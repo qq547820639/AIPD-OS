@@ -34,7 +34,7 @@
 - 重新生成 `docs/audit/repository_snapshot.json`、`capability_matrix.json`、`capability_matrix.md`。
 - 更新 `.github/workflows/ci.yml`：新增 skill-quality 与命令覆盖校验 job。
 
-## Task 7: 版本提升、发布构建与交付
+## Task 7: 版本提升、发布构建与交付 ✅
 - 版本提升至 `5.3.0`（`pyproject.toml` 及版本断言）。
 - 运行全部测试（`aipd test` / `pytest`）、`aipd eval`、黄金项目回归。
 - 重新生成 `RELEASE_MANIFEST.json`，构建签名发布包 `releases/5.3.0/aipd-os-5.3.0.zip` 并生成 SHA-256 清单。
