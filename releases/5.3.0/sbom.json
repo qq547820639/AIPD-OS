@@ -1,0 +1,202 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:aipd-os-5.3.0-sbom",
+  "version": 1,
+  "metadata": {
+    "timestamp": "1970-01-01T00:00:00Z",
+    "component": {
+      "type": "application",
+      "bom-ref": "aipd-os",
+      "name": "aipd-os",
+      "version": "5.3.0",
+      "description": "AIPD-OS v5.3 - AI 产品工程决策操作系统（AI Product/Program Decision OS）"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "cryptography",
+      "purl": "pkg:pypi/cryptography",
+      "optional": [
+        "server"
+      ]
+    },
+    {
+      "type": "library",
+      "name": "mcp",
+      "purl": "pkg:pypi/mcp",
+      "optional": [
+        "server-mcp"
+      ]
+    },
+    {
+      "type": "library",
+      "name": "mypy",
+      "purl": "pkg:pypi/mypy",
+      "optional": [
+        "dev"
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pillow",
+      "purl": "pkg:pypi/pillow",
+      "optional": [
+        "full"
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pytest",
+      "purl": "pkg:pypi/pytest",
+      "optional": [
+        "dev"
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pytest-cov",
+      "purl": "pkg:pypi/pytest-cov",
+      "optional": [
+        "dev"
+      ]
+    },
+    {
+      "type": "library",
+      "name": "pyyaml",
+      "purl": "pkg:pypi/pyyaml",
+      "optional": [
+        "full"
+      ]
+    },
+    {
+      "type": "library",
+      "name": "reportlab",
+      "purl": "pkg:pypi/reportlab",
+      "optional": [
+        "full"
+      ]
+    },
+    {
+      "type": "library",
+      "name": "requests",
+      "purl": "pkg:pypi/requests",
+      "optional": [
+        "full"
+      ]
+    },
+    {
+      "type": "library",
+      "name": "ruff",
+      "purl": "pkg:pypi/ruff",
+      "optional": [
+        "dev"
+      ]
+    }
+  ],
+  "services": [],
+  "aipd": {
+    "selfModules": [
+      "aipd_os",
+      "aipd_os.cad",
+      "aipd_os.cad.anthropometry",
+      "aipd_os.cli",
+      "aipd_os.cli.commands",
+      "aipd_os.cli.main",
+      "aipd_os.config",
+      "aipd_os.evals_runner",
+      "aipd_os.evals_runner.cli",
+      "aipd_os.evals_runner.completion",
+      "aipd_os.evals_runner.golden_projects",
+      "aipd_os.evals_runner.registry",
+      "aipd_os.evals_runner.runner",
+      "aipd_os.evals_runner.scoring",
+      "aipd_os.evals_runner.versioning",
+      "aipd_os.execution",
+      "aipd_os.execution.adapter",
+      "aipd_os.execution.decision_policy",
+      "aipd_os.execution.execution_router",
+      "aipd_os.execution.models",
+      "aipd_os.execution.registry",
+      "aipd_os.execution.runs",
+      "aipd_os.experience",
+      "aipd_os.experience.artifact_preview",
+      "aipd_os.experience.decision_card",
+      "aipd_os.experience.external_wait",
+      "aipd_os.experience.instructions",
+      "aipd_os.experience.project_summary",
+      "aipd_os.experience.resume_summary",
+      "aipd_os.experience.risk_health",
+      "aipd_os.experience.views",
+      "aipd_os.imggen",
+      "aipd_os.imggen.adapter",
+      "aipd_os.layout",
+      "aipd_os.layout.composer",
+      "aipd_os.layout.renderer",
+      "aipd_os.logging_utils",
+      "aipd_os.research",
+      "aipd_os.research.credibility",
+      "aipd_os.scripts",
+      "aipd_os.scripts.schema_check",
+      "aipd_os.security",
+      "aipd_os.security.masking",
+      "aipd_os.security.prompt_injection",
+      "aipd_os.security.sbom",
+      "aipd_os.state",
+      "aipd_os.state.audit",
+      "aipd_os.state.auth",
+      "aipd_os.state.backup",
+      "aipd_os.state.checkpoint",
+      "aipd_os.state.crypto",
+      "aipd_os.state.db",
+      "aipd_os.state.health",
+      "aipd_os.state.migrations",
+      "aipd_os.state.objects",
+      "aipd_os.state.server",
+      "aipd_os.supply_chain",
+      "aipd_os.supply_chain.analysis",
+      "aipd_os.supply_chain.certification",
+      "aipd_os.supply_chain.lab",
+      "aipd_os.supply_chain.quotes",
+      "aipd_os.supply_chain.suppliers",
+      "aipd_os.tool_adapters",
+      "aipd_os.tool_adapters._common",
+      "aipd_os.tool_adapters.builtin",
+      "aipd_os.tool_adapters.cad_adapter",
+      "aipd_os.tool_adapters.document_adapter",
+      "aipd_os.tool_adapters.evt_dvt_pvt_adapter",
+      "aipd_os.tool_adapters.faceted_adapter",
+      "aipd_os.tool_adapters.imggen_adapter",
+      "aipd_os.tool_adapters.layout_adapter",
+      "aipd_os.tool_adapters.local_brep_adapter",
+      "aipd_os.tool_adapters.mail_rfq_adapter",
+      "aipd_os.tool_adapters.research_adapter",
+      "aipd_os.tool_adapters.supplier_adapter",
+      "aipd_os.visual_audit",
+      "aipd_os.visual_audit.auditor",
+      "aipd_os.visual_audit.golden"
+    ],
+    "dependencies": [],
+    "optionalDependencies": {
+      "dev": [
+        "mypy>=1.8",
+        "pytest-cov>=4.0",
+        "pytest>=7.0",
+        "ruff>=0.4"
+      ],
+      "full": [
+        "pillow",
+        "pyyaml",
+        "reportlab",
+        "requests"
+      ],
+      "server": [
+        "cryptography>=3.4"
+      ],
+      "server-mcp": [
+        "mcp>=1.0"
+      ]
+    }
+  }
+}

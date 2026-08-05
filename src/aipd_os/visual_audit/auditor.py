@@ -101,7 +101,7 @@ class VisualAuditor:
         # 2) 人物一致性（需视觉模型）
         expected_char = page_defn.get("expected_character")
         dims["character_consistency"] = {
-            "passed": self._vision(), "requiring_vision": True,
+            "passed": self._vision(), "requiring_vision": not self._vision(),
             "expected": expected_char,
             "note": "requires a real vision backend; not faked" if not self._vision() else "checked by vision backend",
         }
@@ -109,7 +109,7 @@ class VisualAuditor:
         # 3) CMF 一致性（需视觉模型）
         expected_cmf = page_defn.get("expected_cmf")
         dims["cmf_consistency"] = {
-            "passed": self._vision(), "requiring_vision": True,
+            "passed": self._vision(), "requiring_vision": not self._vision(),
             "expected": expected_cmf,
             "note": "requires a real vision backend; not faked" if not self._vision() else "checked by vision backend",
         }

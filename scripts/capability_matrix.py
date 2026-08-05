@@ -332,14 +332,14 @@ CAPABILITIES = [
         "domain": "理论研究",
         "classification": "partially_implemented",
         "declaration_file": "references/evidence-policy.md",
-        "implementation_file": "src/aipd_os/security/prompt_injection.py; scripts/claim_gate.py",
-        "entry_point": "claim_gate.check",
+        "implementation_file": "src/aipd_os/research/credibility.py",
+        "entry_point": "credibility.score_evidence",
         "run_command": "python scripts/claim_gate.py",
         "input_output": "证据项 -> 可信度分级",
-        "unit_test": "tests/test_prompt_injection.py",
+        "unit_test": "tests/test_credibility.py",
         "integration_test": None,
-        "e2e_evidence": "声明门禁可运行",
-        "current_limitation": "分级标准为启发式",
+        "e2e_evidence": "来源可信度/时间衰减/事实假设确定性评分",
+        "current_limitation": "可信度分级为确定性启发式，仍需真实模型/外部核验提升精度",
     },
     {
         "id": "research.prompt_injection_isolation",
@@ -679,14 +679,14 @@ CAPABILITIES = [
         "domain": "CAD与生产图纸",
         "classification": "partially_implemented",
         "declaration_file": "references/cad-engineering-readiness.md",
-        "implementation_file": "templates/cad_engineering_manifest.json",
-        "entry_point": None,
+        "implementation_file": "src/aipd_os/cad/anthropometry.py",
+        "entry_point": "anthropometry.get_dimension",
         "run_command": "aipd cad build",
         "input_output": "人体尺寸 -> 尺寸族约束",
-        "unit_test": None,
+        "unit_test": "tests/test_anthropometry.py",
         "integration_test": None,
-        "e2e_evidence": "模板含尺寸族字段",
-        "current_limitation": "仅模板/示例，无真实人体数据库",
+        "e2e_evidence": "成人男女/儿童百分位确定性查询",
+        "current_limitation": "内置族为常用成年男女/儿童百分位示例，未覆盖全部人群数据库",
     },
     {
         "id": "cad.cae_fatigue",
@@ -935,14 +935,14 @@ CAPABILITIES = [
         "domain": "工业化与验证",
         "classification": "partially_implemented",
         "declaration_file": "references/quality-and-claim-governance.md",
-        "implementation_file": "scripts/claim_gate.py; src/aipd_os/supply_chain/suppliers.py",
-        "entry_point": "claim_gate / suppliers",
+        "implementation_file": "src/aipd_os/supply_chain/certification.py",
+        "entry_point": "certification.CertificationRegistry",
         "run_command": "aipd industrialize",
         "input_output": "认证证据 -> 状态标记",
-        "unit_test": "tests/test_supply_chain.py",
+        "unit_test": "tests/test_certification.py",
         "integration_test": None,
         "e2e_evidence": "未取得认证不宣布已认证",
-        "current_limitation": "认证真实性需外部权威核验",
+        "current_limitation": "状态机确定性实现，证书真实性仍需外部权威核验",
     },
     # ------------------------------------------------------------------ 跨会话与用户体验
     {
@@ -1225,8 +1225,30 @@ def _render_matrix_md(matrix: dict) -> str:
     return "\n".join(lines)
 
 
+def _validate_evidence() -> None:
+    """证据收紧：`partially_implemented` 能力必须声明非空 `current_limitation`。
+
+    ``partially_implemented`` 表示"核心路径可用，边界/证据不全"，因此必须诚实
+    说明当前限制。任何违反项都会抛出 ValueError，使脚本以非零码退出并明确指出
+    违规的能力 id（不静默放行）。
+    """
+    offenders = [
+        cap["id"]
+        for cap in CAPABILITIES
+        if cap["classification"] == "partially_implemented"
+        and not (cap.get("current_limitation") or "").strip()
+    ]
+    if offenders:
+        raise ValueError(
+            "证据收紧失败：以下 partially_implemented 能力缺少非空 "
+            f"current_limitation：{', '.join(sorted(offenders))}"
+        )
+
+
 def generate(repo_root, out_dir) -> dict:
     """生成三份审计交付物，返回生成摘要。"""
+    _validate_evidence()
+
     repo = Path(repo_root).resolve()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)

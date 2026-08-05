@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-08-06T04:45:18",
+  "generated_at": "2026-08-06T05:49:18",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "67fb368bdc56afc4e489f12dd8aaf80893b8490c",
-  "latest_commit_time": "2026-08-06 04:16:36 +0800",
-  "version": "5.2.0",
+  "latest_commit_sha": "9cfec246f0966b9efba669dcb0b88edad4223a52",
+  "latest_commit_time": "2026-08-06 05:04:38 +0800",
+  "version": "5.3.0",
   "file_tree": {
     "top_entries": [
       ".git/",
@@ -60,11 +60,11 @@
       "migrations": 2,
       "references": 36,
       "releases": 0,
-      "scripts": 29,
+      "scripts": 30,
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 37
+      "tests": 44
     }
   },
   "tags": [],
@@ -80,68 +80,52 @@
       "dependency-audit",
       "license-scan",
       "package-build",
-      "audit"
+      "audit",
+      "skill-quality-and-coverage"
     ]
   },
   "release_manifest_verification": {
     "present": true,
-    "version": "5.1.0",
+    "version": "5.3.0",
     "parsed": true,
-    "total_files": 211,
-    "hash_matches": 205,
-    "hash_mismatch_count": 6,
-    "mismatches": [
-      {
-        "path": "docs/audit/audit.json",
-        "reason": "hash_mismatch",
-        "expected": "7ef3078b441f295dd57c926e2979076b0af205528d3c499db4fe58f2b16e1604",
-        "actual": "3ded2374fb1b91c716830e57ff8bd5161751d216105a36a0d82deba7f2183270"
-      },
-      {
-        "path": "docs/audit/v5.1-version-truth-audit.json",
-        "reason": "hash_mismatch",
-        "expected": "ff761617e46de3f8f3c0b660417f3cf57accb117abc420df565fc11aed0c3737",
-        "actual": "837321ad459c6264b4447b0e1672d8a1ac2d9ee921c73f4f6f14e621f263217e"
-      },
-      {
-        "path": "docs/audit/v5.1-version-truth-audit.md",
-        "reason": "hash_mismatch",
-        "expected": "585950f225c5192b1fc3ac32b10031715a5bd93fc19d9410efef6eb645a1bf9d",
-        "actual": "beff6bfc54c61c70c02ecadec50949b0fd9518257464ac8bb52450f28a1b101e"
-      },
-      {
-        "path": "src/aipd_os.egg-info/PKG-INFO",
-        "reason": "hash_mismatch",
-        "expected": "885334ad08a84af0c7b222dc9d0eaa807b8447267ae065a7082b5bea3edc2fed",
-        "actual": "b01f9c98a065ad8b51ff38ed393c8c360ee38889778ea936a2cb6c95f3bed7ec"
-      },
-      {
-        "path": "src/aipd_os.egg-info/SOURCES.txt",
-        "reason": "hash_mismatch",
-        "expected": "8de8008078370330737232c98de0bc25ae71728c740a185b205cd13095fbb66d",
-        "actual": "92826a41599889057a1c75420fb2a7c61c7ce997a26fcf00a2e7be953086b67f"
-      },
-      {
-        "path": "src/aipd_os/evals_runner/completion.py",
-        "reason": "hash_mismatch",
-        "expected": "e42c2598763624c8031dc0548e7536e6a6c5f4577d13e1649eabca051bce72e9",
-        "actual": "70b5fa2d24ac51877eb590e4bf93d667d6a8345a503db997ed87f9284e616c39"
-      }
-    ]
+    "total_files": 406,
+    "hash_matches": 406,
+    "hash_mismatch_count": 0,
+    "mismatches": []
   },
   "untracked_or_generated": [
     " M .github/workflows/ci.yml",
-    " M docs/audit/audit.json",
-    " M docs/audit/v5.1-version-truth-audit.md",
+    " M CHANGELOG.md",
+    " M QUICKSTART.md",
+    " M README.md",
+    " M RELEASE_MANIFEST.json",
+    " M SKILL.md",
+    " M docs/audit/capability_matrix.json",
+    " M docs/audit/capability_matrix.md",
+    " M docs/audit/repository_snapshot.json",
     " M pyproject.toml",
-    " M src/aipd_os/evals_runner/completion.py",
-    "?? .trae/specs/v5.2-capability-matrix-truth-edition/",
-    "?? docs/audit/capability_matrix.json",
-    "?? docs/audit/capability_matrix.md",
-    "?? docs/audit/repository_snapshot.json",
-    "?? scripts/capability_matrix.py",
-    "?? tests/test_capability_matrix.py",
-    "?? tests/test_completion_endpoint.py",
+    " M scripts/capability_matrix.py",
+    " M src/aipd_os/__init__.py",
+    " M src/aipd_os/experience/views.py",
+    " M src/aipd_os/visual_audit/auditor.py",
+    " M tests/test_completion_endpoint.py",
+    " M tests/test_experience.py",
+    " M tests/test_packaging.py",
+    "?? .trae/specs/v5.3-owner-experience-skill-edition/",
+    "?? releases/5.3.0/",
+    "?? scripts/skill_quality_audit.py",
+    "?? src/aipd_os/cad/",
+    "?? src/aipd_os/experience/external_wait.py",
+    "?? src/aipd_os/experience/risk_health.py",
+    "?? src/aipd_os/research/",
+    "?? src/aipd_os/supply_chain/certification.py",
+    "?? tests/test_anthropometry.py",
+    "?? tests/test_certification.py",
+    "?? tests/test_command_coverage.py",
+    "?? tests/test_credibility.py",
+    "?? tests/test_external_wait.py",
+    "?? tests/test_risk_health.py",
+    "?? tests/test_visual_honesty_guardrail.py",
     "generated src/aipd_os.egg-info"
   ],
   "legacy_cad_conflicts": [],

@@ -112,7 +112,7 @@ def test_runner_marks_external_when_unconfigured():
 
     cases = load_cases(_evals_path())
     with mock.patch.dict(os.environ, {}, clear=True):
-        runner = EvalRunner(provider=EnvCompletionProvider(), version="5.2.0")
+        runner = EvalRunner(provider=EnvCompletionProvider(), version="5.3.0")
         result = runner.run_case(cases[0])
     assert result.passed is False
     assert "external" in result.failure_type

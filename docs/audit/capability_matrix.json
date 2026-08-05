@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T05:03:44",
+  "generated_at": "2026-08-06T05:45:59",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "67fb368bdc56afc4e489f12dd8aaf80893b8490c",
-  "version": "5.2.0",
+  "latest_commit_sha": "9cfec246f0966b9efba669dcb0b88edad4223a52",
+  "version": "5.3.0",
   "classification_enum": [
     "fully_implemented",
     "partially_implemented",
@@ -319,14 +319,14 @@
           "domain": "理论研究",
           "classification": "partially_implemented",
           "declaration_file": "references/evidence-policy.md",
-          "implementation_file": "src/aipd_os/security/prompt_injection.py; scripts/claim_gate.py",
-          "entry_point": "claim_gate.check",
+          "implementation_file": "src/aipd_os/research/credibility.py",
+          "entry_point": "credibility.score_evidence",
           "run_command": "python scripts/claim_gate.py",
           "input_output": "证据项 -> 可信度分级",
-          "unit_test": "tests/test_prompt_injection.py",
+          "unit_test": "tests/test_credibility.py",
           "integration_test": null,
-          "e2e_evidence": "声明门禁可运行",
-          "current_limitation": "分级标准为启发式"
+          "e2e_evidence": "来源可信度/时间衰减/事实假设确定性评分",
+          "current_limitation": "可信度分级为确定性启发式，仍需真实模型/外部核验提升精度"
         },
         {
           "id": "research.prompt_injection_isolation",
@@ -674,14 +674,14 @@
           "domain": "CAD与生产图纸",
           "classification": "partially_implemented",
           "declaration_file": "references/cad-engineering-readiness.md",
-          "implementation_file": "templates/cad_engineering_manifest.json",
-          "entry_point": null,
+          "implementation_file": "src/aipd_os/cad/anthropometry.py",
+          "entry_point": "anthropometry.get_dimension",
           "run_command": "aipd cad build",
           "input_output": "人体尺寸 -> 尺寸族约束",
-          "unit_test": null,
+          "unit_test": "tests/test_anthropometry.py",
           "integration_test": null,
-          "e2e_evidence": "模板含尺寸族字段",
-          "current_limitation": "仅模板/示例，无真实人体数据库"
+          "e2e_evidence": "成人男女/儿童百分位确定性查询",
+          "current_limitation": "内置族为常用成年男女/儿童百分位示例，未覆盖全部人群数据库"
         },
         {
           "id": "cad.cae_fatigue",
@@ -934,14 +934,14 @@
           "domain": "工业化与验证",
           "classification": "partially_implemented",
           "declaration_file": "references/quality-and-claim-governance.md",
-          "implementation_file": "scripts/claim_gate.py; src/aipd_os/supply_chain/suppliers.py",
-          "entry_point": "claim_gate / suppliers",
+          "implementation_file": "src/aipd_os/supply_chain/certification.py",
+          "entry_point": "certification.CertificationRegistry",
           "run_command": "aipd industrialize",
           "input_output": "认证证据 -> 状态标记",
-          "unit_test": "tests/test_supply_chain.py",
+          "unit_test": "tests/test_certification.py",
           "integration_test": null,
           "e2e_evidence": "未取得认证不宣布已认证",
-          "current_limitation": "认证真实性需外部权威核验"
+          "current_limitation": "状态机确定性实现，证书真实性仍需外部权威核验"
         }
       ]
     },

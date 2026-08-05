@@ -1,6 +1,6 @@
 # 快速开始（Quick Start）
 
-AIPD-OS v5.1 —— AI 产品工程决策操作系统。从一行产品构想开始，逐步推进到
+AIPD-OS v5.3 —— AI 产品工程决策操作系统。从一行产品构想开始，逐步推进到
 工程基线、CAD、工业化、验证与生产发布。
 
 ## 0. 准备
@@ -76,16 +76,33 @@ AIPD_RELEASE_SIGNING_KEY=your-key python3 scripts/sign_release.py dist/aipd-os-5
 aipd project-summary --db state.db --project p1   # 复核门禁与决策
 ```
 
-## 11. v5.1 新命令（简化入口）
+## 11. v5.3 一键命令（简化入口）
+
+17 个一键命令按工作流分组（核心流程 / 手册链 / CAD / 工业化 / 审计与发布）：
 
 ```bash
+# 核心流程：项目接管驱动
 aipd init --project p1 --name "外骨骼" --goal "助力" --db state.db   # 初始化项目
+aipd intake --prompt "可单手调节的铝合金登山杖" --db state.db        # 一条需求初始化
+aipd resume --db state.db --project p1                              # 恢复/续接项目
 aipd status --db state.db --project p1                              # 所有者视图摘要
 aipd run --db state.db --project p1 --until-decision                 # 运行到真实决策
+aipd decide --db state.db --project p1 --decision D-001 --choice option_a   # 裁定决策
+
+# 手册链 / CAD
+aipd manual plan --db state.db --project p1                          # 手册批次计划
+aipd manual generate --db state.db --project p1 --batch 1            # 生成手册批次
+aipd cad preflight --manifest cad.json --target C2                   # CAD 运行时预检
+aipd cad build --manifest cad.json --target C2                       # CAD 成熟度推进
+
+# 工业化 / 审计与发布
 aipd industrialize --db state.db --quote quotes.csv --stage dv       # 供应链 + 验证
-aipd release check --target C7 --repo .                             # 发布就绪检查
-aipd package --version 5.2.0 --no-tests                              # 构建发布包
+aipd validate --manifest release.json --target C7                    # 生产发布证据门禁
 aipd audit --repo . --out docs/audit                                 # 生成能力矩阵审计产物
+aipd release check --target C7 --repo .                             # 发布就绪检查
+aipd test                                                           # 运行测试套件
+aipd eval --evals evals/evals.json                                  # 运行评估套件
+aipd package --version 5.3.0 --no-tests                              # 构建发布包
 ```
 
 ## 更多

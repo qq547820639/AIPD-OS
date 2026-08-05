@@ -161,11 +161,16 @@ def test_apply_cost_reduction_marks_deliverables_stale(seeded, db):
 # ---------------------------------------------------------------- 顶层视图
 def test_owner_view_composition(seeded, db):
     view = OwnerView(db).owner_update("p1")
-    assert set(view) == {"project_summary", "decision_card",
-                         "resume_summary", "artifact_preview"}
+    assert {"project_summary", "decision_card",
+            "resume_summary", "artifact_preview"} <= set(view)
+    assert "risk_health" in view
+    assert "external_wait" in view
     assert view["decision_card"] is not None
     md = OwnerView(db).to_markdown(view)
     assert "产品所有者视图" in md
     assert "<details>" in md
+    # 风险健康与外部等待新增章节出现在正文
+    assert "风险健康状态" in md
+    assert "外部等待事项" in md
     # 决策卡片在正文出现、内部代号在 details 中
     assert view["decision_card"]["topic"] in md

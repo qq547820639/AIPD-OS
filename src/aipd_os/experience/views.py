@@ -10,10 +10,51 @@ import json
 from typing import Any, Dict, Optional
 
 from ..state.db import AIPDStateDB
+from ..state.checkpoint import CheckpointManager
 from .project_summary import build_project_summary
 from .decision_card import build_decision_card
 from .resume_summary import build_resume_summary
 from .artifact_preview import artifact_preview
+from .risk_health import compute_risk_health
+from .external_wait import summarize_external_wait
+
+# 健康灯 → 带图标的彩色标签
+_HEALTH_LABEL = {"green": "🟢 良好", "yellow": "🟡 需关注", "red": "🔴 高风险"}
+_WAIT_BUCKET_CN = {"supplier": "供应商", "lab": "测试实验室", "other": "其他"}
+
+
+def _build_risk_and_wait(db, tenant: str, project_id: str) -> Dict[str, Any]:
+    """读取风险、外部等待项与项目状态，构建风险健康 + 外部等待视图。"""
+    risks = db.list_risks(tenant, project_id)
+    external_waiting = CheckpointManager(db).resume_summary(project_id, tenant)["external_waiting"]
+    project_status = db.get_project(tenant, project_id).get("status")
+    return {
+        "risk_health": compute_risk_health(risks, external_waiting, project_status),
+        "external_wait": summarize_external_wait(external_waiting),
+    }
+
+
+def _health_section(rh: Dict[str, Any]) -> str:
+    """渲染风险健康状态的 Markdown 段落（不暴露内部代号）。"""
+    light = rh.get("traffic_light", "green")
+    label = _HEALTH_LABEL.get(light, "🟢 良好")
+    reason = rh.get("reason", "")
+    return f"{label}" + (f" — {reason}" if reason else "")
+
+
+def _wait_section(ew: Dict[str, Any]) -> str:
+    """渲染外部等待事项的 Markdown 段落（不暴露内部代号）。"""
+    if not ew.get("count", 0):
+        return "项目当前无外部等待事项。"
+    lines = [ew.get("summary", "")]
+    for bucket in ("supplier", "lab", "other"):
+        items = ew.get(bucket, [])
+        if not items:
+            continue
+        lines.append(f"- {_WAIT_BUCKET_CN[bucket]}：")
+        for line in items:
+            lines.append(f"  - {line}")
+    return "\n".join(lines)
 
 
 def render_markdown(view: Dict[str, Any]) -> str:
@@ -39,6 +80,12 @@ def render_markdown(view: Dict[str, Any]) -> str:
         "",
         "## 下一个里程碑",
         ps.get("next_milestone", ""),
+        "",
+        "## 风险健康状态",
+        _health_section(view.get("risk_health", {})),
+        "",
+        "## 外部等待事项",
+        _wait_section(view.get("external_wait", {})),
         "",
         "## 需要您做决策",
     ]
@@ -91,12 +138,14 @@ class OwnerView:
 
     def owner_update(self, project_id: str) -> Dict[str, Any]:
         """返回所有者的完整更新视图（自然语言优先）。"""
-        return {
+        view = {
             "project_summary": build_project_summary(self._db, project_id, self._tenant),
             "decision_card": build_decision_card(self._db, project_id, tenant_id=self._tenant),
             "resume_summary": build_resume_summary(self._db, project_id, self._tenant),
             "artifact_preview": artifact_preview(self._db, project_id, self._tenant),
         }
+        view.update(_build_risk_and_wait(self._db, self._tenant, project_id))
+        return view
 
     def to_markdown(self, view: Optional[Dict[str, Any]] = None,
                     project_id: Optional[str] = None) -> str:

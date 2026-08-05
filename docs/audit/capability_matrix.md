@@ -1,9 +1,9 @@
 # AIPD-OS 能力矩阵（v5.2 真实性核验版）
 
-- 生成时间：`2026-08-06T05:03:44`
+- 生成时间：`2026-08-06T05:45:59`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`67fb368bdc56afc4e489f12dd8aaf80893b8490c`
-- 版本：`5.2.0`
+- 默认分支：`main`；HEAD：`9cfec246f0966b9efba669dcb0b88edad4223a52`
+- 版本：`5.3.0`
 - 能力总数：`70`
 
 ## 分类统计
@@ -45,7 +45,7 @@
 | 引用 | `fully_implemented` | references/research-integration.md | scripts/research/postprocess.py | postprocess.attach_citation | `python scripts/research/postprocess.py` | scripts/research/selftest_postprocess.py |  |
 | 标准法规 | `external_dependency` | references/research-integration.md |  |  | `` |  | 依赖外部法规库/专业数据源，未接入时诚实等待 |
 | 专利和竞品 | `external_dependency` | references/research-integration.md |  |  | `` |  | 依赖外部专利/竞品数据源，未接入时诚实等待 |
-| 证据可信度 | `partially_implemented` | references/evidence-policy.md | src/aipd_os/security/prompt_injection.py; scripts/claim_gate.py | claim_gate.check | `python scripts/claim_gate.py` | tests/test_prompt_injection.py | 分级标准为启发式 |
+| 证据可信度 | `partially_implemented` | references/evidence-policy.md | src/aipd_os/research/credibility.py | credibility.score_evidence | `python scripts/claim_gate.py` | tests/test_credibility.py | 可信度分级为确定性启发式，仍需真实模型/外部核验提升精度 |
 | 提示注入隔离 | `fully_implemented` | SECURITY.md / THREAT_MODEL.md | src/aipd_os/security/prompt_injection.py | isolation.sanitize | `aipd eval` | tests/test_prompt_injection.py |  |
 
 ## 产品手册
@@ -78,7 +78,7 @@
 | 参数化模型 | `external_dependency` | references/cad-engineering-readiness.md | src/aipd_os/tool_adapters/local_brep_adapter.py |  | `aipd cad build` |  | 依赖外部原生 B-Rep 内核 |
 | 装配约束 | `external_dependency` | references/cad-engineering-readiness.md |  |  | `` |  | 依赖外部 CAD 内核 |
 | 连续运动学 | `external_dependency` | references/cad-engineering-readiness.md |  |  | `` |  | 依赖外部仿真/运动学工具 |
-| 人体尺寸族 | `partially_implemented` | references/cad-engineering-readiness.md | templates/cad_engineering_manifest.json |  | `aipd cad build` |  | 仅模板/示例，无真实人体数据库 |
+| 人体尺寸族 | `partially_implemented` | references/cad-engineering-readiness.md | src/aipd_os/cad/anthropometry.py | anthropometry.get_dimension | `aipd cad build` | tests/test_anthropometry.py | 内置族为常用成年男女/儿童百分位示例，未覆盖全部人群数据库 |
 | CAE和疲劳 | `external_dependency` | references/cad-engineering-readiness.md |  |  | `` |  | 依赖外部 CAE/有限元工具 |
 | DFM/DFA | `fully_implemented` | references/cad-engineering-readiness.md | templates/cad_engineering_manifest.json; scripts/production_release_gate.py | production_release_gate | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 公差链 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
@@ -100,7 +100,7 @@
 | 测试失败根因 | `fully_implemented` | references/end-to-end-closure-model.md | src/aipd_os/supply_chain/analysis.py | analysis.analyze_stage | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py |  |
 | 纠正任务 | `fully_implemented` | references/end-to-end-closure-model.md | src/aipd_os/supply_chain/analysis.py | analysis.create_correction_tasks | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py |  |
 | 实体数据回写 | `fully_implemented` | references/end-to-end-closure-model.md | src/aipd_os/supply_chain/analysis.py | analysis.propagate | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py |  |
-| 认证状态 | `partially_implemented` | references/quality-and-claim-governance.md | scripts/claim_gate.py; src/aipd_os/supply_chain/suppliers.py | claim_gate / suppliers | `aipd industrialize` | tests/test_supply_chain.py | 认证真实性需外部权威核验 |
+| 认证状态 | `partially_implemented` | references/quality-and-claim-governance.md | src/aipd_os/supply_chain/certification.py | certification.CertificationRegistry | `aipd industrialize` | tests/test_certification.py | 状态机确定性实现，证书真实性仍需外部权威核验 |
 
 ## 跨会话与用户体验
 

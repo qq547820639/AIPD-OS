@@ -1,6 +1,15 @@
-# AIPD Orchestrator v5.2.0
+# AIPD Orchestrator v5.3.0
 
 AI全链路产品开发与交付主管：一个对话入口，自主推进理论基础、产品定义、连续附件产品手册、工程CAD、工业化、供应链、EVT/DVT/PVT和生产发布。
+
+## v5.3新增
+
+- **风险 RYG / 外部等待所有者视图**：Supervisor 提供风险红黄绿（RYG）分级与外部等待（blocked_external）的所有者视图，等待外部输入期间继续其他独立工作；
+- **确定性可信度 / 人体测量 / 认证模块**：credibility、anthropometry、certification 三个确定性模块，事实与认知一律可追溯、不虚构；
+- **视觉审计诚实护栏**：视觉落差评估拒绝为“看起来像”背书，防止视觉意图覆盖安全；
+- **命令覆盖一致性测试**：`tests/test_command_coverage.py` 校验声明 / 注册 / 测试三向不变量；
+- **SKILL.md v5.3 刷新**：17 个一键命令按工作流分组声明，专业细节集中到 `references/`；
+- **17 个一键命令**（`aipd <cmd>`）：`init` / `intake` / `resume` / `status` / `run` / `decide` / `manual plan` / `manual generate` / `cad preflight` / `cad build` / `industrialize` / `validate` / `audit` / `release check` / `test` / `eval` / `package`。
 
 ## v5.2新增
 
