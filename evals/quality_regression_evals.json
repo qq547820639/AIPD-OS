@@ -5,7 +5,7 @@
   },
   {
     "name": "faceted fallback cannot become engineering CAD",
-    "expected": "Faceted BREP is capped at CAD-L1 even if files are watertight and deterministic."
+    "expected": "Faceted BREP is capped at C1 even if files are watertight and deterministic."
   },
   {
     "name": "manual quality failure triggers internal rework",

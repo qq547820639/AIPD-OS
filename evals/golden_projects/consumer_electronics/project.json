@@ -1,0 +1,9 @@
+{
+  "id": "consumer_electronics",
+  "name": "智能温控器",
+  "goal": "交付一款消费电子温控器的用户手册",
+  "brief": "智能温控器支持远程控制与学习算法，面向家庭用户。",
+  "facts": {"params": {"input_voltage": 5, "power": 2, "display": "2.8寸", "wifi": "2.4GHz", "weight": 0.3}},
+  "minimum_pages": 6,
+  "expected": ["manual_pages_produced", "batch_continuity_holds", "no_fabricated_external_evidence", "pdf_zip_produced"]
+}

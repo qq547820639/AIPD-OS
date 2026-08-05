@@ -1,0 +1,90 @@
+"""评估 CLI。
+
+用法：
+    python -m aipd_os.evals_runner.cli run --evals evals/evals.json \
+        --provider fake --out <dir> [--version 5.0.0] [--threshold 0.1] [--baseline <dir>]
+
+``--provider fake`` 使用确定性脚本化假实现；``--provider model`` 使用真实模型端点
+（需配置 AIPD_EVAL_MODEL_ENDPOINT）。提供 ``--baseline`` 时按分数下降阈值做回归门禁，
+若任一 case 下降超过 ``--threshold`` 则以非零退出码结束。
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+from typing import Dict, Optional
+
+from aipd_os.evals_runner.completion import EnvCompletionProvider
+from aipd_os.evals_runner.registry import load_cases
+from aipd_os.evals_runner.runner import EvalRunner, build_report
+from aipd_os.evals_runner.versioning import (
+    load_baseline,
+    save_eval_report,
+    should_block_release,
+)
+
+
+def _make_provider(provider: str):
+    if provider == "model":
+        return EnvCompletionProvider()
+    if provider == "fake":
+        return None  # EvalRunner 默认构造 RecordedCompletionProvider
+    raise SystemExit(f"未知 provider: {provider}（可选 fake / model）")
+
+
+def _print_report(report: Dict) -> None:
+    summary = report.get("summary", {})
+    print(f"评估版本: {report.get('version')}  模型: {report.get('model_version')}")
+    print(
+        f"通过 {summary.get('passed', 0)}/{summary.get('total', 0)}  外部/跳过 "
+        f"{summary.get('external', 0)}"
+    )
+    for r in report.get("results", []):
+        flag = "PASS" if r.get("passed") else "FAIL"
+        ext = " [external]" if "external" in r.get("failure_type", []) else ""
+        print(f"  [{flag}]{ext} {r['case_id']}  score={r['score']}  {r.get('failure_type')}")
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    cases = load_cases(args.evals)
+    provider = _make_provider(args.provider)
+    runner = EvalRunner(provider=provider, version=args.version)
+    results = runner.run(cases, out_dir=args.out, report_version=args.version)
+    report = build_report(results, version=args.version)
+    save_eval_report(report, args.out, version=args.version)
+    _print_report(report)
+
+    if args.baseline:
+        baseline = load_baseline(args.baseline, args.version)
+        gate = should_block_release(report, baseline, threshold=args.threshold)
+        print(f"回归门禁: {gate['reason']}")
+        if gate["blocked"]:
+            print(f"阻塞发布：{gate['reason']}")
+            return 1
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="aipd_os.evals_runner.cli")
+    sub = parser.add_subparsers(dest="command", required=True)
+    p = sub.add_parser("run", help="运行行为评估")
+    p.add_argument("--evals", required=True, help="evals/evals.json 路径")
+    p.add_argument("--provider", choices=["fake", "model"], default="fake")
+    p.add_argument("--out", required=True, help="报告输出目录")
+    p.add_argument("--version", default="5.0.0", help="评估版本号")
+    p.add_argument("--threshold", type=float, default=0.1, help="允许的最大分数下降")
+    p.add_argument("--baseline", default=None, help="基线目录（用于回归门禁）")
+    p.set_defaults(func=cmd_run)
+    return parser
+
+
+def main(argv: Optional[list] = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

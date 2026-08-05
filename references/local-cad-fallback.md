@@ -4,14 +4,14 @@ Use this route only when the provider CAD skill and native OpenCASCADE/build123d
 
 ## Allowed scope
 
-- CAD-L0 through CAD-L3 internal digital prototypes.
+- C0 through C1 internal digital prototypes.
 - Source-controlled parametric geometry.
 - Closed mesh solids, faceted BREP STEP, STL/GLB derivatives, deterministic inspection and snapshots.
 - Early supplier discussion and DFM preparation clearly marked not for tooling.
 
 ## Forbidden claims
 
-A faceted fallback does not establish native feature history, analytic surfaces, GD&T, tolerance stack, strength, fatigue, assist torque, user safety, tooling readiness or physical production approval. It must never be labeled CAD-L4/L5 or production-frozen.
+A faceted fallback does not establish native feature history, analytic surfaces, GD&T, tolerance stack, strength, fatigue, assist torque, user safety, tooling readiness or physical production approval. It must never be labeled above C1 or production-frozen.
 
 ## Execution order
 

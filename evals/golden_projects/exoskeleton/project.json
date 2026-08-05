@@ -1,0 +1,9 @@
+{
+  "id": "exoskeleton",
+  "name": "工厂外骨骼",
+  "goal": "为工厂辅助搬运场景交付一款外骨骼产品手册（>=10 页）",
+  "brief": "工厂外骨骼用于辅助工人搬运重物，围绕安全、续航与舒适性展开说明。",
+  "facts": {"params": {"peak_torque": 120, "weight": 8.5, "battery_capacity": 60, "max_speed": 20, "input_voltage": 48, "max_load": 100}},
+  "minimum_pages": 10,
+  "expected": ["manual_pages_produced", "batch_continuity_holds", "no_fabricated_external_evidence", "pdf_zip_produced"]
+}

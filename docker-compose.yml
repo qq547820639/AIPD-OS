@@ -1,0 +1,26 @@
+services:
+  state:
+    build: .
+    container_name: aipd-state
+    environment:
+      AIPD_MODE: server
+      AIPD_PORT: "8000"
+      AIPD_DB_DIR: /data/state.db
+      AIPD_ENCRYPTION_KEY: ${AIPD_ENCRYPTION_KEY:-change-me-encryption-key}
+      AIPD_SECRET: ${AIPD_SECRET:-change-me-secret}
+      AIPD_RETENTION_DAYS: "90"
+    ports:
+      - "8000:8000"
+    volumes:
+      - state_db:/data
+      - state_backup:/data/backups
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+
+volumes:
+  state_db:
+  state_backup:

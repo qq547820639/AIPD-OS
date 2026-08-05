@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Minimal faceted-BREP STEP writer and structural parser.
 
-This fallback supports internal CAD-L0..L3 digital prototypes when an OpenCASCADE
+This fallback supports internal C0..C1 digital prototypes when an OpenCASCADE
 runtime or provider CAD skill is unavailable. It is not a replacement for native
 feature-history CAD, analytic B-Rep, GD&T, or tooling release.
 """

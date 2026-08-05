@@ -10,7 +10,7 @@ python scripts/runtime_preflight.py --require-cad --json-out runtime_preflight.j
 
 ## 最低运行样例
 
-对真实项目执行至少一次 CAD-L0 到 CAD-L3：
+对真实项目执行至少一次 C0 到 C3：
 
 - 受控 CAD Brief 和 CAD Contract；
 - 参数化 Python 源码；

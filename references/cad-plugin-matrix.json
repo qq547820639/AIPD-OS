@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "maturity_system": "C0..C7",
+  "plugins": [
+    {
+      "id": "text-to-cad",
+      "name": "Text-to-CAD",
+      "type": "generator",
+      "provider": "provider_cad_skill",
+      "version": "1.0.0",
+      "maturity_ceiling": "C7",
+      "dependencies": [],
+      "compatible_os": ["macos", "linux", "windows"],
+      "fallback_to": ["local-native-brep"],
+      "discoverable": true
+    },
+    {
+      "id": "local-native-brep",
+      "name": "Local Native B-Rep",
+      "type": "native_brep",
+      "provider": "build123d+OCP",
+      "version": "0.9.0",
+      "maturity_ceiling": "C7",
+      "dependencies": [
+        {"plugin": "text-to-cad", "version_required": ">=1.0.0"}
+      ],
+      "compatible_os": ["macos", "linux", "windows"],
+      "fallback_to": ["local-faceted-fallback"],
+      "discoverable": true
+    },
+    {
+      "id": "local-faceted-fallback",
+      "name": "Local Faceted Fallback",
+      "type": "faceted",
+      "provider": "trimesh+matplotlib",
+      "version": "0.3.0",
+      "maturity_ceiling": "C1",
+      "dependencies": [
+        {"plugin": "text-to-cad", "version_required": ">=1.0.0"}
+      ],
+      "compatible_os": ["macos", "linux", "windows"],
+      "fallback_to": [],
+      "discoverable": false
+    },
+    {
+      "id": "cad-chain",
+      "name": "CAD Chain Orchestrator",
+      "type": "generator",
+      "provider": "aipd",
+      "version": "5.0.0",
+      "maturity_ceiling": "C7",
+      "dependencies": [
+        {"plugin": "text-to-cad", "version_required": ">=1.0.0"},
+        {"plugin": "local-native-brep", "version_required": ">=0.9.0"}
+      ],
+      "compatible_os": ["macos", "linux"],
+      "fallback_to": ["local-faceted-fallback"],
+      "discoverable": true
+    }
+  ]
+}

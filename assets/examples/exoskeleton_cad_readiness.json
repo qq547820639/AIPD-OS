@@ -6,7 +6,7 @@
   "work_that_can_continue_without_owner": [
     "建立人体包络与肩部运动空间研究任务",
     "建立CAD目录、参数命名和事实ID映射规则",
-    "编制CAD-L0验收矩阵",
+    "编制C0验收矩阵",
     "检索标准紧固件、轴承和弹性元件候选",
     "准备关键姿态和工位禁入区列表"
   ],
@@ -21,9 +21,9 @@
     ]
   },
   "initial_cad_levels": {
-    "G3_target": "CAD-L1",
-    "G4_target": "CAD-L3",
-    "DVT_target": "CAD-L4",
-    "PVT_target": "CAD-L5"
+    "G3_target": "C1",
+    "G4_target": "C3",
+    "DVT_target": "C4",
+    "PVT_target": "C5"
   }
 }

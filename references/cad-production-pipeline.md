@@ -6,10 +6,10 @@
 
 ## 工具能力与成熟度上限
 
-- mesh：最高CAD-L0；
-- faceted_brep：最高CAD-L1；
-- native_brep：在证据完整时最高CAD-L4；
-- provider_native_cad + 工程/供应商/实体证据：可进入CAD-L5。
+- mesh：最高C0；
+- faceted_brep：最高C1；
+- native_brep：在证据完整时最高C7；
+- provider_native_cad + 工程/供应商/实体证据：可进入C7。
 
 工具回退只保持项目推进，不保持成熟度声明。
 

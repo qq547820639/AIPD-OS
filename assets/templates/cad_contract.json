@@ -1,7 +1,7 @@
 {
   "project_id": "PROJECT-ID",
   "contract_id": "CAD-CONTRACT-001",
-  "cad_level": "CAD-L0",
+  "cad_level": "C0",
   "spec_version": "0.1.0",
   "source_facts": [],
   "required_artifacts": ["source", "step", "inspection_report", "snapshot"],

@@ -3,7 +3,7 @@
   "owner_goal": "Define the actual user result, not a file list",
   "golden_references": [],
   "communication_target": {"manual_visual_score_min": 8.0, "owner_validation_required": true},
-  "engineering_target": {"cad_level": "CAD-L3", "native_brep_required": true},
+  "engineering_target": {"cad_level": "C3", "native_brep_required": true},
   "prototype_target": {"human_use_authorized": false},
-  "forbidden_claims": ["production ready without CAD-L5 and PVT", "wearable without fit and risk validation"]
+  "forbidden_claims": ["production ready without C7 and PVT", "wearable without fit and risk validation"]
 }

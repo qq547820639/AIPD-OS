@@ -1,44 +1,43 @@
 {
   "runtime": "faceted_brep",
-  "runtime_max_level": "CAD-L1",
-  "reached_level": "CAD-L1",
-  "target_level": "CAD-L3",
+  "runtime_ceiling": "C1",
+  "faceted_brep_capped": true,
+  "reached_level": "C1",
+  "target_level": "C7",
   "target_passed": false,
   "level_checks": {
-    "CAD-L0": {
+    "C0": {
       "passed": true,
       "checks": {
+        "design_intent": true,
         "coordinate_system": true,
-        "human_environment_envelopes": true,
         "overall_dimensions": true
       },
       "runtime_allowed": true
     },
-    "CAD-L1": {
+    "C1": {
       "passed": true,
       "checks": {
+        "design_intent": true,
         "coordinate_system": true,
-        "human_environment_envelopes": true,
         "overall_dimensions": true,
-        "architecture_layout": true,
-        "load_path_concept": true,
-        "interface_placeholders": true
+        "faceted_brep_mesh": true,
+        "step_assemblies": true
       },
       "runtime_allowed": true
     },
-    "CAD-L2": {
+    "C2": {
       "passed": false,
       "checks": {
+        "design_intent": true,
         "coordinate_system": true,
-        "human_environment_envelopes": true,
         "overall_dimensions": true,
-        "architecture_layout": true,
-        "load_path_concept": true,
-        "interface_placeholders": true,
+        "faceted_brep_mesh": true,
+        "step_assemblies": true,
         "native_parametric_brep": false,
         "editable_feature_tree": false,
         "real_part_features": false,
-        "material_process_intent": true
+        "step_parts": false
       },
       "runtime_allowed": false
     }

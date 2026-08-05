@@ -21,7 +21,7 @@ def main()->int:
  artifact_complete=all(exists(root,x) for x in artifacts)
  digital_thread_complete=artifact_complete and exists(root,'state/project_checkpoint.json') and exists(root,'cad/model.step') and exists(root,'cad/inspection_report.json') and exists(root,'manufacturing/bom.xlsx')
  communication_accepted=bool(digital_thread_complete and contract is not None and manual and manual.get('golden_reference_compared') and manual.get('owner_or_independent_visual_acceptance') and manual.get('score',0)>=manual.get('threshold',8.0))
- engineering_model_ready=bool(cad and cad.get('target_passed') and cad.get('reached_level') in ['CAD-L3','CAD-L4','CAD-L5'])
+ engineering_model_ready=bool(cad and cad.get('target_passed') and cad.get('reached_level') in ['C3','C4','C5','C6','C7'])
  prototype_build_ready=bool(cad and cad.get('claims',{}).get('prototype_build_ready'))
  production_release_ready=bool(cad and cad.get('claims',{}).get('production_release_ready') and exists(root,'release/production_approval.json'))
  states={'artifact':artifact_complete,'communication':communication_accepted,'engineering':engineering_model_ready,'prototype':prototype_build_ready,'production':production_release_ready}

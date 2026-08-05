@@ -5,6 +5,13 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    import aipd_os  # noqa: F401
+except ImportError:
+    # 独立运行脚本时，若包未 pip 安装，则将仓库 src/ 加入 sys.path
+    _src = Path(__file__).resolve().parent.parent / 'src'
+    if str(_src) not in sys.path:
+        sys.path.insert(0, str(_src))
 PHASES=['S0_intake','S1_theory','S2_product_definition','S3_manual','S4_engineering_baseline','S5_cad','S6_industrialization','S7_validation','S8_release']
 WORK_STATUSES={'queued','ready','running','blocked_external','blocked_decision','internal_rework','complete','cancelled'}
 SCHEMA=r"""
@@ -36,6 +43,11 @@ CREATE TABLE IF NOT EXISTS supervisor_lineage(
 CREATE TABLE IF NOT EXISTS supervisor_claims(
  claim_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, claim TEXT NOT NULL, allowed INTEGER NOT NULL,
  evidence_json TEXT NOT NULL DEFAULT '[]', reason TEXT, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS decisions(
+ decision_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, topic TEXT NOT NULL,
+ trigger TEXT, recommendation TEXT, options_json TEXT NOT NULL DEFAULT '[]',
+ status TEXT NOT NULL DEFAULT 'proposed', choice TEXT, comment TEXT,
+ created_at TEXT NOT NULL, resolved_at TEXT);
 """
 def now(): return datetime.now(timezone.utc).isoformat()
 def jd(v): return json.dumps(v,ensure_ascii=False,sort_keys=True)
@@ -117,6 +129,75 @@ class Supervisor:
    caps=[dict(r) for r in c.execute('SELECT * FROM supervisor_capabilities ORDER BY checked_at DESC')]
    running=[dict(r) for r in c.execute("SELECT work_id,phase,module,title,status FROM supervisor_work_items WHERE status IN ('running','blocked_decision','blocked_external')")]
   return {'work_counts':counts,'phases':phases,'capabilities':caps,'active_or_blocked':running}
+ def _set_status(self,wid,status,decision_id=None):
+  with self.connect() as c:
+   if decision_id:
+    c.execute('UPDATE supervisor_work_items SET status=?,decision_id=?,updated_at=? WHERE work_id=?',(status,decision_id,now(),wid))
+   else:
+    c.execute('UPDATE supervisor_work_items SET status=?,updated_at=? WHERE work_id=?',(status,now(),wid))
+ def _persist_decision(self,wid,pkg):
+  pid=self.project_id(); ts=now()
+  with self.connect() as c:
+   c.execute('INSERT INTO decisions(decision_id,project_id,topic,trigger,recommendation,options_json,status,created_at) VALUES(?,?,?,?,?,?,?,?)',
+    (pkg['decision_id'],pid,pkg['decision']['topic'],pkg['decision']['category'],pkg['recommendation'],jd(pkg['options']),'proposed',ts))
+ def _register_outputs(self,wid,capability_floor,out):
+  try: self.register_capability(capability_floor,'available',provider=out['record'].provider)
+  except Exception: pass
+  self.add_lineage('work_item',wid,'run',out['record'].run_id,'executed_via')
+ def run_supervisor(self,steps=1,adapter_registry=None,router=None,decision_policy=None):
+  """驱动监督器执行：直到需要决策或工作耗尽。
+  返回每个步骤的结果列表（complete / internal_rework / blocked_external / decision）。
+  """
+  from aipd_os.logging_utils import get_logger, log_event
+  logger=get_logger('aipd.supervisor')
+  from aipd_os.execution.decision_policy import build_decision_package, should_ask_decision
+  from aipd_os.execution.execution_router import ExecutionRouter
+  from aipd_os.execution.runs import RunStore
+  from aipd_os.tool_adapters.builtin import build_registry
+  if adapter_registry is None: adapter_registry=build_registry()
+  if router is None:
+   _store=RunStore(str(self.path.parent/'execution_runs.db'))
+   router=ExecutionRouter(_store,adapter_registry,get_logger('aipd.router'))
+  if decision_policy is None: decision_policy=should_ask_decision
+  results=[]
+  for _ in range(steps):
+   item=self.next_work()
+   if item is None:
+    log_event(logger,'supervisor_no_work'); break
+   wid=item['work_id']
+   inputs=json.loads(item['inputs_json'])
+   capability_floor=item.get('capability_floor') or inputs.get('capability_floor')
+   log_event(logger,'supervisor_step_started',work_id=wid,phase=item.get('phase'),module=item.get('module'),capability_floor=capability_floor)
+   if item.get('owner_required') or decision_policy(item,inputs):
+    pkg=build_decision_package(item,options=item.get('options') or inputs.get('options'))
+    self._persist_decision(wid,pkg); self._set_status(wid,'blocked_decision',pkg['decision_id'])
+    log_event(logger,'supervisor_decision_required',work_id=wid,decision_id=pkg['decision_id'])
+    results.append({'work_id':wid,'action':'decision','decision':pkg}); continue
+   if not capability_floor or adapter_registry.get(capability_floor) is None:
+    reason='no capability_floor assigned' if not capability_floor else f'no adapter registered for {capability_floor}'
+    self.fail(wid,reason,external=False,retry=True)
+    log_event(logger,'supervisor_no_adapter',work_id=wid,reason=reason)
+    results.append({'work_id':wid,'action':'internal_rework','reason':reason}); continue
+   try:
+    out=router.run(wid,capability_floor,inputs,context={'work_id':wid})
+    record=out['record']
+    if record.status in ('succeeded','fallback'):
+     self.complete(wid,outputs=out['result']); self._register_outputs(wid,capability_floor,out)
+     log_event(logger,'supervisor_work_complete',work_id=wid,status=record.status,run_id=record.run_id)
+     results.append({'work_id':wid,'action':'complete','status':record.status,'record':record.to_dict()})
+    elif record.status=='blocked_external':
+     self.fail(wid,record.error_message or 'external capability unavailable',external=True,retry=False)
+     log_event(logger,'supervisor_work_blocked_external',work_id=wid,run_id=record.run_id)
+     results.append({'work_id':wid,'action':'blocked_external','record':record.to_dict()})
+    else:
+     self.fail(wid,record.error_message or 'execution failed',external=False,retry=True)
+     log_event(logger,'supervisor_work_failed',work_id=wid,status=record.status,run_id=record.run_id)
+     results.append({'work_id':wid,'action':'internal_rework','status':record.status,'record':record.to_dict()})
+   except Exception as exc:
+    self.fail(wid,str(exc),external=False,retry=True)
+    log_event(logger,'supervisor_work_error',work_id=wid,error=str(exc))
+    results.append({'work_id':wid,'action':'internal_rework','error':str(exc)})
+  return results
 
 def parser():
  p=argparse.ArgumentParser(); p.add_argument('--db',required=True); sub=p.add_subparsers(dest='cmd',required=True)
@@ -127,6 +208,7 @@ def parser():
  s=sub.add_parser('fail'); s.add_argument('--work-id',required=True); s.add_argument('--reason',required=True); s.add_argument('--external',action='store_true'); s.add_argument('--no-retry',action='store_true')
  s=sub.add_parser('register-capability'); s.add_argument('--name',required=True); s.add_argument('--status',required=True); s.add_argument('--provider'); s.add_argument('--maturity-ceiling'); s.add_argument('--metadata-json',default='{}')
  s=sub.add_parser('lineage'); s.add_argument('--upstream-type',required=True); s.add_argument('--upstream-id',required=True); s.add_argument('--downstream-type',required=True); s.add_argument('--downstream-id',required=True); s.add_argument('--relation',default='derives'); s.add_argument('--version')
+ s=sub.add_parser('run'); s.add_argument('--steps',type=int,default=1)
  sub.add_parser('status')
  return p
 
@@ -139,6 +221,7 @@ def main():
  elif a.cmd=='fail': s.fail(a.work_id,a.reason,a.external,not a.no_retry); out={'ok':True}
  elif a.cmd=='register-capability': out={'capability_id':s.register_capability(a.name,a.status,a.provider,a.maturity_ceiling,json.loads(a.metadata_json))}
  elif a.cmd=='lineage': s.add_lineage(a.upstream_type,a.upstream_id,a.downstream_type,a.downstream_id,a.relation,a.version); out={'ok':True}
+ elif a.cmd=='run': out={'results':s.run_supervisor(a.steps)}
  elif a.cmd=='status': out=s.status()
  print(json.dumps(out,ensure_ascii=False,indent=2)); return 0
 if __name__=='__main__': sys.exit(main())

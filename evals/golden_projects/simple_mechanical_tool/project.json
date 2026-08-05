@@ -1,0 +1,9 @@
+{
+  "id": "simple_mechanical_tool",
+  "name": "手动扭矩扳手",
+  "goal": "交付一把手动扭矩扳手的操作手册",
+  "brief": "手动扭矩扳手用于精确紧固螺栓，需说明扭矩设定与维护。",
+  "facts": {"params": {"range": 20, "min_torque": 5, "max_torque": 100, "accuracy": 3, "length": 400}},
+  "minimum_pages": 4,
+  "expected": ["manual_pages_produced", "batch_continuity_holds", "no_fabricated_external_evidence", "pdf_zip_produced"]
+}

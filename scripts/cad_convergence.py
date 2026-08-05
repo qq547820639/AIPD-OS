@@ -212,7 +212,7 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
 
 def selftest() -> None:
     contract = {
-        "project_id": "T", "contract_id": "C", "cad_level": "CAD-L1", "spec_version": "1",
+        "project_id": "T", "contract_id": "C", "cad_level": "C1", "spec_version": "1",
         "required_artifacts": ["source", "step", "inspection_report", "snapshot"],
         "hard_constraints": [{"id": "HC-1", "description": "valid", "evidence_required": True}],
         "soft_objectives": [{"id": "SO-1", "metric": "mass", "direction": "min", "target": 10, "limit": 20, "weight": 1}],

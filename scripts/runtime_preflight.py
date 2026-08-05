@@ -29,7 +29,7 @@ def main():
  architecture={f:(root/f).is_file() for f in architecture_files}; codex=command_version('codex')
  plugin=inspect_plugin([a.cad_skill_dir,Path.cwd()/'.agents/skills/cad',Path.home()/'.agents/skills/cad',Path.home()/'.codex/plugins/text-to-cad/skills/cad'])
  local_brep={'available':has_module('build123d') and has_module('OCP'),'modules':{'build123d':has_module('build123d'),'OCP':has_module('OCP')}}
- local_faceted={'available':all(has_module(m) for m in ('trimesh','numpy','matplotlib')),'modules':{m:has_module(m) for m in ('trimesh','numpy','matplotlib')},'max_release_level':'CAD-L3 internal digital prototype'}
+ local_faceted={'available':all(has_module(m) for m in ('trimesh','numpy','matplotlib')),'modules':{m:has_module(m) for m in ('trimesh','numpy','matplotlib')},'max_release_level':'C1 internal digital prototype'}
  modes=[]
  if plugin['detected']:modes.append('provider_cad_skill')
  if local_brep['available']:modes.append('local_native_brep')
