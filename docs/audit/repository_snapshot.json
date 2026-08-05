@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-06T04:45:18",
+  "generated_at": "2026-08-06T05:03:44",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
   "latest_commit_sha": "67fb368bdc56afc4e489f12dd8aaf80893b8490c",
@@ -85,58 +85,34 @@
   },
   "release_manifest_verification": {
     "present": true,
-    "version": "5.1.0",
+    "version": "5.2.0",
     "parsed": true,
-    "total_files": 211,
-    "hash_matches": 205,
-    "hash_mismatch_count": 6,
-    "mismatches": [
-      {
-        "path": "docs/audit/audit.json",
-        "reason": "hash_mismatch",
-        "expected": "7ef3078b441f295dd57c926e2979076b0af205528d3c499db4fe58f2b16e1604",
-        "actual": "f8ddbbdab93387ee3f907a78700da6fa456c1236ffe417baa44b38046a87758c"
-      },
-      {
-        "path": "docs/audit/v5.1-version-truth-audit.json",
-        "reason": "hash_mismatch",
-        "expected": "ff761617e46de3f8f3c0b660417f3cf57accb117abc420df565fc11aed0c3737",
-        "actual": "837321ad459c6264b4447b0e1672d8a1ac2d9ee921c73f4f6f14e621f263217e"
-      },
-      {
-        "path": "docs/audit/v5.1-version-truth-audit.md",
-        "reason": "hash_mismatch",
-        "expected": "585950f225c5192b1fc3ac32b10031715a5bd93fc19d9410efef6eb645a1bf9d",
-        "actual": "a07f37b6f7b5fbecc2a7a95f5507153e058806f65d1f348b66c11ca10bc5c197"
-      },
-      {
-        "path": "src/aipd_os.egg-info/PKG-INFO",
-        "reason": "hash_mismatch",
-        "expected": "885334ad08a84af0c7b222dc9d0eaa807b8447267ae065a7082b5bea3edc2fed",
-        "actual": "b01f9c98a065ad8b51ff38ed393c8c360ee38889778ea936a2cb6c95f3bed7ec"
-      },
-      {
-        "path": "src/aipd_os.egg-info/SOURCES.txt",
-        "reason": "hash_mismatch",
-        "expected": "8de8008078370330737232c98de0bc25ae71728c740a185b205cd13095fbb66d",
-        "actual": "92826a41599889057a1c75420fb2a7c61c7ce997a26fcf00a2e7be953086b67f"
-      },
-      {
-        "path": "src/aipd_os/evals_runner/completion.py",
-        "reason": "hash_mismatch",
-        "expected": "e42c2598763624c8031dc0548e7536e6a6c5f4577d13e1649eabca051bce72e9",
-        "actual": "70b5fa2d24ac51877eb590e4bf93d667d6a8345a503db997ed87f9284e616c39"
-      }
-    ]
+    "total_files": 277,
+    "hash_matches": 277,
+    "hash_mismatch_count": 0,
+    "mismatches": []
   },
   "untracked_or_generated": [
     " M .github/workflows/ci.yml",
+    " M CHANGELOG.md",
+    " M QUICKSTART.md",
+    " M README.md",
+    " M RELEASE_MANIFEST.json",
+    " M docs/audit/audit.json",
+    " M docs/audit/v5.1-version-truth-audit.json",
+    " M docs/audit/v5.1-version-truth-audit.md",
     " M pyproject.toml",
+    " M src/aipd_os/__init__.py",
+    " M src/aipd_os/cli/commands.py",
+    " M src/aipd_os/cli/main.py",
     " M src/aipd_os/evals_runner/completion.py",
+    " M tests/test_cli.py",
+    " M tests/test_packaging.py",
     "?? .trae/specs/v5.2-capability-matrix-truth-edition/",
     "?? docs/audit/capability_matrix.json",
     "?? docs/audit/capability_matrix.md",
     "?? docs/audit/repository_snapshot.json",
+    "?? releases/5.2.0/",
     "?? scripts/capability_matrix.py",
     "?? tests/test_capability_matrix.py",
     "?? tests/test_completion_endpoint.py",

@@ -883,6 +883,17 @@ def cmd_validate(args):
     return rc
 
 
+# ---- audit：生成能力矩阵审计产物（repository_snapshot / capability_matrix）----
+def cmd_audit(args):
+    repo = Path(args.repo) if args.repo else _repo_root()
+    out = Path(args.out)
+    mod = _import_module("capability_matrix")
+    summary = mod.generate(str(repo), str(out))
+    result = {"command": "audit", "ok": True, **summary}
+    _emit(args, result, lambda: print(json.dumps(summary, ensure_ascii=False, indent=2)))
+    return 0
+
+
 # ---- release check：版本真实性审计 + 生产发布门禁 + 通过性报告 ----
 def cmd_release_check(args):
     repo = Path(args.repo) if args.repo else _repo_root()
@@ -967,6 +978,7 @@ COMMAND_FUNCS: Dict[str, Any] = {
     "cad build": cmd_cad_build,
     "industrialize": cmd_industrialize,
     "validate": cmd_validate,
+    "audit": cmd_audit,
     "release check": cmd_release_check,
     "test": cmd_test,
     "eval": cmd_eval,

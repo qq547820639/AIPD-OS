@@ -1,6 +1,12 @@
-# AIPD Orchestrator v5.1.0
+# AIPD Orchestrator v5.2.0
 
 AI全链路产品开发与交付主管：一个对话入口，自主推进理论基础、产品定义、连续附件产品手册、工程CAD、工业化、供应链、EVT/DVT/PVT和生产发布。
+
+## v5.2新增
+
+- **能力矩阵审计产物**：`aipd audit --repo . --out docs/audit` 生成 `repository_snapshot.json` / `capability_matrix.json` / `capability_matrix.md`，对六大域全部能力按 7 类（fully_implemented / partially_implemented / protocol_only / template_only / external_dependency / not_implemented / not_verifiable）分类并给出证据字段；
+- **真实/可插拔模型评测**：`EnvCompletionProvider` 接入 OpenAI 兼容 HTTP 端点（`AIPD_EVAL_MODEL_ENDPOINT/KEY/VERSION`）真实调用；未配置时诚实标记 `external_dependency`，绝不返回伪造输出；
+- **干净环境安装修复**：`mcp` 移出 `[full]` 至独立 `server-mcp` extra，Python 3.9 下 `pip install -e ".[full,dev]"` 可成功；CI 安装完整依赖。
 
 ## v5.1新增
 

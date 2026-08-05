@@ -21,7 +21,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install -e ".[dev]"
+          pip install -e ".[full,dev]"
       - name: Run unit tests
         run: python -m pytest tests/ -m "not integration" -q
 
@@ -36,7 +36,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install -e ".[dev]"
+          pip install -e ".[full,dev]"
       - name: Run integration tests
         run: python -m pytest tests/ -m integration -q
 
@@ -147,5 +147,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Run repo audit
         run: python scripts/audit_repo.py --json-out docs/audit/audit.json
+      - name: Generate capability matrix audit deliverables
+        run: python scripts/capability_matrix.py --repo . --out docs/audit
       - name: Run audit tests
-        run: python -m pytest tests/test_audit_repo.py -q
+        run: python -m pytest tests/test_audit_repo.py tests/test_capability_matrix.py -q

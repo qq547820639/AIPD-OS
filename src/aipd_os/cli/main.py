@@ -201,6 +201,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["validate"])
 
+    p = sub.add_parser("audit", help="生成能力矩阵审计产物（repository_snapshot / capability_matrix）。"
+                                     " Example: aipd audit --repo . --out docs/audit")
+    p.add_argument("--repo")
+    p.add_argument("--out", default="docs/audit")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["audit"])
+
     # release（两级）：release check
     p_release = sub.add_parser("release", help="发布管理（check 就绪检查）。"
                                                " Example: aipd release check --target C7 --repo .")

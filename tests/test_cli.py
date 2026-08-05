@@ -362,11 +362,24 @@ def test_release_check_missing_manifest_errors(tmp_path, capsys):
     assert "error" in data
 
 
+def test_audit_generates_three_deliverables(tmp_path, capsys):
+    out = tmp_path / "audit"
+    rc = cli_main.main(["audit", "--repo", str(ROOT), "--out", str(out), "--json"])
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert data["ok"] is True
+    assert data["command"] == "audit"
+    for name in ("repository_snapshot.json", "capability_matrix.json", "capability_matrix.md"):
+        assert (out / name).exists(), f"缺少 {name}"
+    assert data["total_capabilities"] > 0
+    assert "by_classification" in data
+
+
 def test_new_commands_registered():
     from aipd_os.cli.commands import PLANNED_COMMANDS
     for name in ["init", "intake", "resume", "status", "decide",
                  "manual plan", "manual generate", "cad preflight", "cad build",
-                 "industrialize", "validate", "release check",
+                 "industrialize", "validate", "audit", "release check",
                  "test", "eval", "package"]:
         assert name in PLANNED_COMMANDS, f"{name} 未登记"
 

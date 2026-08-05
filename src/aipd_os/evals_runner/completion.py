@@ -2,7 +2,8 @@
 
 - :class:`CompletionProvider`：接口基类（``complete`` / ``model``）。
 - :class:`RecordedCompletionProvider`：按 system 消息中的 case_id 返回脚本化文本并记录历史。
-- :class:`EnvCompletionProvider`：从环境变量读取真实模型端点；未配置时抛
+- :class:`EnvCompletionProvider`：从环境变量读取真实模型端点（OpenAI 兼容），
+  真实调用 HTTP API 并返回文本；未配置端点/密钥时抛
   :class:`ModelNotConfiguredError`（诚实标记外部依赖，而非假装生成）。
 """
 
@@ -13,6 +14,9 @@ import re
 from typing import Any, Dict, List, Optional
 
 _CASE_TAG = re.compile(r"\[eval case:\s*([^\]]+)\]")
+
+# 请求体默认模型名（可被 AIPD_EVAL_MODEL_VERSION 覆盖）。
+_DEFAULT_MODEL = "gpt-4o-mini"
 
 
 class ModelNotConfiguredError(RuntimeError):
@@ -54,30 +58,74 @@ class RecordedCompletionProvider(CompletionProvider):
 
 
 class EnvCompletionProvider(CompletionProvider):
-    """真实模型提供器：从环境变量读取端点与密钥，未配置则诚实抛错。"""
+    """真实模型提供器：从环境变量读取 OpenAI 兼容端点并真实调用。
+
+    未配置端点/密钥时抛 :class:`ModelNotConfiguredError`（外部依赖，绝不伪造）。
+
+    环境变量：
+    - ``AIPD_EVAL_MODEL_ENDPOINT``：OpenAI 兼容 ``/chat/completions`` 端点 URL。
+    - ``AIPD_EVAL_MODEL_KEY``：Bearer API 密钥。
+    - ``AIPD_EVAL_MODEL_VERSION``：模型名（可选，默认 ``gpt-4o-mini``）。
+    """
 
     def __init__(
         self,
         endpoint_env: str = "AIPD_EVAL_MODEL_ENDPOINT",
         key_env: str = "AIPD_EVAL_MODEL_KEY",
         model_version_env: str = "AIPD_EVAL_MODEL_VERSION",
+        timeout: float = 60.0,
     ) -> None:
         self.endpoint_env = endpoint_env
         self.key_env = key_env
-        self._model_version = os.environ.get(model_version_env, "env-model")
+        self.model_version_env = model_version_env
+        self.timeout = timeout
+        self._model_version = os.environ.get(model_version_env, "") or _DEFAULT_MODEL
+        self._endpoint = os.environ.get(endpoint_env, "")
+        self._key = os.environ.get(key_env, "")
 
     def model(self) -> str:
         return self._model_version
 
     def complete(self, messages: List[Dict[str, Any]]) -> str:
-        endpoint = os.environ.get(self.endpoint_env)
-        key = os.environ.get(self.key_env)
-        if not endpoint or not key:
+        if not self._endpoint or not self._key:
             raise ModelNotConfiguredError(
-                f"{self.endpoint_env}/{self.key_env} 未配置，无法调用真实模型"
+                f"{self.endpoint_env}/{self.key_env} 未配置，无法真实调用模型；"
+                "用例应诚实标记为 external_dependency，不得伪造输出。"
             )
-        # 具体端点 SDK 未接入，诚实拒绝假装调用。
-        raise RuntimeError("EnvCompletionProvider: 未接入具体模型端点 SDK")
+        try:
+            import requests  # 延迟导入：仅真实端点路径需要
+        except ImportError as exc:  # pragma: no cover - 依赖缺失时诚实报外部依赖
+            raise ModelNotConfiguredError(
+                "缺少 requests 依赖，无法真实调用模型端点"
+            ) from exc
+
+        payload: Dict[str, Any] = {
+            "model": self._model_version,
+            "messages": messages,
+            "temperature": 0.2,
+        }
+        headers = {
+            "Authorization": f"Bearer {self._key}",
+            "Content-Type": "application/json",
+        }
+        try:
+            resp = requests.post(
+                self._endpoint,
+                json=payload,
+                headers=headers,
+                timeout=self.timeout,
+            )
+        except requests.RequestException as exc:
+            raise RuntimeError(f"调用模型端点失败: {exc}") from exc
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"模型端点返回 HTTP {resp.status_code}: {resp.text[:500]}"
+            )
+        try:
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise RuntimeError(f"无法解析模型端点响应: {exc}") from exc
 
 
 __all__ = [

@@ -84,7 +84,8 @@ aipd status --db state.db --project p1                              # 所有者�
 aipd run --db state.db --project p1 --until-decision                 # 运行到真实决策
 aipd industrialize --db state.db --quote quotes.csv --stage dv       # 供应链 + 验证
 aipd release check --target C7 --repo .                             # 发布就绪检查
-aipd package --version 5.1.0 --no-tests                              # 构建发布包
+aipd package --version 5.2.0 --no-tests                              # 构建发布包
+aipd audit --repo . --out docs/audit                                 # 生成能力矩阵审计产物
 ```
 
 ## 更多
