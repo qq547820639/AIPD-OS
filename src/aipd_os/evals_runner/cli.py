@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional
 
+from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.evals_runner.completion import EnvCompletionProvider
 from aipd_os.evals_runner.registry import load_cases
 from aipd_os.evals_runner.runner import EvalRunner, build_report
@@ -73,7 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--evals", required=True, help="evals/evals.json 路径")
     p.add_argument("--provider", choices=["fake", "model"], default="fake")
     p.add_argument("--out", required=True, help="报告输出目录")
-    p.add_argument("--version", default="5.0.0", help="评估版本号")
+    p.add_argument("--version", default=_PKG_VERSION, help="评估版本号")
     p.add_argument("--threshold", type=float, default=0.1, help="允许的最大分数下降")
     p.add_argument("--baseline", default=None, help="基线目录（用于回归门禁）")
     p.set_defaults(func=cmd_run)

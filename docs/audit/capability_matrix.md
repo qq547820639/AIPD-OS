@@ -1,17 +1,17 @@
 # AIPD-OS 能力矩阵（v5.2 真实性核验版）
 
-- 生成时间：`2026-08-06T05:45:59`
+- 生成时间：`2026-08-06T07:38:43`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`9cfec246f0966b9efba669dcb0b88edad4223a52`
-- 版本：`5.3.0`
+- 默认分支：`main`；HEAD：`651dfbc76fc4b5cd3abea07a90740cedf3d0ca76`
+- 版本：`5.4.0`
 - 能力总数：`70`
 
 ## 分类统计
 
 | 分类 | 数量 | 说明 |
 | --- | --- | --- |
-| `fully_implemented` | 52 | 完整实现（有真实运行工件与测试证据） |
-| `partially_implemented` | 7 | 部分实现（核心路径可用，边界/证据不全） |
+| `fully_implemented` | 44 | 完整实现（有真实运行工件与测试证据） |
+| `partially_implemented` | 15 | 部分实现（核心路径可用，边界/证据不全） |
 | `protocol_only` | 0 | 仅协议/接口（无真实执行） |
 | `template_only` | 0 | 仅模板/示例（无真实执行） |
 | `external_dependency` | 11 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
@@ -25,13 +25,13 @@
 | 一句话创建项目 | `fully_implemented` | README.md / SKILL.md | src/aipd_os/cli/commands.py; scripts/aipd_supervisor.py | cmd_intake / Supervisor.run_supervisor | `aipd intake --prompt "<一句话需求>"` | tests/test_cli.py::cmd_intake | 拆分规模受默认工作包模板约束 |
 | 自动拆分工作包 | `fully_implemented` | references/work-queue-and-routing.md | scripts/aipd_supervisor.py | Supervisor.plan / Supervisor.run_supervisor | `aipd run --project <id>` | tests/test_supervisor_execution.py |  |
 | 依赖排序 | `fully_implemented` | references/work-queue-and-routing.md | scripts/aipd_supervisor.py | Supervisor._next_work | `aipd run --project <id>` | tests/test_supervisor_execution.py |  |
-| 真实工具调用 | `fully_implemented` | references/capability-floor-policy.md | src/aipd_os/execution/execution_router.py; tool_adapters/* | ExecutionRouter.execute | `aipd run --project <id>` | tests/test_execution_router.py; tests/test_adapters.py |  |
+| 真实工具调用 | `fully_implemented` | references/capability-floor-policy.md | src/aipd_os/execution/execution_router.py; tool_adapters/* | ExecutionRouter.execute | `aipd run --project <id>` | tests/test_execution_router.py; tests/test_adapters.py | 主循环真实调用工具，但 research/imggen/cad 等外部适配器在无后端时诚实返回 simulated/external 占位，不真实执行 |
 | 重试 | `fully_implemented` | references/supervisor-operating-model.md | src/aipd_os/execution/execution_router.py | ExecutionRouter._bounded_retry | `aipd run --project <id>` | tests/test_execution_router.py | 重试次数为固定有界值 |
 | 工具回退 | `fully_implemented` | references/capability-floor-policy.md | src/aipd_os/execution/execution_router.py | ExecutionRouter._fallback | `aipd run --project <id>` | tests/test_execution_router.py |  |
 | 工件登记 | `fully_implemented` | references/deliverable-contracts.md | src/aipd_os/execution/runs.py | ExecutionRouter.collect_artifacts | `aipd run --project <id>` | tests/test_execution_router.py |  |
-| 事实写回 | `fully_implemented` | references/state-model.md | scripts/aipd_supervisor.py | Supervisor._update_facts | `aipd run --project <id>` | tests/test_supervisor_execution.py |  |
-| stale传播 | `fully_implemented` | references/supervisor-operating-model.md | scripts/aipd_supervisor.py | Supervisor._mark_stale | `aipd run --project <id>` | tests/test_supervisor_execution.py |  |
-| 自动返工 | `fully_implemented` | references/supervisor-operating-model.md | scripts/aipd_supervisor.py | Supervisor._rework | `aipd run --project <id>` | tests/test_supervisor_execution.py |  |
+| 事实写回 | `partially_implemented` | references/state-model.md | scripts/aipd_supervisor.py | Supervisor._update_facts | `aipd run --project <id>` | tests/test_supervisor_execution.py | 全库无独立 product_truth/facts 表；主管的 update_facts 仅写 steps_log 字符串标签，未回写结构化事实表 |
+| stale传播 | `partially_implemented` | references/supervisor-operating-model.md | scripts/aipd_supervisor.py | Supervisor._mark_stale | `aipd run --project <id>` | tests/test_supervisor_execution.py | 仅写 invalidates 血缘标记，不重建/不重排下游工件 |
+| 自动返工 | `partially_implemented` | references/supervisor-operating-model.md | scripts/aipd_supervisor.py | Supervisor._rework | `aipd run --project <id>` | tests/test_supervisor_execution.py | 复用旧工作项重试，不新建独立返工项，且无返工次数上限 |
 | 只在必要决策时暂停 | `fully_implemented` | references/decision-policy.md | scripts/aipd_supervisor.py | Supervisor.run_supervisor / aipd run --until-decision | `aipd run --project <id> --until-decision` | tests/test_execution_router.py; tests/test_decision_policy.py |  |
 
 ## 理论研究
@@ -40,9 +40,9 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 附件读取 | `fully_implemented` | references/research-integration.md | scripts/research/_env.py; src/aipd_os/execution/adapter.py | research.source_worker | `python scripts/research/source_worker.py` | scripts/research/selftest_postprocess.py |  |
 | 多源论文检索 | `fully_implemented` | references/research-integration.md | scripts/research/search_papers_by_{arxiv,crossref,dblp,open_alex,openreview,semantic_scholar}.py | search_papers.py | `python scripts/research/search_papers.py --query "..."` | scripts/research/selftest_runtime.py | 需网络/外部源可用 |
-| 全文获取 | `partially_implemented` | references/research-integration.md | scripts/research/_http_runtime.py; source_worker.py | source_worker.fetch | `python scripts/research/source_worker.py` | scripts/research/selftest_runtime.py | 受限于源开放性与反爬限制 |
+| 全文获取 | `partially_implemented` | references/research-integration.md | scripts/research/_http_runtime.py; source_worker.py | source_worker.fetch | `python scripts/research/source_worker.py` | scripts/research/selftest_runtime.py | 各连接器当前仅取摘要，未实现全文获取与全文/摘要区分 |
 | 去重排序 | `fully_implemented` | references/research-integration.md | scripts/research/postprocess.py | postprocess.run | `python scripts/research/postprocess.py` | scripts/research/selftest_postprocess.py |  |
-| 引用 | `fully_implemented` | references/research-integration.md | scripts/research/postprocess.py | postprocess.attach_citation | `python scripts/research/postprocess.py` | scripts/research/selftest_postprocess.py |  |
+| 引用 | `partially_implemented` | references/research-integration.md | scripts/research/postprocess.py | postprocess.attach_citation | `python scripts/research/postprocess.py` | scripts/research/selftest_postprocess.py | 仅后处理附加引用标识，无独立引用生成/引文格式管线 |
 | 标准法规 | `external_dependency` | references/research-integration.md |  |  | `` |  | 依赖外部法规库/专业数据源，未接入时诚实等待 |
 | 专利和竞品 | `external_dependency` | references/research-integration.md |  |  | `` |  | 依赖外部专利/竞品数据源，未接入时诚实等待 |
 | 证据可信度 | `partially_implemented` | references/evidence-policy.md | src/aipd_os/research/credibility.py | credibility.score_evidence | `python scripts/claim_gate.py` | tests/test_credibility.py | 可信度分级为确定性启发式，仍需真实模型/外部核验提升精度 |
@@ -55,17 +55,17 @@
 | 理论基础进入规划 | `fully_implemented` | references/manual-chain-workflow.md | scripts/manual_chain.py | manual_chain.cmd_plan_batches | `aipd manual plan` | tests/test_manual_chain_e2e.py |  |
 | 先规划，不直接生成全册 | `fully_implemented` | references/manual-chain-workflow.md | scripts/manual_chain.py | cmd_plan_batches / cmd_run_batch | `aipd manual plan && aipd manual generate` | tests/test_manual_chain_e2e.py |  |
 | 锚点页 | `fully_implemented` | references/manual-chain-workflow.md | scripts/manual_chain.py | cmd_run_batch(anchors=...) | `aipd manual generate --anchors ...` | tests/test_manual_chain_e2e.py |  |
-| 前批页面作为后批附件 | `fully_implemented` | references/manual-chain-workflow.md | scripts/manual_chain.py | cmd_run_batch(prior_batch=...) | `aipd manual generate --prior-batch <id>` | tests/test_manual_chain_e2e.py |  |
+| 前批页面作为后批附件 | `partially_implemented` | references/manual-chain-workflow.md | scripts/manual_chain.py | cmd_run_batch(prior_batch=...) | `aipd manual generate --prior-batch <id>` | tests/test_manual_chain_e2e.py | 仅收集前批页面路径与 hash 登记入状态，未真实传入图像模型作为附件 |
 | Visual Bible | `fully_implemented` | references/manual-chain-workflow.md | scripts/manual_chain.py | cmd_run_batch(visual_bible=...) | `aipd manual generate --visual-bible ...` | tests/test_manual_chain_e2e.py |  |
 | 人物一致性 | `partially_implemented` | references/manual-quality-system.md | src/aipd_os/visual_audit/auditor.py | auditor.audit_page | `aipd eval / python -m aipd_os.visual_audit.auditor` | tests/test_visual_golden.py | 依赖视觉/图像后端，无后端时走外部任务包 |
 | 产品结构一致性 | `partially_implemented` | references/manual-quality-system.md | src/aipd_os/visual_audit/auditor.py | auditor.audit_page | `aipd eval` | tests/test_visual_golden.py | 依赖视觉后端 |
 | CMF一致性 | `partially_implemented` | references/manual-quality-system.md | src/aipd_os/visual_audit/auditor.py | auditor.audit_page | `aipd eval` | tests/test_visual_golden.py | 依赖视觉后端 |
-| 真实图像生成 | `external_dependency` | references/image-generation-batch-policy.md | src/aipd_os/imggen/adapter.py | imggen.adapter | `aipd manual generate` | tests/test_imggen.py | 依赖外部图像后端 |
+| 真实图像生成 | `external_dependency` | references/image-generation-batch-policy.md | src/aipd_os/imggen/adapter.py | imggen.adapter | `aipd manual generate` | tests/test_imggen.py | imggen 适配器为空壳：即使标 available 也必然抛错，无真实图像模型客户端；未配置后端时向外部任务包诚实降级 |
 | 真实中文排版 | `fully_implemented` | references/product-manual-pipeline.md | src/aipd_os/layout/{composer,renderer}.py | layout.compose_pdf | `aipd manual generate` | tests/test_layout.py |  |
 | 参数表和曲线 | `fully_implemented` | references/product-manual-pipeline.md | src/aipd_os/layout/renderer.py | renderer.render_table/curve | `aipd manual generate` | tests/test_layout.py |  |
-| 失败页局部返工 | `fully_implemented` | references/manual-chain-workflow.md | scripts/manual_chain.py | cmd_run_batch(external_pending/rework) | `aipd manual generate` | tests/test_manual_chain_e2e.py |  |
+| 失败页局部返工 | `partially_implemented` | references/manual-chain-workflow.md | scripts/manual_chain.py | cmd_run_batch(external_pending/rework) | `aipd manual generate` | tests/test_manual_chain_e2e.py | 仅产出失败页重建计划（rebuild_plan），无据此仅重跑单页的执行入口 |
 | PNG、PDF 和 ZIP | `fully_implemented` | references/product-manual-pipeline.md | src/aipd_os/layout/composer.py | layout.build_zip/compose_pdf | `aipd manual generate` | tests/test_layout.py |  |
-| 黄金样本语义审核 | `fully_implemented` | references/benchmark-and-golden-sample-policy.md | src/aipd_os/visual_audit/golden.py | golden.audit | `aipd eval` | tests/test_visual_golden.py | 依赖视觉后端；无后端走外部任务包 |
+| 黄金样本语义审核 | `partially_implemented` | references/benchmark-and-golden-sample-policy.md | src/aipd_os/visual_audit/golden.py | golden.audit | `aipd eval` | tests/test_visual_golden.py | 黄金样本仅元数据清单，真实对照 PNG 不在仓库；依赖视觉后端，无后端走外部任务包 |
 
 ## CAD与生产图纸
 
@@ -108,7 +108,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 项目持久化 | `fully_implemented` | references/state-model.md | src/aipd_os/state/db.py | AIPDStateDB | `aipd init` | tests/test_state_db.py |  |
 | checkpoint | `fully_implemented` | references/state-model.md | src/aipd_os/state/checkpoint.py | checkpoint.save/load | `aipd status` | tests/test_backup_checkpoint.py |  |
-| 新会话自动恢复 | `fully_implemented` | references/state-model.md | src/aipd_os/experience/resume_summary.py | resume_summary.build | `aipd resume` | tests/test_experience.py |  |
+| 新会话自动恢复 | `partially_implemented` | references/state-model.md | src/aipd_os/experience/resume_summary.py | resume_summary.build | `aipd resume` | tests/test_experience.py | aipd resume 仅输出恢复摘要，不自动调用 supervisor 继续执行；manual 附件链不在状态库/备份范围内无法恢复 |
 | 不重复询问 | `fully_implemented` | references/interaction-contract-v4.md | src/aipd_os/experience/resume_summary.py | resume_summary (decisions_to_ask) | `aipd resume` | tests/test_behavior_contracts.py |  |
 | 项目摘要 | `fully_implemented` | references/interaction-contract-v4.md | src/aipd_os/experience/project_summary.py; views.py | OwnerView.owner_update | `aipd status` | tests/test_experience.py |  |
 | 单一决策卡 | `fully_implemented` | references/interaction-contract-v4.md | src/aipd_os/experience/decision_card.py | decision_card.build | `aipd status` | tests/test_experience.py |  |

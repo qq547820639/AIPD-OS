@@ -23,6 +23,7 @@ fails the overall gate. Existing (a)..(h) logic is preserved unchanged.
 """
 from __future__ import annotations
 import argparse, hashlib, json
+import jsonschema
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -134,14 +135,33 @@ def check_requirement(d, root, level, key):
     return errs
 
 
-def _walk(o, fn):
-    if isinstance(o, dict):
-        fn(o)
-        for v in o.values():
-            _walk(v, fn)
-    elif isinstance(o, list):
-        for v in o:
-            _walk(v, fn)
+def _find_cad_contract(d, root):
+    """Locate the CAD contract object to schema-validate, or None if absent.
+
+    Handles the `cad_contract` field being (a) an inline dict (the contract
+    object itself), (b) a ``{"path": ...}`` file reference, or (c) a plain
+    string file path. A missing/unreadable referenced file yields ``{}`` so the
+    schema check fails rather than silently passing.
+    """
+    value = val(d, 'cad_contract')
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        path, _ = resolve_path(value)
+        if path is None:
+            return value  # inline contract object
+    else:
+        path, _ = resolve_path(value)
+        if path is None:
+            return None  # not a dict or file reference
+    p = (root / path).resolve()
+    if not p.is_file():
+        return {}
+    try:
+        loaded = json.loads(p.read_text(encoding='utf-8'))
+    except Exception:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
 
 
 def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_idx,
@@ -171,18 +191,26 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
     add('file_openable', 'C1', not unopenable,
         '; '.join(unopenable) if unopenable else 'all referenced files openable')
 
-    # schema_valid: JSON-backable manifest values that are dicts with a 'schema' field parse.
+    # schema_valid: validate the CAD contract against assets/schemas/cad_contract.schema.json.
     schema_issues = []
-
-    def _check_schema(o):
-        if isinstance(o, dict) and isinstance(o.get('schema'), str) and o['schema'].strip():
+    schema_path = Path(__file__).resolve().parent.parent / "assets" / "schemas" / "cad_contract.schema.json"
+    try:
+        with open(str(schema_path), encoding='utf-8') as fh:
+            schema = json.load(fh)
+    except Exception as exc:
+        schema_issues.append(f"cannot load CAD schema: {exc}")
+        schema = None
+    if schema is not None:
+        contract = _find_cad_contract(d, root)
+        if contract is not None:
             try:
-                json.loads(o['schema'])
-            except Exception as exc:
-                schema_issues.append(f"schema parse error: {exc}")
-    _walk(d, _check_schema)
+                jsonschema.validate(contract, schema)
+            except jsonschema.ValidationError as exc:
+                schema_issues.append(f"cad_contract schema violation: {exc.message}")
+            except jsonschema.SchemaError as exc:
+                schema_issues.append(f"CAD schema invalid: {exc}")
     add('schema_valid', 'C6', not schema_issues,
-        '; '.join(schema_issues) if schema_issues else 'manifest schema fields valid')
+        '; '.join(schema_issues) if schema_issues else 'cad_contract validates against cad_contract.schema.json')
 
     # drawing_cad_same_revision: drawings_version must equal model_version.
     dv = val(d, 'drawings_version')

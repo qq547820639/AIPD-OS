@@ -37,8 +37,8 @@ def _find_manifest() -> Path | None:
 
 
 def test_version() -> None:
-    assert __version__ == "5.3.0"
-    assert aipd_os.__version__ == "5.3.0"
+    assert __version__ == "5.4.0"
+    assert aipd_os.__version__ == "5.4.0"
 
 
 def test_config_imports_and_defaults() -> None:

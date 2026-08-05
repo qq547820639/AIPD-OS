@@ -13,8 +13,10 @@ no_fake_supplier_quote / no_claim_without_test（外部任务包诚实性）。
 
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -173,6 +175,15 @@ def _split_batches(pages: List[Dict[str, Any]], per_batch: int = 5) -> List[Dict
     return batches
 
 
+def _sha256(path: str) -> str:
+    """对文件计算 SHA-256 十六进制摘要。"""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def run_golden_project(
     project: GoldenProject,
     workdir: str,
@@ -182,6 +193,8 @@ def run_golden_project(
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     min_pages = minimum_pages or project.minimum_pages
+    wall_start = time.monotonic()
+    trajectory: List[Dict[str, Any]] = []
 
     # 1) 临时 DB + 项目
     db = AIPDStateDB(str(workdir / "state.sqlite"))
@@ -196,11 +209,26 @@ def run_golden_project(
     for defn in pages:
         png = render_page(defn, str(pages_dir / f"{defn['page_id']}.png"))
         rendered.append(png)
+        trajectory.append(
+            {
+                "tool": "manual.render_page",
+                "page_id": defn["page_id"],
+                "artifact": png,
+                "ok": True,
+            }
+        )
 
     # 3) 批次 + 审计
     batches = _split_batches(pages)
     batch_state = {"batch_runs": batches}
     audit = VisualAuditor().audit_batch(batch_state, str(pages_dir), facts=project.facts)
+    trajectory.append(
+        {
+            "tool": "manual.visual_audit",
+            "ok": bool(audit.get("batch_continuity_ok")),
+            "detail": {"failing_pages": audit.get("failing_pages")},
+        }
+    )
 
     # 4) 假图像适配器经真实路由驱动（诚实外部任务包）
     store = RunStore(str(workdir / "runs.sqlite"))
@@ -225,6 +253,57 @@ def run_golden_project(
     pdf = compose_pdf(rendered, str(workdir / "manual.pdf"))
     zipf = build_zip(rendered, str(workdir / "manual.zip"))
 
+    # 记录真实执行轨迹（来自 RunStore 的规范化执行记录）
+    run_records = store.list_runs(project.id)
+    for rec in run_records:
+        trajectory.append(
+            {
+                "tool": rec.tool,
+                "provider": rec.provider,
+                "run_id": rec.run_id,
+                "status": rec.status,
+                "error_classification": rec.error_classification,
+                "error_message": rec.error_message,
+                "cost": rec.cost,
+                "tokens_in": rec.tokens_in,
+                "tokens_out": rec.tokens_out,
+            }
+        )
+    trajectory.append({"tool": "manual.compose_pdf", "artifact": pdf, "ok": True})
+    trajectory.append({"tool": "manual.compose_zip", "artifact": zipf, "ok": True})
+
+    # 实际可观测的误差/修复记录
+    errors_and_fixes: List[Dict[str, Any]] = []
+    for rec in run_records:
+        if rec.error_classification or rec.status in {
+            "failed", "blocked_external", "retried", "fallback",
+        }:
+            errors_and_fixes.append(
+                {
+                    "run_id": rec.run_id,
+                    "tool": rec.tool,
+                    "status": rec.status,
+                    "error_classification": rec.error_classification,
+                    "error_message": rec.error_message,
+                }
+            )
+    if audit.get("failing_pages"):
+        errors_and_fixes.append({"audit_failing_pages": audit.get("failing_pages")})
+
+    # 每份产物的 SHA-256
+    artifact_hashes: Dict[str, str] = {}
+    for png in rendered:
+        artifact_hashes[Path(png).name] = _sha256(png)
+    artifact_hashes["manual.pdf"] = _sha256(pdf)
+    artifact_hashes["manual.zip"] = _sha256(zipf)
+
+    # 成本/token：本夹具为确定性离线运行，不使用真实 Completion 提供器，
+    # 故 token/成本如实记 0/na，绝不伪造数字。
+    tokens_in = sum(rec.tokens_in for rec in run_records)
+    tokens_out = sum(rec.tokens_out for rec in run_records)
+    cost = sum(rec.cost for rec in run_records)
+    elapsed_seconds = round(time.monotonic() - wall_start, 3)
+
     # 6) 断言与报告
     checks: List[Dict[str, Any]] = [
         {"name": "manual_pages_produced", "ok": len(rendered) >= min_pages},
@@ -240,7 +319,9 @@ def run_golden_project(
         "project_id": project.id,
         "project_name": project.name,
         "model_version": "golden-deterministic",
+        "provider": "offline-deterministic",
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "elapsed_seconds": elapsed_seconds,
         "manual_pages": len(rendered),
         "batches": len(batches),
         "batch_continuity_ok": audit.get("batch_continuity_ok"),
@@ -249,6 +330,19 @@ def run_golden_project(
         "external_task_packages": external_pkgs,
         "pdf": pdf,
         "zip": zipf,
+        "artifact_hashes": artifact_hashes,
+        "tool_trajectory": trajectory,
+        "errors_and_fixes": errors_and_fixes,
+        "model_usage": {
+            "provider": "offline-deterministic",
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "cost": cost,
+            "note": (
+                "黄金夹具为 offline-deterministic 离线运行，不使用真实 "
+                "Completion 提供器；token 与成本如实记 0/na，未伪造。"
+            ),
+        },
         "checks": checks,
         "passed": passed,
     }

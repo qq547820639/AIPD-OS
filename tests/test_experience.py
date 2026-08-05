@@ -4,6 +4,8 @@
 """
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from aipd_os.state.db import AIPDStateDB
@@ -82,6 +84,31 @@ def test_project_summary_is_natural_language(seeded, db):
     # 内部代号只放在 details 里
     assert summary["details"]["project_id"] == "p1"
     assert summary["details"]["counts"]["open_decisions"] == 1
+
+
+def test_gaps_count_stale_artifacts(seeded, db):
+    """GAP 1：过期待重做产物数量用真实数字替换字面量 'N'。"""
+    summary = build_project_summary(db, "p1")
+    assert "有 N 项" not in summary["gaps"], summary["gaps"]
+    assert re.search(r"有 \d+ 项产物已过期需重做", summary["gaps"]), summary["gaps"]
+
+
+def test_gaps_translate_type_codenames(seeded, db):
+    """GAP 2：manual/cad/bom 等内部类型代号不泄漏到顶层摘要。"""
+    summary = build_project_summary(db, "p1")
+    for field in ("current_work", "completed", "gaps"):
+        value = summary[field]
+        assert "manual" not in value, (field, value)
+        assert "cad" not in value, (field, value)
+        assert "bom" not in value, (field, value)
+
+
+def test_top_risk_translates_severity(seeded, db):
+    """GAP 2：影响级别英文（high/medium）翻译成中文。"""
+    summary = build_project_summary(db, "p1")
+    assert "high" not in summary["top_risk"], summary["top_risk"]
+    assert "medium" not in summary["top_risk"], summary["top_risk"]
+    assert "影响级别：高" in summary["top_risk"], summary["top_risk"]
 
 
 # ---------------------------------------------------------------- 决策卡片
@@ -174,3 +201,50 @@ def test_owner_view_composition(seeded, db):
     assert "外部等待事项" in md
     # 决策卡片在正文出现、内部代号在 details 中
     assert view["decision_card"]["topic"] in md
+
+
+def test_owner_markdown_hides_jargon(seeded, db):
+    """GAP 2：决策 ID / 类型代号 / 英文严重度 / dict repr / 英文动作不泄漏到正文。"""
+    view = OwnerView(db).owner_update("p1")
+    md = OwnerView(db).to_markdown(view)
+    body = md.split("<details>")[0]  # 只取可见正文，不含 details
+    # 决策 ID 不泄漏
+    assert view["decision_card"]["decision_id"] not in body
+    # 类型代号/英文严重度不泄漏
+    assert "manual" not in body
+    assert "bom" not in body
+    assert "medium" not in body
+    assert "high" not in body
+    # 英文动作描述翻译成中文
+    assert "resolve proposed decisions" not in body
+    # 不出现 Python dict 的 repr
+    assert "{'" not in body
+
+
+def test_owner_markdown_renders_artifact_diff(seeded, db):
+    """GAP 3：制品版本差异预览被渲染进默认所有者视图。"""
+    view = OwnerView(db).owner_update("p1")
+    md = OwnerView(db).to_markdown(view)
+    assert "制品版本 / 参数差异" in md
+    assert "CAD" in md
+
+
+# ---------------------------------------------------------------- 新增意图解析
+def test_parse_instruction_new_intents(seeded, db):
+    """GAP 4：选A / 保留模块化 / 暂不进入实体制造 不再落到 unknown。"""
+    assert parse_instruction("选A", db, "p1").kind == "choose"
+    assert parse_instruction("保留模块化", db, "p1").kind == "keep_modularity"
+    assert parse_instruction("暂不进入实体制造", db, "p1").kind == "halt_physical_manufacturing"
+    # 选A 映射到第一个选项
+    choose = parse_instruction("选A", db, "p1")
+    assert choose.params["choice"] == "与 A 代工厂合作"
+
+
+def test_apply_approve_propagates_decision_fact(seeded, db):
+    """GAP 4(b)：批准路径把决策结果写入 Product Truth，并解析该决策。"""
+    instr = parse_instruction("批准", db, "p1")
+    result = apply_instruction(instr, db, "p1")
+    assert result["resolved_decision_id"] == seeded["did"]
+    assert result["recorded_fact_id"] is not None
+    keys = [f["key"] for f in db.list_facts("default", "p1")]
+    assert "decision_outcome" in keys

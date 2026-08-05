@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from ..state.db import AIPDStateDB
 from ..state.checkpoint import CheckpointManager
@@ -21,6 +21,65 @@ from .external_wait import summarize_external_wait
 # 健康灯 → 带图标的彩色标签
 _HEALTH_LABEL = {"green": "🟢 良好", "yellow": "🟡 需关注", "red": "🔴 高风险"}
 _WAIT_BUCKET_CN = {"supplier": "供应商", "lab": "测试实验室", "other": "其他"}
+
+# 影响档位代号 → 中文（不在正文暴露 medium/high 等英文）
+_IMPACT_CN = {"high": "高", "medium": "中", "low": "低", "none": "无"}
+
+
+def _impact_cn(v: Any) -> str:
+    return _IMPACT_CN.get(str(v).lower(), str(v))
+
+
+def _where_left_off_cn(rs: Dict[str, Any]) -> str:
+    """把“上次进行到哪”渲染成干净中文，避免泄漏 Python dict 的 repr。"""
+    wlo = rs.get("where_left_off", "")
+    if isinstance(wlo, dict):
+        note = wlo.get("note") or wlo.get("summary") or ""
+        at = wlo.get("at") or wlo.get("created_at")
+        if note and at:
+            return f"{note}（记录于 {at}）"
+        if note:
+            return str(note)
+        if at:
+            return f"上次记录于 {at}"
+        return "没有历史检查点，从当前阶段开始"
+    return str(wlo) if wlo else "没有历史检查点，从当前阶段开始"
+
+
+def _next_action_cn(rs: Dict[str, Any]) -> str:
+    """把英文内部动作描述（如 resolve proposed decisions）翻成中文。"""
+    na = rs.get("next_action", "") or ""
+    if isinstance(na, str):
+        if na.startswith("resolve proposed decisions: "):
+            return "处理待审决策：" + na[len("resolve proposed decisions: "):]
+        if na.startswith("continue phase "):
+            return "继续推进当前阶段：" + na[len("continue phase "):]
+    return str(na)
+
+
+def _artifact_diff_section(ap: Dict[str, Any]) -> str:
+    """把制品版本/参数差异渲染成中文正文（数据存在才展示）。"""
+    lines: List[str] = []
+    cad = ap.get("cad_versions") or []
+    if cad:
+        lines.append("CAD 版本差异：")
+        for c in cad:
+            if "from_version" in c and "to_version" in c:
+                line = f"- CAD 版本：{c.get('from_version') or '?'} → {c.get('to_version') or '?'}"
+                if c.get("reason"):
+                    line += f"（原因：{c['reason']}）"
+                lines.append(line)
+            else:
+                lines.append(f"- CAD 当前版本：{c.get('version') or '-'}")
+    params = ap.get("parameter_diffs") or []
+    if params:
+        lines.append("关键参数变化：")
+        for p in params:
+            name = p.get("key") or p.get("parameter") or ""
+            lines.append(f"- {name}：{p.get('from', '-')} → {p.get('to', '-')}")
+    if not lines:
+        return "当前没有已记录的制品版本/参数差异。"
+    return "\n".join(lines)
 
 
 def _build_risk_and_wait(db, tenant: str, project_id: str) -> Dict[str, Any]:
@@ -93,26 +152,31 @@ def render_markdown(view: Dict[str, Any]) -> str:
     if card is None:
         lines.append("当前没有待您决策的事项。")
     else:
-        lines.append(f"**{card['topic']}**（{card['decision_id']}）")
+        lines.append(f"**{card['topic']}**")
         lines.append(f"- AI 建议：{card['ai_recommendation']}")
         lines.append("- 可选方案及其影响：")
         for opt in card["options"]:
             imp = card.get("impacts", {}).get(opt, {})
             lines.append(
-                f"  - {opt}（成本:{imp.get('cost', '-')} / 性能:{imp.get('performance', '-')}"
-                f" / 时间:{imp.get('time', '-')} / 安全:{imp.get('safety', '-')}）")
+                f"  - {opt}（成本:{_impact_cn(imp.get('cost', '-'))}"
+                f" / 性能:{_impact_cn(imp.get('performance', '-'))}"
+                f" / 时间:{_impact_cn(imp.get('time', '-'))}"
+                f" / 安全:{_impact_cn(imp.get('safety', '-'))}）")
         lines.append(f"- 批准后系统将自动执行：{card['after_approval']}")
 
     lines += [
         "",
         "## 上次进行到哪",
-        str(rs.get("where_left_off", "")),
+        _where_left_off_cn(rs),
         "",
         "## 新增/变更的关键参数",
         "、".join(rs.get("new_fact_keys", [])) if rs.get("new_fact_keys") else "无",
         "",
+        "## 制品版本 / 参数差异",
+        _artifact_diff_section(view.get("artifact_preview", {})),
+        "",
         "## 下一步",
-        str(rs.get("next_action", "")),
+        _next_action_cn(rs),
         "",
         "---",
         "<details><summary>内部代号 / 技术细节</summary>",

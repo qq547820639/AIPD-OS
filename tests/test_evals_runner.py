@@ -9,6 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from aipd_os import __version__ as _PKG_VERSION  # noqa: E402
 from aipd_os.evals_runner.completion import (  # noqa: E402
     EnvCompletionProvider,
     ModelNotConfiguredError,
@@ -68,7 +69,7 @@ def test_run_over_evals_json_produces_report(tmp_path):
     results = runner.run(cases, out_dir=str(tmp_path))
     assert len(results) == len(cases)
     assert all(r.passed for r in results)
-    report = (Path(tmp_path) / "eval_reports" / "5.0.0" / "report.json")
+    report = (Path(tmp_path) / "eval_reports" / _PKG_VERSION / "report.json")
     assert report.exists()
 
 

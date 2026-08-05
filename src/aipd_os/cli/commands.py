@@ -654,12 +654,34 @@ def cmd_status(args):
     return 0
 
 
-# ---- decide：裁定决策（映射 submit-decision）----
+# ---- decide：裁定决策（映射 submit-decision；支持 --natural 自然语言回复）----
 def cmd_decide(args):
+    from aipd_os.experience.instructions import apply_instruction, parse_instruction
     from aipd_os.state.db import AIPDStateDB
 
     db = AIPDStateDB(args.db)
     pid = args.project or _resolve_project(db)
+
+    natural = getattr(args, "natural", None)
+    if natural:
+        instr = parse_instruction(natural, db, pid, DEFAULT_TENANT)
+        applied = apply_instruction(instr, db, pid, DEFAULT_TENANT)
+        result = {"command": "decide", "ok": True, "project_id": pid,
+                  "kind": applied["kind"],
+                  "resolved_decision_id": applied.get("resolved_decision_id"),
+                  "recorded_fact_id": applied.get("recorded_fact_id"),
+                  "propagated_impact": applied.get("propagated_impact", [])}
+
+        def prose():
+            print(f"已理解您的回复（{instr.kind}）：")
+            for line in result["propagated_impact"]:
+                print(f"· {line}")
+        _emit(args, result, prose)
+        return 0
+
+    if not args.decision_id or not args.choice:
+        raise ValueError("请提供 --decision-id/--choice，或使用 --natural 提供一句自然语言回复。")
+
     db.resolve_decision(DEFAULT_TENANT, pid, args.decision_id, args.choice, args.comment)
     dec = next((d for d in db.list_decisions(DEFAULT_TENANT, pid)
                 if d["decision_id"] == args.decision_id), None)

@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -25,6 +26,9 @@ _COST_RE = re.compile(r"(?:成本|价钱|价格|价位|售价)[^0-9]*(\d+(?:\.\d
 _INDUSTRIAL_RE = re.compile(r"工业化|更工业|工业风")
 _MEDICAL_RE = re.compile(r"不要医疗|避免医疗|不要医疗风|医疗风|医疗器械风")
 _ARTIFACT_RE = re.compile(r"@([\w\-\./\\]+)")
+_CHOOSE_RE = re.compile(r"选\s*([A-Za-z])")
+_KEEP_MODULAR_RE = re.compile(r"保留模块化")
+_HALT_PHYSICAL_RE = re.compile(r"暂不进入实体制造|不进入实体制造|暂缓实体制造|暂不进入量产")
 
 
 @dataclass
@@ -43,6 +47,31 @@ def _prev_approved(decision: Dict[str, Any]) -> str:
 def _next_open_decision(db: AIPDStateDB, project_id: str, tenant_id: str) -> Optional[Dict[str, Any]]:
     open_ds = db.list_open_decisions(tenant_id, project_id)
     return open_ds[0] if open_ds else None
+
+
+def _options_of(decision: Optional[Dict[str, Any]]) -> List[str]:
+    """把 decision 的 options（list 或 'A/B/C' 字符串或 options_json）规整为字符串列表。"""
+    if not decision:
+        return []
+    raw = decision.get("options")
+    if raw is None:
+        raw = decision.get("options_json")
+    # DB 把 options 存为 options_json 字符串，先尝试 JSON 解码
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, list):
+            return [str(o) for o in parsed if str(o).strip()]
+        if isinstance(parsed, str):
+            raw = parsed
+        elif parsed is not None:
+            return []
+        return [o.strip() for o in re.split(r"[/、,，|]", raw) if o.strip()]
+    if isinstance(raw, list):
+        return [str(o) for o in raw if str(o).strip()]
+    return []
 
 
 def parse_instruction(text: str, db: AIPDStateDB, project_id: str,
@@ -95,6 +124,36 @@ def parse_instruction(text: str, db: AIPDStateDB, project_id: str,
         return Instruction(kind="style_constraint", target=target,
                             params={"style": None, "avoid": "medical"},
                             propagated_impact=impact)
+
+    # 5) 选择某个选项（如"选A"→ 第一个选项）
+    cm2 = _CHOOSE_RE.search(text)
+    if cm2:
+        letter = cm2.group(1).upper()
+        options = _options_of(open_dec)
+        idx = ord(letter) - ord("A")
+        choice = options[idx] if 0 <= idx < len(options) else (options[0] if options else None)
+        impact = []
+        if choice:
+            impact.append(f"选择「{choice}」并据此推进")
+        return Instruction(
+            kind="choose", target=artifact or (open_dec["decision_id"] if open_dec else None),
+            params={"option_index": idx, "choice": choice}, propagated_impact=impact)
+
+    # 6) 保留模块化设计
+    if _KEEP_MODULAR_RE.search(text):
+        impact = ["记录设计意图：保留模块化设计"]
+        if artifact:
+            impact.append(f"@{artifact} 相关设计需保持模块化约束")
+        return Instruction(kind="keep_modularity", target=artifact,
+                            params={"constraint": "modularity"}, propagated_impact=impact)
+
+    # 7) 暂不进入实体制造
+    if _HALT_PHYSICAL_RE.search(text):
+        impact = ["暂不进入实体制造阶段，先推进设计与验证"]
+        if artifact:
+            impact.append(f"@{artifact} 不进入实体制造，仅停留在设计/验证层面")
+        return Instruction(kind="halt_physical_manufacturing", target=artifact,
+                            params={"halt": "physical_manufacturing"}, propagated_impact=impact)
 
     # 未识别 → 通用指令
     impact = []
@@ -153,11 +212,56 @@ def apply_instruction(instruction: Instruction, db: AIPDStateDB, project_id: str
             choice = _prev_approved(target_dec)
             db.resolve_decision(tenant_id, project_id, target_dec["decision_id"],
                                 choice=choice, comment="已由产品所有者批准")
+            fid = db.add_fact(tenant_id, project_id,
+                              key="decision_outcome",
+                              value=f"决策「{target_dec['topic']}」批准，采用方案：{choice}",
+                              status="C", source="owner-instruction",
+                              conditions="产品所有者批准后的决策结果")
+            result["recorded_fact_id"] = fid
             result["resolved_decision_id"] = target_dec["decision_id"]
             result["propagated_impact"].append(
                 f"决策「{target_dec['topic']}」已批准，采用推荐方案：{choice}")
+            result["propagated_impact"].append("已把决策结果写入项目事实（Product Truth）")
         else:
             result["propagated_impact"].append("当前没有待批准的决策")
+        return result
+
+    if kind == "choose":
+        choice = instruction.params.get("choice")
+        decision_id = instruction.target or instruction.params.get("decision_id")
+        open_ds = db.list_open_decisions(tenant_id, project_id)
+        target_dec = next((d for d in open_ds if d["decision_id"] == decision_id), None)
+        if target_dec is not None and choice:
+            db.resolve_decision(tenant_id, project_id, target_dec["decision_id"],
+                                choice=choice, comment="已由产品所有者选择")
+            fid = db.add_fact(tenant_id, project_id,
+                              key="decision_outcome",
+                              value=f"决策「{target_dec['topic']}」选择：{choice}",
+                              status="C", source="owner-instruction",
+                              conditions="产品所有者选择的决策结果")
+            result["recorded_fact_id"] = fid
+            result["resolved_decision_id"] = target_dec["decision_id"]
+            result["propagated_impact"].append(f"决策「{target_dec['topic']}」已选择：{choice}")
+        else:
+            result["propagated_impact"].append("当前没有可选择的待审决策")
+        return result
+
+    if kind == "keep_modularity":
+        fid = db.add_fact(tenant_id, project_id,
+                          key="design_intent", value="保留模块化设计",
+                          status="C", source="owner-instruction",
+                          conditions="产品所有者指定的设计意图约束")
+        result["recorded_fact_id"] = fid
+        result["propagated_impact"].append("已记录设计意图：保留模块化设计")
+        return result
+
+    if kind == "halt_physical_manufacturing":
+        fid = db.add_fact(tenant_id, project_id,
+                          key="manufacturing_stance", value="暂不进入实体制造",
+                          status="C", source="owner-instruction",
+                          conditions="产品所有者要求暂不进入实体制造")
+        result["recorded_fact_id"] = fid
+        result["propagated_impact"].append("已记录制造推进约束：暂不进入实体制造")
         return result
 
     if kind == "cost_reduction":

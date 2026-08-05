@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.evals_runner.completion import (
     CompletionProvider,
     ModelNotConfiguredError,
@@ -124,7 +125,7 @@ class EvalRunner:
         provider: Optional[CompletionProvider] = None,
         workdir: Optional[str] = None,
         script: Optional[Dict[str, str]] = None,
-        version: str = "5.0.0",
+        version: str = _PKG_VERSION,
     ) -> None:
         self.provider = provider or RecordedCompletionProvider(script or _DEFAULT_SCRIPT)
         merged = dict(_DEFAULT_SCRIPT)

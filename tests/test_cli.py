@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.cli import main as cli_main
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -119,7 +120,7 @@ def test_run_evals_fake_produces_report(tmp_path, capsys):
     ])
     capsys.readouterr()
     assert rc == 0
-    report = out / "eval_reports" / "5.0.0" / "report.json"
+    report = out / "eval_reports" / _PKG_VERSION / "report.json"
     assert report.exists()
     data = json.loads(report.read_text(encoding="utf-8"))
     assert data["summary"]["passed"] == data["summary"]["total"]

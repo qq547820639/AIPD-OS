@@ -19,7 +19,7 @@ from .objects import ObjectStore
 from .server import StateService, main, run_http
 from .audit import AuditLogger
 
-__version__ = "5.0.0"
+__version__ = "5.4.0"
 
 __all__ = [
     "AIPDStateDB", "OptimisticLockError", "ProjectNotFoundError", "TenantNotFoundError",

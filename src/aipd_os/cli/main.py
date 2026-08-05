@@ -131,13 +131,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["status"])
 
-    p = sub.add_parser("decide", help="裁定一个决策。"
-                                      " Example: aipd decide --db state.db --decision-id D1 --choice 单臂")
+    p = sub.add_parser("decide", help="裁定一个决策。可用 --decision-id/--choice 显式裁定，"
+                                      "或用 --natural 提供一句自然语言回复（如：批准 / 选A / 保留模块化）。"
+                                      " Example: aipd decide --db state.db --decision-id D1 --choice 单臂"
+                                      " | aipd decide --db state.db --natural '选A'")
     p.add_argument("--db", required=True)
     p.add_argument("--project")
-    p.add_argument("--decision-id", required=True)
-    p.add_argument("--choice", required=True)
+    p.add_argument("--decision-id")
+    p.add_argument("--choice")
     p.add_argument("--comment")
+    p.add_argument("--natural", help="一句自然语言的所有者回复（批准/选A/保留模块化/暂不进入实体制造等）")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["decide"])
 

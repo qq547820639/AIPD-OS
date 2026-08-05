@@ -28,6 +28,24 @@ GATE_NAMES: Dict[str, str] = {
 _DONE_STATUSES = {"done", "completed", "released"}
 _WORK_STATUSES = {"planned", "in_progress", "in_progressing"}
 
+# 交付物类型代号 → 中文（不把 manual/cad/bom 等内部代号泄露给所有者）
+_TYPE_CN = {
+    "manual": "使用手册", "cad": "CAD 图纸", "bom": "物料清单",
+    "drawing": "工程图纸", "page": "页面", "marketing": "营销物料",
+    "spec": "规格书", "test_report": "测试报告",
+}
+
+# 影响级别代号 → 中文
+_SEVERITY_CN = {"critical": "严重", "high": "高", "medium": "中", "low": "低"}
+
+
+def _type_cn(t: Optional[str]) -> str:
+    return _TYPE_CN.get((t or "").lower(), t or "")
+
+
+def _severity_cn(s: Optional[str]) -> str:
+    return _SEVERITY_CN.get(str(s or "").lower(), s or "")
+
 
 def _milestone(gate: Optional[str]) -> str:
     return GATE_NAMES.get(gate or "", "后续阶段")
@@ -40,7 +58,7 @@ def _current_work(project: Dict[str, Any], deliverables: List[Dict[str, Any]],
         return f"正在等待您的决策：{topic}。批准后系统会自动继续推进。"
     working = [d for d in deliverables if d.get("status") in _WORK_STATUSES]
     if working:
-        names = "、".join(d["type"] for d in working[:5])
+        names = "、".join(_type_cn(d["type"]) for d in working[:5])
         return f"正在推进：{names}（{_milestone(project.get('gate'))}）。"
     return f"按当前计划推进下一阶段：{_milestone(project.get('gate'))}。"
 
@@ -50,7 +68,7 @@ def _completed(decisions: List[Dict[str, Any]], deliverables: List[Dict[str, Any
     parts: List[str] = []
     done = [d for d in deliverables if d.get("status") in _DONE_STATUSES]
     if done:
-        parts.append("已完成交付：" + "、".join(d["type"] for d in done[:5]))
+        parts.append("已完成交付：" + "、".join(_type_cn(d["type"]) for d in done[:5]))
     if decisions:
         parts.append("已做决策：" + "；".join(
             f"{d['topic']}（选择{d.get('choice') or '推荐方案'}）" for d in decisions[:5]))
@@ -64,10 +82,11 @@ def _gaps(deliverables: List[Dict[str, Any]], resume: Dict[str, Any]) -> str:
     parts: List[str] = []
     pending = [d for d in deliverables if d.get("status") in _WORK_STATUSES]
     if pending:
-        parts.append("待完成：" + "、".join(d["type"] for d in pending[:5]))
+        parts.append("待完成：" + "、".join(_type_cn(d["type"]) for d in pending[:5]))
     stale = [a for a in resume.get("stale_artifacts", [])]
     if stale:
-        parts.append("有 N 项产物已过期需重做：" + "、".join(a["type"] for a in stale[:5]))
+        parts.append(f"有 {len(stale)} 项产物已过期需重做："
+                     + "、".join(_type_cn(a["type"]) for a in stale[:5]))
     ext = resume.get("external_waiting", [])
     if ext:
         parts.append("仍有外部等待事项未闭环")
@@ -82,7 +101,7 @@ def _top_risk(risks: List[Dict[str, Any]]) -> str:
     r = ranked[0]
     base = f"最大风险：{r['title']}"
     if r.get("impact"):
-        base += f"（影响级别：{r['impact']}）"
+        base += f"（影响级别：{_severity_cn(r['impact'])}）"
     if r.get("mitigation"):
         base += f"；缓解措施：{r['mitigation']}"
     return base

@@ -11,6 +11,7 @@ propose_decision / resolve_decision / export_checkpoint），并新增认证、�
 """
 from __future__ import annotations
 
+import inspect
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -247,8 +248,17 @@ class AuthError(Exception):
     pass
 
 
+class UnauthorizedError(Exception):
+    """RPC 请求未通过认证（HTTP 401）。"""
+
+
 # =========================================================================
 # HTTP/JSON 传输（仅用标准库 http.server，无第三方依赖）
+#
+# 注意：该传输是认证的。每个 POST /rpc 请求必须携带有效令牌
+# ``{"user": ..., "token": ..., "method": ..., "params": ...}``，令牌由
+# ``auth_login`` / ``auth_register`` 签发；未认证请求返回 HTTP 401。
+# 认证后的 actor 身份会注入到支持 ``actor`` 的方法，从而触发项目级授权。
 # =========================================================================
 
 class _RpcHandler(BaseHTTPRequestHandler):
@@ -268,7 +278,7 @@ class _RpcHandler(BaseHTTPRequestHandler):
         else:
             self._send_json(404, {"error": "not found"})
 
-    def do_POST(self):  # RPC 端点
+    def do_POST(self):  # RPC 端点（必须认证）
         if self.path.rstrip("/") != "/rpc":
             self._send_json(404, {"error": "not found"})
             return
@@ -277,10 +287,39 @@ class _RpcHandler(BaseHTTPRequestHandler):
             req = json.loads(self.rfile.read(length).decode("utf-8"))
             method = req.get("method")
             params = req.get("params", {}) or {}
+            # 认证：每个 RPC 请求必须携带有效令牌（user + token），
+            # 否则拒绝（401），并将认证后的 actor 身份注入调用以触发授权。
+            actor = self._authenticate(req)
+            params = self._inject_actor(method, params, actor)
             result = self.service.call(method, **params)
             self._send_json(200, {"result": result})
+        except UnauthorizedError as exc:
+            self._send_json(401, {"error": str(exc), "error_type": "unauthorized"})
         except Exception as exc:  # noqa: BLE001 - 统一返回错误
             self._send_json(400, {"error": str(exc), "error_type": type(exc).__name__})
+
+    def _authenticate(self, req: Dict[str, Any]) -> str:
+        """校验请求中的 user/token；失败抛 :class:`UnauthorizedError`，成功返回 user_id。"""
+        user = req.get("user")
+        token = req.get("token")
+        if not user or not token:
+            raise UnauthorizedError("missing auth credentials (user + token required)")
+        if not self.service.auth.authenticate(user, token):
+            raise UnauthorizedError("invalid or expired auth token")
+        return user
+
+    def _inject_actor(self, method: str, params: Dict[str, Any], actor: str) -> Dict[str, Any]:
+        """对支持 actor 的方法注入认证身份，使 :meth:`StateService._authorize` 生效。"""
+        handler = getattr(self.service, method, None)
+        if handler is None:
+            return params
+        try:
+            params_sig = inspect.signature(handler).parameters
+        except (TypeError, ValueError):
+            return params
+        if "actor" in params_sig:
+            params.setdefault("actor", actor)
+        return params
 
     def log_message(self, *args):  # 默认会打印到 stderr，静默处理
         pass
@@ -320,4 +359,4 @@ if __name__ == "__main__":
     main()
 
 
-__all__ = ["StateService", "AuthError", "run_http", "main"]
+__all__ = ["StateService", "AuthError", "UnauthorizedError", "run_http", "main"]

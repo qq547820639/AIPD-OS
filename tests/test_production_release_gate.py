@@ -141,3 +141,47 @@ def test_consistent_c2_manifest_passes(tmp_path):
     assert out["achieved"] == "C7"
     assert r.returncode == 0
     assert all(c["passed"] for c in out["evidence_checks"])
+
+
+def _valid_cad_contract() -> dict:
+    return {
+        "project_id": "P-1",
+        "contract_id": "C-1",
+        "cad_level": "C2",
+        "spec_version": "1.0.0",
+        "source_facts": [],
+        "required_artifacts": ["model.step"],
+        "hard_constraints": [{"id": "HC-1", "description": "closed solid"}],
+        "soft_objectives": [
+            {"id": "SO-1", "metric": "part_count", "direction": "min",
+             "target": 1, "limit": 3, "weight": 1.0}
+        ],
+        "release_policy": {
+            "minimum_score": 0.9,
+            "minimum_improvement": 0.01,
+            "max_internal_iterations": 8,
+        },
+    }
+
+
+def test_schema_valid_accepts_valid_cad_contract(tmp_path):
+    """符合 cad_contract.schema.json 的契约通过 schema_valid 证据门。"""
+    p = write_complete_manifest(tmp_path, cad_contract=_valid_cad_contract())
+    r = run_gate(p, "C2")
+    out = json.loads(r.stdout)
+    assert get_check(out, "schema_valid")["passed"] is True
+    assert out["passed"] is True
+    assert r.returncode == 0
+
+
+def test_schema_valid_rejects_invalid_cad_contract(tmp_path):
+    """违反 schema（缺少必填 project_id）的契约被 schema_valid 拒绝并导致门失败。"""
+    bad = _valid_cad_contract()
+    del bad["project_id"]
+    p = write_complete_manifest(tmp_path, cad_contract=bad)
+    r = run_gate(p, "C2")
+    out = json.loads(r.stdout)
+    assert get_check(out, "schema_valid")["passed"] is False
+    assert any("schema_valid" in f for f in out["failures"])
+    assert out["passed"] is False
+    assert r.returncode == 2

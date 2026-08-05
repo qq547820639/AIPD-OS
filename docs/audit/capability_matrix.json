@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T05:45:59",
+  "generated_at": "2026-08-06T07:38:43",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "9cfec246f0966b9efba669dcb0b88edad4223a52",
-  "version": "5.3.0",
+  "latest_commit_sha": "651dfbc76fc4b5cd3abea07a90740cedf3d0ca76",
+  "version": "5.4.0",
   "classification_enum": [
     "fully_implemented",
     "partially_implemented",
@@ -25,8 +25,8 @@
   "summary": {
     "total_capabilities": 70,
     "by_classification": {
-      "fully_implemented": 52,
-      "partially_implemented": 7,
+      "fully_implemented": 44,
+      "partially_implemented": 15,
       "protocol_only": 0,
       "template_only": 0,
       "external_dependency": 11,
@@ -95,8 +95,8 @@
           "input_output": "工作包 -> 调用适配器 -> 运行记录/工件",
           "unit_test": "tests/test_execution_router.py; tests/test_adapters.py",
           "integration_test": "tests/test_supervisor_execution.py",
-          "e2e_evidence": "执行记录含完整字段并持久化",
-          "current_limitation": null
+          "e2e_evidence": "doc.generate 产出真实 Markdown、cad.faceted-fallback 产出真实 STEP 文件",
+          "current_limitation": "主循环真实调用工具，但 research/imggen/cad 等外部适配器在无后端时诚实返回 simulated/external 占位，不真实执行"
         },
         {
           "id": "supervisor.retry",
@@ -147,7 +147,7 @@
           "id": "supervisor.fact_writeback",
           "name": "事实写回",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
           "declaration_file": "references/state-model.md",
           "implementation_file": "scripts/aipd_supervisor.py",
           "entry_point": "Supervisor._update_facts",
@@ -155,14 +155,14 @@
           "input_output": "执行结果 -> 事实主表更新 -> 证据登记",
           "unit_test": "tests/test_supervisor_execution.py",
           "integration_test": null,
-          "e2e_evidence": "事实随执行推进更新",
-          "current_limitation": null
+          "e2e_evidence": "执行日志/血缘写回，但未写入独立 facts 事实表",
+          "current_limitation": "全库无独立 product_truth/facts 表；主管的 update_facts 仅写 steps_log 字符串标签，未回写结构化事实表"
         },
         {
           "id": "supervisor.stale_propagation",
           "name": "stale传播",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
           "declaration_file": "references/supervisor-operating-model.md",
           "implementation_file": "scripts/aipd_supervisor.py",
           "entry_point": "Supervisor._mark_stale",
@@ -170,14 +170,14 @@
           "input_output": "事实变更 -> 受影响工件标记 stale",
           "unit_test": "tests/test_supervisor_execution.py",
           "integration_test": null,
-          "e2e_evidence": "stale 标记在关键变更后触发",
-          "current_limitation": null
+          "e2e_evidence": "stale 血缘标记在关键变更后写入",
+          "current_limitation": "仅写 invalidates 血缘标记，不重建/不重排下游工件"
         },
         {
           "id": "supervisor.auto_rework",
           "name": "自动返工",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
           "declaration_file": "references/supervisor-operating-model.md",
           "implementation_file": "scripts/aipd_supervisor.py",
           "entry_point": "Supervisor._rework",
@@ -185,8 +185,8 @@
           "input_output": "stale/失败 -> 内部返工任务 -> 重新执行",
           "unit_test": "tests/test_supervisor_execution.py",
           "integration_test": null,
-          "e2e_evidence": "内部返工自动创建并推进",
-          "current_limitation": null
+          "e2e_evidence": "失败/过期项复用旧项重试",
+          "current_limitation": "复用旧工作项重试，不新建独立返工项，且无返工次数上限"
         },
         {
           "id": "supervisor.pause_at_decision",
@@ -250,8 +250,8 @@
           "input_output": "DOI/URL -> 全文文本",
           "unit_test": "scripts/research/selftest_runtime.py",
           "integration_test": null,
-          "e2e_evidence": "部分源可拉取全文",
-          "current_limitation": "受限于源开放性与反爬限制"
+          "e2e_evidence": "部分源可拉取内容",
+          "current_limitation": "各连接器当前仅取摘要，未实现全文获取与全文/摘要区分"
         },
         {
           "id": "research.dedup_ranking",
@@ -272,7 +272,7 @@
           "id": "research.citation",
           "name": "引用",
           "domain": "理论研究",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
           "declaration_file": "references/research-integration.md",
           "implementation_file": "scripts/research/postprocess.py",
           "entry_point": "postprocess.attach_citation",
@@ -280,8 +280,8 @@
           "input_output": "证据项 -> 引用标注",
           "unit_test": "scripts/research/selftest_postprocess.py",
           "integration_test": null,
-          "e2e_evidence": "引用可生成",
-          "current_limitation": null
+          "e2e_evidence": "后处理可附加引用标识",
+          "current_limitation": "仅后处理附加引用标识，无独立引用生成/引文格式管线"
         },
         {
           "id": "research.standards_regulations",
@@ -397,7 +397,7 @@
           "id": "manual.prior_batch_as_attachment",
           "name": "前批页面作为后批附件",
           "domain": "产品手册",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
           "declaration_file": "references/manual-chain-workflow.md",
           "implementation_file": "scripts/manual_chain.py",
           "entry_point": "cmd_run_batch(prior_batch=...)",
@@ -405,8 +405,8 @@
           "input_output": "上一批完整页面 -> 下一批上下文",
           "unit_test": "tests/test_manual_chain_e2e.py",
           "integration_test": null,
-          "e2e_evidence": "连续附件继承",
-          "current_limitation": null
+          "e2e_evidence": "前批页面路径/hash 随批次登记",
+          "current_limitation": "仅收集前批页面路径与 hash 登记入状态，未真实传入图像模型作为附件"
         },
         {
           "id": "manual.visual_bible",
@@ -481,7 +481,7 @@
           "unit_test": "tests/test_imggen.py",
           "integration_test": null,
           "e2e_evidence": "后端不可用时走外部任务包，不假装生成",
-          "current_limitation": "依赖外部图像后端"
+          "current_limitation": "imggen 适配器为空壳：即使标 available 也必然抛错，无真实图像模型客户端；未配置后端时向外部任务包诚实降级"
         },
         {
           "id": "manual.real_chinese_typesetting",
@@ -517,7 +517,7 @@
           "id": "manual.failure_page_local_rework",
           "name": "失败页局部返工",
           "domain": "产品手册",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
           "declaration_file": "references/manual-chain-workflow.md",
           "implementation_file": "scripts/manual_chain.py",
           "entry_point": "cmd_run_batch(external_pending/rework)",
@@ -525,8 +525,8 @@
           "input_output": "视觉审计失败 -> 仅重建失败页面",
           "unit_test": "tests/test_manual_chain_e2e.py",
           "integration_test": null,
-          "e2e_evidence": "失败页局部返工计划",
-          "current_limitation": null
+          "e2e_evidence": "auditor 产出失败页 rebuild_plan",
+          "current_limitation": "仅产出失败页重建计划（rebuild_plan），无据此仅重跑单页的执行入口"
         },
         {
           "id": "manual.png_pdf_zip",
@@ -547,7 +547,7 @@
           "id": "manual.golden_sample_semantic_audit",
           "name": "黄金样本语义审核",
           "domain": "产品手册",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
           "declaration_file": "references/benchmark-and-golden-sample-policy.md",
           "implementation_file": "src/aipd_os/visual_audit/golden.py",
           "entry_point": "golden.audit",
@@ -555,8 +555,8 @@
           "input_output": "对比页面 -> 语义维度得分",
           "unit_test": "tests/test_visual_golden.py",
           "integration_test": null,
-          "e2e_evidence": "WBX-1 黄金样本可重复评测",
-          "current_limitation": "依赖视觉后端；无后端走外部任务包"
+          "e2e_evidence": "WBX-1 黄金清单可重复评测",
+          "current_limitation": "黄金样本仅元数据清单，真实对照 PNG 不在仓库；依赖视觉后端，无后端走外部任务包"
         }
       ]
     },
@@ -982,7 +982,7 @@
           "id": "ux.auto_resume",
           "name": "新会话自动恢复",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
           "declaration_file": "references/state-model.md",
           "implementation_file": "src/aipd_os/experience/resume_summary.py",
           "entry_point": "resume_summary.build",
@@ -991,7 +991,7 @@
           "unit_test": "tests/test_experience.py",
           "integration_test": null,
           "e2e_evidence": "恢复摘要生成",
-          "current_limitation": null
+          "current_limitation": "aipd resume 仅输出恢复摘要，不自动调用 supervisor 继续执行；manual 附件链不在状态库/备份范围内无法恢复"
         },
         {
           "id": "ux.no_repeat_questioning",

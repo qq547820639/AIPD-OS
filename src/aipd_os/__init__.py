@@ -9,6 +9,6 @@ This package is the v5.1 engineering foundation layer providing unified
 configuration, structured logging, a CLI entry point and script skeletons.
 """
 
-__version__ = "5.3.0"
+__version__ = "5.4.0"
 
 __all__ = ["__version__"]

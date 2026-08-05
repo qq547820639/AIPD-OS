@@ -12,10 +12,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from aipd_os import __version__ as _PKG_VERSION
+
 
 def build_report(
     results: list,
-    version: str = "5.0.0",
+    version: str = _PKG_VERSION,
     model_version: Optional[str] = None,
 ) -> Dict[str, Any]:
     """把结果列表组装为报告 dict。"""
