@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T03:59:17",
+  "generated_at": "2026-08-06T04:02:06",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "96fe3b5b0b8f4f40ce8894c01cc33d421a7ea470",
-  "latest_commit_time": "2026-08-06 02:19:28 +0800",
+  "latest_commit_sha": "ead48605f2884effa9087f517be43f1b30854734",
+  "latest_commit_time": "2026-08-06 04:01:34 +0800",
   "version": "5.1.0",
   "file_tree": {
     "top_entries": [
@@ -32,6 +32,7 @@
       "references/",
       "RELEASE_MANIFEST.json",
       "RELEASE_SIGNING.md",
+      "releases/",
       "requirements-quality.txt",
       "SBOM.md",
       "scripts/",
@@ -58,6 +59,7 @@
       "evals": 13,
       "migrations": 2,
       "references": 36,
+      "releases": 0,
       "scripts": 28,
       "src": 0,
       "state_service": 3,
@@ -66,7 +68,7 @@
     }
   },
   "tags": [],
-  "releases_dir_exists": false,
+  "releases_dir_exists": true,
   "ci_status": {
     "workflow_present": true,
     "jobs": [
@@ -86,55 +88,30 @@
     "version": "5.1.0",
     "parsed": true,
     "total_files": 211,
-    "hash_matches": 210,
-    "hash_mismatch_count": 1,
+    "hash_matches": 208,
+    "hash_mismatch_count": 3,
     "mismatches": [
       {
         "path": "docs/audit/audit.json",
         "reason": "hash_mismatch",
         "expected": "7ef3078b441f295dd57c926e2979076b0af205528d3c499db4fe58f2b16e1604",
         "actual": "f8ddbbdab93387ee3f907a78700da6fa456c1236ffe417baa44b38046a87758c"
+      },
+      {
+        "path": "docs/audit/v5.1-version-truth-audit.json",
+        "reason": "hash_mismatch",
+        "expected": "ff761617e46de3f8f3c0b660417f3cf57accb117abc420df565fc11aed0c3737",
+        "actual": "6048b4cad56cad5c1489a5033e7d1bf21f4b6da978fa988b1d15d2cf1d8b14db"
+      },
+      {
+        "path": "docs/audit/v5.1-version-truth-audit.md",
+        "reason": "hash_mismatch",
+        "expected": "585950f225c5192b1fc3ac32b10031715a5bd93fc19d9410efef6eb645a1bf9d",
+        "actual": "1e935e2405162014bf491b52bd8df39c0cda843397302341a6fcffe731335401"
       }
     ]
   },
   "untracked_or_generated": [
-    " M .github/workflows/ci.yml",
-    " M CHANGELOG.md",
-    " M QUICKSTART.md",
-    " M README.md",
-    " M RELEASE_MANIFEST.json",
-    " M evals/evals.json",
-    " M pyproject.toml",
-    " M scripts/aipd_supervisor.py",
-    " M scripts/production_release_gate.py",
-    " M src/aipd_os/__init__.py",
-    " M src/aipd_os/cli/commands.py",
-    " M src/aipd_os/cli/main.py",
-    " M src/aipd_os/evals_runner/completion.py",
-    " M src/aipd_os/evals_runner/runner.py",
-    " M src/aipd_os/evals_runner/scoring.py",
-    " M src/aipd_os/execution/execution_router.py",
-    " M src/aipd_os/execution/models.py",
-    " M src/aipd_os/execution/runs.py",
-    " M src/aipd_os/security/prompt_injection.py",
-    " M src/aipd_os/tool_adapters/evt_dvt_pvt_adapter.py",
-    " M src/aipd_os/tool_adapters/mail_rfq_adapter.py",
-    " M src/aipd_os/tool_adapters/supplier_adapter.py",
-    " M tests/maturity_consistency_test.py",
-    " M tests/test_cli.py",
-    " M tests/test_execution_router.py",
-    " M tests/test_packaging.py",
-    " M tests/test_production_release_gate.py",
-    " M tests/test_prompt_injection.py",
-    "?? .trae/specs/v5.1-audit-deepening-edition/",
-    "?? docs/audit/",
-    "?? scripts/audit_repo.py",
-    "?? src/aipd_os/py.typed",
-    "?? src/aipd_os/supply_chain/",
-    "?? src/aipd_os/visual_audit/golden.py",
-    "?? tests/test_audit_repo.py",
-    "?? tests/test_supply_chain.py",
-    "?? tests/test_visual_golden.py",
     "generated src/aipd_os.egg-info"
   ],
   "legacy_cad_conflicts": [],
