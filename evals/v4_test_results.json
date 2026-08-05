@@ -1,0 +1,38 @@
+[
+  {
+    "cmd": "/opt/pyvenv/bin/python /mnt/data/aipd-orchestrator-v4.0.0/scripts/selftest_v4.py",
+    "returncode": 0,
+    "stdout": "v4 supervisor selftest passed\n",
+    "stderr": ""
+  },
+  {
+    "cmd": "/opt/pyvenv/bin/python /mnt/data/aipd-orchestrator-v4.0.0/scripts/selftest_v3.py",
+    "returncode": 0,
+    "stdout": "v3 selftest passed\n",
+    "stderr": ""
+  },
+  {
+    "cmd": "/opt/pyvenv/bin/python /mnt/data/aipd-orchestrator-v4.0.0/scripts/selftest_state.py",
+    "returncode": 0,
+    "stdout": "state self-test passed\n",
+    "stderr": ""
+  },
+  {
+    "cmd": "/opt/pyvenv/bin/python /mnt/data/aipd-orchestrator-v4.0.0/scripts/selftest_quality.py",
+    "returncode": 0,
+    "stdout": "{\n  \"passed\": true,\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "cmd": "/opt/pyvenv/bin/python /mnt/data/aipd-orchestrator-v4.0.0/scripts/research/selftest_postprocess.py",
+    "returncode": 0,
+    "stdout": "",
+    "stderr": "  ok title_norm strips case/punct\n  ok norm_doi strips url prefixes\n  ok norm_arxiv strips version + prefix\n  ok survey titles tagged\n  ok term_words drops stopwords/short\n  ok stemming via startswith\n  ok irrelevant paper scores 0\n  ok dedup collapses doi+title matches to one record\n  ok dedup keeps priority source + provenance\n  ok dedup max citations + fills missing fields\n  ok distinct papers not merged\n  ok title bridges doi-less duplicate into the doi cluster\n  ok rank keeps everything by default\n  ok most relevant first, survey sunk despite citations\n  ok min_score drops and counts\n\n[GREEN] selftest_postprocess: 15/15 passed\n"
+  },
+  {
+    "cmd": "/opt/pyvenv/bin/python /mnt/data/aipd-orchestrator-v4.0.0/scripts/research/selftest_runtime.py",
+    "returncode": 0,
+    "stdout": "",
+    "stderr": "_duration (__main__.RuntimeTests.test_read_timeout_is_idle_not_total_duration) ... ok\ntest_retry_is_bounded_and_passes_timeout_tuple (__main__.RuntimeTests.test_retry_is_bounded_and_passes_timeout_tuple) ... [crossref] HTTP 429; retrying in 3s (attempt 2/4)\n[crossref] HTTP 429; retrying in 6s (attempt 3/4)\n[crossref] HTTP 429; retrying in 12s (attempt 4/4)\nok\ntest_timeout_defaults_override_and_validation (__main__.RuntimeTests.test_timeout_defaults_override_and_validation) ... ok\ntest_timeout_environment_rejects_every_non_positive_or_malformed_value (__main__.RuntimeTests.test_timeout_environment_rejects_every_non_positive_or_malformed_value) ... ok\ntest_atomic_result_envelope (__main__.WorkerTests.test_atomic_result_envelope) ... ok\ntest_interrupt_terminates_all_started_workers (__main__.WorkerTests.test_interrupt_terminates_all_started_workers) ... ok\ntest_invalid_runtime_configuration_fails_before_starting_workers (__main__.WorkerTests.test_invalid_runtime_configuration_fails_before_starting_workers) ... ok\ntest_public_api_keeps_order_and_applies_date_filter_after_workers (__main__.WorkerTests.test_public_api_keeps_order_and_applies_date_filter_after_workers) ... ok\ntest_sources_overlap_in_parallel_and_serialize_when_disabled (__main__.WorkerTests.test_sources_overlap_in_parallel_and_serialize_when_disabled) ... ok\ntest_worker_crash_and_invalid_json_do_not_cancel_other_sources (__main__.WorkerTests.test_worker_crash_and_invalid_json_do_not_cancel_other_sources) ... [arxiv] worker exited with status 7; skipping this source.\n[dblp] invalid worker result: Expecting value: line 1 column 1 (char 0); skipping this source.\n[open_alex] worker produced no result file; skipping this source.\nok\ntest_worker_preserves_query_order_and_continues_after_error (__main__.WorkerTests.test_worker_preserves_query_order_and_continues_after_error) ... [arxiv] Error on query 'bad': boom\nok\n\n----------------------------------------------------------------------\nRan 16 tests in 3.590s\n\nOK\n"
+  }
+]

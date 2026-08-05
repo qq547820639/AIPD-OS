@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "project_id": "PROJECT-ID",
+  "phase": "theory_ingested",
+  "minimum_pages": 10,
+  "source_materials": [],
+  "prompts": [],
+  "pages": [],
+  "anchors": [],
+  "batches": [],
+  "visual_bible": null,
+  "design_intent_package": null,
+  "facts_version": null
+}

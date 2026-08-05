@@ -1,0 +1,18 @@
+{
+  "project": {
+    "project_id": "PROJECT-001",
+    "name": "",
+    "goal": "",
+    "gate": "G0",
+    "status": "active",
+    "version": "0.1.0",
+    "owner_policy": "AI executes; owner reviews decisions only"
+  },
+  "facts": [],
+  "evidence": [],
+  "decisions": [],
+  "deliverables": [],
+  "risks": [],
+  "dependencies": [],
+  "changes": []
+}

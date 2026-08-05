@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AIPD CAD Contract",
+  "type": "object",
+  "required": ["project_id", "contract_id", "cad_level", "spec_version", "required_artifacts", "hard_constraints", "soft_objectives", "release_policy"],
+  "properties": {
+    "project_id": {"type": "string", "minLength": 1},
+    "contract_id": {"type": "string", "minLength": 1},
+    "cad_level": {"enum": ["CAD-L0", "CAD-L1", "CAD-L2", "CAD-L3", "CAD-L4", "CAD-L5"]},
+    "spec_version": {"type": "string", "minLength": 1},
+    "source_facts": {"type": "array", "items": {"type": "string"}},
+    "required_artifacts": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "hard_constraints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "description"],
+        "properties": {
+          "id": {"type": "string"},
+          "description": {"type": "string"},
+          "safety_critical": {"type": "boolean"},
+          "evidence_required": {"type": "boolean"}
+        }
+      }
+    },
+    "soft_objectives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "metric", "direction", "target", "limit", "weight"],
+        "properties": {
+          "id": {"type": "string"},
+          "metric": {"type": "string"},
+          "direction": {"enum": ["min", "max"]},
+          "target": {"type": "number"},
+          "limit": {"type": "number"},
+          "weight": {"type": "number", "exclusiveMinimum": 0}
+        }
+      }
+    },
+    "release_policy": {
+      "type": "object",
+      "required": ["minimum_score", "minimum_improvement", "max_internal_iterations"],
+      "properties": {
+        "minimum_score": {"type": "number", "minimum": 0, "maximum": 1},
+        "minimum_improvement": {"type": "number", "minimum": 0},
+        "max_internal_iterations": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

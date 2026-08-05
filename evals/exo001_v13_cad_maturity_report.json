@@ -1,0 +1,51 @@
+{
+  "runtime": "faceted_brep",
+  "runtime_max_level": "CAD-L1",
+  "reached_level": "CAD-L1",
+  "target_level": "CAD-L3",
+  "target_passed": false,
+  "level_checks": {
+    "CAD-L0": {
+      "passed": true,
+      "checks": {
+        "coordinate_system": true,
+        "human_environment_envelopes": true,
+        "overall_dimensions": true
+      },
+      "runtime_allowed": true
+    },
+    "CAD-L1": {
+      "passed": true,
+      "checks": {
+        "coordinate_system": true,
+        "human_environment_envelopes": true,
+        "overall_dimensions": true,
+        "architecture_layout": true,
+        "load_path_concept": true,
+        "interface_placeholders": true
+      },
+      "runtime_allowed": true
+    },
+    "CAD-L2": {
+      "passed": false,
+      "checks": {
+        "coordinate_system": true,
+        "human_environment_envelopes": true,
+        "overall_dimensions": true,
+        "architecture_layout": true,
+        "load_path_concept": true,
+        "interface_placeholders": true,
+        "native_parametric_brep": false,
+        "editable_feature_tree": false,
+        "real_part_features": false,
+        "material_process_intent": true
+      },
+      "runtime_allowed": false
+    }
+  },
+  "claims": {
+    "wearable_human_ready": false,
+    "prototype_build_ready": false,
+    "production_release_ready": false
+  }
+}

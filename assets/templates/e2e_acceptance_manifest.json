@@ -1,0 +1,23 @@
+{
+  "architecture": [
+    "state/project_checkpoint.json",
+    "requirements/requirements.md",
+    "concept/concept_report.md",
+    "engineering/v1_engineering.md",
+    "manual/manual.pdf"
+  ],
+  "cad_runtime": [
+    "cad/cad_brief.md",
+    "cad/cad_contract.json",
+    "cad/model.py",
+    "cad/model.step",
+    "cad/inspection_report.json",
+    "cad/snapshot.png"
+  ],
+  "production_release": [
+    "manufacturing/bom.xlsx",
+    "manufacturing/drawing_register.csv",
+    "release/manifest.json",
+    "release/approval.json"
+  ]
+}

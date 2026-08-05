@@ -1,0 +1,6 @@
+interface:
+  display_name: "AI全链路产品开发与交付主管 v4.0"
+  short_description: "一个对话入口，自主完成从产品想法到生产发布的数字工作"
+  default_prompt: "接管当前产品项目。全部数字工作由你完成，我只审核。请自主完成理论研究、产品定义、连续附件产品手册、工程CAD、工业化、供应链和验证管理；只有命中决策闸门时向我提交决策包。"
+policy:
+  allow_implicit_invocation: true

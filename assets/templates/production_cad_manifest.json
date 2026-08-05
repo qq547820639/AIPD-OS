@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "project_id": "PROJECT-ID",
+  "target_level": "C6",
+  "runtime": null,
+  "design_intent": "design_intent.json",
+  "parametric_source": [],
+  "step_assemblies": [],
+  "step_parts": [],
+  "drawings": [],
+  "bom": null,
+  "icd": [],
+  "kinematics_reports": [],
+  "collision_reports": [],
+  "cae_reports": [],
+  "dfm_dfa": [],
+  "tolerance_gdt": [],
+  "inspection_plan": null,
+  "assembly_instructions": null,
+  "physical_evidence": [],
+  "release_manifest": null,
+  "owner_release": false
+}

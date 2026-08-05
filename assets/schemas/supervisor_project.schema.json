@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AIPD Supervisor Project",
+  "type": "object",
+  "required": [
+    "project_id",
+    "goal",
+    "current_phase",
+    "status",
+    "truth_baseline_version"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "current_phase": {
+      "enum": [
+        "S0_intake",
+        "S1_theory",
+        "S2_product_definition",
+        "S3_manual",
+        "S4_engineering_baseline",
+        "S5_cad",
+        "S6_industrialization",
+        "S7_validation",
+        "S8_release"
+      ]
+    },
+    "status": {
+      "enum": [
+        "active",
+        "awaiting_owner_decision",
+        "blocked_external",
+        "internal_rework",
+        "released",
+        "archived"
+      ]
+    },
+    "truth_baseline_version": {
+      "type": "string"
+    }
+  }
+}

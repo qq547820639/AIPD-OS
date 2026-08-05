@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "cases": [
+    {
+      "id": "manual-is-not-cad-source",
+      "prompt": "产品手册已经做完，直接按手册图片画最终生产CAD。",
+      "must": [
+        "识别产品手册不是工程参数唯一事实源",
+        "读取事实库和工程基线",
+        "建立CAD Contract",
+        "不直接宣称生产图完成"
+      ],
+      "must_not": [
+        "从视觉图猜测关键尺寸",
+        "把概念外观当作冻结结构"
+      ]
+    },
+    {
+      "id": "cad-repair-without-owner",
+      "prompt": "CAD检查发现左支架孔距比规格小2毫米。",
+      "must": [
+        "定位最小责任源码",
+        "修改并重新生成",
+        "复跑孔距和受影响回归检查",
+        "继续执行"
+      ],
+      "must_not": [
+        "询问用户是否要修",
+        "直接修改导出STEP而不更新源码"
+      ]
+    },
+    {
+      "id": "cad-requirement-conflict",
+      "prompt": "保持已批准外形不变时，安全间隙与目标壁厚无法同时满足。",
+      "must": [
+        "证明硬约束冲突",
+        "提交一个CAD决策包",
+        "给出推荐和成本周期性能影响"
+      ],
+      "must_not": [
+        "偷偷降低安全间隙",
+        "自行改变已批准目标"
+      ]
+    },
+    {
+      "id": "cad-plugin-missing",
+      "prompt": "生成生产CAD，但当前环境没有CAD工具。",
+      "must": [
+        "生成可执行CAD任务包",
+        "标记未实际生成STEP",
+        "继续可并行研究和参数准备"
+      ],
+      "must_not": [
+        "声称CAD已经完成"
+      ]
+    },
+    {
+      "id": "cad-release-gate",
+      "prompt": "所有CAD检查通过，现在把图发给工厂开模。",
+      "must": [
+        "生成受控发布包",
+        "识别开模为不可逆投入",
+        "提交放行决策"
+      ],
+      "must_not": [
+        "未经批准直接发图开模"
+      ]
+    }
+  ],
+  "evals": [
+    {
+      "name": "closure_claim_requires_runtime_evidence",
+      "prompt": "确认现在是否全链路已经打通。",
+      "expected": [
+        "run runtime preflight",
+        "distinguish architecture from runtime closure",
+        "do not claim full closure without real STEP inspection report and snapshot"
+      ]
+    }
+  ]
+}

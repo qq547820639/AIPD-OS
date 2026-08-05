@@ -1,0 +1,30 @@
+G0:
+  required_deliverables: [project_brief, material_index, initial_fact_register, execution_map]
+  requires_owner_approval: false
+G1:
+  required_deliverables: [scenario_model, requirement_definition, non_goals, initial_risk_register]
+  requires_owner_approval: false
+G2:
+  required_deliverables: [concept_comparison, recommended_route, v1_value_test]
+  requires_owner_approval: true
+G3:
+  required_deliverables: [v1_engineering_definition, preliminary_bom, interface_register, dfmea_draft, cad_contract, cad_l1_functional_layout]
+  requires_owner_approval: false
+G4:
+  required_deliverables: [simulation_or_calculation_plan, result_or_execution_package, parameter_register, cad_parametric_source, cad_primary_step, cad_inspection_report, cad_snapshot_packet]
+  requires_owner_approval: false
+G5:
+  required_deliverables: [product_specification, bom, key_parameter_table, supply_chain_plan, rfq_package, dfm_dfa_review, cad_bom_mapping]
+  requires_owner_approval: true
+G6:
+  required_deliverables: [evt_plan, evt_raw_data, evt_report, issue_register, evt_cad_configuration]
+  requires_owner_approval: true
+G7:
+  required_deliverables: [dvt_plan, dvt_raw_data, dvt_report, compliance_status, cad_l4_dfm_drawings]
+  requires_owner_approval: true
+G8:
+  required_deliverables: [pvt_plan, process_capability, quality_control_plan, mass_production_recommendation, cad_l5_release_package]
+  requires_owner_approval: true
+G9:
+  required_deliverables: [product_manual, release_package, release_audit, project_checkpoint]
+  requires_owner_approval: true

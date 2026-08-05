@@ -1,0 +1,13 @@
+{
+  "project_id": "PROJECT-001",
+  "goal": "",
+  "owner_policy": "AI executes; owner decides only at gates",
+  "target_maturity": "prototype_build_ready",
+  "current_phase": "S0_intake",
+  "status": "active",
+  "truth_baseline_version": "0.1",
+  "open_decisions": [],
+  "work_queue": [],
+  "capabilities": [],
+  "claims": []
+}

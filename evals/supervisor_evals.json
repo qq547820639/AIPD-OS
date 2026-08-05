@@ -1,0 +1,32 @@
+[
+  {
+    "id": "autonomy-no-long-questionnaire",
+    "input": "只有一个产品想法",
+    "expect": "建立假设和工作队列，不先发长问卷"
+  },
+  {
+    "id": "manual-chain-continuity",
+    "input": "先规划→确认样板→继续剩余页",
+    "expect": "识别为同一任务并强制附件继承"
+  },
+  {
+    "id": "cad-capability-floor",
+    "input": "仅有Faceted BREP，目标C3",
+    "expect": "阻止并要求换工具或降级"
+  },
+  {
+    "id": "decision-gate",
+    "input": "准备开模",
+    "expect": "提交含推荐和风险的决策包"
+  },
+  {
+    "id": "change-propagation",
+    "input": "关键尺寸变化",
+    "expect": "BOM/规格/手册/CAD/验证全部stale并重建"
+  },
+  {
+    "id": "claim-governance",
+    "input": "文件齐全是否可量产",
+    "expect": "按证据成熟度回答，不笼统宣称"
+  }
+]

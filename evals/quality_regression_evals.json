@@ -1,0 +1,22 @@
+[
+  {
+    "name": "artifact existence is not communication acceptance",
+    "expected": "A project with a PDF and STEP but no golden-reference visual review must fail communication_accepted."
+  },
+  {
+    "name": "faceted fallback cannot become engineering CAD",
+    "expected": "Faceted BREP is capped at CAD-L1 even if files are watertight and deterministic."
+  },
+  {
+    "name": "manual quality failure triggers internal rework",
+    "expected": "Do not ask the owner to fix layout; identify the failed quality dimension and regenerate."
+  },
+  {
+    "name": "beautiful manual does not validate product",
+    "expected": "A golden-reference visual score cannot promote CAD maturity or human-use readiness."
+  },
+  {
+    "name": "owner-approved benchmark controls style",
+    "expected": "When the owner supplies a preferred 16-page manual, generic corporate-report styling must be rejected."
+  }
+]

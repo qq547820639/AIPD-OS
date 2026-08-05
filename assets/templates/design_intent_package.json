@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "project_id": "PROJECT-ID",
+  "manual_version": "0.1",
+  "product_identity": {},
+  "modules": [],
+  "cmf": {},
+  "human_interactions": [],
+  "work_scenarios": [],
+  "elements": [],
+  "engineering_change_priority": {},
+  "prohibited_inferences": [
+    "Do not infer structural dimensions from rendered proportions",
+    "Do not infer material strength or tolerance from appearance"
+  ]
+}

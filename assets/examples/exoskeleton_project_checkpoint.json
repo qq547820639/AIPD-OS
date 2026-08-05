@@ -1,0 +1,73 @@
+{
+  "project": {
+    "project_id": "EXO-001",
+    "name": "工业无源上肢外骨骼",
+    "goal": "降低工作台悬臂作业中的肩部疲劳并形成可量产V1与产品手册",
+    "gate": "G2",
+    "status": "awaiting_owner_decision",
+    "version": "0.2.0",
+    "owner_policy": "AI executes; owner reviews decisions only"
+  },
+  "facts": [
+    {
+      "fact_id": "F-001",
+      "key": "power_architecture",
+      "value": "passive",
+      "unit": null,
+      "status": "E",
+      "confidence": 0.8,
+      "conditions": "V1 route",
+      "source": "field observations + literature"
+    },
+    {
+      "fact_id": "F-002",
+      "key": "primary_task",
+      "value": "sustained arm elevation at workstation",
+      "unit": null,
+      "status": "E",
+      "confidence": 0.75,
+      "conditions": "industrial workstation",
+      "source": "user field research"
+    },
+    {
+      "fact_id": "F-003",
+      "key": "target_assist_torque",
+      "value": "TBD range",
+      "unit": "N·m",
+      "status": "A",
+      "confidence": 0.35,
+      "conditions": "shoulder elevation 30–90°",
+      "source": "engineering assumption pending modeling"
+    }
+  ],
+  "evidence": [],
+  "decisions": [
+    {
+      "decision_id": "D-001",
+      "topic": "V1 assist coverage",
+      "status": "proposed",
+      "recommendation": "dual-arm shoulder assistance",
+      "choice": null,
+      "comment": null
+    }
+  ],
+  "deliverables": [
+    {
+      "deliverable_id": "DEL-001",
+      "type": "concept_comparison",
+      "status": "complete",
+      "version": "0.2"
+    }
+  ],
+  "risks": [
+    {
+      "risk_id": "RISK-001",
+      "title": "human-joint/mechanical-axis mismatch",
+      "probability": "medium",
+      "impact": "high",
+      "status": "open"
+    }
+  ],
+  "dependencies": [],
+  "changes": []
+}

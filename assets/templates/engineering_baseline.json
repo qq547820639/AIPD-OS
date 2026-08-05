@@ -1,0 +1,13 @@
+{
+  "project_id": "PROJECT-ID",
+  "product_architecture": null,
+  "target_population": {"percentiles": [], "size_strategy": null},
+  "kinematics": {"ranges": [], "misalignment_strategy": null},
+  "task_envelope": null,
+  "load_cases": [],
+  "assist_curve": null,
+  "contact_interfaces": [],
+  "materials_and_processes": [],
+  "risk_register": [],
+  "facts_version": null
+}

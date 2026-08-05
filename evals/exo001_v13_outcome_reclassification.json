@@ -1,0 +1,12 @@
+{
+  "project_root": "/mnt/data/EXO-001-full-digital",
+  "artifact_complete": true,
+  "digital_thread_complete": true,
+  "communication_accepted": false,
+  "engineering_model_ready": false,
+  "prototype_build_ready": false,
+  "production_release_ready": false,
+  "requested_gate": "communication",
+  "requested_gate_passed": false,
+  "classification": "digital_thread_complete_but_outcome_not_accepted"
+}

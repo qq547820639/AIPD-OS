@@ -1,0 +1,25 @@
+{
+  "iteration": 1,
+  "spec_version": "0.1.0",
+  "artifacts": {
+    "source": "cad/source/example.py",
+    "step": "cad/step/example.step",
+    "inspection_report": "cad/inspection/example.json",
+    "snapshot": "cad/snapshots/example.png"
+  },
+  "hard_constraint_results": [
+    {
+      "id": "HC-001",
+      "passed": true,
+      "actual": "1 valid closed solid",
+      "evidence": "cad/inspection/example.json"
+    }
+  ],
+  "metrics": {
+    "part_count": 1
+  },
+  "regressions": [],
+  "high_risk_assumptions": [],
+  "approved_requirement_conflict": false,
+  "notes": ""
+}

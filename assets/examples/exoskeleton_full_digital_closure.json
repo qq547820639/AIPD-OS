@@ -1,0 +1,57 @@
+{
+  "project_root": "/mnt/data/EXO-001-full-digital",
+  "groups": {
+    "architecture": {
+      "passed": true,
+      "checks": {
+        "state/project_checkpoint.json": true,
+        "requirements/requirements.md": true,
+        "concept/concept_report.md": true,
+        "engineering/v1_engineering.md": true,
+        "manual/manual.pdf": true
+      },
+      "missing": []
+    },
+    "cad_runtime": {
+      "passed": true,
+      "checks": {
+        "cad/cad_brief.md": true,
+        "cad/cad_contract.json": true,
+        "cad/model.py": true,
+        "cad/model.step": true,
+        "cad/model.stl": true,
+        "cad/model.glb": true,
+        "cad/inspection_report.json": true,
+        "cad/snapshot.png": true
+      },
+      "missing": []
+    },
+    "production_handoff": {
+      "passed": true,
+      "checks": {
+        "manufacturing/bom.xlsx": true,
+        "manufacturing/drawing_register.csv": true,
+        "cad/drawings/EXO-001-GA-001.pdf": true,
+        "release/approval.json": true
+      },
+      "missing": []
+    }
+  },
+  "semantic_checks": {
+    "inspection_passed": true,
+    "all_cad_hard_checks": true,
+    "three_pose_checks": true,
+    "closed_part_count": true,
+    "cad_contract_passed": true,
+    "step_syntax_and_solids": true,
+    "bom_is_valid_xlsx": true,
+    "drawing_register_complete": true,
+    "release_scope_controlled": true
+  },
+  "architecture_closed": true,
+  "cad_runtime_closed": true,
+  "production_handoff_pack_ready": true,
+  "full_digital_chain_ready": true,
+  "physical_loop_pending": true,
+  "classification": "full_digital_chain_ready"
+}

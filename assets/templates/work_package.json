@@ -1,0 +1,17 @@
+{
+  "phase": "S1_theory",
+  "module": "research",
+  "title": "",
+  "objective": "",
+  "priority": 50,
+  "depends_on": [],
+  "inputs": {},
+  "outputs": {},
+  "acceptance": {
+    "deterministic": [],
+    "professional_review": [],
+    "outcome": []
+  },
+  "capability_floor": null,
+  "failure_policy": "auto_repair_then_internal_replan"
+}

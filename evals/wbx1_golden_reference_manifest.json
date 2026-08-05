@@ -1,0 +1,120 @@
+{
+  "label": "Owner-approved WBX-1 16-page visual benchmark",
+  "source_dir": "/mnt/data/wbx_manual_ref",
+  "count": 16,
+  "items": [
+    {
+      "file": "1.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "e4ded55dfcc7e048829a9c6e8f89dc3be61f7649cc803eb9998383c4614c94f2"
+    },
+    {
+      "file": "10.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "dd73b9d41735ed2f7199c4454565f84e97fbdf0872aff24fa54ae9afbb9f057b"
+    },
+    {
+      "file": "11.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "92cf906185c1dfc04a4d1e2b17e3d3109c697b889c9cda4ce729c69659538c31"
+    },
+    {
+      "file": "12.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "6be06f47dc2c1f0eac3b9c20acd273d84c9fc159ce4bd1a267f598cc3947077d"
+    },
+    {
+      "file": "13.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "82b837b0d8b7ecc9d3d50600acc4561487d8e875216231e4771aae2be16742d3"
+    },
+    {
+      "file": "14.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "e20414138e3453448831718741ec308e7d0647b87aca88cf8b3338479df4d943"
+    },
+    {
+      "file": "15.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "657c0ef3c957e8779bcd963bc89c16c1dd0385d58d58759925477f3142a192a4"
+    },
+    {
+      "file": "16.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "3c99856a34c067f2ebe6752211f9f5dac5a5db87dc9f477859403d248a0866aa"
+    },
+    {
+      "file": "2.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "fd0c896aee26a472b967bed6d19dc8becd15c14ff217bc4eb6e74e6ef6e976c4"
+    },
+    {
+      "file": "3.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "0a754317ca4e9aba54b2da76f63f281ba0d46f9399056e436ffff28dc753a22d"
+    },
+    {
+      "file": "4.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "4370e33d52a4f81b925e1117cffdae6f12e6f85a15f9e04364819e25d718dad7"
+    },
+    {
+      "file": "5.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "d5a5da604cc4ebe7f432af7c0eb13e88c0a0e2045a429cc9445d7f1b790576ee"
+    },
+    {
+      "file": "6.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "ee4257a5cbaee1626b7b455fc0a177a9f4a4313c530154f45c125b6371137370"
+    },
+    {
+      "file": "7.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "1b5ce654b9bcbfac9d7c1032689d4f4df2dfd97de814952282d1fb310f040a78"
+    },
+    {
+      "file": "8.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "5807e368f2a1196316dbc9408025323fab3bcc493b06406627823152fb4add23"
+    },
+    {
+      "file": "9.png",
+      "width": 1055,
+      "height": 1491,
+      "mode": "RGB",
+      "sha256": "f22d50cbdeb9920980415b6af1604a07c5a1fd45216029aa0a258197243ed735"
+    }
+  ],
+  "status": "golden_reference_registered"
+}

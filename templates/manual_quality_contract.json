@@ -1,0 +1,21 @@
+{
+  "expected_page_count": 16,
+  "min_width": 2480,
+  "min_height": 3508,
+  "max_white_ratio": 0.90,
+  "min_entropy": 2.0,
+  "duplicate_hash_distance_max": 3,
+  "visual_review_threshold": 8.0,
+  "visual_review_dimensions": [
+    "brand_identity",
+    "narrative_clarity",
+    "information_hierarchy",
+    "asset_quality",
+    "product_consistency",
+    "human_scene_realism",
+    "technical_explanatory_power",
+    "chinese_typography",
+    "information_density",
+    "engineering_truthfulness"
+  ]
+}

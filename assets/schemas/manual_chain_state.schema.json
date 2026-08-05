@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AIPD Manual Chain State",
+  "type": "object",
+  "required": ["schema_version", "project_id", "phase", "minimum_pages", "prompts", "pages", "anchors", "batches"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "project_id": {"type": "string", "minLength": 1},
+    "phase": {"type": "string"},
+    "minimum_pages": {"type": "integer", "minimum": 1},
+    "source_materials": {"type": "array"},
+    "prompts": {"type": "array"},
+    "pages": {"type": "array"},
+    "anchors": {"type": "array"},
+    "batches": {"type": "array"},
+    "visual_bible": {},
+    "design_intent_package": {},
+    "facts_version": {}
+  }
+}

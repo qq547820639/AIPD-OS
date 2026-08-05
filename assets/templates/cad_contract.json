@@ -1,0 +1,31 @@
+{
+  "project_id": "PROJECT-ID",
+  "contract_id": "CAD-CONTRACT-001",
+  "cad_level": "CAD-L0",
+  "spec_version": "0.1.0",
+  "source_facts": [],
+  "required_artifacts": ["source", "step", "inspection_report", "snapshot"],
+  "hard_constraints": [
+    {
+      "id": "HC-001",
+      "description": "输出为有效闭合实体，且实体数量符合任务定义",
+      "safety_critical": false,
+      "evidence_required": true
+    }
+  ],
+  "soft_objectives": [
+    {
+      "id": "SO-001",
+      "metric": "part_count",
+      "direction": "min",
+      "target": 1,
+      "limit": 3,
+      "weight": 1.0
+    }
+  ],
+  "release_policy": {
+    "minimum_score": 0.9,
+    "minimum_improvement": 0.01,
+    "max_internal_iterations": 8
+  }
+}
