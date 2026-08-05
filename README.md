@@ -1,6 +1,16 @@
-# AIPD Orchestrator v5.0.0
+# AIPD Orchestrator v5.1.0
 
 AI全链路产品开发与交付主管：一个对话入口，自主推进理论基础、产品定义、连续附件产品手册、工程CAD、工业化、供应链、EVT/DVT/PVT和生产发布。
+
+## v5.1新增
+
+- **版本真实性审计**：`scripts/audit_repo.py` 生成可再生成的审计报告（`docs/audit/`），校验 git 提交、pyproject 版本、`RELEASE_MANIFEST.json` 逐文件哈希、CI job 与遗留 CAD 冲突；
+- **供应链与验证执行器**（`supply_chain/`）：报价、供应商、实验室与分析，配套升级 supplier / mail_rfq / evt_dvt_pvt 适配器；
+- **生产发布证据门禁**（`evidence_checks`）：`gdt_covers_ctq`、`ctq_has_inspection`、`drawing_cad_same_revision` 等；
+- **WBX-1 黄金样本视觉落差评估**（`visual_audit/golden.py`）；
+- **行为评估扩展至 15 项**（`evals.json` v1.2）；
+- **16 个一键命令**（`init` / `intake` / `resume` / `status` / `run` / `decide` / `manual plan` / `manual generate` / `cad preflight` / `cad build` / `industrialize` / `validate` / `release check` / `test` / `eval` / `package`），支持 `--json` 模式；
+- **提示注入隔离增强**：高风险动作需人工批准。见 `SECURITY.md` / `THREAT_MODEL.md`。
 
 ## v5.0新增
 

@@ -61,6 +61,74 @@ class ExecutionRecord:
     evidence_references: List[str] = field(default_factory=list)
     error_message: str = ""
     artifacts: List[str] = field(default_factory=list)
+    project_id: str = ""
+    capability: str = ""
+    retry_parent: str = ""
+    fallback_from: str = ""
+
+    @property
+    def started_at(self) -> str:
+        """与 start_time 等价的时间戳（两种命名风格兼容）。"""
+        return self.start_time
+
+    @property
+    def completed_at(self) -> str:
+        """与 end_time 等价的时间戳（两种命名风格兼容）。"""
+        return self.end_time
+
+    @property
+    def adapter_id(self) -> str:
+        """适配器标识：优先 capability，缺省回退到 tool。"""
+        return self.capability or self.tool
+
+    @property
+    def provider_version(self) -> str:
+        """提供方版本（version 的别名）。"""
+        return self.version
+
+    @property
+    def token_usage(self) -> Dict[str, int]:
+        """token 用量（{input, output}）。"""
+        return {"input": self.tokens_in, "output": self.tokens_out}
+
+    @property
+    def error_type(self) -> str:
+        """错误分类（error_classification 的别名）。"""
+        return self.error_classification
+
+    @property
+    def evidence_ids(self) -> List[str]:
+        """证据引用（evidence_references 的别名）。"""
+        return self.evidence_references
+
+    @property
+    def artifact_ids(self) -> List[str]:
+        """产物路径列表（artifacts 的别名）。"""
+        return self.artifacts
+
+    def unified_record(self) -> Dict[str, Any]:
+        """返回包含全部 19 个统一运行记录字段的 dict。"""
+        return {
+            "run_id": self.run_id,
+            "project_id": self.project_id,
+            "work_id": self.work_id,
+            "adapter_id": self.adapter_id,
+            "provider": self.provider,
+            "provider_version": self.provider_version,
+            "capability": self.capability,
+            "input_hash": self.input_hash,
+            "output_hash": self.output_hash,
+            "started_at": self.started_at,
+            "completed_at": self.completed_at,
+            "status": self.status,
+            "cost": self.cost,
+            "token_usage": self.token_usage,
+            "retry_parent": self.retry_parent,
+            "fallback_from": self.fallback_from,
+            "error_type": self.error_type,
+            "evidence_ids": self.evidence_ids,
+            "artifact_ids": self.artifact_ids,
+        }
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -99,6 +167,10 @@ class ExecutionRecord:
             evidence_references=_loads(row["evidence_refs_json"], []),
             error_message=row["error_message"] or "",
             artifacts=_loads(row["artifacts_json"], []),
+            project_id=row.get("project_id", "") or "",
+            capability=row.get("capability", "") or "",
+            retry_parent=row.get("retry_parent", "") or "",
+            fallback_from=row.get("fallback_from", "") or "",
         )
 
 

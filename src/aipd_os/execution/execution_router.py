@@ -70,6 +70,7 @@ class ExecutionRouter:
         capability_id: str,
         input: Dict[str, Any],
         context: Optional[Dict[str, Any]] = None,
+        project_id: str = "",
     ) -> Dict[str, Any]:
         """执行一次路由，返回 ``{'record': ExecutionRecord, 'result': dict|None}``。
 
@@ -80,6 +81,8 @@ class ExecutionRouter:
             raise KeyError(f"no adapter for capability: {capability_id}")
 
         context = context or {}
+        project_id = project_id or context.get("project_id", "")
+        context["project_id"] = project_id
 
         # 1) 能力可用性
         meta = adapter.discover()
@@ -96,6 +99,9 @@ class ExecutionRouter:
         run_id = self.store.create_run(
             work_id, adapter.capability_id(), meta.get("provider", ""),
             meta.get("version", "1.0"), input_hash,
+            project_id=project_id,
+            adapter_id=adapter.capability_id(),
+            capability=adapter.capability_id(),
         )
         lineage: List[str] = []
 
@@ -130,7 +136,9 @@ class ExecutionRouter:
                 break
 
         # 3) 降级链
-        fallback_result = self._try_fallback(run_id, lineage, work_id, input, adapter)
+        fallback_result = self._try_fallback(
+            run_id, lineage, work_id, input, adapter, context
+        )
         if fallback_result is not None:
             return fallback_result
 
@@ -191,7 +199,9 @@ class ExecutionRouter:
         work_id: str,
         input: Dict[str, Any],
         adapter: ToolAdapter,
+        context: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
+        context = context or {}
         for cid in adapter.fallback_chain():
             fb = self.registry.get(cid)
             if fb is None:
@@ -206,6 +216,11 @@ class ExecutionRouter:
                 work_id, fb.capability_id(), meta.get("provider", ""),
                 meta.get("version", "1.0"), self._hash(input),
                 retry_lineage=list(lineage) + [run_id],
+                project_id=context.get("project_id", ""),
+                adapter_id=fb.capability_id(),
+                capability=fb.capability_id(),
+                retry_parent=run_id,
+                fallback_from=adapter.capability_id(),
             )
             try:
                 return self._finalize_success(
@@ -236,6 +251,9 @@ class ExecutionRouter:
         run_id = self.store.create_run(
             work_id, adapter.capability_id(), meta.get("provider", ""),
             meta.get("version", "1.0"), input_hash,
+            project_id=context.get("project_id", ""),
+            adapter_id=adapter.capability_id(),
+            capability=adapter.capability_id(),
         )
         # 写入外部任务包（诚实性）
         try:

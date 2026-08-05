@@ -1,7 +1,7 @@
 """行为评估的评分逻辑。
 
 - ``score_response``：基于关键词的 must/must_not 打分。
-- ``semantic_checks``：针对 10 个行为契约的关键词/正则确定性检查器。
+- ``semantic_checks``：针对 13 个行为契约的关键词/正则确定性检查器。
 """
 
 from __future__ import annotations
@@ -107,6 +107,25 @@ def _key_dimension_propagation(text: str) -> bool:
     return bool(re.search(r"(关键尺寸变更|受影响交付物过时|传播到依赖|标记过时)", text))
 
 
+
+
+def _retrieve_or_mark_assumption(text: str) -> bool:
+    """缺信息先检索或标记假设：出现检索/标记假设/待确认，且不盲目臆造。"""
+    if re.search(r"(编造|臆造|随意给个|虚构)", text):
+        return False
+    return bool(re.search(r"(检索|标记假设|assumption|待确认|先查证|缺数据)", text))
+
+
+def _cad_change_writes_back_manual(text: str) -> bool:
+    """CAD 变更回写手册：出现回写/同步手册/手册已更新/影响传播到手册。"""
+    return bool(re.search(r"(回写手册|同步手册|手册已更新|影响传播到手册|手册同步)", text))
+
+
+def _natural_language_review_parsed(text: str) -> bool:
+    """自然语言审核意见被解析为决策/行动：出现解析/已理解意见/翻译为/采纳。"""
+    return bool(re.search(r"(解析|已理解您的意见|翻译为|采纳|落实为用户意图)", text))
+
+
 semantic_checks: Dict[str, SemCheck] = {
     "no_long_questionnaire": _no_long_questionnaire,
     "only_ask_when_necessary": _only_ask_when_necessary,
@@ -118,6 +137,9 @@ semantic_checks: Dict[str, SemCheck] = {
     "no_claim_without_test": _no_claim_without_test,
     "no_cross_session_repeat": _no_cross_session_repeat,
     "key_dimension_propagation": _key_dimension_propagation,
+    "retrieve_or_mark_assumption": _retrieve_or_mark_assumption,
+    "cad_change_writes_back_manual": _cad_change_writes_back_manual,
+    "natural_language_review_parsed": _natural_language_review_parsed,
 }
 
 

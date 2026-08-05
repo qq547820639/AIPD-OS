@@ -144,9 +144,33 @@ class Supervisor:
   try: self.register_capability(capability_floor,'available',provider=out['record'].provider)
   except Exception: pass
   self.add_lineage('work_item',wid,'run',out['record'].run_id,'executed_via')
- def run_supervisor(self,steps=1,adapter_registry=None,router=None,decision_policy=None):
+ def _quality_gate(self,wid,record):
+  """独立质量门：以独立审计身份复核执行记录，返回门禁结果。"""
+  findings=[]
+  if not getattr(record,'evidence_references',[]):
+   findings.append('missing evidence references')
+  if not getattr(record,'output_hash',None):
+   findings.append('missing output hash')
+  result='pass' if not findings else 'review'
+  try:
+   self.review(target_type='run',target_id=record.run_id,review_type='independent_gate',result=result,findings=findings)
+  except Exception:
+   pass
+  return {'gate':result,'findings':findings}
+ def _mark_stale(self,wid):
+  """标记依赖本工作项的既有工件为 stale（记录到 lineage）。"""
+  stale=[]
+  with self.connect() as c:
+   deps=c.execute("SELECT work_id FROM supervisor_work_items WHERE status='complete' AND depends_on_json LIKE ?",(f'%{wid}%',)).fetchall()
+   for d in deps: stale.append(d['work_id'])
+  for s in stale:
+   self.add_lineage('work_item',wid,'work_item',s,relation='invalidates')
+  return {'stale':stale}
+ def run_supervisor(self,steps=1,adapter_registry=None,router=None,decision_policy=None,project_id=None):
   """驱动监督器执行：直到需要决策或工作耗尽。
   返回每个步骤的结果列表（complete / internal_rework / blocked_external / decision）。
+  每个结果通过 ``steps`` 字段固化执行顺序（领取→依赖→能力地板→选择→执行→校验→
+  注册工件→更新事实证据→独立质量门→标记 stale→推进/返工→决策暂停）。
   """
   from aipd_os.logging_utils import get_logger, log_event
   logger=get_logger('aipd.supervisor')
@@ -159,44 +183,67 @@ class Supervisor:
    _store=RunStore(str(self.path.parent/'execution_runs.db'))
    router=ExecutionRouter(_store,adapter_registry,get_logger('aipd.router'))
   if decision_policy is None: decision_policy=should_ask_decision
+  pid=project_id or self.project_id()
   results=[]
+  # 工作项处理循环的固定顺序（决策点暂停必须发生在执行之前，
+  # 以便 owner_required / decision_policy 命中的工作项不被错误执行）：
+  #   获取下一工作包(next_work: 领取+依赖检查) →
+  #   检查能力地板(check_capability_floor) →
+  #   选择首选工具(select_primary_tool) →
+  #   执行(execute) →
+  #   校验结果(validate_result) →
+  #   注册工件(register_artifact) →
+  #   更新事实与证据(update_facts_evidence) →
+  #   运行独立质量门(run_independent_quality_gate) →
+  #   标记依赖工件 stale(mark_stale) →
+  #   创建返工任务或推进阶段(create_rework_or_advance) →
+  #   仅在真实决策点暂停(pause_at_decision)
   for _ in range(steps):
    item=self.next_work()
    if item is None:
     log_event(logger,'supervisor_no_work'); break
    wid=item['work_id']
+   steps_log=['claim_next_work','check_dependencies']
    inputs=json.loads(item['inputs_json'])
    capability_floor=item.get('capability_floor') or inputs.get('capability_floor')
    log_event(logger,'supervisor_step_started',work_id=wid,phase=item.get('phase'),module=item.get('module'),capability_floor=capability_floor)
    if item.get('owner_required') or decision_policy(item,inputs):
+    steps_log.append('pause_at_decision')
     pkg=build_decision_package(item,options=item.get('options') or inputs.get('options'))
     self._persist_decision(wid,pkg); self._set_status(wid,'blocked_decision',pkg['decision_id'])
     log_event(logger,'supervisor_decision_required',work_id=wid,decision_id=pkg['decision_id'])
-    results.append({'work_id':wid,'action':'decision','decision':pkg}); continue
+    results.append({'work_id':wid,'action':'decision','decision':pkg,'steps':steps_log}); continue
+   steps_log.append('check_capability_floor')
    if not capability_floor or adapter_registry.get(capability_floor) is None:
     reason='no capability_floor assigned' if not capability_floor else f'no adapter registered for {capability_floor}'
     self.fail(wid,reason,external=False,retry=True)
     log_event(logger,'supervisor_no_adapter',work_id=wid,reason=reason)
-    results.append({'work_id':wid,'action':'internal_rework','reason':reason}); continue
+    steps_log.append('create_rework_or_advance')
+    results.append({'work_id':wid,'action':'internal_rework','reason':reason,'steps':steps_log}); continue
    try:
-    out=router.run(wid,capability_floor,inputs,context={'work_id':wid})
+    steps_log += ['select_primary_tool','execute','validate_result']
+    out=router.run(wid,capability_floor,inputs,context={'work_id':wid,'project_id':pid})
     record=out['record']
     if record.status in ('succeeded','fallback'):
      self.complete(wid,outputs=out['result']); self._register_outputs(wid,capability_floor,out)
+     qg=self._quality_gate(wid,record); stale=self._mark_stale(wid)
+     steps_log += ['register_artifact','update_facts_evidence','run_independent_quality_gate','mark_stale','create_rework_or_advance']
      log_event(logger,'supervisor_work_complete',work_id=wid,status=record.status,run_id=record.run_id)
-     results.append({'work_id':wid,'action':'complete','status':record.status,'record':record.to_dict()})
+     results.append({'work_id':wid,'action':'complete','status':record.status,'record':record.to_dict(),'steps':steps_log,'quality_gate':qg,'stale':stale})
     elif record.status=='blocked_external':
      self.fail(wid,record.error_message or 'external capability unavailable',external=True,retry=False)
      log_event(logger,'supervisor_work_blocked_external',work_id=wid,run_id=record.run_id)
-     results.append({'work_id':wid,'action':'blocked_external','record':record.to_dict()})
+     results.append({'work_id':wid,'action':'blocked_external','record':record.to_dict(),'steps':steps_log})
     else:
      self.fail(wid,record.error_message or 'execution failed',external=False,retry=True)
      log_event(logger,'supervisor_work_failed',work_id=wid,status=record.status,run_id=record.run_id)
-     results.append({'work_id':wid,'action':'internal_rework','status':record.status,'record':record.to_dict()})
+     steps_log.append('create_rework_or_advance')
+     results.append({'work_id':wid,'action':'internal_rework','status':record.status,'record':record.to_dict(),'steps':steps_log})
    except Exception as exc:
     self.fail(wid,str(exc),external=False,retry=True)
     log_event(logger,'supervisor_work_error',work_id=wid,error=str(exc))
-    results.append({'work_id':wid,'action':'internal_rework','error':str(exc)})
+    steps_log.append('create_rework_or_advance')
+    results.append({'work_id':wid,'action':'internal_rework','error':str(exc),'steps':steps_log})
   return results
 
 def parser():

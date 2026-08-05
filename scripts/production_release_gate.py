@@ -16,6 +16,10 @@ Beyond field truthiness the gate performs multi-dimensional checks:
   (f) approval status
   (g) evidence freshness (timestamp not older than --max-evidence-age-hours)
   (h) tool capability ceiling (manifest runtime must allow the claimed level)
+
+Additional evidence-gate checks are reported additively in `evidence_checks`
+(a list of {check, level, passed, detail}) and any failed evidence check also
+fails the overall gate. Existing (a)..(h) logic is preserved unchanged.
 """
 from __future__ import annotations
 import argparse, hashlib, json
@@ -130,6 +134,146 @@ def check_requirement(d, root, level, key):
     return errs
 
 
+def _walk(o, fn):
+    if isinstance(o, dict):
+        fn(o)
+        for v in o.values():
+            _walk(v, fn)
+    elif isinstance(o, list):
+        for v in o:
+            _walk(v, fn)
+
+
+def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_idx,
+                        now, max_age_hours):
+    """Build the additive `evidence_checks` list. Each entry: {check, level, passed, detail}."""
+    checks = []
+
+    def add(check, level, passed, detail):
+        checks.append({'check': check, 'level': level, 'passed': bool(passed), 'detail': detail})
+
+    # file_openable: for FILE_KEYS file paths, attempt to open.
+    unopenable = []
+    for k in sorted(FILE_KEYS):
+        value = val(d, k)
+        path, _ = resolve_path(value)
+        if not path:
+            continue
+        p = (root / path).resolve()
+        if not p.is_file():
+            unopenable.append(f"{k}: not found: {path}")
+        else:
+            try:
+                with open(str(p), 'rb') as fh:
+                    fh.read(1)
+            except OSError as exc:
+                unopenable.append(f"{k}: unreadable: {exc}")
+    add('file_openable', 'C1', not unopenable,
+        '; '.join(unopenable) if unopenable else 'all referenced files openable')
+
+    # schema_valid: JSON-backable manifest values that are dicts with a 'schema' field parse.
+    schema_issues = []
+
+    def _check_schema(o):
+        if isinstance(o, dict) and isinstance(o.get('schema'), str) and o['schema'].strip():
+            try:
+                json.loads(o['schema'])
+            except Exception as exc:
+                schema_issues.append(f"schema parse error: {exc}")
+    _walk(d, _check_schema)
+    add('schema_valid', 'C6', not schema_issues,
+        '; '.join(schema_issues) if schema_issues else 'manifest schema fields valid')
+
+    # drawing_cad_same_revision: drawings_version must equal model_version.
+    dv = val(d, 'drawings_version')
+    mv = val(d, 'model_version')
+    if dv is not None and mv is not None:
+        same = dv == mv
+        add('drawing_cad_same_revision', 'C6', same,
+            f"drawings_version={dv!r} model_version={mv!r}")
+    else:
+        add('drawing_cad_same_revision', 'C6', True,
+            'drawings_version/model_version not both present')
+
+    # bom_matches_model: bom_line_count must equal model_part_count.
+    b = val(d, 'bom_line_count')
+    mp = val(d, 'model_part_count')
+    if b is not None and mp is not None:
+        same = b == mp
+        add('bom_matches_model', 'C6', same, f"bom_line_count={b} model_part_count={mp}")
+    else:
+        add('bom_matches_model', 'C6', True, 'bom_line_count/model_part_count not both present')
+
+    # units_datum_tolerance_complete: units present; datum_scheme when tolerance_gdt
+    # present; each drawing entry needs tolerance or a global tolerance_gdt.
+    unit_issues = []
+    units = val(d, 'units')
+    if not (isinstance(units, str) and units.strip()):
+        unit_issues.append('units missing')
+    tol_gdt = val(d, 'tolerance_gdt')
+    datum = val(d, 'datum_scheme')
+    if present(tol_gdt) and not present(datum):
+        unit_issues.append('datum_scheme missing while tolerance_gdt present')
+    drawings = d.get('drawings')
+    if isinstance(drawings, list) and not present(tol_gdt):
+        if drawings and not all(
+                isinstance(entry, dict) and present(entry.get('tolerance'))
+                for entry in drawings):
+            unit_issues.append('drawing entries lack tolerance and no global tolerance_gdt')
+    add('units_datum_tolerance_complete', 'C5', not unit_issues,
+        '; '.join(unit_issues) if unit_issues else 'units/datum/tolerance complete')
+
+    # gdt_covers_ctq: every ctq feature must appear in gdt features.
+    ctq = d.get('ctq')
+    gdt = d.get('gdt')
+    if isinstance(ctq, list) and ctq and isinstance(gdt, list):
+        ctq_feats = {str(c.get('feature')) for c in ctq if isinstance(c, dict)}
+        gdt_feats = {str(g.get('feature')) for g in gdt if isinstance(g, dict)}
+        uncovered = sorted(ctq_feats - gdt_feats)
+        add('gdt_covers_ctq', 'C5', not uncovered,
+            f"ctq features not covered by gdt: {uncovered}" if uncovered
+            else 'all ctq features covered by gdt')
+    else:
+        add('gdt_covers_ctq', 'C5', True, 'ctq/gdt not both lists present')
+
+    # ctq_has_inspection: every ctq item must have inspection_method or test_method.
+    if isinstance(ctq, list) and ctq:
+        missing_ins = [
+            str(c.get('feature')) for c in ctq
+            if isinstance(c, dict)
+            and not present(c.get('inspection_method'))
+            and not present(c.get('test_method'))
+        ]
+        add('ctq_has_inspection', 'C6', not missing_ins,
+            f"ctq items lacking inspection: {missing_ins}" if missing_ins
+            else 'all ctq items have inspection')
+    else:
+        add('ctq_has_inspection', 'C6', True, 'no ctq present')
+
+    # tool_capability_supports_level: runtime ceiling must allow the claimed level.
+    cap_ok = ceiling_idx >= target_idx
+    add('tool_capability_supports_level', 'C0', cap_ok,
+        f"runtime '{runtime}' ceiling {ceiling} vs target {target}")
+
+    # owner_approval_real: owner_release present and approval_status approved/released.
+    owner = val(d, 'owner_release')
+    status = val(d, 'approval_status')
+    ok = present(owner) and str(status).lower() in ('approved', 'released')
+    add('owner_approval_real', 'C7', ok,
+        f"owner_release={present(owner)} approval_status={status!r}")
+
+    # evidence_not_expired: timestamp freshness.
+    ts = parse_ts(val(d, 'timestamp'))
+    if ts is not None:
+        age_h = (now - ts).total_seconds() / 3600.0
+        add('evidence_not_expired', 'C7', age_h <= max_age_hours,
+            f"evidence age {age_h:.1f}h <= {max_age_hours}h")
+    else:
+        add('evidence_not_expired', 'C7', True, 'no timestamp to check')
+
+    return checks
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument('--manifest', required=True)
@@ -173,6 +317,14 @@ def main() -> int:
         if age_h > a.max_evidence_age_hours:
             failures.append(f"evidence stale: {age_h:.1f}h > {a.max_evidence_age_hours}h")
 
+    # additive evidence-gate checks; failed ones also fail the overall gate
+    evidence_checks = run_evidence_checks(
+        d, root, runtime, ceiling, ceiling_idx, a.target, target_idx, now,
+        a.max_evidence_age_hours)
+    for c in evidence_checks:
+        if not c['passed']:
+            failures.append(f"{c['level']}:{c['check']}: {c['detail']}")
+
     # cumulative level evaluation (per-key checks), bounded by the runtime ceiling
     achieved = None
     missing = []
@@ -197,6 +349,7 @@ def main() -> int:
         'achieved_reached': achieved_reached,
         'missing': missing,
         'failures': failures,
+        'evidence_checks': evidence_checks,
         'runtime': runtime,
         'runtime_ceiling': ceiling,
         'production_release_ready': bool(passed and a.target == 'C7'),

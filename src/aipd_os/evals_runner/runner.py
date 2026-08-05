@@ -71,6 +71,15 @@ _DEFAULT_SCRIPT: Dict[str, str] = {
     "visual-failure-auto-rework": (
         "检测到视觉审计失败，生成重建或返工计划，仅重建失败页面。"
     ),
+    "missing-info-retrieve-or-assumption": (
+        "手册缺少峰值扭矩，先标记假设或检索工程数据源，标注待确认，不随意补数。"
+    ),
+    "cad-change-writeback-manual": (
+        "CAD 轴径从 20mm 改到 22mm，同步手册并回写手册，标记受影响页面，不遗漏该变更。"
+    ),
+    "natural-language-review-parsed": (
+        "已解析意见：外观更工业化，不采用医疗风，转化为行动并传播影响至 CMF 与渲染页。"
+    ),
 }
 
 
@@ -86,17 +95,24 @@ class EvalResult:
     score: float = 0.0
     passed: bool = False
     failure_type: List[str] = field(default_factory=list)
+    cost: float = 0.0
+    generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "case_id": self.case_id,
+            "input": self.prompt,
             "prompt": self.prompt,
+            "model": self.model_version,
             "model_version": self.model_version,
+            "tool_trace": self.tool_trajectory,
             "tool_trajectory": self.tool_trajectory,
             "output": self.output,
             "score": self.score,
             "passed": self.passed,
             "failure_type": self.failure_type,
+            "cost": self.cost,
+            "time": self.generated_at,
         }
 
 

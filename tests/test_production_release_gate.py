@@ -1,4 +1,4 @@
-"""production_release_gate 单元测试：achieved 修复与多维门检查。"""
+"""production_release_gate 单元测试：achieved 修复、多维门检查与新增 evidence_checks。"""
 from __future__ import annotations
 
 import json
@@ -48,6 +48,10 @@ def write_complete_manifest(tmp_path, **overrides) -> Path:
     return p
 
 
+def get_check(out, name: str) -> dict:
+    return next(c for c in out["evidence_checks"] if c["check"] == name)
+
+
 def test_c0_missing_achieved_none(tmp_path):
     """回归：C0 任一要求缺失时 achieved 必须为 None 且 passed=False。"""
     ev = full_evidence()
@@ -69,6 +73,8 @@ def test_complete_manifest_passes(tmp_path):
     assert out["achieved"] == "C7"
     assert out["passed"] is True
     assert r.returncode == 0
+    assert "evidence_checks" in out
+    assert all(c["passed"] for c in out["evidence_checks"])
 
 
 def test_missing_file_requirement_fails(tmp_path):
@@ -89,3 +95,49 @@ def test_stale_evidence_fails(tmp_path):
     assert out["passed"] is False
     assert r.returncode == 2
     assert any("stale" in f for f in out["failures"])
+    assert get_check(out, "evidence_not_expired")["passed"] is False
+
+
+def test_gdt_not_covering_ctq_fails(tmp_path):
+    """gdt 未覆盖某个 ctq feature 时证据门失败。"""
+    p = write_complete_manifest(
+        tmp_path,
+        ctq=[{"feature": "hole_a", "inspection_method": "CMM"}],
+        gdt=[{"feature": "slot_b"}],
+    )
+    r = run_gate(p, "C2")
+    out = json.loads(r.stdout)
+    assert out["passed"] is False
+    assert r.returncode == 2
+    assert get_check(out, "gdt_covers_ctq")["passed"] is False
+
+
+def test_ctq_missing_inspection_fails(tmp_path):
+    """ctq 条目缺少 inspection_method / test_method 时证据门失败。"""
+    p = write_complete_manifest(tmp_path, ctq=[{"feature": "hole_a"}])
+    r = run_gate(p, "C2")
+    out = json.loads(r.stdout)
+    assert out["passed"] is False
+    assert r.returncode == 2
+    assert get_check(out, "ctq_has_inspection")["passed"] is False
+
+
+def test_drawing_model_version_mismatch_fails(tmp_path):
+    """drawings_version != model_version 时证据门失败。"""
+    p = write_complete_manifest(tmp_path, drawings_version="2.0.0")
+    r = run_gate(p, "C2")
+    out = json.loads(r.stdout)
+    assert out["passed"] is False
+    assert r.returncode == 2
+    assert get_check(out, "drawing_cad_same_revision")["passed"] is False
+
+
+def test_consistent_c2_manifest_passes(tmp_path):
+    """完全一致的 C2 清单通过，且所有 evidence_checks 通过。"""
+    p = write_complete_manifest(tmp_path)
+    r = run_gate(p, "C2")
+    out = json.loads(r.stdout)
+    assert out["passed"] is True
+    assert out["achieved"] == "C7"
+    assert r.returncode == 0
+    assert all(c["passed"] for c in out["evidence_checks"])

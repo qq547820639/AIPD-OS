@@ -1,15 +1,21 @@
 """验证数据导入适配器（'validation.import-evt-dvt-pvt'）。
 
-导入 EVT/DVT/PVT 原始验证数据文件。
+把 CSV/XLSX 导入委托给 supply_chain.lab，并用 supply_chain.analysis 做
+阶段分析，产出纠偏任务与 BOM/CAD 影响传播。
 """
 
 from __future__ import annotations
 
-import json
-import os
+from pathlib import Path
 from typing import Any, Dict
 
 from aipd_os.execution.adapter import ToolAdapter
+from aipd_os.supply_chain.analysis import (
+    analyze_stage,
+    create_correction_tasks,
+    propagate_impact,
+)
+from aipd_os.supply_chain.lab import import_lab_csv, import_lab_json, import_lab_report, import_lab_xlsx
 from aipd_os.tool_adapters._common import meta, token_meta
 
 VALID_STAGES = {"evt", "dvt", "pvt"}
@@ -17,7 +23,7 @@ VALID_STAGES = {"evt", "dvt", "pvt"}
 
 class ValidationDataAdapter(ToolAdapter):
     provider = "local"
-    version = "1.0"
+    version = "1.1"
 
     def capability_id(self) -> str:
         return "validation.import-evt-dvt-pvt"
@@ -36,25 +42,39 @@ class ValidationDataAdapter(ToolAdapter):
 
     def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
         stage = str(input.get("stage", "evt")).lower()
-        records = []
+        files = input.get("files", [])
+        all_records = []
         artifacts = []
-        for f in input.get("files", []):
+        for f in files:
             path = str(f)
-            record = {"stage": stage, "path": path, "imported": os.path.isfile(path)}
-            if os.path.isfile(path):
-                try:
-                    with open(path, "r", encoding="utf-8") as fh:
-                        record["data"] = json.load(fh)
-                except Exception:
-                    record["data"] = None
-            records.append(record)
+            ext = Path(path).suffix.lower()
+            if ext == ".csv":
+                res = import_lab_csv(path, stage)
+            elif ext == ".xlsx":
+                res = import_lab_xlsx(path, stage)
+            elif ext == ".json":
+                res = import_lab_json(path, stage)
+            else:
+                res = import_lab_report(path, stage)  # pdf/docx -> external_blocked
+            all_records.extend(res.get("records", []))
             artifacts.append(path)
+
+        analysis = analyze_stage(all_records, stage)
+        correction_tasks = create_correction_tasks(analysis, stage)
+        facts = input.get("facts") or {}
+        bom = input.get("bom") or []
+        affected_keys = [it["test_item"] for it in analysis.get("failing_items", [])]
+        propagated_stale = propagate_impact(facts, bom, affected_keys)
+
         result = {
             "stage": stage,
-            "records": records,
-            "imported_count": sum(1 for r in records if r["imported"]),
+            "records": all_records,
+            "analysis": analysis,
+            "correction_tasks": correction_tasks,
+            "propagated_stale": propagated_stale,
+            "imported_count": len(artifacts),
             "artifacts": artifacts,
-            "_meta": token_meta(str(records)),
+            "_meta": token_meta(str(all_records)),
         }
         return result
 

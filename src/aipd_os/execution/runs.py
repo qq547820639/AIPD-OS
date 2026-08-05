@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS execution_runs(
  retry_lineage_json TEXT NOT NULL DEFAULT '[]',
  evidence_refs_json TEXT NOT NULL DEFAULT '[]',
  error_message TEXT,
+ project_id TEXT NOT NULL DEFAULT '',
+ adapter_id TEXT NOT NULL DEFAULT '',
+ capability TEXT NOT NULL DEFAULT '',
+ retry_parent TEXT NOT NULL DEFAULT '',
+ fallback_from TEXT NOT NULL DEFAULT '',
  artifacts_json TEXT NOT NULL DEFAULT '[]',
  result_json TEXT NOT NULL DEFAULT '{}');
 """
@@ -52,6 +57,17 @@ def canonical_hash(data: Any) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
+def _ensure_columns(c) -> None:
+    """就地迁移：CREATE TABLE IF NOT EXISTS 不会给已存在的表补列，
+    这里通过 PRAGMA 检查并用 ALTER TABLE 补齐缺失的新增列。"""
+    cols = {r[1] for r in c.execute("PRAGMA table_info(execution_runs)").fetchall()}
+    for name in ("project_id", "adapter_id", "capability", "retry_parent", "fallback_from"):
+        if name not in cols:
+            c.execute(
+                f"ALTER TABLE execution_runs ADD COLUMN {name} TEXT NOT NULL DEFAULT ''"
+            )
+
+
 class RunStore:
     """sqlite 持久化的执行记录存储。"""
 
@@ -60,6 +76,7 @@ class RunStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as c:
             c.executescript(_SCHEMA)
+            _ensure_columns(c)
 
     @contextmanager
     def connect(self):
@@ -85,14 +102,20 @@ class RunStore:
         version: str,
         input_hash: str,
         retry_lineage: Optional[List[str]] = None,
+        project_id: str = "",
+        adapter_id: str = "",
+        capability: str = "",
+        retry_parent: str = "",
+        fallback_from: str = "",
     ) -> str:
         run_id = self._new_run_id()
         ts = _now()
         with self.connect() as c:
             c.execute(
                 "INSERT INTO execution_runs(run_id,work_id,tool,provider,version,input_hash,"
-                "output_hash,start_time,status,retry_lineage_json,cost,tokens_in,tokens_out)"
-                " VALUES(?,?,?,?,?,?,?,?,?,?,0,0,0)",
+                "output_hash,start_time,status,retry_lineage_json,cost,tokens_in,tokens_out,"
+                "project_id,adapter_id,capability,retry_parent,fallback_from)"
+                " VALUES(?,?,?,?,?,?,?,?,?,?,0,0,0,?,?,?,?,?)",
                 (
                     run_id,
                     work_id,
@@ -104,6 +127,11 @@ class RunStore:
                     ts,
                     "running",
                     json.dumps(retry_lineage or [], ensure_ascii=False),
+                    project_id,
+                    adapter_id,
+                    capability,
+                    retry_parent,
+                    fallback_from,
                 ),
             )
         return run_id
@@ -125,6 +153,11 @@ class RunStore:
             "status",
             "error_classification",
             "error_message",
+            "project_id",
+            "adapter_id",
+            "capability",
+            "retry_parent",
+            "fallback_from",
             "result",
             "artifacts",
             "evidence_references",
@@ -173,6 +206,10 @@ class RunStore:
             prev.version,
             prev.input_hash,
             retry_lineage=lineage,
+            project_id=prev.project_id,
+            adapter_id=prev.adapter_id,
+            capability=prev.capability,
+            retry_parent=prev_run_id,
         )
 
     def get_run(self, run_id: str) -> ExecutionRecord:

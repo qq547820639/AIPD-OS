@@ -9,8 +9,8 @@ from aipd_os.logging_utils import get_logger, log_event
 
 
 def test_version() -> None:
-    assert __version__ == "5.0.0"
-    assert aipd_os.__version__ == "5.0.0"
+    assert __version__ == "5.1.0"
+    assert aipd_os.__version__ == "5.1.0"
 
 
 def test_config_imports_and_defaults() -> None:

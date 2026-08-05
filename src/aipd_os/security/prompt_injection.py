@@ -146,6 +146,84 @@ def is_external_content_allowed(kind: str) -> bool:
     return True
 
 
+# 外部内容不得请求发送/外泄敏感信息（防数据外泄 + 最小权限）
+_SEND_SENSITIVE_VERBS = [
+    "send", "share", "email", "forward", "transmit", "upload",
+    "exfiltrate", "disclose", "leak", "release", "provide", "post",
+]
+_SENSITIVE_TARGETS = [
+    "credentials", "password", "passwords", "api key", "api keys",
+    "access token", "tokens", "secret", "secrets", "private key",
+    "supplier quote", "quote", "contact", "phone number",
+    "email address", "experiment data", "raw data", "database",
+]
+
+
+def external_cannot_send_sensitive_info(text: str) -> bool:
+    """外部内容是否请求发送/外泄敏感信息。
+
+    返回 True 表示文本试图让系统对外发送敏感信息，应被拒绝
+    （最小权限 + 防数据外泄）。
+    """
+    if not text:
+        return False
+    lowered = text.lower()
+    has_verb = any(v in lowered for v in _SEND_SENSITIVE_VERBS)
+    has_target = any(t in lowered for t in _SENSITIVE_TARGETS)
+    return has_verb and has_target
+
+
+# 外部内容默认以最小权限运行：不得请求提权 / 扩大访问范围
+_PRIVILEGE_ESCALATION = [
+    "grant", "elevate", "elevated", "privilege", "privileges",
+    "root access", "admin access", "administrator", "sudo",
+    "full access", "unrestricted", "escalate", "give me access",
+    "unlock access", "wider access", "all scopes", "wildcard access",
+]
+
+
+def external_cannot_escalate_privilege(text: str) -> bool:
+    """外部内容是否请求提权（最小权限原则）。
+
+    返回 True 表示文本试图提升权限 / 扩大访问范围，应被拒绝。
+    """
+    if not text:
+        return False
+    lowered = text.lower()
+    return any(k in lowered for k in _PRIVILEGE_ESCALATION)
+
+
+# 需要人工批准的高风险外部动作
+_HIGH_RISK_ACTIONS = frozenset({
+    "send_data_externally", "send_sensitive_info", "modify_maturity_gate",
+    "modify_security_policy", "execute_system_command", "install_software",
+    "delete_data", "modify_data", "external_network_call",
+    "production_release", "privilege_escalation",
+    "payment", "financial_transaction",
+})
+
+
+def requires_human_approval(action: str, text: str = "") -> bool:
+    """判断外部动作是否属于高风险，需要人工批准。
+
+    高风险动作（发送/外泄敏感信息、修改门禁或安全策略、提权、删除/修改数据、
+    对外网络调用、生产发布、支付等）必须经过人工批准。
+
+    :param action: 外部动作标识（见 ``_HIGH_RISK_ACTIONS``）
+    :param text: 可选的触发内容，用于对未知动作做兜底判定
+    """
+    if action in _HIGH_RISK_ACTIONS:
+        return True
+    return bool(
+        text
+        and (
+            external_cannot_send_sensitive_info(text)
+            or external_never_controls_policy(text)
+            or external_cannot_escalate_privilege(text)
+        )
+    )
+
+
 def sanitize_external_content(
     text: str,
     source_type: str = "document",
@@ -172,8 +250,12 @@ def sanitize_external_content(
     held_out: List[str] = []
 
     # 剥离含可疑指令的行：外部内容永远不进入系统指令通道
-    clean_lines = [line for line in lines if not detect_suspicious_instructions(line)]
-    held_out = [line for line in lines if detect_suspicious_instructions(line)]
+    def _susp(line: str) -> bool:
+        return bool(detect_suspicious_instructions(line)
+                    or external_cannot_send_sensitive_info(line)
+                    or external_cannot_escalate_privilege(line))
+    clean_lines = [line for line in lines if not _susp(line)]
+    held_out = [line for line in lines if _susp(line)]
     sanitized = "\n".join(clean_lines)
 
     if suspicious:
@@ -187,6 +269,16 @@ def sanitize_external_content(
         warnings.append(
             "external content attempted to change maturity gate or security policy; "
             "change denied"
+        )
+
+    if external_cannot_send_sensitive_info(text):
+        warnings.append(
+            "external content requested sending sensitive information; denied "
+            "(least privilege / no exfiltration)"
+        )
+    if external_cannot_escalate_privilege(text):
+        warnings.append(
+            "external content requested privilege escalation; denied (least privilege)"
         )
 
     if held_out and logger is not None:
@@ -214,6 +306,9 @@ __all__ = [
     "ALLOWED_SOURCE_TYPES",
     "detect_suspicious_instructions",
     "external_never_controls_policy",
+    "external_cannot_send_sensitive_info",
+    "external_cannot_escalate_privilege",
+    "requires_human_approval",
     "is_external_content_allowed",
     "sanitize_external_content",
     "log_suspect",
