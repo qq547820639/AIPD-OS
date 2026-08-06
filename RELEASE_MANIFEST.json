@@ -8,7 +8,7 @@
     {
       "path": ".github/workflows/ci.yml",
       "size": 6551,
-      "sha256": "c51874f2d0408395d5c228f135c9a84d412f4d2f76c29b2c38093c61adeba4d1"
+      "sha256": "a3a756d99b926cd5d51614a206fcc344ec4353cd5f9e2cab0e7699e43ccd710e"
     },
     {
       "path": ".gitignore",
@@ -342,23 +342,23 @@
     },
     {
       "path": "docs/audit/audit.json",
-      "size": 5037,
-      "sha256": "774b0ed1af80af98c715e9ea3b85e169c51e236529130b1de8af232a9a0874c3"
+      "size": 3691,
+      "sha256": "3f4a87c0fe0f808298dcf011b21599f986782dd6da8fc7618255da3cedde76bb"
     },
     {
       "path": "docs/audit/capability_matrix.json",
       "size": 51998,
-      "sha256": "9903ff9ecb37f47b4c26223642ef8afc3531d344d7584a04eabc43e3e8f9c495"
+      "sha256": "c9afec9b2f8ca13947b17e10ce966c6af22f2e652e9c05eb22ffe7c26687609f"
     },
     {
       "path": "docs/audit/capability_matrix.md",
       "size": 18356,
-      "sha256": "02d94e01e5bf6f3260e91fc8d7708ca051dba79e548bb84e0b16772a3df7de70"
+      "sha256": "86a2175ba7690bb85033bdd9d007583c79d3d687d7a91a0df126f707d25c6674"
     },
     {
       "path": "docs/audit/repository_snapshot.json",
-      "size": 4071,
-      "sha256": "54539894d0a217bc88826f302400927f991cf7f1d9d229d2a8683c2fc08854ce"
+      "size": 2725,
+      "sha256": "4df1e715a189bb666c0e919d29f6f9c0ffdbd3e4b81117a07a7982540342faa7"
     },
     {
       "path": "docs/audit/v5.1-version-truth-audit.json",

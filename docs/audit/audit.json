@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T11:59:38",
+  "generated_at": "2026-08-06T12:07:06",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "496a7acc9e1a280c87f3b366c400bfd93020c1d7",
-  "latest_commit_time": "2026-08-06 11:59:24 +0800",
+  "latest_commit_sha": "792ceb6b17fbcd9a4f61034670a87fb7523358f9",
+  "latest_commit_time": "2026-08-06 12:06:45 +0800",
   "version": "5.5.0",
   "file_tree": {
     "top_entries": [
@@ -95,63 +95,33 @@
     "present": true,
     "version": "5.5.0",
     "parsed": true,
-    "total_files": 345,
-    "hash_matches": 336,
-    "hash_mismatch_count": 9,
+    "total_files": 348,
+    "hash_matches": 344,
+    "hash_mismatch_count": 4,
     "mismatches": [
       {
         "path": ".github/workflows/ci.yml",
         "reason": "hash_mismatch",
-        "expected": "09481e3538f6e9d9c5e11d6bd6d60f320de9a9dcc6ff6c27a5d877a79c05bef5",
-        "actual": "c51874f2d0408395d5c228f135c9a84d412f4d2f76c29b2c38093c61adeba4d1"
-      },
-      {
-        "path": ".gitignore",
-        "reason": "hash_mismatch",
-        "expected": "fd026a4efd652c1ea5907b4527521c0ccd97393a4282a53e9631339468619129",
-        "actual": "e113f6eefe715a5365c63de6e85e479037a601d1593231f10c4ffe3e6f5f2ae2"
+        "expected": "c51874f2d0408395d5c228f135c9a84d412f4d2f76c29b2c38093c61adeba4d1",
+        "actual": "a3a756d99b926cd5d51614a206fcc344ec4353cd5f9e2cab0e7699e43ccd710e"
       },
       {
         "path": "docs/audit/capability_matrix.json",
         "reason": "hash_mismatch",
-        "expected": "5c45ec5881301048d3e14b51319f7c0f15b360a9b2514c097db5a7e9c1ab0ac1",
-        "actual": "9903ff9ecb37f47b4c26223642ef8afc3531d344d7584a04eabc43e3e8f9c495"
+        "expected": "9903ff9ecb37f47b4c26223642ef8afc3531d344d7584a04eabc43e3e8f9c495",
+        "actual": "c9afec9b2f8ca13947b17e10ce966c6af22f2e652e9c05eb22ffe7c26687609f"
       },
       {
         "path": "docs/audit/capability_matrix.md",
         "reason": "hash_mismatch",
-        "expected": "8cf6787d14f4a68553d2f12dfa7066226cdd32610450f3818181bbe638f4a63d",
-        "actual": "02d94e01e5bf6f3260e91fc8d7708ca051dba79e548bb84e0b16772a3df7de70"
+        "expected": "02d94e01e5bf6f3260e91fc8d7708ca051dba79e548bb84e0b16772a3df7de70",
+        "actual": "86a2175ba7690bb85033bdd9d007583c79d3d687d7a91a0df126f707d25c6674"
       },
       {
         "path": "docs/audit/repository_snapshot.json",
         "reason": "hash_mismatch",
-        "expected": "a59098533488250b9f990123cbc529ae6b21d418ef3184c14495c367027d4f45",
-        "actual": "54539894d0a217bc88826f302400927f991cf7f1d9d229d2a8683c2fc08854ce"
-      },
-      {
-        "path": "scripts/skill_quality_audit.py",
-        "reason": "hash_mismatch",
-        "expected": "ed6ce5588a925396460dc8f9fe7b4947eed9b0dea7711e38f215840f0f826d97",
-        "actual": "fa3c0212707d2b8943d8ecafed0f5852f3f84ae09a8fad4a5a3d9b128609159f"
-      },
-      {
-        "path": "src/aipd_os/imggen/providers.py",
-        "reason": "hash_mismatch",
-        "expected": "2961e72c25ab7a93fdb9acb3ac60ae3283f040e7b717eb19a047babe2fa1b416",
-        "actual": "8a4ea68ca3b9a30146d4c6a3d0617f0857a871d9a9eb57d4a615f1000f43005d"
-      },
-      {
-        "path": "src/aipd_os/layout/renderer.py",
-        "reason": "hash_mismatch",
-        "expected": "0bc44ade1eca97404da8b62f2893d3c17eceb00df105c730d0ede2b42a2a2357",
-        "actual": "4947fd3df9c82f419e14132792882ab2332f98fb3c92c1e1aade23e4aa47ad1d"
-      },
-      {
-        "path": "tests/test_layout.py",
-        "reason": "hash_mismatch",
-        "expected": "a96a35419de08f303cf21ee60b8c11b22d1fabc8331baac85dc9e30d08a860c3",
-        "actual": "ad75c46c99425fdabfbcae5bd8f5d4ea8c53c90e11135d801f7f826fd0710af7"
+        "expected": "54539894d0a217bc88826f302400927f991cf7f1d9d229d2a8683c2fc08854ce",
+        "actual": "4df1e715a189bb666c0e919d29f6f9c0ffdbd3e4b81117a07a7982540342faa7"
       }
     ]
   },

@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T11:59:36",
+  "generated_at": "2026-08-06T12:07:03",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "496a7acc9e1a280c87f3b366c400bfd93020c1d7",
-  "latest_commit_time": "2026-08-06 11:59:24 +0800",
+  "latest_commit_sha": "792ceb6b17fbcd9a4f61034670a87fb7523358f9",
+  "latest_commit_time": "2026-08-06 12:06:45 +0800",
   "version": "5.5.0",
   "file_tree": {
     "top_entries": [
@@ -95,45 +95,15 @@
     "present": true,
     "version": "5.5.0",
     "parsed": true,
-    "total_files": 345,
-    "hash_matches": 339,
-    "hash_mismatch_count": 6,
+    "total_files": 348,
+    "hash_matches": 347,
+    "hash_mismatch_count": 1,
     "mismatches": [
       {
         "path": ".github/workflows/ci.yml",
         "reason": "hash_mismatch",
-        "expected": "09481e3538f6e9d9c5e11d6bd6d60f320de9a9dcc6ff6c27a5d877a79c05bef5",
-        "actual": "c51874f2d0408395d5c228f135c9a84d412f4d2f76c29b2c38093c61adeba4d1"
-      },
-      {
-        "path": ".gitignore",
-        "reason": "hash_mismatch",
-        "expected": "fd026a4efd652c1ea5907b4527521c0ccd97393a4282a53e9631339468619129",
-        "actual": "e113f6eefe715a5365c63de6e85e479037a601d1593231f10c4ffe3e6f5f2ae2"
-      },
-      {
-        "path": "scripts/skill_quality_audit.py",
-        "reason": "hash_mismatch",
-        "expected": "ed6ce5588a925396460dc8f9fe7b4947eed9b0dea7711e38f215840f0f826d97",
-        "actual": "fa3c0212707d2b8943d8ecafed0f5852f3f84ae09a8fad4a5a3d9b128609159f"
-      },
-      {
-        "path": "src/aipd_os/imggen/providers.py",
-        "reason": "hash_mismatch",
-        "expected": "2961e72c25ab7a93fdb9acb3ac60ae3283f040e7b717eb19a047babe2fa1b416",
-        "actual": "8a4ea68ca3b9a30146d4c6a3d0617f0857a871d9a9eb57d4a615f1000f43005d"
-      },
-      {
-        "path": "src/aipd_os/layout/renderer.py",
-        "reason": "hash_mismatch",
-        "expected": "0bc44ade1eca97404da8b62f2893d3c17eceb00df105c730d0ede2b42a2a2357",
-        "actual": "4947fd3df9c82f419e14132792882ab2332f98fb3c92c1e1aade23e4aa47ad1d"
-      },
-      {
-        "path": "tests/test_layout.py",
-        "reason": "hash_mismatch",
-        "expected": "a96a35419de08f303cf21ee60b8c11b22d1fabc8331baac85dc9e30d08a860c3",
-        "actual": "ad75c46c99425fdabfbcae5bd8f5d4ea8c53c90e11135d801f7f826fd0710af7"
+        "expected": "c51874f2d0408395d5c228f135c9a84d412f4d2f76c29b2c38093c61adeba4d1",
+        "actual": "a3a756d99b926cd5d51614a206fcc344ec4353cd5f9e2cab0e7699e43ccd710e"
       }
     ]
   },
