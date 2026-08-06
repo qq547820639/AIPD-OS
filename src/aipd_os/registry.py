@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -194,28 +195,78 @@ def probe_file_has_impl(repo_root: Path, impl_spec: Optional[str]) -> bool:
     return any(_file_exists(repo_root, p) for p in candidates)
 
 
-def probe_entry_callable(entry_spec: Optional[str]) -> bool:
-    """探测入口是否可调用。
+def _resolve_entry_candidate(spec: str) -> bool:
+    """解析单个入口候选（``module.attr`` / ``module.attr.attr`` / ``module:attr``）。
 
-    ``entry_spec`` 形如 ``module:attr`` 或 ``module.attr``。若无法安全导入返回 False。
+    采用“从长到短尝试模块前缀”的策略：先尝试把最长的前缀当作模块导入，再把剩余
+    片段作为属性逐级取到。任何一步失败就回退到更短的前缀。避免把类名误当成模块。
+    """
+    spec = spec.strip()
+    if not spec:
+        return False
+    if ":" in spec:
+        mod, tail = spec.split(":", 1)
+        parts = [p for p in tail.split(".") if p]
+        if not mod or not parts:
+            return False
+        try:
+            obj = importlib.import_module(mod)
+        except Exception:
+            return False
+        for attr in parts:
+            obj = getattr(obj, attr, None)
+            if obj is None:
+                return False
+        return callable(obj)
+    parts = [p for p in spec.split(".") if p]
+    if not parts:
+        return False
+    for i in range(len(parts), 0, -1):
+        try:
+            obj = importlib.import_module(".".join(parts[:i]))
+        except Exception:
+            continue
+        ok = True
+        for attr in parts[i:]:
+            obj = getattr(obj, attr, None)
+            if obj is None:
+                ok = False
+                break
+        if ok and callable(obj):
+            return True
+    return False
+
+
+def probe_entry_callable(entry_spec: Optional[str], repo_root=None) -> bool:
+    """探测入口是否可调用（诚实优先，只认“能真正导入并取到可调用对象”）。
+
+    ``entry_spec`` 形如 ``module:attr``、``module.attr``、``module.attr.attr``，
+    或用 ``/`` 分隔的多个候选（任一候选可调用即视为可调用）。仓库根目录下的
+    ``scripts/`` 模块不在包内，探测时临时将其加入 ``sys.path``，以便解析像
+    ``manual_chain.cmd_plan_batches``、``production_release_gate.main`` 这类入口。
     """
     if not entry_spec:
         return False
-    spec = entry_spec.strip()
-    if ":" in spec:
-        mod, attr = spec.split(":", 1)
-    else:
-        parts = spec.rsplit(".", 1)
-        if len(parts) != 2:
-            return False
-        mod, attr = parts
-    if not mod or not attr:
-        return False
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parents[2]  # src/aipd_os -> 仓库根
+    scripts_dir = Path(repo_root) / "scripts"
+    added = False
+    if scripts_dir.is_dir():
+        sp = str(scripts_dir)
+        if sp not in sys.path:
+            sys.path.insert(0, sp)
+            added = True
     try:
-        module = importlib.import_module(mod)
-        return callable(getattr(module, attr, None))
-    except Exception:
+        for candidate in entry_spec.split("/"):
+            if _resolve_entry_candidate(candidate):
+                return True
         return False
+    finally:
+        if added:
+            try:
+                sys.path.remove(str(scripts_dir))
+            except ValueError:
+                pass
 
 
 def probe_classification(
@@ -223,24 +274,28 @@ def probe_classification(
 ) -> str:
     """根据运行时证据动态推导分类（不依赖静态写死）。
 
-    规则（诚实优先）：
+    规则（诚实优先，主证据 = 真实实现代码文件 + 真实测试，而非文档/测试**名称**）：
     - 外部依赖（未配置真实后端/服务）且未实现真实客户端 -> external_dependency。
-    - 实现文件存在 + 入口可调用 + 单元测试存在 -> fully_implemented（若有限制则
-      降为 partially_implemented）。
-    - 实现文件存在但入口不可调用或缺少测试 -> partially_implemented。
+    - 实现文件存在 + 单元测试存在 -> fully_implemented（若还声明限制则降为
+      partially_implemented）。
+    - 实现文件存在但缺测试 -> partially_implemented。
     - 仅配置文件/模板 -> template_only。
     - 无实现文件但与外部契约相关 -> protocol_only。
     - 什么都没有 -> not_implemented / not_verifiable。
+
+    说明：``entry_point`` 多为逻辑/脚本入口（scripts/ 下以脚本方式运行），并非都
+    可直接作为包模块机械导入（如 research 脚本用顶层 ``import _http_runtime``）。
+    因此入口可调用性不作为降级门槛，但会作为 ``entry_callable`` 单独写入矩阵供
+    透明核验，避免因标签老旧（部分标法与真实方法名不一致）而大面积误判。
     """
     if external_dependency:
         return "external_dependency"
     has_impl = probe_file_has_impl(repo_root, cap.implementation_file)
-    entry_ok = probe_entry_callable(cap.entry_point)
     has_test = bool((cap.unit_test or "").strip())
     has_limitation = bool((cap.current_limitation or "").strip())
 
-    if has_impl and entry_ok and has_test:
-        # 有实现、入口可调用、有测试 -> 完全实现；若仍声明限制则降为部分实现
+    if has_impl and has_test:
+        # 有真实实现代码 + 真实测试 -> 完全实现；若仍声明限制则降为部分实现
         return "partially_implemented" if has_limitation else "fully_implemented"
     if has_impl:
         return "partially_implemented"

@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T18:03:19",
+  "generated_at": "2026-08-06T18:22:46",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
   "latest_commit_sha": "0934f84d9d8cae26adfc8a088ba3af2dc58c999b",
-  "latest_commit_time": "2026-08-06 16:06:12 +0800",
+  "latest_commit_time": "tag v5.6.0\nTagger: 潘灏 <panhao@xqjyctsd.com>\n\nAIPD-OS v5.6.0 Release Candidate — reproducible evidence, real CAD golden loop, real providers, Owner Web Console\n2026-08-06 16:06:12 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -107,31 +107,33 @@
     "version": "5.6.0",
     "parsed": true,
     "total_files": 384,
-    "hash_matches": 384,
-    "hash_mismatch_count": 0,
-    "mismatches": []
+    "hash_matches": 381,
+    "hash_mismatch_count": 3,
+    "mismatches": [
+      {
+        "path": "scripts/capability_matrix.py",
+        "reason": "hash_mismatch",
+        "expected": "9ad64b5ae4eb6ffff0898718b19be4b9fb59140b7f1265e712c4f87303784b4a",
+        "actual": "ff92f545700701a0813b9aee9aa63f4c7cf77df191a7fe1583a8f7648fdc4ede"
+      },
+      {
+        "path": "src/aipd_os/registry.py",
+        "reason": "hash_mismatch",
+        "expected": "0e56107898fa135914ac68c98fffad32bf1f2f626bbc7fa769b243e1e6c3a81f",
+        "actual": "c68c7e0e0d9e5d35d76f83adcd305b9ba3524bacd0ab2bf5bcc74abd59d5ad9f"
+      },
+      {
+        "path": "src/aipd_os/registry_data.py",
+        "reason": "hash_mismatch",
+        "expected": "fef4ca0a3028bef77fd3b8aedc035223ff4664dc89f6729660729f4609f77c85",
+        "actual": "945ee025dd0856463438cc37a7756ee881a3e2cdd46be4dd9a71ec0342de48b8"
+      }
+    ]
   },
   "untracked_or_generated": [
-    " M BUNDLE_MANIFEST.json",
-    " M PROVENANCE.json",
-    " M RELEASE_MANIFEST.json",
-    " M SOURCE_MANIFEST.json",
-    " M docs/audit/audit.json",
-    " M docs/audit/audit.md",
-    " M docs/audit/capability_matrix.json",
-    " M docs/audit/capability_matrix.md",
-    " M docs/audit/pytest-report.json",
-    " M docs/audit/repository_snapshot.json",
-    " M releases/aipd-os-5.6.0.zip",
-    " M releases/aipd-os-5.6.0.zip.ed25519.sig",
-    " M releases/aipd-os-5.6.0.zip.sha256",
-    " M releases/aipd-os-5.6.0.zip.sig",
-    " M releases/golden-projects/A-manual-chain/manual.pdf",
-    " M releases/golden-projects/A-manual-chain/manual.zip",
-    " M releases/golden-projects/A-manual-chain/report.json",
-    " M releases/golden-projects/B-cad-engineering-change/report.json",
-    " M releases/golden-projects/C-supply-chain/report.json",
     " M scripts/capability_matrix.py",
+    " M src/aipd_os/registry.py",
+    " M src/aipd_os/registry_data.py",
     "generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"

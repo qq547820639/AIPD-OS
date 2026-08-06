@@ -61,7 +61,7 @@ def _probe_capability(cap, repo: Path) -> dict:
     """对单能力做运行时证据探测，返回 probe 证据字典。"""
     return {
         "implementation_file_exists": probe_file_has_impl(repo, cap.implementation_file),
-        "entry_callable": probe_entry_callable(cap.entry_point),
+        "entry_callable": probe_entry_callable(cap.entry_point, repo),
         "external_dependency_flag": bool(
             getattr(cap, "external_dependency", False)
         ),
