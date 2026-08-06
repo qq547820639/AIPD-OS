@@ -87,12 +87,17 @@ def test_contract_backend_unknown_param_rejected():
 # 2. C2 诚实性：无真实内核时 external_dependency
 # ---------------------------------------------------------------------------
 
-def test_cadquery_backend_external_when_no_kernel():
+def test_cadquery_backend_honest_status():
+    from aipd_os.cad.backends import _CADQUERY_AVAILABLE
     backend = CadQueryBackend()
-    # 当前环境未安装 cadquery -> 诚实标记外部依赖，绝不伪装为 full。
-    assert backend.capability_status() == EXTERNAL_DEPENDENCY
-    assert backend.is_available() is False
-    assert backend.maturity_ceiling() == 'C2'  # 声明能力上限，但状态为外部依赖
+    # 诚实性契约：真实内核可用 -> full；未安装 -> external_dependency，绝不伪装。
+    if _CADQUERY_AVAILABLE:
+        assert backend.capability_status() == FULL
+        assert backend.is_available() is True
+    else:
+        assert backend.capability_status() == EXTERNAL_DEPENDENCY
+        assert backend.is_available() is False
+    assert backend.maturity_ceiling() == 'C2'  # 声明能力上限，但状态随内核虚实而变
 
 
 def test_contract_backend_honest_external_dependency():

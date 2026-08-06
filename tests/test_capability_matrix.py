@@ -16,6 +16,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.audit_repo import audit_repo  # noqa: E402
 from scripts.capability_matrix import CLASSIFICATIONS, _build_capability_matrix  # noqa: E402
+from aipd_os.registry import load_default_registry  # noqa: E402
 
 AUDIT_DIR = REPO_ROOT / "docs" / "audit"
 
@@ -68,7 +69,8 @@ def test_matrix_classifications_valid_and_covered():
 
 
 def test_matrix_buildable_from_repo():
-    matrix = _build_capability_matrix(REPO_ROOT)
+    registry = load_default_registry()
+    matrix = _build_capability_matrix(REPO_ROOT, registry)
     on_disk_total = json.loads(MATRIX_JSON_PATH.read_text(encoding="utf-8"))[
         "summary"]["total_capabilities"]
     assert matrix["summary"]["total_capabilities"] == on_disk_total

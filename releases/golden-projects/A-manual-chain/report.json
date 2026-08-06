@@ -1,0 +1,32 @@
+{
+  "project_id": "golden-A",
+  "name": "连续附件产品手册",
+  "source_commit": "c177a79f55acbffedfc147ba67853a3033866efd",
+  "checks": {
+    "clean_import_runs": true,
+    "batch_continuity": true,
+    "external_honest_hold": true,
+    "checkpoint_recovery": true,
+    "decision_owner_view": true,
+    "release_report_matches_head": true
+  },
+  "batches": 3,
+  "pages": 12,
+  "artifacts": {
+    "manual.pdf": "e368b5e08e5ebd17007abec23fa312781f142b683dddc88a6f05c12f92aabdbf",
+    "manual.zip": "b2ad1d963a9329f5e1227363c61cdef7b6516817539a71ab2871c7fa49fca22a",
+    "cover.png": "22cbceabacab68a0a258881ae4d331ee27e6701e11f4513aa688ce8cd17cb4bf",
+    "principle.png": "f03d6013f8f536d1cf84c7b7eec2b573ec3f4648c00b499b030d0d902bb004f7",
+    "parameter_table.png": "bb44486480f75de6c65255525d578bc7be8401f65314a2e5bced2753179e616b",
+    "module_main.png": "1933e716c3736101ededb37b17ac31eef8d6e3efe62a4089af6761eddfa3c855",
+    "module_drive.png": "631d1ab64ece37fd6e5eab92de80b1c374962d0be5978969e1256a1d668cf507",
+    "user_scene.png": "f197fa7875663d076ea0cb8738794dbdd020741f2ecc405e6f0599fd4ae1b3ef",
+    "user_scene_2.png": "e525ee0fdecfd5a486522e259f8c2c532935c41b8ac9d1753994336adb0245be",
+    "cmf.png": "536ceb91e35fff4ac5b5fa6b29d40270a2d4d0abdc86f21175494a3db7b892f2",
+    "curve.png": "acc7165d09ed370589e9578664fb0f2abad6100df8e68b0fa185d9d044246cfb",
+    "qa.png": "94edfd54af2dfa2d5b4744647d00b965e734c6717bb831d7f14467a181f1a634",
+    "closure.png": "f4e55b6b5b711ef51fd122cadf425d8396e2a8024cb78a032d6ff975f9f572c4",
+    "principle_2.png": "fdb5b20994a4875fef401295ec4096cfec8951e9530d946f1ca66b9d248d8ef0"
+  },
+  "generated_at": "2026-08-06T08:04:21.667640+00:00"
+}

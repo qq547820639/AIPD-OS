@@ -11,6 +11,7 @@ from aipd_os.imggen.providers import (
     ImageGenProvider,
     PILImageGenProvider,
     ExternalImageGenProvider,
+    RealImageGenProvider,
     provider_from_name,
 )
 from aipd_os.imggen.registry import AnchorRegistry, VisualBible
@@ -21,6 +22,7 @@ __all__ = [
     "ImageGenProvider",
     "PILImageGenProvider",
     "ExternalImageGenProvider",
+    "RealImageGenProvider",
     "provider_from_name",
     "AnchorRegistry",
     "VisualBible",

@@ -72,6 +72,23 @@ jobs:
       - name: Run maturity consistency tests
         run: python -m pytest tests/maturity_consistency_test.py -q
 
+  cad-golden-loop:
+    name: CAD golden loop (real kernel)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install (with real CadQuery kernel via cad extra)
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -e ".[cad,dev]"
+      - name: Verify real CadQuery/OpenCASCADE kernel
+        run: python -c "import cadquery as cq; print('cadquery', cq.__version__)"
+      - name: Run CAD golden-closure tests (real B-Rep kernel required)
+        run: python -m pytest tests/test_cad_golden_loop.py -q
+
   secret-scan:
     name: Secret scan
     runs-on: ubuntu-latest
@@ -180,6 +197,7 @@ jobs:
       - integration
       - schema-validation
       - maturity-consistency
+      - cad-golden-loop
       - secret-scan
       - dependency-audit
       - license-scan

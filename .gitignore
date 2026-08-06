@@ -15,6 +15,9 @@ htmlcov/
 dist/
 build/
 
+# pytest machine-report cache (committed copy lives at docs/audit/pytest-report.json)
+.pytest/
+
 # Virtual environments
 .venv/
 .venv-ci/
@@ -25,6 +28,10 @@ env/
 .env
 .env.*
 !.env.example
+
+# Release signing: private key is NEVER committed; public key is committed for verification.
+.release_keys/ed25519_private.pem
+.release_keys/*.sig
 
 # IDE / OS
 .idea/

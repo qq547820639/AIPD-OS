@@ -1,0 +1,4 @@
+stage,test_item,sample_id,result,pass_fail,notes
+evt,drop_test,A-1,ok,pass,passed
+evt,drop_test,A-2,broken,fail,cracked
+evt,thermal,B-1,105C,pass,ok

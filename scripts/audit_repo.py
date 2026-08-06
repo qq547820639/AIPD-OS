@@ -182,6 +182,56 @@ def _verify_release_manifest(repo_root: Path) -> dict:
     }
 
 
+def _verify_source_manifest(repo_root: Path) -> dict:
+    """读取并校验 SOURCE_MANIFEST.json 的文件哈希（P0-1 发布证据体系可复现）。"""
+    manifest_path = repo_root / "SOURCE_MANIFEST.json"
+    if not manifest_path.exists():
+        return {"present": False}
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"present": True, "version": None, "parsed": False}
+
+    version = manifest.get("version")
+    source_commit = manifest.get("source_commit")
+    files = manifest.get("files", [])
+    matches = 0
+    mismatches: list = []
+    for entry in files:
+        rel = entry.get("path")
+        expected = entry.get("sha256")
+        if not rel or not expected:
+            continue
+        target = repo_root / rel
+        if not target.is_file():
+            mismatches.append(
+                {"path": rel, "reason": "missing", "expected": expected}
+            )
+            continue
+        actual = _sha256(target)
+        if actual == expected:
+            matches += 1
+        else:
+            mismatches.append(
+                {
+                    "path": rel,
+                    "reason": "hash_mismatch",
+                    "expected": expected,
+                    "actual": actual,
+                }
+            )
+    return {
+        "present": True,
+        "version": version,
+        "source_commit": source_commit,
+        "parsed": True,
+        "total_files": len(files),
+        "hash_matches": matches,
+        "hash_mismatch_count": len(mismatches),
+        "mismatches": mismatches[:20],
+    }
+
+
 def _collect_untracked_or_generated(repo_root: Path) -> list:
     """收集未跟踪/被修改文件，以及生成的目录（__pycache__、*.egg-info）。"""
     found: list = []
@@ -263,6 +313,7 @@ def audit_repo(repo_root) -> dict:
 
     ci_jobs = _parse_ci_jobs(root)
     manifest_verification = _verify_release_manifest(root)
+    source_manifest_verification = _verify_source_manifest(root)
     untracked_or_generated = _collect_untracked_or_generated(root)
     legacy_cad_conflicts = _scan_legacy_cad_conflicts(root)
 
@@ -293,6 +344,7 @@ def audit_repo(repo_root) -> dict:
             "jobs": ci_jobs,
         },
         "release_manifest_verification": manifest_verification,
+        "source_manifest_verification": source_manifest_verification,
         "untracked_or_generated": untracked_or_generated,
         "legacy_cad_conflicts": legacy_cad_conflicts,
         "has_sbom": has_sbom,

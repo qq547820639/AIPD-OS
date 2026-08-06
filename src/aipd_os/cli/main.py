@@ -304,6 +304,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["recover"])
 
+    # ---- v5.6 Owner Web Console ----
+    p = sub.add_parser("ui", help="启动本地 Owner Web Console（首次向导/项目总览/决策/制品/运行控制/外部等待）。"
+                                  " Example: aipd ui --db state.db")
+    p.add_argument("--db", help="状态数据库路径（默认取配置 db_dir/state.db）")
+    p.add_argument("--project", help="默认项目 ID（可选）")
+    p.add_argument("--host", help="监听地址（默认取配置，127.0.0.1）")
+    p.add_argument("--port", type=int, help="监听端口（默认取配置，8080）")
+    p.set_defaults(func=COMMAND_FUNCS["ui"])
+
     return parser
 
 

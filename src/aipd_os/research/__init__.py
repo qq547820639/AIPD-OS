@@ -37,6 +37,35 @@ from .documents import (
     sha256_of,
 )
 from .expiry import STALE_STATUS, expire_evidence_list, mark_evidence_expired
+from .fulltext import (
+    ACCESS_BLOCKED,
+    ACCESS_OPEN,
+    ACCESS_RESTRICTED,
+    TEXT_TYPE_ABSTRACT,
+    TEXT_TYPE_FULL_TEXT,
+    TEXT_TYPE_METADATA,
+    TEXT_TYPE_OCR_TEXT,
+    TEXT_TYPE_QUOTED_SNIPPET,
+    TEXT_TYPES,
+    Conclusion,
+    DelegateProvider,
+    ExternalProvider,
+    FullTextCache,
+    Provider,
+    TextRecord,
+    classify_access,
+    classify_text,
+    competitor_provider,
+    deduplicate_texts,
+    default_expires_at,
+    fetch_fulltext,
+    is_open_access_url,
+    patent_provider,
+    refetch_strategy,
+    regulation_provider,
+    standard_provider,
+    tag_text,
+)
 from .fetchers import (
     DOCUMENT_PARSERS,
     ContractFetcher,
@@ -88,4 +117,14 @@ __all__ = [
     # 回写与过期
     "ResearchBackend", "run_research_chain", "mark_evidence_expired",
     "expire_evidence_list", "STALE_STATUS",
+    # 文本类型 / 全文 / 结论 / Provider
+    "TEXT_TYPE_METADATA", "TEXT_TYPE_ABSTRACT", "TEXT_TYPE_FULL_TEXT",
+    "TEXT_TYPE_OCR_TEXT", "TEXT_TYPE_QUOTED_SNIPPET", "TEXT_TYPES",
+    "ACCESS_OPEN", "ACCESS_RESTRICTED", "ACCESS_BLOCKED",
+    "classify_text", "tag_text", "TextRecord",
+    "is_open_access_url", "classify_access",
+    "FullTextCache", "deduplicate_texts", "fetch_fulltext",
+    "default_expires_at", "refetch_strategy", "Conclusion",
+    "Provider", "ExternalProvider", "DelegateProvider",
+    "standard_provider", "regulation_provider", "patent_provider", "competitor_provider",
 ]

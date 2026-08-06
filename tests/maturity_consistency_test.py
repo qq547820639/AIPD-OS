@@ -21,8 +21,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 
 # 跳过的目录：元数据/任务说明（.trae/specs 描述本次迁移本身）、依赖与缓存。
-SKIP_DIRS = {'.git', '.venv', '.pytest_cache', '__pycache__', '.trae', 'tests'}
+SKIP_DIRS = {'.git', '.venv', '.pytest_cache', '__pycache__', '.trae', 'tests', '.pytest'}
 EXTS = {'.py', '.json', '.md', '.yaml', '.yml', '.txt', '.html'}
+# 机器生成的测试报告（含测试 nodeid 字符串）不属于产品源码，跳过以免误报。
+REPORT_NAMES = {'pytest-report.json', 'lastreport.json'}
 PATTERN = re.compile(r'CAD-L\d')
 # Faceted BREP 最高 C1：任何与 C2 及以上成熟度关联的表述均视为过度声称。
 # faceted 大小写不敏感；层级 C[2-9] 保持大小写敏感以免命中哈希中的小写十六进制。
@@ -42,6 +44,8 @@ def iter_text_files(root: Path):
         if not p.is_file():
             continue
         if any(part in SKIP_DIRS for part in p.parts):
+            continue
+        if p.name in REPORT_NAMES:
             continue
         if p.suffix in EXTS:
             yield p

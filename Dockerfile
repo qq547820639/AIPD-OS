@@ -7,7 +7,11 @@ COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 
 # 安装带 server 可选依赖的包（server extra 提供 cryptography 作真实加密后端）
-RUN pip install --no-cache-dir ".[server]"
+# 可选：构建时 --build-arg INSTALL_CAD=1 会额外安装真实 CadQuery/OpenCASCADE 内核
+# （cad extra），用于参数化 B-Rep 建模；默认不装以保持镜像精简。
+ARG INSTALL_CAD=0
+RUN pip install --no-cache-dir ".[server]" \
+    && if [ "${INSTALL_CAD}" != "0" ]; then pip install --no-cache-dir ".[cad]"; fi
 
 # 默认以 server 模式运行状态服务（端口 8000）
 ENV AIPD_MODE=server \

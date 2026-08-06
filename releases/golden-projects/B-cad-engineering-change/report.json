@@ -1,0 +1,28 @@
+{
+  "project_id": "golden-B",
+  "name": "参数化 CAD 与工程变更",
+  "source_commit": "c177a79f55acbffedfc147ba67853a3033866efd",
+  "cad_tool": "cadquery",
+  "cad_tool_version": "2.5.2",
+  "volume_before": 47833.45733366649,
+  "volume_after": 57753.45733366649,
+  "checks": {
+    "clean_import_runs": true,
+    "real_kernel_invoked": true,
+    "step_roundtrip": true,
+    "hash_changed_on_edit": true,
+    "truth_writeback": true,
+    "stale_and_rework": true,
+    "rework_bounded": true,
+    "checkpoint_recovery": true,
+    "decision_owner_view": true,
+    "release_report_matches_head": true
+  },
+  "artifacts": {
+    "bracket.step": "4efdb74acb9cae3a27b12c5853466e73648625181b44e155eddc5f03cc41322f",
+    "bracket.py": "83bd6a1fe950d751be436dc45c73108a7184bc7c69188abc586b361a33866265",
+    "bracket_v2.step": "09fe94e00c3a0cf09a0e283c4741ff0481c0600c505958d30214e12a9d4e8891",
+    "bracket_v2.py": "592219ce19f9a7d7b2305f169e2b9e3c46a03a2aca779e76d7cb5297f7847e95"
+  },
+  "generated_at": "2026-08-06T08:04:22.990275+00:00"
+}

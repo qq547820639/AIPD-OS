@@ -23,7 +23,7 @@ from .audit import AuditLogger
 from .state_backend import (DEFAULT_TENANT, ExternalDependencyError, LocalStateBackend,
                             RemoteStateBackend, StateBackend)
 
-__version__ = "5.5.0"
+__version__ = "5.6.0"
 
 __all__ = [
     "AIPDStateDB", "OptimisticLockError", "ProjectNotFoundError", "TenantNotFoundError",

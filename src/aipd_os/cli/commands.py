@@ -1130,6 +1130,33 @@ def cmd_doctor(args):
     perm_ok, perm_detail = _check_repo_permissions(repo)
     _doctor_check(checks, "permissions", "ok" if perm_ok else "fail", perm_detail)
 
+    # 8) 凭据保护与脱敏：检查常见敏感环境变量是否已登记、是否已脱敏
+    from aipd_os.security.secrets import SecretStore, is_sensitive_var
+    store = SecretStore()
+    for env in ("AIPD_EVAL_MODEL_ENDPOINT_API_KEY", "AIPD_MAIL_PASSWORD",
+                "AIPD_IMGGEN_API_KEY", "AIPD_VISION_API_KEY",
+                "AIPD_DATA_ENCRYPTION_KEY"):
+        store.register(env, "...")
+    sensitive_envs = [e for e in os.environ if is_sensitive_var(e)]
+    registered = [e for e in sensitive_envs if store.is_registered(e)]
+    unregistered = [e for e in sensitive_envs if not store.is_registered(e)]
+    exposed = [e for e in sorted(sensitive_envs) if store.exposed(e)]
+    leaked = [e for e in exposed if not store.is_registered(e)]
+    masking_on = all(store.masked(e) is not None and store.masked(e) != e
+                     for e in exposed) if exposed else True
+    if leaked:
+        _doctor_check(checks, "security.credentials",
+                      "fail",
+                      f"unregistered sensitive env set: {', '.join(leaked)}")
+    else:
+        _doctor_check(checks, "security.credentials",
+                      "ok" if (not sensitive_envs or masking_on) else "warn",
+                      f"registered={len(registered)} unregistered={len(unregistered)} "
+                      f"exposed={len(exposed)} masking={masking_on}")
+    _doctor_check(checks, "security.masking",
+                  "ok" if masking_on else "fail",
+                  "credential masking active" if masking_on else "credential masking disabled")
+
     failed = [c for c in checks if c["status"] == "fail"]
     result = {"command": "doctor", "ok": not failed, "version": __version__, "checks": checks}
     if getattr(args, "json", False):
@@ -1261,6 +1288,25 @@ def cmd_recover(args):
 
 
 # --------------------------------------------------------------------------
+# ui —— 启动本地 Owner Web Console（aipd ui）
+# --------------------------------------------------------------------------
+def cmd_ui(args):
+    """启动本地 Owner Web Console：标准库 HTTP 服务，CLI/Web/JSON 共用同一业务服务。"""
+    from aipd_os.config import get_settings
+    from aipd_os.web import WebConsole, serve
+
+    settings = get_settings()
+    db_path = args.db or str(Path(get_settings().db_dir) / "state.db")
+    host = args.host or settings.host
+    port = int(args.port or settings.port)
+
+    console = WebConsole(db_path, tenant_id=DEFAULT_TENANT,
+                         default_project=args.project)
+    serve(console, host=host, port=port)
+    return 0
+
+
+# --------------------------------------------------------------------------
 # 命令分发表
 # --------------------------------------------------------------------------
 COMMAND_FUNCS: Dict[str, Any] = {
@@ -1302,6 +1348,8 @@ COMMAND_FUNCS: Dict[str, Any] = {
     "onboard": cmd_onboard,
     "reset": cmd_reset,
     "recover": cmd_recover,
+    # v5.6 Owner Web Console
+    "ui": cmd_ui,
 }
 
 PLANNED_COMMANDS = list(COMMAND_FUNCS.keys())

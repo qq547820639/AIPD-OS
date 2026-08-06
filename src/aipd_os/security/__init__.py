@@ -28,6 +28,12 @@ from .prompt_injection import (
     sanitize_external_content,
 )
 from .sbom import generate_sbom, verify_sbom
+from .secrets import (
+    SecretStore,
+    is_sensitive_var,
+    mask_secret,
+    mask_secret_deep,
+)
 
 __all__ = [
     "sanitize_external_content",
@@ -42,4 +48,8 @@ __all__ = [
     "PermissionError",
     "generate_sbom",
     "verify_sbom",
+    "SecretStore",
+    "mask_secret",
+    "mask_secret_deep",
+    "is_sensitive_var",
 ]

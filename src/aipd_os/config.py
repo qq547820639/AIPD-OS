@@ -52,6 +52,12 @@ class Settings:
     retention_days: int = 90
     host: str = "127.0.0.1"
     port: int = 8080
+    # 外部 Provider 配置（model / image / vision / CAD / mail）
+    model_provider: str = ""
+    image_provider: str = ""
+    vision_provider: str = ""
+    cad_provider: str = ""
+    mail_provider: str = ""
     config_files: List[Path] = field(default_factory=list)
     extra: Dict[str, Any] = field(default_factory=dict)
 
@@ -85,6 +91,16 @@ class Settings:
             self.host = str(_env("HOST"))
         if _env("PORT") is not None:
             self.port = int(_env("PORT"))
+        if _env("MODEL_PROVIDER") is not None:
+            self.model_provider = str(_env("MODEL_PROVIDER"))
+        if _env("IMAGE_PROVIDER") is not None:
+            self.image_provider = str(_env("IMAGE_PROVIDER"))
+        if _env("VISION_PROVIDER") is not None:
+            self.vision_provider = str(_env("VISION_PROVIDER"))
+        if _env("CAD_PROVIDER") is not None:
+            self.cad_provider = str(_env("CAD_PROVIDER"))
+        if _env("MAIL_PROVIDER") is not None:
+            self.mail_provider = str(_env("MAIL_PROVIDER"))
 
 
 def _load_json(path: Path) -> Dict[str, Any]:

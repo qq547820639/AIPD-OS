@@ -30,10 +30,11 @@ class JsonFormatter(logging.Formatter):
         }
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
-        # 附加字段（通过 extra 传入）
+        # 附加字段（通过 extra 传入）；先做敏感字段脱敏，避免完整凭据入日志
         extra = getattr(record, "aipd_fields", None)
         if extra and isinstance(extra, dict):
-            payload.update(extra)
+            from aipd_os.security.secrets import mask_secret_deep
+            payload.update(mask_secret_deep(extra))
         return json.dumps(payload, ensure_ascii=False, default=str)
 
 

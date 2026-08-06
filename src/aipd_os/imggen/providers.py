@@ -12,14 +12,18 @@
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
+import json
 import os
 import random
 import time
+import urllib.request
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from PIL import Image, ImageDraw
@@ -247,8 +251,197 @@ class ExternalImageGenProvider(ImageGenProvider):
         )
 
 
+class RealImageGenProvider(ImageGenProvider):
+    """真实图像生成 Provider 客户端（凭据门控）。
+
+    协议：OpenAI-compatible 图像端点（POST ``{url}/images/generations``，响应
+    ``{"data": [{"b64_json": ...} | {"url": ...}]}``），或任意以原始二进制图返回的
+    兼容端点。**必须真正发送 HTTP 请求并解析真实图像字节**（base64 或二进制），
+    而不是 PIL 拼图。
+
+    前一批真实图像作为 ``input_images``（base64 data URI）图像条件随请求发送，
+    供兼容后端对后一批进行图像条件生成（而非仅拼成蒙太奇证明字节存在）。
+
+    --- 凭据门控 ---
+    未配置 ``AIPD_IMAGE_PROVIDER_URL`` / ``AIPD_IMAGE_API_KEY`` 时 ``available()`` 为
+    False；``generate_batch`` 抛 ``ImageGenUnavailable``（链保持 HOLD）；可用
+    ``write_external_task_package()`` 输出完整外部任务包（URL / API key / 模型名 /
+    期望输出格式）。绝不假装生成图像。
+    """
+
+    id = "real"
+    external_dependency = True
+
+    def __init__(
+        self,
+        url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        output_format: str = "png",
+        timeout: float = 60.0,
+    ):
+        self.url = url or os.environ.get("AIPD_IMAGE_PROVIDER_URL")
+        self.api_key = api_key or os.environ.get("AIPD_IMAGE_API_KEY")
+        self.model = model or os.environ.get("AIPD_IMAGE_MODEL", "dall-e-3")
+        self.output_format = (
+            output_format or os.environ.get("AIPD_IMAGE_OUTPUT", "png")
+        ).lower()
+        self.timeout = float(os.environ.get("AIPD_IMAGE_TIMEOUT", timeout))
+
+    def available(self) -> bool:
+        return bool(self.url and self.api_key)
+
+    def _endpoint(self) -> str:
+        base = self.url.rstrip("/")
+        if base.endswith("/images/generations"):
+            return base
+        return base + "/images/generations"
+
+    def _send(self, payload: dict) -> tuple:
+        """发送真实 HTTP POST 并返回 (raw_bytes, http_status, content_type, latency_ms)。"""
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(self._endpoint(), data=body, method="POST")
+        req.add_header("Content-Type", "application/json")
+        if self.api_key:
+            req.add_header("Authorization", f"Bearer {self.api_key}")
+        t0 = time.monotonic()
+        with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310 - 用户配置的可信端点
+            raw = resp.read()
+            status = getattr(resp, "status", 200)
+            content_type = resp.headers.get("Content-Type", "")
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        return raw, status, content_type, latency_ms
+
+    @staticmethod
+    def _decode_image(raw: bytes, content_type: str) -> tuple:
+        """解析真实图像字节，返回 (bytes, format, source)。"""
+        # 优先解析 OpenAI-compatible JSON
+        try:
+            obj = json.loads(raw.decode("utf-8", "replace"))
+        except Exception:
+            obj = None
+        if isinstance(obj, dict):
+            data_list = obj.get("data")
+            if isinstance(data_list, list) and data_list:
+                first = data_list[0]
+                b64 = first.get("b64_json")
+                if b64:
+                    return base64.b64decode(b64), "PNG", "b64_json"
+                url_ = first.get("url")
+                if url_:
+                    with urllib.request.urlopen(url_, timeout=60) as r:  # noqa: S310
+                        return r.read(), "PNG", "url"
+        # 兜底：原始二进制图
+        ct = (content_type or "").lower()
+        fmt = "JPEG" if ("jpeg" in ct or "jpg" in ct) else "PNG"
+        return raw, fmt, "binary"
+
+    def generate_batch(
+        self,
+        request: BatchRequest,
+        prior_batch: Optional[PriorBatchContent] = None,
+    ) -> List[GeneratedImage]:
+        if not self.available():
+            raise ImageGenUnavailable(
+                "real image provider not configured (missing AIPD_IMAGE_PROVIDER_URL / "
+                "AIPD_IMAGE_API_KEY); chain stays HOLD; no image bytes fabricated"
+            )
+        prior_images = list((prior_batch.images or [])) if prior_batch and prior_batch.images else []
+        # 前一批真实图像作为图像条件（base64 data URI），供后端做条件生成。
+        prior_attachments = []
+        for im in prior_images:
+            data = im.get("data") or b""
+            prior_attachments.append(
+                "data:image/png;base64," + base64.b64encode(data).decode("ascii")
+            )
+        req_id = request.request_id or f"req-{uuid.uuid4().hex[:12]}"
+        results: List[GeneratedImage] = []
+        for page in request.pages:
+            size = request.generation_params.get("size") or [1024, 1024]
+            if isinstance(size, str):
+                w, h = (int(x) for x in size.lower().split("x"))
+            else:
+                w, h = int(size[0]), int(size[1])
+            prompt = (
+                f"{request.prompt_template} {page.get('title', '')} / "
+                f"{page.get('page_id', '')} / {page.get('expected_cmf', '')}"
+            )
+            payload = {
+                "model": self.model,
+                "prompt": prompt,
+                "size": f"{w}x{h}",
+                "n": 1,
+                "response_format": "b64_json",
+                "input_images": prior_attachments,
+                "prior_image_count": len(prior_attachments),
+            }
+            raw, http_status, content_type, latency_ms = self._send(payload)
+            data, fmt, source = self._decode_image(raw, content_type)
+            artifact_hash = _sha(data)
+            meta = {
+                "provider_id": self.id,
+                "request_id": req_id,
+                "model": self.model,
+                "http_status": http_status,
+                "source": source,
+                "prompt": prompt,
+                "prior_image_count": len(prior_attachments),
+                "prior_condition": True,
+                "generation_params": dict(request.generation_params),
+                "latency_ms": latency_ms,
+                "cost": None,
+                "cost_unit": "provider_billed",
+                "artifact_hash": artifact_hash,
+                "note": "real image provider; bytes parsed from real HTTP response",
+            }
+            results.append(
+                GeneratedImage(
+                    page_id=page.get("page_id"),
+                    data=data,
+                    format=fmt or "PNG",
+                    width=w,
+                    height=h,
+                    sha256=artifact_hash,
+                    meta=meta,
+                )
+            )
+        return results
+
+    def write_external_task_package(self, request: BatchRequest, out_dir: str) -> dict:
+        """无凭据时输出完整外部任务包（URL / API key / 模型名 / 期望输出格式），保持 HOLD。
+
+        不写任何图像文件。
+        """
+        out_path = Path(out_dir)
+        out_path.mkdir(parents=True, exist_ok=True)
+        pkg = {
+            "job_type": "image_generation",
+            "provider": self.id,
+            "status": "external_pending",
+            "hold": True,
+            "required_config": {
+                "url": "AIPD_IMAGE_PROVIDER_URL  (OpenAI-compatible POST <url>/images/generations)",
+                "api_key": "AIPD_IMAGE_API_KEY",
+                "model": f"AIPD_IMAGE_MODEL (default {self.model}; e.g. dall-e-3 / stable-diffusion-xl)",
+                "output_format": f"AIPD_IMAGE_OUTPUT (default {self.output_format}; e.g. png / jpeg)",
+            },
+            "request": {
+                "pages": [p.get("page_id") for p in request.pages],
+                "model_version": request.model_version,
+                "prompt_template": request.prompt_template,
+                "generation_params": request.generation_params,
+            },
+            "note": "no real image provider configured; chain stays HOLD; no image bytes fabricated",
+        }
+        task_path = out_path / f"real_{request.request_id or 'batch'}.task.json"
+        task_path.write_text(json.dumps(pkg, ensure_ascii=False, indent=2), encoding="utf-8")
+        return pkg
+
+
 def provider_from_name(name: str) -> ImageGenProvider:
     """按名称构造 Provider（用于 CLI 选择与测试注入）。"""
+    if name in ("real", "http", "openai", "comfy", "sd", "stable-diffusion"):
+        return RealImageGenProvider()
     if name in ("pil", "PILImageGenProvider", "local", "deterministic"):
         return PILImageGenProvider()
     return ExternalImageGenProvider()
@@ -261,6 +454,7 @@ __all__ = [
     "ImageGenProvider",
     "PILImageGenProvider",
     "ExternalImageGenProvider",
+    "RealImageGenProvider",
     "provider_from_name",
     "FIG_SIZE",
     "MODEL_VERSION",

@@ -294,6 +294,12 @@ def cmd_run_batch(a):
     output_pages = []; completed = []; external = []
     if provider.available():
         try:
+            # 真实 Provider：把前一批真实图像作为图像条件传给后一批
+            # （RealImageGenProvider 会把 prior_content 的真实字节编码为 input_images 附件，
+            #   而非仅拼成蒙太奇证明字节存在）。无真实 Provider 时保持 HOLD。
+            if provider.id == "real" and prior_content:
+                request.generation_params["prior_condition"] = True
+                request.generation_params["prior_image_count"] = len(prior_content.images)
             gen_images = provider.generate_batch(request, prior_content)
             for item, gimg in zip(defns, gen_images):
                 entry = item["entry"]; defn = item["defn"]

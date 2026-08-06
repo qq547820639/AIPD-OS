@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aipd-os"
-version = "5.5.0"
-description = "AIPD-OS v5.5 - AI 产品工程决策操作系统（AI Product/Program Decision OS）"
+version = "5.6.0"
+description = "AIPD-OS v5.6 - AI 产品工程决策操作系统（AI Product/Program Decision OS）"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -34,6 +34,11 @@ full = [
     "reportlab",
     "requests",
     "pyyaml",
+]
+# 真实 CAD 参数化 B-Rep 内核（可选）。不放进默认 dependencies，保持最小安装干净；
+# 安装后 CadQueryBackend 可用，local_brep_adapter / cad.parametric_model 达到 C2。
+cad = [
+    "cadquery>=2.4",
 ]
 # mcp 要求 Python >=3.10，与项目 requires-python >=3.9 冲突；
 # 单独置于独立 extra，避免破坏 Python 3.9 的干净安装。

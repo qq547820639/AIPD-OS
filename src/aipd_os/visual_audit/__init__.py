@@ -5,5 +5,6 @@
 而是标记 ``requiring_vision``。
 """
 from aipd_os.visual_audit.auditor import VisualAuditor, audit_batch
+from aipd_os.visual_audit.providers import VisionAuditProvider, VisionAuditUnavailable
 
-__all__ = ["VisualAuditor", "audit_batch"]
+__all__ = ["VisualAuditor", "audit_batch", "VisionAuditProvider", "VisionAuditUnavailable"]
