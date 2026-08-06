@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T12:07:03",
+  "generated_at": "2026-08-06T12:17:56",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "792ceb6b17fbcd9a4f61034670a87fb7523358f9",
-  "latest_commit_time": "2026-08-06 12:06:45 +0800",
+  "latest_commit_sha": "e92c2cf5b76400c049ae58f3e1103331afe47c60",
+  "latest_commit_time": "2026-08-06 12:17:45 +0800",
   "version": "5.5.0",
   "file_tree": {
     "top_entries": [
@@ -96,14 +96,20 @@
     "version": "5.5.0",
     "parsed": true,
     "total_files": 348,
-    "hash_matches": 347,
-    "hash_mismatch_count": 1,
+    "hash_matches": 346,
+    "hash_mismatch_count": 2,
     "mismatches": [
       {
-        "path": ".github/workflows/ci.yml",
+        "path": ".trae/specs/v5.5-real-closure-trust-ux-edition/checklist.md",
         "reason": "hash_mismatch",
-        "expected": "c51874f2d0408395d5c228f135c9a84d412f4d2f76c29b2c38093c61adeba4d1",
-        "actual": "a3a756d99b926cd5d51614a206fcc344ec4353cd5f9e2cab0e7699e43ccd710e"
+        "expected": "edd018740228f31b056907c644e42c3ab62e9d69e1d7bcd1ff108f3d2953be59",
+        "actual": "1649043783c3ff0a44edd7e9508bdcd987bbf71e12fd257f616803cea22c4974"
+      },
+      {
+        "path": ".trae/specs/v5.5-real-closure-trust-ux-edition/tasks.md",
+        "reason": "hash_mismatch",
+        "expected": "3f40d08b2f02fa044af0460020f3d7b76136eef4e14e0d22b5d5f299f47c14ae",
+        "actual": "d3e7a2e204ad23a95a26fb3deb7f7d82a12ec3b4a23b1ed0a0275a9edf34abf6"
       }
     ]
   },

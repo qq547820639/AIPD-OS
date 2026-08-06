@@ -92,8 +92,8 @@
     },
     {
       "path": ".trae/specs/v5.5-real-closure-trust-ux-edition/checklist.md",
-      "size": 5825,
-      "sha256": "edd018740228f31b056907c644e42c3ab62e9d69e1d7bcd1ff108f3d2953be59"
+      "size": 6004,
+      "sha256": "1649043783c3ff0a44edd7e9508bdcd987bbf71e12fd257f616803cea22c4974"
     },
     {
       "path": ".trae/specs/v5.5-real-closure-trust-ux-edition/spec.md",
@@ -102,8 +102,8 @@
     },
     {
       "path": ".trae/specs/v5.5-real-closure-trust-ux-edition/tasks.md",
-      "size": 9485,
-      "sha256": "3f40d08b2f02fa044af0460020f3d7b76136eef4e14e0d22b5d5f299f47c14ae"
+      "size": 9868,
+      "sha256": "d3e7a2e204ad23a95a26fb3deb7f7d82a12ec3b4a23b1ed0a0275a9edf34abf6"
     },
     {
       "path": "CHANGELOG.md",
@@ -342,23 +342,23 @@
     },
     {
       "path": "docs/audit/audit.json",
-      "size": 3691,
-      "sha256": "3f4a87c0fe0f808298dcf011b21599f986782dd6da8fc7618255da3cedde76bb"
+      "size": 4026,
+      "sha256": "9e22772a36b7d235f15a54d3b5a3021c221c94a99ff9a775eca86c9ee8b196f7"
     },
     {
       "path": "docs/audit/capability_matrix.json",
       "size": 51998,
-      "sha256": "c9afec9b2f8ca13947b17e10ce966c6af22f2e652e9c05eb22ffe7c26687609f"
+      "sha256": "7461090f25fb92ae7ca1b095f8350d4352e015a9ecfcc02cb6095abfae3a782e"
     },
     {
       "path": "docs/audit/capability_matrix.md",
       "size": 18356,
-      "sha256": "86a2175ba7690bb85033bdd9d007583c79d3d687d7a91a0df126f707d25c6674"
+      "sha256": "77d73d42c359840adb8b29af0f3a345131d8984fb3a4c79a6001795dcade6eba"
     },
     {
       "path": "docs/audit/repository_snapshot.json",
-      "size": 2725,
-      "sha256": "4df1e715a189bb666c0e919d29f6f9c0ffdbd3e4b81117a07a7982540342faa7"
+      "size": 3060,
+      "sha256": "0e22332bda3fedec6d8bf6e0e262b8bda66a106de2105ae4677cde0873900650"
     },
     {
       "path": "docs/audit/v5.1-version-truth-audit.json",

@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T12:07:06",
+  "generated_at": "2026-08-06T12:17:58",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "792ceb6b17fbcd9a4f61034670a87fb7523358f9",
-  "latest_commit_time": "2026-08-06 12:06:45 +0800",
+  "latest_commit_sha": "e92c2cf5b76400c049ae58f3e1103331afe47c60",
+  "latest_commit_time": "2026-08-06 12:17:45 +0800",
   "version": "5.5.0",
   "file_tree": {
     "top_entries": [
@@ -96,32 +96,38 @@
     "version": "5.5.0",
     "parsed": true,
     "total_files": 348,
-    "hash_matches": 344,
-    "hash_mismatch_count": 4,
+    "hash_matches": 343,
+    "hash_mismatch_count": 5,
     "mismatches": [
       {
-        "path": ".github/workflows/ci.yml",
+        "path": ".trae/specs/v5.5-real-closure-trust-ux-edition/checklist.md",
         "reason": "hash_mismatch",
-        "expected": "c51874f2d0408395d5c228f135c9a84d412f4d2f76c29b2c38093c61adeba4d1",
-        "actual": "a3a756d99b926cd5d51614a206fcc344ec4353cd5f9e2cab0e7699e43ccd710e"
+        "expected": "edd018740228f31b056907c644e42c3ab62e9d69e1d7bcd1ff108f3d2953be59",
+        "actual": "1649043783c3ff0a44edd7e9508bdcd987bbf71e12fd257f616803cea22c4974"
+      },
+      {
+        "path": ".trae/specs/v5.5-real-closure-trust-ux-edition/tasks.md",
+        "reason": "hash_mismatch",
+        "expected": "3f40d08b2f02fa044af0460020f3d7b76136eef4e14e0d22b5d5f299f47c14ae",
+        "actual": "d3e7a2e204ad23a95a26fb3deb7f7d82a12ec3b4a23b1ed0a0275a9edf34abf6"
       },
       {
         "path": "docs/audit/capability_matrix.json",
         "reason": "hash_mismatch",
-        "expected": "9903ff9ecb37f47b4c26223642ef8afc3531d344d7584a04eabc43e3e8f9c495",
-        "actual": "c9afec9b2f8ca13947b17e10ce966c6af22f2e652e9c05eb22ffe7c26687609f"
+        "expected": "c9afec9b2f8ca13947b17e10ce966c6af22f2e652e9c05eb22ffe7c26687609f",
+        "actual": "7461090f25fb92ae7ca1b095f8350d4352e015a9ecfcc02cb6095abfae3a782e"
       },
       {
         "path": "docs/audit/capability_matrix.md",
         "reason": "hash_mismatch",
-        "expected": "02d94e01e5bf6f3260e91fc8d7708ca051dba79e548bb84e0b16772a3df7de70",
-        "actual": "86a2175ba7690bb85033bdd9d007583c79d3d687d7a91a0df126f707d25c6674"
+        "expected": "86a2175ba7690bb85033bdd9d007583c79d3d687d7a91a0df126f707d25c6674",
+        "actual": "77d73d42c359840adb8b29af0f3a345131d8984fb3a4c79a6001795dcade6eba"
       },
       {
         "path": "docs/audit/repository_snapshot.json",
         "reason": "hash_mismatch",
-        "expected": "54539894d0a217bc88826f302400927f991cf7f1d9d229d2a8683c2fc08854ce",
-        "actual": "4df1e715a189bb666c0e919d29f6f9c0ffdbd3e4b81117a07a7982540342faa7"
+        "expected": "4df1e715a189bb666c0e919d29f6f9c0ffdbd3e4b81117a07a7982540342faa7",
+        "actual": "0e22332bda3fedec6d8bf6e0e262b8bda66a106de2105ae4677cde0873900650"
       }
     ]
   },

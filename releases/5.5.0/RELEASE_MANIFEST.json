@@ -2,8 +2,8 @@
   "version": "5.5.0",
   "artifact": "aipd-os-5.5.0.zip",
   "artifact_path": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/releases/5.5.0/aipd-os-5.5.0.zip",
-  "sha256": "bd74f16c40ef560804919b77c64010bd32fcc41f6c93b69c2f824cbfefddeb3c",
-  "generated_at": "2026-08-06T04:07:15.864579+00:00",
+  "sha256": "55d4aa7834ab161f41ac19e24fc258913149991f376cfe604ffe333e0ca8d26f",
+  "generated_at": "2026-08-06T04:17:59.136185+00:00",
   "files": [
     {
       "path": "assets/schemas/cad_contract.schema.json",
@@ -31,19 +31,19 @@
     },
     {
       "path": "docs/audit/audit.json",
-      "sha256": "3f4a87c0fe0f808298dcf011b21599f986782dd6da8fc7618255da3cedde76bb"
+      "sha256": "9e22772a36b7d235f15a54d3b5a3021c221c94a99ff9a775eca86c9ee8b196f7"
     },
     {
       "path": "docs/audit/capability_matrix.json",
-      "sha256": "c9afec9b2f8ca13947b17e10ce966c6af22f2e652e9c05eb22ffe7c26687609f"
+      "sha256": "7461090f25fb92ae7ca1b095f8350d4352e015a9ecfcc02cb6095abfae3a782e"
     },
     {
       "path": "docs/audit/capability_matrix.md",
-      "sha256": "86a2175ba7690bb85033bdd9d007583c79d3d687d7a91a0df126f707d25c6674"
+      "sha256": "77d73d42c359840adb8b29af0f3a345131d8984fb3a4c79a6001795dcade6eba"
     },
     {
       "path": "docs/audit/repository_snapshot.json",
-      "sha256": "4df1e715a189bb666c0e919d29f6f9c0ffdbd3e4b81117a07a7982540342faa7"
+      "sha256": "0e22332bda3fedec6d8bf6e0e262b8bda66a106de2105ae4677cde0873900650"
     },
     {
       "path": "docs/audit/v5.1-version-truth-audit.json",
