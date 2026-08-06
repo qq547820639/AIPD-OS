@@ -2,9 +2,9 @@
   "name": "AIPD-OS bundle manifest",
   "bundle": "aipd-os-5.6.0.zip",
   "bundle_path": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/releases/aipd-os-5.6.0.zip",
-  "bundle_sha256": "fe0fe8c5b994c1525395a60df26dec824f0073f1fa2a7a062f3d6733edcb9145",
-  "bundle_size": 59059896,
-  "entry_count": 4699,
+  "bundle_sha256": "15d98ca5d5adf1cd94a2d5ca569a9b1fc2027d087347230f65f903198d27e367",
+  "bundle_size": 59070735,
+  "entry_count": 4705,
   "entries": [
     {
       "path": ".github/workflows/ci.yml",
@@ -20,6 +20,36 @@
       "path": ".pytest/lastreport.json",
       "size": 385818,
       "sha256": "5aa7407e6493ddf102e2a5ca1ac79687f57dc3b4df1ff775d3c0244e5160d1fd"
+    },
+    {
+      "path": ".pytest_cache/.gitignore",
+      "size": 37,
+      "sha256": "3ed731b65d06150c138e2dadb0be0697550888a6b47eb8c45ecc9adba8b8e9bd"
+    },
+    {
+      "path": ".pytest_cache/CACHEDIR.TAG",
+      "size": 191,
+      "sha256": "37dc88ef9a0abeddbe81053a6dd8fdfb13afb613045ea1eb4a5c815a74a3bde4"
+    },
+    {
+      "path": ".pytest_cache/README.md",
+      "size": 302,
+      "sha256": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad"
+    },
+    {
+      "path": ".pytest_cache/v/cache/lastfailed",
+      "size": 78,
+      "sha256": "19f0d7ed4237502533eb943c0b171d23688323542c6dd8d810c86b80eb584190"
+    },
+    {
+      "path": ".pytest_cache/v/cache/nodeids",
+      "size": 37754,
+      "sha256": "d195fd9035a0430103d863e661237fdb676ddc78fde583235ce17ef46d6c62cf"
+    },
+    {
+      "path": ".pytest_cache/v/cache/stepwise",
+      "size": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     },
     {
       "path": ".release_keys/ed25519_private.pem",
@@ -21218,8 +21248,8 @@
     },
     {
       "path": "BUNDLE_MANIFEST.json",
-      "size": 932571,
-      "sha256": "9c62cc71be4fc9aafd01550d15dedd864dbc18bdc97749fbd7ed39e5e7525e9c"
+      "size": 937802,
+      "sha256": "5d49c1ade4dd7f6db21229dfd77e48103b1ab9db08ac1346ca3dc21c4c2d22d7"
     },
     {
       "path": "CHANGELOG.md",
@@ -21248,8 +21278,8 @@
     },
     {
       "path": "PROVENANCE.json",
-      "size": 2302,
-      "sha256": "b4f881832a31df128e0ac616c09b03a3f5d3a956b34dd4a062e262744afddc55"
+      "size": 2335,
+      "sha256": "1049e6d6accb6a664970420437133dcff2f2f58e7a6483c8ff86ee321207fe6d"
     },
     {
       "path": "QUICKSTART.md",
@@ -21288,8 +21318,8 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "size": 64345,
-      "sha256": "4386a099cdbff0b13fae895c4aa8d2c8a8c58fa986b88b2eff7f84dbb019ac7e"
+      "size": 64378,
+      "sha256": "a62a35e04372b276919c4c82898bef2fb085594c8a593eaff82f4e05b8de10f3"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
