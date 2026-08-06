@@ -2,9 +2,9 @@
   "name": "AIPD-OS bundle manifest",
   "bundle": "aipd-os-5.6.0.zip",
   "bundle_path": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/releases/aipd-os-5.6.0.zip",
-  "bundle_sha256": "7132199ade9406e00c93a260ff2563aae2b3ad0057f144f5ccf6d16f21178127",
-  "bundle_size": 47143910,
-  "entry_count": 4667,
+  "bundle_sha256": "fe0fe8c5b994c1525395a60df26dec824f0073f1fa2a7a062f3d6733edcb9145",
+  "bundle_size": 59059896,
+  "entry_count": 4699,
   "entries": [
     {
       "path": ".github/workflows/ci.yml",
@@ -30,6 +30,81 @@
       "path": ".release_keys/ed25519_public.pem",
       "size": 113,
       "sha256": "a2bdf350b112773f4bd9e2712fe1cbea5c0687ed6bf01e598bd16f0e05415026"
+    },
+    {
+      "path": ".ruff_cache/.gitignore",
+      "size": 35,
+      "sha256": "9e3a60f1e6ec4ae60215c11d54b171392745ec25e9dded433d5bd921363af316"
+    },
+    {
+      "path": ".ruff_cache/0.15.15/10631525610787095666",
+      "size": 101,
+      "sha256": "b71cd6f083c573d48821ddd48b2a3e5fda702cd4c415f2920ef83911e7412008"
+    },
+    {
+      "path": ".ruff_cache/0.15.15/11977140688987517063",
+      "size": 873,
+      "sha256": "a591842541aa49220682756fc1c0728d846ce117bf778b7acabd6b98741bce64"
+    },
+    {
+      "path": ".ruff_cache/0.15.15/12576482423981956586",
+      "size": 273,
+      "sha256": "feebb16c38b437c8f0a97e82df3d5fcb372d5111b2c58f44c311a9580d562b33"
+    },
+    {
+      "path": ".ruff_cache/0.15.15/16566063967711843359",
+      "size": 131,
+      "sha256": "a0780dbd107460ff4f569347733b641db6a8843ae19dd9f1d5824c33dd2bbbab"
+    },
+    {
+      "path": ".ruff_cache/0.15.15/3631964707683083944",
+      "size": 330,
+      "sha256": "eb90ed60e734f8d0410863587a8783079d4058f93d05f51740c760e170a2c59e"
+    },
+    {
+      "path": ".ruff_cache/0.16.1/10997337107133991420",
+      "size": 188,
+      "sha256": "799d1f073533ad811b9cbe3e5265785810d81a171b008cada216f8e0e7d53379"
+    },
+    {
+      "path": ".ruff_cache/0.16.1/14544057029525065364",
+      "size": 188,
+      "sha256": "dbf27e393951768676902e7d1e2a9eb6a7b22a0fd03a2041d5fc3a3e5a6136a8"
+    },
+    {
+      "path": ".ruff_cache/0.16.1/15786085114470168220",
+      "size": 252,
+      "sha256": "dd569207603939978a54211c22c77d13a6b7b923ec3a9682bbf1788e281d9324"
+    },
+    {
+      "path": ".ruff_cache/0.16.1/16740651123071599532",
+      "size": 196,
+      "sha256": "e35fb1b62c09e50f41b9764c3e601302367d06394f58c7e95dbc5b2c93ed2d5f"
+    },
+    {
+      "path": ".ruff_cache/0.16.1/2728165621296051356",
+      "size": 132,
+      "sha256": "5505e7f234cc9a6d536fe440e51d49898611baff25cfaf076cdd265c38b2b2bd"
+    },
+    {
+      "path": ".ruff_cache/0.16.1/4077202633642244729",
+      "size": 204,
+      "sha256": "6887f346bdc7bd487872ebf6fa7c8f76c502584dfc9c9f582a00fa75db81ea4e"
+    },
+    {
+      "path": ".ruff_cache/0.16.1/576947856934870306",
+      "size": 468,
+      "sha256": "d3651ae15422a8279257f4b7b712c8aa8da19b4f11f91b21e058cfa22a375c95"
+    },
+    {
+      "path": ".ruff_cache/0.16.1/7473576877462022964",
+      "size": 1468,
+      "sha256": "0f1953cbe1f4a32e3e334407c2f897b9d2ba895bcac9d63385944fc621357384"
+    },
+    {
+      "path": ".ruff_cache/CACHEDIR.TAG",
+      "size": 43,
+      "sha256": "5953156d7e0c564a427251316eaf26f8870e6483ae2197f916b630e4f93e31ae"
     },
     {
       "path": ".trae/specs/v5-execution-experience-edition/checklist.md",
@@ -21143,8 +21218,8 @@
     },
     {
       "path": "BUNDLE_MANIFEST.json",
-      "size": 932384,
-      "sha256": "f57db2999dd5fb8ba7e09e689f2687327dee4f7aefdf7bb783a3a1ce82c2ac42"
+      "size": 932571,
+      "sha256": "9c62cc71be4fc9aafd01550d15dedd864dbc18bdc97749fbd7ed39e5e7525e9c"
     },
     {
       "path": "CHANGELOG.md",
@@ -21173,8 +21248,8 @@
     },
     {
       "path": "PROVENANCE.json",
-      "size": 2406,
-      "sha256": "332d190c0343d4955c4f213801cb71f3b9d9df69e01166ae6d806f5d9f1c4268"
+      "size": 2302,
+      "sha256": "b4f881832a31df128e0ac616c09b03a3f5d3a956b34dd4a062e262744afddc55"
     },
     {
       "path": "QUICKSTART.md",
@@ -21188,8 +21263,8 @@
     },
     {
       "path": "RELEASE_MANIFEST.json",
-      "size": 66597,
-      "sha256": "b61f4d8da75459e3478ee4c1d417313e7cf497622e4dcd2e0c47adee0efbcc1b"
+      "size": 64800,
+      "sha256": "d7664f945bfad707a2deab080307e49a60f37238ec55293cb3247930cdf9397d"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -21213,8 +21288,8 @@
     },
     {
       "path": "SOURCE_MANIFEST.json",
-      "size": 66800,
-      "sha256": "ceff8b61b9b07b25c5be30185b9d0771feb5d634af76d65bacfa7bad8924ece1"
+      "size": 64345,
+      "sha256": "4386a099cdbff0b13fae895c4aa8d2c8a8c58fa986b88b2eff7f84dbb019ac7e"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -21387,6 +21462,21 @@
       "sha256": "f4d34d089ca7a8374575f397f547d0ac305897abab4eb1fba2b431d4a135abc3"
     },
     {
+      "path": "dist/aipd_os-5.6.0-py3-none-any.whl",
+      "size": 346875,
+      "sha256": "e9e7bbaa09b2cac17562b546e84000db99038885ed2b53f76a8986f0cd00d667"
+    },
+    {
+      "path": "dist/aipd_os-5.6.0-py3-none-any.whl.ed25519.sig",
+      "size": 89,
+      "sha256": "0fd3fbca489b98f33b4ccf1777c1c264db5282b95c7211d816ec9fd5f3d896c3"
+    },
+    {
+      "path": "dist/aipd_os-5.6.0.tar.gz",
+      "size": 383387,
+      "sha256": "bdbe95d0bcd1080c04cb4a994785c80de157c109b4547baff0efded3b79a8f6d"
+    },
+    {
       "path": "docker-compose.yml",
       "size": 674,
       "sha256": "eb689dc1a54130d805111e65453ed12a9e3dead71b38d3886e39e121ca658ffb"
@@ -21403,18 +21493,23 @@
     },
     {
       "path": "docs/audit/audit.json",
-      "size": 3338,
-      "sha256": "c6b691253bdb3f9aba0d04d25d73951e9a24431492915e74ec815d9602525267"
+      "size": 3594,
+      "sha256": "f3e4ab2272debe117bdf1721b36c0859bfabb02dc678a1ba219e3f1555b00955"
+    },
+    {
+      "path": "docs/audit/audit.md",
+      "size": 2444,
+      "sha256": "660c8d764bbb897a93b00be4b70cce9e47f41b6f5c1feea5a5bc5f6eb925c013"
     },
     {
       "path": "docs/audit/capability_matrix.json",
       "size": 67150,
-      "sha256": "491b4e0dd20d0ade3a19ee5f6bd32ab70151a8fafe3ee7ecadfa897297cdc9c2"
+      "sha256": "01b2aa7eb22688f1467960ab3b2cf0059faf5317f8ba6d22d0d77aa62332f503"
     },
     {
       "path": "docs/audit/capability_matrix.md",
       "size": 19039,
-      "sha256": "4592ff8630e098a83eb5602de7a32dc31c5706f5f3e53b4b6b77620a626db056"
+      "sha256": "8819a08a04dc8c0f589cc86e2411b9bc85d904a345299e8b77950660794ee0cd"
     },
     {
       "path": "docs/audit/pytest-report.json",
@@ -21428,8 +21523,8 @@
     },
     {
       "path": "docs/audit/repository_snapshot.json",
-      "size": 3337,
-      "sha256": "bb49a2e09d444b293c804b53efc3b281d0971a7b2d78bafb03ed42ba3d50150e"
+      "size": 3356,
+      "sha256": "a8b60e22218596bd3104c843edac8c025ce73a7731a407d1968de6a96f836f69"
     },
     {
       "path": "docs/audit/v5.1-version-truth-audit.json",
@@ -21575,6 +21670,11 @@
       "path": "evals_out/honesty_golden_tmp/manual.pdf",
       "size": 464930,
       "sha256": "0c9890e02d5450246e8b20f7a7ace31f965888e5a969005b80ce9ff81533dc97"
+    },
+    {
+      "path": "evals_out/honesty_golden_tmp/manual.zip",
+      "size": 696021,
+      "sha256": "cc9fe6e373165d61ba54b096275c55f39d80e6557da9d23fc3d9b0fb1a7e6212"
     },
     {
       "path": "evals_out/honesty_golden_tmp/pages/gp_cover_001.png",
@@ -21802,6 +21902,11 @@
       "sha256": "5136449e78aae35e25c737f52cbc3626776f156228642d19d69f7507fed744a7"
     },
     {
+      "path": "releases/5.1.0/aipd-os-5.1.0.zip",
+      "size": 1622895,
+      "sha256": "5b88da0eb409020980056dbd90f9bca8419475074bceffcda90dc4a958c826bb"
+    },
+    {
       "path": "releases/5.1.0/evals/eval_reports/5.0.0/report.json",
       "size": 20094,
       "sha256": "dd9f383414396b371441dcda9e112f7b8bb46ecef724d9be1b4145efeae46aa1"
@@ -21830,6 +21935,11 @@
       "path": "releases/5.2.0/RELEASE_MANIFEST.json",
       "size": 27727,
       "sha256": "f489f51012e8dccfede57488ef8437b5a2eed190cbc87c7fb2b0a47f7cbc56d6"
+    },
+    {
+      "path": "releases/5.2.0/aipd-os-5.2.0.zip",
+      "size": 1648949,
+      "sha256": "5048fbf9f5273f1196a6c9500a7ebbe7ead97d643e93168d779a3744c7d5ed02"
     },
     {
       "path": "releases/5.2.0/evals/eval_reports/5.0.0/report.json",
@@ -21862,6 +21972,11 @@
       "sha256": "92c95c4ce911d96272957742ac68099291534f88ddd5ea763e81da7d8acb1e95"
     },
     {
+      "path": "releases/5.3.0/aipd-os-5.3.0.zip",
+      "size": 1670688,
+      "sha256": "307183510a521923cc39ea705912e21dd4ddb82bdde3b1dbe85aa05594d9302e"
+    },
+    {
       "path": "releases/5.3.0/evals/eval_reports/5.0.0/report.json",
       "size": 20094,
       "sha256": "9fcbce7b1b7f69a9af4bde307f4b1e3236bfdcfc79a94be717f497ec653dfb36"
@@ -21892,6 +22007,11 @@
       "sha256": "12c491821a179b585535af0102470898a45944c7f09b83ae6f40d8332fe94459"
     },
     {
+      "path": "releases/5.4.0/aipd-os-5.4.0.zip",
+      "size": 1709282,
+      "sha256": "98870680f5a4544893b216cce3f5d41601b4ddd163bc6dca3755bf86ce66f5df"
+    },
+    {
       "path": "releases/5.4.0/evals/eval_reports/5.4.0/report.json",
       "size": 20094,
       "sha256": "15f97f52116d8ab3fcdccc5ef57a159b4f1dd5949bcf78449d70912073850447"
@@ -21920,6 +22040,11 @@
       "path": "releases/5.5.0/RELEASE_MANIFEST.json",
       "size": 34333,
       "sha256": "ab17509c2f46ea14fec4f3d708af9bee5cccecc9082539c8db0f1691d5857e0e"
+    },
+    {
+      "path": "releases/5.5.0/aipd-os-5.5.0.zip",
+      "size": 1831186,
+      "sha256": "55d4aa7834ab161f41ac19e24fc258913149991f376cfe604ffe333e0ca8d26f"
     },
     {
       "path": "releases/5.5.0/evals/eval_reports/5.5.0/report.json",
@@ -21973,8 +22098,13 @@
     },
     {
       "path": "releases/golden-projects/A-manual-chain/manual.pdf",
-      "size": 1464257,
-      "sha256": "e368b5e08e5ebd17007abec23fa312781f142b683dddc88a6f05c12f92aabdbf"
+      "size": 1464261,
+      "sha256": "c2631a0c2ebf0c44b2830ba325123a766093fbf2ba196ad1d42aea4f341633ae"
+    },
+    {
+      "path": "releases/golden-projects/A-manual-chain/manual.zip",
+      "size": 2081179,
+      "sha256": "bdba96bcf71b5413ef582eaf7b35a5d7b046918dc284df7d5df9e9668e5fc13b"
     },
     {
       "path": "releases/golden-projects/A-manual-chain/module_drive.png",
@@ -22009,7 +22139,7 @@
     {
       "path": "releases/golden-projects/A-manual-chain/report.json",
       "size": 1691,
-      "sha256": "2bebaf9162828d54867e75d4063649b60d5c4c4175857338af8d1d3d22ad83c1"
+      "sha256": "bd337697a33ccb0b7941e7ccb920d70ad7d56ecc795591d16b808280560d1cf3"
     },
     {
       "path": "releases/golden-projects/A-manual-chain/user_scene.png",
@@ -22044,7 +22174,7 @@
     {
       "path": "releases/golden-projects/B-cad-engineering-change/report.json",
       "size": 1035,
-      "sha256": "e1582519cae4762dee9e0a77ee3aaecdf3299cf8ad654e97f9304349a1b32a99"
+      "sha256": "92868877c0a1bfb10304c54a031d46b2d0d9888f65e65279ad1af2d45dcbd849"
     },
     {
       "path": "releases/golden-projects/C-supply-chain/lab.csv",
@@ -22059,7 +22189,7 @@
     {
       "path": "releases/golden-projects/C-supply-chain/report.json",
       "size": 1010,
-      "sha256": "7312de0efff2a128728f8deb6c8d09c9953e116aafeb40def78407592cea2da2"
+      "sha256": "9f2d4692681155defad0f751c12712885b46cd5415b0699c9da366687e91849e"
     },
     {
       "path": "requirements-quality.txt",
@@ -22088,8 +22218,8 @@
     },
     {
       "path": "scripts/audit_repo.py",
-      "size": 17635,
-      "sha256": "a565da169ff1d470fe7da1446e0911aca7bae769771eeed0ff112ca9f013bb03"
+      "size": 18308,
+      "sha256": "e41c77c1e3320fc0709a4d2a22f5a704cd905753a7024d793ee67e2a7ff4ebed"
     },
     {
       "path": "scripts/benchmark_manifest.py",
@@ -22118,8 +22248,8 @@
     },
     {
       "path": "scripts/capability_matrix.py",
-      "size": 8221,
-      "sha256": "a434f1b9f82264a2f049030ea3a7a1a688450d9269688419bcfa7fcea584e83b"
+      "size": 8514,
+      "sha256": "db85e8a5d6f7d1e28273c2c7b16e99d466df5dc3facf8b974f849dd52941cc1e"
     },
     {
       "path": "scripts/check_skill_package.py",
@@ -22193,13 +22323,13 @@
     },
     {
       "path": "scripts/regenerate_release_manifest.py",
-      "size": 2424,
-      "sha256": "9ae97e11695d947c95259266036a50d77c376aad1a54ab850819e960bcd10964"
+      "size": 2546,
+      "sha256": "4066f3f699900d31536eb325876e271a551989cfebea438204a731fa09a2d9ff"
     },
     {
       "path": "scripts/release_evidence.py",
-      "size": 12830,
-      "sha256": "969fcf6dea10e343d4926ff69fabbb51dee89434fe00a31e023e8e84d4c96175"
+      "size": 13070,
+      "sha256": "84461d6d3818b0c24d65a737c0736caa815c797bdb50e0c11ad1f5369e72425e"
     },
     {
       "path": "scripts/research/README.md",
@@ -22310,6 +22440,36 @@
       "path": "scripts/skill_quality_audit.py",
       "size": 7331,
       "sha256": "fa3c0212707d2b8943d8ecafed0f5852f3f84ae09a8fad4a5a3d9b128609159f"
+    },
+    {
+      "path": "src/aipd_os.egg-info/PKG-INFO",
+      "size": 6895,
+      "sha256": "94455ce356af44e2d3a553cfa22f958f3023dfc1547a9b2c7bd281a4154ab17a"
+    },
+    {
+      "path": "src/aipd_os.egg-info/SOURCES.txt",
+      "size": 6592,
+      "sha256": "8ea345afb8d5d62004eacb3a6b6b08880c92a496d022ca647a044c9d6e4362de"
+    },
+    {
+      "path": "src/aipd_os.egg-info/dependency_links.txt",
+      "size": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "src/aipd_os.egg-info/entry_points.txt",
+      "size": 47,
+      "sha256": "7ee254b2904c9e5fdd4229c8bfb62de5e5909c3c8fa3b593c49cfb96fdbc60da"
+    },
+    {
+      "path": "src/aipd_os.egg-info/requires.txt",
+      "size": 184,
+      "sha256": "2ad67c7a5484eb85f50b0198cf09ec6ec605982b5dbe54c1cbb6004a5698a458"
+    },
+    {
+      "path": "src/aipd_os.egg-info/top_level.txt",
+      "size": 8,
+      "sha256": "3f3e1d99f1641a71216e0cb269ce1a39b48f4650cf88fca97fc66f51063ff3e8"
     },
     {
       "path": "src/aipd_os/__init__.py",

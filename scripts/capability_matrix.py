@@ -33,9 +33,9 @@ from aipd_os.registry import (  # noqa: E402
 )
 
 
-def _build_snapshot(repo: Path) -> dict:
+def _build_snapshot(repo: Path, pin_commit: str | None = None) -> dict:
     """基于 audit_repo 生成 repository_snapshot.json。"""
-    report = audit_repo(repo)
+    report = audit_repo(repo, pin_commit=pin_commit)
     return {
         "generated_at": report["generated_at"],
         "repo_root": report["repo_root"],
@@ -152,7 +152,7 @@ def _render_matrix_md(matrix: dict) -> str:
     return "\n".join(lines)
 
 
-def generate(repo_root, out_dir) -> dict:
+def generate(repo_root, out_dir, pin_commit: str | None = None) -> dict:
     """生成三份审计交付物，返回生成摘要。"""
     repo = Path(repo_root).resolve()
     out = Path(out_dir)
@@ -163,7 +163,7 @@ def generate(repo_root, out_dir) -> dict:
     if errors:
         raise ValueError("Capability Registry 校验失败：\n" + "\n".join(errors))
 
-    snapshot = _build_snapshot(repo)
+    snapshot = _build_snapshot(repo, pin_commit=pin_commit)
     matrix = _build_capability_matrix(repo, registry)
 
     (out / "repository_snapshot.json").write_text(
@@ -193,8 +193,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="AIPD-OS 能力矩阵审计产物生成（Registry 驱动）")
     parser.add_argument("--repo", default=".", help="仓库根目录（默认当前目录）")
     parser.add_argument("--out", default="docs/audit", help="输出目录（默认 docs/audit）")
+    parser.add_argument("--pin-commit", default="",
+                        help="把 snapshot/矩阵的 latest_commit_sha 固定到最终 tag SHA")
     args = parser.parse_args()
-    summary = generate(args.repo, args.out)
+    summary = generate(args.repo, args.out, pin_commit=args.pin_commit or None)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 

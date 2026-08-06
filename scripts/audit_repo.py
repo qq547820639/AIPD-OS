@@ -282,8 +282,12 @@ def _scan_legacy_cad_conflicts(repo_root: Path) -> list:
     return hits
 
 
-def audit_repo(repo_root) -> dict:
-    """审计仓库真实状态，返回结果字典。输入可为 str 或 pathlib.Path。"""
+def audit_repo(repo_root, pin_commit: str | None = None) -> dict:
+    """审计仓库真实状态，返回结果字典。输入可为 str 或 pathlib.Path。
+
+    ``pin_commit`` 用于把 latest_commit_sha 固定到最终 tag SHA（如 ``--pin-commit``），
+    使报告指向“被测试的发布提交”而非领先于 tag 的发布证据元数据提交（P0-1）。
+    """
     root = Path(repo_root).resolve()
     if not root.is_dir():
         raise NotADirectoryError(f"仓库根目录不存在: {root}")
@@ -291,8 +295,12 @@ def audit_repo(repo_root) -> dict:
     default_branch = _run_git(root, ["symbolic-ref", "--short", "HEAD"])
     if not default_branch:
         default_branch = _run_git(root, ["branch", "--show-current"])
-    latest_commit_sha = _run_git(root, ["rev-parse", "HEAD"])
-    latest_commit_time = _run_git(root, ["show", "-s", "--format=%ci", "HEAD"])
+    if pin_commit:
+        latest_commit_sha = _run_git(root, ["rev-parse", f"{pin_commit}^{{commit}}"]) or pin_commit
+        latest_commit_time = _run_git(root, ["show", "-s", "--format=%ci", pin_commit])
+    else:
+        latest_commit_sha = _run_git(root, ["rev-parse", "HEAD"])
+        latest_commit_time = _run_git(root, ["show", "-s", "--format=%ci", "HEAD"])
 
     tags = _run_git(root, ["tag", "-l"])
     tags_list = [t for t in tags.splitlines() if t] if tags else []
@@ -469,9 +477,11 @@ def main() -> None:
     parser.add_argument("--repo", default=".", help="仓库根目录（默认当前目录）")
     parser.add_argument("--json-out", default="", help="JSON 报告输出路径")
     parser.add_argument("--markdown-out", default="", help="Markdown 报告输出路径")
+    parser.add_argument("--pin-commit", default="",
+                        help="把报告 latest_commit_sha 固定到最终 tag SHA（默认取当前 HEAD）")
     args = parser.parse_args()
 
-    report = audit_repo(args.repo)
+    report = audit_repo(args.repo, pin_commit=args.pin_commit or None)
     _write_report(report, args.json_out or "", args.markdown_out or "")
     if not args.json_out and not args.markdown_out:
         print(json.dumps(report, ensure_ascii=False, indent=2))

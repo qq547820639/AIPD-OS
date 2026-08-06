@@ -1,8 +1,8 @@
 {
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
-  "source_commit": "0934f84d9d8cae26adfc8a088ba3af2dc58c999b",
-  "generated_at": "2026-08-06T08:08:33+00:00",
+  "source_commit": "0934f84",
+  "generated_at": "2026-08-06T08:45:54+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -366,81 +366,6 @@
       "sha256": "9440d2429fbacad841994ffe351133e3149e484e2461eeed7d7bf77c00cf7afc"
     },
     {
-      "path": "docs/audit/audit.json",
-      "size": 3338,
-      "sha256": "c6b691253bdb3f9aba0d04d25d73951e9a24431492915e74ec815d9602525267"
-    },
-    {
-      "path": "docs/audit/capability_matrix.json",
-      "size": 67150,
-      "sha256": "491b4e0dd20d0ade3a19ee5f6bd32ab70151a8fafe3ee7ecadfa897297cdc9c2"
-    },
-    {
-      "path": "docs/audit/capability_matrix.md",
-      "size": 19039,
-      "sha256": "4592ff8630e098a83eb5602de7a32dc31c5706f5f3e53b4b6b77620a626db056"
-    },
-    {
-      "path": "docs/audit/pytest-report.json",
-      "size": 385818,
-      "sha256": "5aa7407e6493ddf102e2a5ca1ac79687f57dc3b4df1ff775d3c0244e5160d1fd"
-    },
-    {
-      "path": "docs/audit/release_evidence_notes.md",
-      "size": 5101,
-      "sha256": "ce41bf9586c7c2ad874b12e05c7a7df07e8d8a3922d6b22565146a11bec9205f"
-    },
-    {
-      "path": "docs/audit/repository_snapshot.json",
-      "size": 3337,
-      "sha256": "bb49a2e09d444b293c804b53efc3b281d0971a7b2d78bafb03ed42ba3d50150e"
-    },
-    {
-      "path": "docs/audit/v5.1-version-truth-audit.json",
-      "size": 5011,
-      "sha256": "4d9fe9c0f2b68ee891a9698f5702c9cb9339fe7ae849b19cc96f664968a592d0"
-    },
-    {
-      "path": "docs/audit/v5.1-version-truth-audit.md",
-      "size": 6269,
-      "sha256": "dab6e0723a4ddd839c78dd2b9f5c47895521e2fa2d407a4045d54421b93be5d7"
-    },
-    {
-      "path": "docs/audit/v5.4/phase2-3-execution-research-audit.md",
-      "size": 17036,
-      "sha256": "a96d1d5f3e61afbde59477229718f52539903be4a5f1c3ed3dddd236d44d0874"
-    },
-    {
-      "path": "docs/audit/v5.4/phase4-manual-chain-audit.md",
-      "size": 9674,
-      "sha256": "a01002aa33ce13a5cc1f0f12d765a8849989562dd7d4f1c76f9de2dac4da6c35"
-    },
-    {
-      "path": "docs/audit/v5.4/phase5-cad-audit.md",
-      "size": 11273,
-      "sha256": "2d00bca4725287ecaaf0620a1de7d09732a26aec02565fcd1ccfb1aba025ad8a"
-    },
-    {
-      "path": "docs/audit/v5.4/phase6-recovery-state-audit.md",
-      "size": 13106,
-      "sha256": "f359e174c819751057d172f28a1d2e9ba4e226f8e6b282eed2280766cfc7f45e"
-    },
-    {
-      "path": "docs/audit/v5.4/phase7-supply-chain-audit.md",
-      "size": 9933,
-      "sha256": "b1006e315c5cb308bd8c7658b6145c389a4d0cd63bcc0b3bd9affa85cdeddf68"
-    },
-    {
-      "path": "docs/audit/v5.4/phase8-owner-ux-audit.md",
-      "size": 13861,
-      "sha256": "26fa39d7948c7cf95c3c60053f3cb0fd3916948d7505841ecf42e848a649f5e3"
-    },
-    {
-      "path": "docs/audit/v5.4/phase9-evals-golden-audit.md",
-      "size": 15463,
-      "sha256": "b9a9d2a01bb018f385858b94ff6dd489543841100b9909093f29ecf0ad44ea14"
-    },
-    {
       "path": "docs/security/dependency-cve-review.md",
       "size": 5186,
       "sha256": "7e131ca7624fb4374dd055420e0984616bd6fa1770d154d18d68e4bf3ffe0208"
@@ -747,8 +672,8 @@
     },
     {
       "path": "scripts/audit_repo.py",
-      "size": 17635,
-      "sha256": "a565da169ff1d470fe7da1446e0911aca7bae769771eeed0ff112ca9f013bb03"
+      "size": 18308,
+      "sha256": "e41c77c1e3320fc0709a4d2a22f5a704cd905753a7024d793ee67e2a7ff4ebed"
     },
     {
       "path": "scripts/benchmark_manifest.py",
@@ -777,8 +702,8 @@
     },
     {
       "path": "scripts/capability_matrix.py",
-      "size": 8221,
-      "sha256": "a434f1b9f82264a2f049030ea3a7a1a688450d9269688419bcfa7fcea584e83b"
+      "size": 8514,
+      "sha256": "db85e8a5d6f7d1e28273c2c7b16e99d466df5dc3facf8b974f849dd52941cc1e"
     },
     {
       "path": "scripts/check_skill_package.py",
@@ -852,13 +777,13 @@
     },
     {
       "path": "scripts/regenerate_release_manifest.py",
-      "size": 2424,
-      "sha256": "9ae97e11695d947c95259266036a50d77c376aad1a54ab850819e960bcd10964"
+      "size": 2546,
+      "sha256": "4066f3f699900d31536eb325876e271a551989cfebea438204a731fa09a2d9ff"
     },
     {
       "path": "scripts/release_evidence.py",
-      "size": 12830,
-      "sha256": "969fcf6dea10e343d4926ff69fabbb51dee89434fe00a31e023e8e84d4c96175"
+      "size": 13070,
+      "sha256": "84461d6d3818b0c24d65a737c0736caa815c797bdb50e0c11ad1f5369e72425e"
     },
     {
       "path": "scripts/research/README.md",

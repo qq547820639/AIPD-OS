@@ -16,6 +16,11 @@
       "sha256": "2bbacb07cb6641979797d8e46ce97a36f856320855412b354cda19ccfff82c81"
     },
     {
+      "path": ".release_keys/ed25519_public.pem",
+      "size": 113,
+      "sha256": "a2bdf350b112773f4bd9e2712fe1cbea5c0687ed6bf01e598bd16f0e05415026"
+    },
+    {
       "path": ".trae/specs/v5-execution-experience-edition/checklist.md",
       "size": 3404,
       "sha256": "c60e79f237f3dd61981ccdd1c756b707a7f9bb18c72ea72fc118738150100bc3"
@@ -121,6 +126,11 @@
       "sha256": "7dcbb8b97496e276d3da9c96b5ecc45689d96136551cbf702a283d2d7ed8e13c"
     },
     {
+      "path": "BUNDLE_MANIFEST.json",
+      "size": 932571,
+      "sha256": "9c62cc71be4fc9aafd01550d15dedd864dbc18bdc97749fbd7ed39e5e7525e9c"
+    },
+    {
       "path": "CHANGELOG.md",
       "size": 11123,
       "sha256": "1cccaa931660a0566a1e41aff2facb0af7f7757641d89362550fb2184cfc16bd"
@@ -144,6 +154,11 @@
       "path": "LICENSE",
       "size": 1087,
       "sha256": "50a082e6ab3ebb2db1a9aee413199cb03fa1202bf41530677b344cbc7c701767"
+    },
+    {
+      "path": "PROVENANCE.json",
+      "size": 2302,
+      "sha256": "b4f881832a31df128e0ac616c09b03a3f5d3a956b34dd4a062e262744afddc55"
     },
     {
       "path": "QUICKSTART.md",
@@ -174,6 +189,11 @@
       "path": "SKILL.md",
       "size": 9282,
       "sha256": "ed07416633be3698418f888dccf63c7724b4348aa6af03d44de3c28c4e5291d2"
+    },
+    {
+      "path": "SOURCE_MANIFEST.json",
+      "size": 64345,
+      "sha256": "4386a099cdbff0b13fae895c4aa8d2c8a8c58fa986b88b2eff7f84dbb019ac7e"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -359,76 +379,6 @@
       "path": "docs/architecture.md",
       "size": 5107,
       "sha256": "9440d2429fbacad841994ffe351133e3149e484e2461eeed7d7bf77c00cf7afc"
-    },
-    {
-      "path": "docs/audit/audit.json",
-      "size": 8386,
-      "sha256": "1950ff606c7be6856c2a3d21aba83848fe580f7f611e863b4820a91a43fd8772"
-    },
-    {
-      "path": "docs/audit/capability_matrix.json",
-      "size": 67150,
-      "sha256": "f106976c436d89c24598929f205b00b00d996b21d18024fdfc18c82c2fa7a485"
-    },
-    {
-      "path": "docs/audit/capability_matrix.md",
-      "size": 19039,
-      "sha256": "cc679714c4afda08ce6099d989edd17ab7cbd3c4dd547fa2b1ab07f049dfda8a"
-    },
-    {
-      "path": "docs/audit/release_evidence_notes.md",
-      "size": 5101,
-      "sha256": "ce41bf9586c7c2ad874b12e05c7a7df07e8d8a3922d6b22565146a11bec9205f"
-    },
-    {
-      "path": "docs/audit/repository_snapshot.json",
-      "size": 7486,
-      "sha256": "0da300eff17ddbacd27d017a3e3bd7b387f837ff02a3aaef9650c7901b30d480"
-    },
-    {
-      "path": "docs/audit/v5.1-version-truth-audit.json",
-      "size": 5011,
-      "sha256": "4d9fe9c0f2b68ee891a9698f5702c9cb9339fe7ae849b19cc96f664968a592d0"
-    },
-    {
-      "path": "docs/audit/v5.1-version-truth-audit.md",
-      "size": 6269,
-      "sha256": "dab6e0723a4ddd839c78dd2b9f5c47895521e2fa2d407a4045d54421b93be5d7"
-    },
-    {
-      "path": "docs/audit/v5.4/phase2-3-execution-research-audit.md",
-      "size": 17036,
-      "sha256": "a96d1d5f3e61afbde59477229718f52539903be4a5f1c3ed3dddd236d44d0874"
-    },
-    {
-      "path": "docs/audit/v5.4/phase4-manual-chain-audit.md",
-      "size": 9674,
-      "sha256": "a01002aa33ce13a5cc1f0f12d765a8849989562dd7d4f1c76f9de2dac4da6c35"
-    },
-    {
-      "path": "docs/audit/v5.4/phase5-cad-audit.md",
-      "size": 11273,
-      "sha256": "2d00bca4725287ecaaf0620a1de7d09732a26aec02565fcd1ccfb1aba025ad8a"
-    },
-    {
-      "path": "docs/audit/v5.4/phase6-recovery-state-audit.md",
-      "size": 13106,
-      "sha256": "f359e174c819751057d172f28a1d2e9ba4e226f8e6b282eed2280766cfc7f45e"
-    },
-    {
-      "path": "docs/audit/v5.4/phase7-supply-chain-audit.md",
-      "size": 9933,
-      "sha256": "b1006e315c5cb308bd8c7658b6145c389a4d0cd63bcc0b3bd9affa85cdeddf68"
-    },
-    {
-      "path": "docs/audit/v5.4/phase8-owner-ux-audit.md",
-      "size": 13861,
-      "sha256": "26fa39d7948c7cf95c3c60053f3cb0fd3916948d7505841ecf42e848a649f5e3"
-    },
-    {
-      "path": "docs/audit/v5.4/phase9-evals-golden-audit.md",
-      "size": 15463,
-      "sha256": "b9a9d2a01bb018f385858b94ff6dd489543841100b9909093f29ecf0ad44ea14"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -737,8 +687,8 @@
     },
     {
       "path": "scripts/audit_repo.py",
-      "size": 17635,
-      "sha256": "a565da169ff1d470fe7da1446e0911aca7bae769771eeed0ff112ca9f013bb03"
+      "size": 18308,
+      "sha256": "e41c77c1e3320fc0709a4d2a22f5a704cd905753a7024d793ee67e2a7ff4ebed"
     },
     {
       "path": "scripts/benchmark_manifest.py",
@@ -767,8 +717,8 @@
     },
     {
       "path": "scripts/capability_matrix.py",
-      "size": 8221,
-      "sha256": "a434f1b9f82264a2f049030ea3a7a1a688450d9269688419bcfa7fcea584e83b"
+      "size": 8514,
+      "sha256": "db85e8a5d6f7d1e28273c2c7b16e99d466df5dc3facf8b974f849dd52941cc1e"
     },
     {
       "path": "scripts/check_skill_package.py",
@@ -842,13 +792,13 @@
     },
     {
       "path": "scripts/regenerate_release_manifest.py",
-      "size": 2424,
-      "sha256": "9ae97e11695d947c95259266036a50d77c376aad1a54ab850819e960bcd10964"
+      "size": 2546,
+      "sha256": "4066f3f699900d31536eb325876e271a551989cfebea438204a731fa09a2d9ff"
     },
     {
       "path": "scripts/release_evidence.py",
-      "size": 12830,
-      "sha256": "969fcf6dea10e343d4926ff69fabbb51dee89434fe00a31e023e8e84d4c96175"
+      "size": 13070,
+      "sha256": "84461d6d3818b0c24d65a737c0736caa815c797bdb50e0c11ad1f5369e72425e"
     },
     {
       "path": "scripts/research/README.md",

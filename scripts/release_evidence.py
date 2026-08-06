@@ -49,6 +49,9 @@ SOURCE_EXCLUDE_PREFIXES = (
     ".mypy_cache/",
     "__pycache__/",
     "src/aipd_os.egg-info/",
+    # 审计报告是“生成式证据”（内容依赖清单自身），也属于会随生成而自变的一类，
+    # 排除它们以打破“清单↔审计报告”循环哈希，保证 hash_mismatch 可归零。
+    "docs/audit/",
 )
 SOURCE_EXCLUDE_SUFFIXES = (".zip", ".step", ".tar.gz", ".whl", ".egg",
                            ".sig", ".sha256")

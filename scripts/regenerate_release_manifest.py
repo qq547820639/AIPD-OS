@@ -29,6 +29,8 @@ _EXCLUDE_PREFIXES = (
     ".mypy_cache/",
     "__pycache__/",
     "src/aipd_os.egg-info/",
+    # 审计报告是生成式证据，内容随清单生成而变化，排除以打破循环哈希。
+    "docs/audit/",
 )
 
 
