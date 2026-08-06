@@ -1,7 +1,7 @@
 {
   "project_id": "golden-C",
   "name": "RFQ / 报价 / 实验数据 / 纠正任务",
-  "source_commit": "5c4b84e3895443ed3dd53b1a92de191eadb1c1a3",
+  "source_commit": "d58ab14f54a469698a1af7a07db80d24812fa268",
   "checks": {
     "clean_import_runs": true,
     "external_mail_honest_hold": true,
@@ -25,7 +25,7 @@
       "reason": "drop_test 在 evt 阶段失败（fail）"
     }
   ],
-  "generated_at": "2026-08-06T10:02:40.843143+00:00",
+  "generated_at": "2026-08-06T10:44:10.100611+00:00",
   "artifacts": {
     "quote.csv": "4adb58643c23ef79026e6a8ccecf8172ac4d1540431aba3b43a4eeead5448c0b",
     "lab.csv": "34a9cc55555403b543acd59a206451083aec8bbb571eddbad4d35ac6482b6e3a"

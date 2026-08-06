@@ -1,8 +1,8 @@
 {
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
-  "source_commit": "0934f84d9d8cae26adfc8a088ba3af2dc58c999b",
-  "generated_at": "2026-08-06T10:08:38+00:00",
+  "source_commit": "d58ab14f54a469698a1af7a07db80d24812fa268",
+  "generated_at": "2026-08-06T10:44:50+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -702,8 +702,8 @@
     },
     {
       "path": "scripts/capability_matrix.py",
-      "size": 8620,
-      "sha256": "9ad64b5ae4eb6ffff0898718b19be4b9fb59140b7f1265e712c4f87303784b4a"
+      "size": 8626,
+      "sha256": "ff92f545700701a0813b9aee9aa63f4c7cf77df191a7fe1583a8f7648fdc4ede"
     },
     {
       "path": "scripts/check_skill_package.py",
@@ -1237,13 +1237,13 @@
     },
     {
       "path": "src/aipd_os/registry.py",
-      "size": 9917,
-      "sha256": "0e56107898fa135914ac68c98fffad32bf1f2f626bbc7fa769b243e1e6c3a81f"
+      "size": 12297,
+      "sha256": "c68c7e0e0d9e5d35d76f83adcd305b9ba3524bacd0ab2bf5bcc74abd59d5ad9f"
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 40395,
-      "sha256": "fef4ca0a3028bef77fd3b8aedc035223ff4664dc89f6729660729f4609f77c85"
+      "size": 41320,
+      "sha256": "945ee025dd0856463438cc37a7756ee881a3e2cdd46be4dd9a71ec0342de48b8"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
