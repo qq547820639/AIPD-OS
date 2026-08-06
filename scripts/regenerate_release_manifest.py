@@ -19,6 +19,12 @@ _REPO = Path(__file__).resolve().parent.parent
 
 # 排除：清单自身、发布产物、虚拟环境、构建与缓存目录
 _EXCLUDE_PREFIXES = (
+    # 发布证据文件彼此是“生成式证据”：SOURCE/BUNDLE/PROVENANCE/RELEASE 清单
+    # 的内容会随清单生成而变化，若互相登记对方，任何一个重新生成都会使其余
+    # 清单失效（自引用循环）。因此彼此互不登记，仅登记“确定的源文件集合”。
+    "SOURCE_MANIFEST.json",
+    "BUNDLE_MANIFEST.json",
+    "PROVENANCE.json",
     "RELEASE_MANIFEST.json",
     "releases/",
     "build/",

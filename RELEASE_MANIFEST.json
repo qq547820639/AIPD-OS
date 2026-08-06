@@ -126,11 +126,6 @@
       "sha256": "7dcbb8b97496e276d3da9c96b5ecc45689d96136551cbf702a283d2d7ed8e13c"
     },
     {
-      "path": "BUNDLE_MANIFEST.json",
-      "size": 932571,
-      "sha256": "9c62cc71be4fc9aafd01550d15dedd864dbc18bdc97749fbd7ed39e5e7525e9c"
-    },
-    {
       "path": "CHANGELOG.md",
       "size": 11123,
       "sha256": "1cccaa931660a0566a1e41aff2facb0af7f7757641d89362550fb2184cfc16bd"
@@ -154,11 +149,6 @@
       "path": "LICENSE",
       "size": 1087,
       "sha256": "50a082e6ab3ebb2db1a9aee413199cb03fa1202bf41530677b344cbc7c701767"
-    },
-    {
-      "path": "PROVENANCE.json",
-      "size": 2302,
-      "sha256": "b4f881832a31df128e0ac616c09b03a3f5d3a956b34dd4a062e262744afddc55"
     },
     {
       "path": "QUICKSTART.md",
@@ -189,11 +179,6 @@
       "path": "SKILL.md",
       "size": 9282,
       "sha256": "ed07416633be3698418f888dccf63c7724b4348aa6af03d44de3c28c4e5291d2"
-    },
-    {
-      "path": "SOURCE_MANIFEST.json",
-      "size": 64345,
-      "sha256": "4386a099cdbff0b13fae895c4aa8d2c8a8c58fa986b88b2eff7f84dbb019ac7e"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -792,8 +777,8 @@
     },
     {
       "path": "scripts/regenerate_release_manifest.py",
-      "size": 2546,
-      "sha256": "4066f3f699900d31536eb325876e271a551989cfebea438204a731fa09a2d9ff"
+      "size": 2943,
+      "sha256": "8fe743314591374c3566bd8eecce2242662663068b91b8437e01021aee6a2557"
     },
     {
       "path": "scripts/release_evidence.py",

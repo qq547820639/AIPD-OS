@@ -1,6 +1,6 @@
 # AIPD-OS 版本真实性审计报告（v5.1）
 
-- 生成时间：`2026-08-06T16:44:48`
+- 生成时间：`2026-08-06T16:51:32`
 - 仓库根目录：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
 
 ## 1. 仓库基本信息
@@ -52,29 +52,32 @@
 ## 4. Release Manifest 校验
 
 - Manifest 版本：`5.6.0`
-- 文件条目总数：`387`
-- 哈希匹配：`387` / `387`
+- 文件条目总数：`384`
+- 哈希匹配：`384` / `384`
 - 哈希不匹配：`0`
 
 ## 5. 未跟踪 / 生成文件
 
-- 共 `17` 项：
+- 共 `20` 项：
+  - ` M BUNDLE_MANIFEST.json`
+  - ` M PROVENANCE.json`
+  - ` M RELEASE_MANIFEST.json`
+  - ` M SOURCE_MANIFEST.json`
   - ` M docs/audit/capability_matrix.json`
   - ` M docs/audit/capability_matrix.md`
   - ` M docs/audit/repository_snapshot.json`
-  - ` M scripts/audit_repo.py`
-  - ` M scripts/capability_matrix.py`
+  - ` M releases/aipd-os-5.6.0.zip`
+  - ` M releases/aipd-os-5.6.0.zip.ed25519.sig`
+  - ` M releases/aipd-os-5.6.0.zip.sha256`
+  - ` M releases/aipd-os-5.6.0.zip.sig`
+  - ` M releases/golden-projects/A-manual-chain/manual.pdf`
+  - ` M releases/golden-projects/A-manual-chain/manual.zip`
+  - ` M releases/golden-projects/A-manual-chain/report.json`
+  - ` M releases/golden-projects/B-cad-engineering-change/report.json`
+  - ` M releases/golden-projects/C-supply-chain/report.json`
   - ` M scripts/regenerate_release_manifest.py`
-  - ` M scripts/release_evidence.py`
-  - `A  releases/aipd-os-5.6.0.zip.sha256`
-  - `A  releases/aipd-os-5.6.0.zip.sig`
-  - `M  BUNDLE_MANIFEST.json`
-  - `M  releases/aipd-os-5.6.0.zip`
-  - `M  releases/aipd-os-5.6.0.zip.ed25519.sig`
-  - `MM PROVENANCE.json`
-  - `MM RELEASE_MANIFEST.json`
-  - `MM SOURCE_MANIFEST.json`
   - `generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__`
+  - `generated build/bundle_stage/src/aipd_os.egg-info`
   - `generated src/aipd_os.egg-info`
 
 ## 6. 遗留 CAD 冲突

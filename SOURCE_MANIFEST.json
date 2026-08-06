@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "0934f84d9d8cae26adfc8a088ba3af2dc58c999b",
-  "generated_at": "2026-08-06T08:47:12+00:00",
+  "generated_at": "2026-08-06T08:51:22+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -777,8 +777,8 @@
     },
     {
       "path": "scripts/regenerate_release_manifest.py",
-      "size": 2546,
-      "sha256": "4066f3f699900d31536eb325876e271a551989cfebea438204a731fa09a2d9ff"
+      "size": 2943,
+      "sha256": "8fe743314591374c3566bd8eecce2242662663068b91b8437e01021aee6a2557"
     },
     {
       "path": "scripts/release_evidence.py",

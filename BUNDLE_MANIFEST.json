@@ -2,8 +2,8 @@
   "name": "AIPD-OS bundle manifest",
   "bundle": "aipd-os-5.6.0.zip",
   "bundle_path": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/releases/aipd-os-5.6.0.zip",
-  "bundle_sha256": "15d98ca5d5adf1cd94a2d5ca569a9b1fc2027d087347230f65f903198d27e367",
-  "bundle_size": 59070735,
+  "bundle_sha256": "d53f9956c0ee3de0afb1a2a6172a16d78502056cdeea73b17ae76a9bca4a640b",
+  "bundle_size": 59071135,
   "entry_count": 4705,
   "entries": [
     {
@@ -21248,8 +21248,8 @@
     },
     {
       "path": "BUNDLE_MANIFEST.json",
-      "size": 937802,
-      "sha256": "5d49c1ade4dd7f6db21229dfd77e48103b1ab9db08ac1346ca3dc21c4c2d22d7"
+      "size": 938762,
+      "sha256": "de92f312e748d1d29fb6835b98aed2011a3daf17c76de5d04335efd803ff82cf"
     },
     {
       "path": "CHANGELOG.md",
@@ -21279,7 +21279,7 @@
     {
       "path": "PROVENANCE.json",
       "size": 2335,
-      "sha256": "1049e6d6accb6a664970420437133dcff2f2f58e7a6483c8ff86ee321207fe6d"
+      "sha256": "8e200feb8c41cf491c300248c78549b0a3184ea7fa36b04ff3951cb5237db456"
     },
     {
       "path": "QUICKSTART.md",
@@ -21293,8 +21293,8 @@
     },
     {
       "path": "RELEASE_MANIFEST.json",
-      "size": 64800,
-      "sha256": "d7664f945bfad707a2deab080307e49a60f37238ec55293cb3247930cdf9397d"
+      "size": 64340,
+      "sha256": "36539c72386ae17b516c0f6df14bf627e52b0baefff16bc0a58adbd8cf06fc8d"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -21319,7 +21319,7 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "size": 64378,
-      "sha256": "a62a35e04372b276919c4c82898bef2fb085594c8a593eaff82f4e05b8de10f3"
+      "sha256": "d0576ce19ef9f7ceb9065148b61d047ab486b6ba6d818d6f164f710a3979c7f9"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -22128,13 +22128,13 @@
     },
     {
       "path": "releases/golden-projects/A-manual-chain/manual.pdf",
-      "size": 1464261,
-      "sha256": "c2631a0c2ebf0c44b2830ba325123a766093fbf2ba196ad1d42aea4f341633ae"
+      "size": 1464264,
+      "sha256": "53c4bbcf4d957724bcbfd7aa1448bbf47b5703fad8ab1aa3da85ebb3c59a5064"
     },
     {
       "path": "releases/golden-projects/A-manual-chain/manual.zip",
-      "size": 2081179,
-      "sha256": "bdba96bcf71b5413ef582eaf7b35a5d7b046918dc284df7d5df9e9668e5fc13b"
+      "size": 2081207,
+      "sha256": "8292137623e13d6b296e38dbd914f1fdf4ca43af00b02e680e635be5892a58d6"
     },
     {
       "path": "releases/golden-projects/A-manual-chain/module_drive.png",
@@ -22169,7 +22169,7 @@
     {
       "path": "releases/golden-projects/A-manual-chain/report.json",
       "size": 1691,
-      "sha256": "bd337697a33ccb0b7941e7ccb920d70ad7d56ecc795591d16b808280560d1cf3"
+      "sha256": "cfca30f6dd75ad8c75cb17796e4aaab82e5485da4805f364a6eb0c081a4ff477"
     },
     {
       "path": "releases/golden-projects/A-manual-chain/user_scene.png",
@@ -22204,7 +22204,7 @@
     {
       "path": "releases/golden-projects/B-cad-engineering-change/report.json",
       "size": 1035,
-      "sha256": "92868877c0a1bfb10304c54a031d46b2d0d9888f65e65279ad1af2d45dcbd849"
+      "sha256": "f6a29757ae5705ffa74fb4bdde7ca0e5ce2932a40139365f9ec99b7cf155018d"
     },
     {
       "path": "releases/golden-projects/C-supply-chain/lab.csv",
@@ -22219,7 +22219,7 @@
     {
       "path": "releases/golden-projects/C-supply-chain/report.json",
       "size": 1010,
-      "sha256": "9f2d4692681155defad0f751c12712885b46cd5415b0699c9da366687e91849e"
+      "sha256": "d4bd8b63bb7c3d43ae4e110b24b084a5b49954642d1f11e328e055a789fd574c"
     },
     {
       "path": "requirements-quality.txt",
@@ -22353,8 +22353,8 @@
     },
     {
       "path": "scripts/regenerate_release_manifest.py",
-      "size": 2546,
-      "sha256": "4066f3f699900d31536eb325876e271a551989cfebea438204a731fa09a2d9ff"
+      "size": 2943,
+      "sha256": "8fe743314591374c3566bd8eecce2242662663068b91b8437e01021aee6a2557"
     },
     {
       "path": "scripts/release_evidence.py",

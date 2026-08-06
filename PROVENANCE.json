@@ -13,12 +13,12 @@
       "jsonschema": "4.25.1"
     }
   },
-  "build_time": "2026-08-06T08:47:12+00:00",
+  "build_time": "2026-08-06T08:51:22+00:00",
   "dependency_lock": {
     "files": {
       "requirements-quality.txt": "1dc9b146a4c1fc822b0938f5af742882ac1dc358ae16896b7acc1c7051418a37"
     },
-    "pip_freeze": "-e git+ssh://git@github.com/qq547820639/AIPD-OS.git@b15d469829fdd75daa688b8e39ce5cd962ccc9a0#egg=aipd_os\nattrs==26.1.0\nboolean.py==5.0\nbuild==1.4.4\nCacheControl==0.14.3\ncadquery==2.5.2\ncadquery-ocp==7.7.2\ncasadi==3.7.2\ncertifi==2026.7.22\ncffi==2.0.0\ncharset-normalizer==3.4.9\ncoverage==7.10.7\ncryptography==50.0.0\ncyclonedx-python-lib==9.1.0\ndefusedxml==0.7.1\nexceptiongroup==1.3.1\nezdxf==1.4.2\nfilelock==3.19.1\nfonttools==4.60.2\nidna==3.18\nimportlib_metadata==8.7.1\niniconfig==2.1.0\njsonschema==4.25.1\njsonschema-specifications==2025.9.1\nlibrt==0.13.0\nlicense-expression==30.4.4\nmarkdown-it-py==3.0.0\nmdurl==0.1.2\nmsgpack==1.1.2\nmultimethod==1.12\nmypy==1.19.1\nmypy_extensions==1.1.0\nnlopt==2.9.1\nnumpy==2.0.2\npackageurl-python==0.17.6\npackaging==26.3\npath==17.1.1\npathspec==1.1.1\npillow==11.3.0\npip-api==0.0.34\npip-requirements-parser==32.0.1\npip_audit==2.9.0\nplatformdirs==4.4.0\npluggy==1.6.0\npy-serializable==2.1.0\npycparser==2.23\nPygments==2.20.0\npyparsing==3.3.2\npyproject_hooks==1.2.0\npytest==8.4.2\npytest-cov==7.1.0\npytest-json-report==1.5.0\npytest-metadata==3.1.1\nPyYAML==6.0.3\nreferencing==0.36.2\nreportlab==5.0.0\nrequests==2.32.5\nrich==15.0.0\nrpds-py==0.27.1\nruff==0.16.1\nsortedcontainers==2.4.0\ntoml==0.10.2\ntomli==2.4.1\ntyping_extensions==4.16.0\ntypish==1.9.3\nurllib3==2.6.3\nzipp==3.23.1"
+    "pip_freeze": "-e git+ssh://git@github.com/qq547820639/AIPD-OS.git@9578f1330b453f6b41f658e63dc934cfd25183f9#egg=aipd_os\nattrs==26.1.0\nboolean.py==5.0\nbuild==1.4.4\nCacheControl==0.14.3\ncadquery==2.5.2\ncadquery-ocp==7.7.2\ncasadi==3.7.2\ncertifi==2026.7.22\ncffi==2.0.0\ncharset-normalizer==3.4.9\ncoverage==7.10.7\ncryptography==50.0.0\ncyclonedx-python-lib==9.1.0\ndefusedxml==0.7.1\nexceptiongroup==1.3.1\nezdxf==1.4.2\nfilelock==3.19.1\nfonttools==4.60.2\nidna==3.18\nimportlib_metadata==8.7.1\niniconfig==2.1.0\njsonschema==4.25.1\njsonschema-specifications==2025.9.1\nlibrt==0.13.0\nlicense-expression==30.4.4\nmarkdown-it-py==3.0.0\nmdurl==0.1.2\nmsgpack==1.1.2\nmultimethod==1.12\nmypy==1.19.1\nmypy_extensions==1.1.0\nnlopt==2.9.1\nnumpy==2.0.2\npackageurl-python==0.17.6\npackaging==26.3\npath==17.1.1\npathspec==1.1.1\npillow==11.3.0\npip-api==0.0.34\npip-requirements-parser==32.0.1\npip_audit==2.9.0\nplatformdirs==4.4.0\npluggy==1.6.0\npy-serializable==2.1.0\npycparser==2.23\nPygments==2.20.0\npyparsing==3.3.2\npyproject_hooks==1.2.0\npytest==8.4.2\npytest-cov==7.1.0\npytest-json-report==1.5.0\npytest-metadata==3.1.1\nPyYAML==6.0.3\nreferencing==0.36.2\nreportlab==5.0.0\nrequests==2.32.5\nrich==15.0.0\nrpds-py==0.27.1\nruff==0.16.1\nsortedcontainers==2.4.0\ntoml==0.10.2\ntomli==2.4.1\ntyping_extensions==4.16.0\ntypish==1.9.3\nurllib3==2.6.3\nzipp==3.23.1"
   },
   "test_report": {
     "present": true,
@@ -31,5 +31,5 @@
     "errors": null
   },
   "bundle": "aipd-os-5.6.0.zip",
-  "bundle_hash": "15d98ca5d5adf1cd94a2d5ca569a9b1fc2027d087347230f65f903198d27e367"
+  "bundle_hash": "d53f9956c0ee3de0afb1a2a6172a16d78502056cdeea73b17ae76a9bca4a640b"
 }
