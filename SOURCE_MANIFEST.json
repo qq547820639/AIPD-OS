@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "0934f84d9d8cae26adfc8a088ba3af2dc58c999b",
-  "generated_at": "2026-08-06T08:51:22+00:00",
+  "generated_at": "2026-08-06T10:03:34+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -702,8 +702,8 @@
     },
     {
       "path": "scripts/capability_matrix.py",
-      "size": 8514,
-      "sha256": "db85e8a5d6f7d1e28273c2c7b16e99d466df5dc3facf8b974f849dd52941cc1e"
+      "size": 8620,
+      "sha256": "9ad64b5ae4eb6ffff0898718b19be4b9fb59140b7f1265e712c4f87303784b4a"
     },
     {
       "path": "scripts/check_skill_package.py",
@@ -1737,8 +1737,8 @@
     },
     {
       "path": "tests/test_golden_projects_e2e.py",
-      "size": 28052,
-      "sha256": "c5fec08625b78ee632e47d04c283669d01e19625b2ad28792b22370e9f8cbe5b"
+      "size": 28365,
+      "sha256": "c5f14f7e5b3eee84e73ad4b3efd07c182ef094685309e78ced51b1b499389055"
     },
     {
       "path": "tests/test_health.py",

@@ -1,7 +1,7 @@
 {
   "project_id": "golden-B",
   "name": "参数化 CAD 与工程变更",
-  "source_commit": "9578f1330b453f6b41f658e63dc934cfd25183f9",
+  "source_commit": "5c4b84e3895443ed3dd53b1a92de191eadb1c1a3",
   "cad_tool": "cadquery",
   "cad_tool_version": "2.5.2",
   "volume_before": 47833.45733366649,
@@ -24,5 +24,5 @@
     "bracket_v2.step": "09fe94e00c3a0cf09a0e283c4741ff0481c0600c505958d30214e12a9d4e8891",
     "bracket_v2.py": "592219ce19f9a7d7b2305f169e2b9e3c46a03a2aca779e76d7cb5297f7847e95"
   },
-  "generated_at": "2026-08-06T08:49:47.408196+00:00"
+  "generated_at": "2026-08-06T10:02:40.801126+00:00"
 }

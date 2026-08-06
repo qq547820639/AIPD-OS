@@ -1,6 +1,6 @@
 # AIPD-OS 版本真实性审计报告（v5.1）
 
-- 生成时间：`2026-08-06T16:51:32`
+- 生成时间：`2026-08-06T18:03:29`
 - 仓库根目录：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
 
 ## 1. 仓库基本信息
@@ -58,13 +58,16 @@
 
 ## 5. 未跟踪 / 生成文件
 
-- 共 `20` 项：
+- 共 `23` 项：
   - ` M BUNDLE_MANIFEST.json`
   - ` M PROVENANCE.json`
   - ` M RELEASE_MANIFEST.json`
   - ` M SOURCE_MANIFEST.json`
+  - ` M docs/audit/audit.json`
+  - ` M docs/audit/audit.md`
   - ` M docs/audit/capability_matrix.json`
   - ` M docs/audit/capability_matrix.md`
+  - ` M docs/audit/pytest-report.json`
   - ` M docs/audit/repository_snapshot.json`
   - ` M releases/aipd-os-5.6.0.zip`
   - ` M releases/aipd-os-5.6.0.zip.ed25519.sig`
@@ -75,7 +78,7 @@
   - ` M releases/golden-projects/A-manual-chain/report.json`
   - ` M releases/golden-projects/B-cad-engineering-change/report.json`
   - ` M releases/golden-projects/C-supply-chain/report.json`
-  - ` M scripts/regenerate_release_manifest.py`
+  - ` M scripts/capability_matrix.py`
   - `generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__`
   - `generated build/bundle_stage/src/aipd_os.egg-info`
   - `generated src/aipd_os.egg-info`

@@ -68,9 +68,10 @@ def _probe_capability(cap, repo: Path) -> dict:
     }
 
 
-def _build_capability_matrix(repo: Path, registry: CapabilityRegistry) -> dict:
+def _build_capability_matrix(repo: Path, registry: CapabilityRegistry,
+                             pin_commit: str | None = None) -> dict:
     """构建能力矩阵（JSON），分类由 registry.probe_classification 推导。"""
-    snapshot = _build_snapshot(repo)
+    snapshot = _build_snapshot(repo, pin_commit=pin_commit)
     domains = []
     for domain in registry.domains():
         items = []
@@ -164,7 +165,7 @@ def generate(repo_root, out_dir, pin_commit: str | None = None) -> dict:
         raise ValueError("Capability Registry 校验失败：\n" + "\n".join(errors))
 
     snapshot = _build_snapshot(repo, pin_commit=pin_commit)
-    matrix = _build_capability_matrix(repo, registry)
+    matrix = _build_capability_matrix(repo, registry, pin_commit=pin_commit)
 
     (out / "repository_snapshot.json").write_text(
         json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
