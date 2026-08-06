@@ -1,16 +1,18 @@
 {
-  "generated_at": "2026-08-06T12:17:58",
+  "generated_at": "2026-08-06T16:06:44",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "e92c2cf5b76400c049ae58f3e1103331afe47c60",
-  "latest_commit_time": "2026-08-06 12:17:45 +0800",
-  "version": "5.5.0",
+  "latest_commit_sha": "0934f84d9d8cae26adfc8a088ba3af2dc58c999b",
+  "latest_commit_time": "2026-08-06 16:06:12 +0800",
+  "version": "5.6.0",
   "file_tree": {
     "top_entries": [
       ".git/",
       ".github/",
       ".gitignore",
+      ".pytest/",
       ".pytest_cache/",
+      ".release_keys/",
       ".ruff_cache/",
       ".trae/",
       ".venv/",
@@ -18,9 +20,11 @@
       "agents/",
       "assets/",
       "build/",
+      "BUNDLE_MANIFEST.json",
       "CHANGELOG.md",
       "CODE_OF_CONDUCT.md",
       "CONTRIBUTING.md",
+      "dist/",
       "docker-compose.yml",
       "Dockerfile",
       "docs/",
@@ -28,6 +32,7 @@
       "evals_out/",
       "LICENSE",
       "migrations/",
+      "PROVENANCE.json",
       "pyproject.toml",
       "QUICKSTART.md",
       "README.md",
@@ -40,6 +45,7 @@
       "scripts/",
       "SECURITY.md",
       "SKILL.md",
+      "SOURCE_MANIFEST.json",
       "src/",
       "state_service/",
       "templates/",
@@ -50,7 +56,9 @@
     "per_dir_file_count": {
       ".git": 8,
       ".github": 0,
+      ".pytest": 1,
       ".pytest_cache": 3,
+      ".release_keys": 2,
       ".ruff_cache": 2,
       ".trae": 0,
       ".venv": 1,
@@ -58,21 +66,23 @@
       "agents": 1,
       "assets": 0,
       "build": 0,
-      "docs": 1,
+      "dist": 3,
+      "docs": 2,
       "evals": 13,
       "evals_out": 0,
       "migrations": 2,
       "references": 36,
       "releases": 0,
-      "scripts": 32,
+      "scripts": 34,
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 53
+      "tests": 67
     }
   },
   "tags": [
-    "v5.5.0"
+    "v5.5.0",
+    "v5.6.0"
   ],
   "releases_dir_exists": true,
   "ci_status": {
@@ -82,6 +92,7 @@
       "integration",
       "schema-validation",
       "maturity-consistency",
+      "cad-golden-loop",
       "secret-scan",
       "dependency-audit",
       "license-scan",
@@ -93,48 +104,33 @@
   },
   "release_manifest_verification": {
     "present": true,
-    "version": "5.5.0",
+    "version": "5.6.0",
     "parsed": true,
-    "total_files": 348,
-    "hash_matches": 343,
-    "hash_mismatch_count": 5,
-    "mismatches": [
-      {
-        "path": ".trae/specs/v5.5-real-closure-trust-ux-edition/checklist.md",
-        "reason": "hash_mismatch",
-        "expected": "edd018740228f31b056907c644e42c3ab62e9d69e1d7bcd1ff108f3d2953be59",
-        "actual": "1649043783c3ff0a44edd7e9508bdcd987bbf71e12fd257f616803cea22c4974"
-      },
-      {
-        "path": ".trae/specs/v5.5-real-closure-trust-ux-edition/tasks.md",
-        "reason": "hash_mismatch",
-        "expected": "3f40d08b2f02fa044af0460020f3d7b76136eef4e14e0d22b5d5f299f47c14ae",
-        "actual": "d3e7a2e204ad23a95a26fb3deb7f7d82a12ec3b4a23b1ed0a0275a9edf34abf6"
-      },
-      {
-        "path": "docs/audit/capability_matrix.json",
-        "reason": "hash_mismatch",
-        "expected": "c9afec9b2f8ca13947b17e10ce966c6af22f2e652e9c05eb22ffe7c26687609f",
-        "actual": "7461090f25fb92ae7ca1b095f8350d4352e015a9ecfcc02cb6095abfae3a782e"
-      },
-      {
-        "path": "docs/audit/capability_matrix.md",
-        "reason": "hash_mismatch",
-        "expected": "86a2175ba7690bb85033bdd9d007583c79d3d687d7a91a0df126f707d25c6674",
-        "actual": "77d73d42c359840adb8b29af0f3a345131d8984fb3a4c79a6001795dcade6eba"
-      },
-      {
-        "path": "docs/audit/repository_snapshot.json",
-        "reason": "hash_mismatch",
-        "expected": "4df1e715a189bb666c0e919d29f6f9c0ffdbd3e4b81117a07a7982540342faa7",
-        "actual": "0e22332bda3fedec6d8bf6e0e262b8bda66a106de2105ae4677cde0873900650"
-      }
-    ]
+    "total_files": 397,
+    "hash_matches": 397,
+    "hash_mismatch_count": 0,
+    "mismatches": []
+  },
+  "source_manifest_verification": {
+    "present": true,
+    "version": "5.6.0",
+    "source_commit": "c177a79f55acbffedfc147ba67853a3033866efd",
+    "parsed": true,
+    "total_files": 397,
+    "hash_matches": 397,
+    "hash_mismatch_count": 0,
+    "mismatches": []
   },
   "untracked_or_generated": [
+    " M docs/audit/audit.json",
     " M docs/audit/capability_matrix.json",
     " M docs/audit/capability_matrix.md",
     " M docs/audit/repository_snapshot.json",
+    "?? BUNDLE_MANIFEST.json",
+    "?? PROVENANCE.json",
+    "?? SOURCE_MANIFEST.json",
+    "?? docs/audit/pytest-report.json",
+    "generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__",
     "generated src/aipd_os.egg-info"
   ],
   "legacy_cad_conflicts": [],

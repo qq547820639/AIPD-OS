@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T12:17:57",
+  "generated_at": "2026-08-06T16:06:47",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "e92c2cf5b76400c049ae58f3e1103331afe47c60",
-  "version": "5.5.0",
+  "latest_commit_sha": "0934f84d9d8cae26adfc8a088ba3af2dc58c999b",
+  "version": "5.6.0",
   "classification_enum": [
     "fully_implemented",
     "partially_implemented",
@@ -25,11 +25,11 @@
   "summary": {
     "total_capabilities": 70,
     "by_classification": {
-      "fully_implemented": 44,
-      "partially_implemented": 15,
+      "fully_implemented": 2,
+      "partially_implemented": 59,
       "protocol_only": 0,
       "template_only": 0,
-      "external_dependency": 11,
+      "external_dependency": 9,
       "not_implemented": 0,
       "not_verifiable": 0
     }
@@ -42,7 +42,8 @@
           "id": "supervisor.one_sentence_project",
           "name": "一句话创建项目",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "README.md / SKILL.md",
           "implementation_file": "src/aipd_os/cli/commands.py; scripts/aipd_supervisor.py",
           "entry_point": "cmd_intake / Supervisor.run_supervisor",
@@ -51,13 +52,19 @@
           "unit_test": "tests/test_cli.py::cmd_intake",
           "integration_test": "tests/test_supervisor_execution.py",
           "e2e_evidence": "aipd intake 可初始化项目并建立生命周期",
-          "current_limitation": "拆分规模受默认工作包模板约束"
+          "current_limitation": "拆分规模受默认工作包模板约束",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.auto_work_package",
           "name": "自动拆分工作包",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/work-queue-and-routing.md",
           "implementation_file": "scripts/aipd_supervisor.py",
           "entry_point": "Supervisor.plan / Supervisor.run_supervisor",
@@ -66,13 +73,19 @@
           "unit_test": "tests/test_supervisor_execution.py",
           "integration_test": "tests/test_execution_router.py",
           "e2e_evidence": "监督器领取并推进工作包",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.dependency_ordering",
           "name": "依赖排序",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/work-queue-and-routing.md",
           "implementation_file": "scripts/aipd_supervisor.py",
           "entry_point": "Supervisor._next_work",
@@ -81,13 +94,19 @@
           "unit_test": "tests/test_supervisor_execution.py",
           "integration_test": null,
           "e2e_evidence": "依赖校验在领取前执行",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.real_tool_invocation",
           "name": "真实工具调用",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/capability-floor-policy.md",
           "implementation_file": "src/aipd_os/execution/execution_router.py; tool_adapters/*",
           "entry_point": "ExecutionRouter.execute",
@@ -96,13 +115,19 @@
           "unit_test": "tests/test_execution_router.py; tests/test_adapters.py",
           "integration_test": "tests/test_supervisor_execution.py",
           "e2e_evidence": "doc.generate 产出真实 Markdown、cad.faceted-fallback 产出真实 STEP 文件",
-          "current_limitation": "主循环真实调用工具，但 research/imggen/cad 等外部适配器在无后端时诚实返回 simulated/external 占位，不真实执行"
+          "current_limitation": "主循环真实调用工具，但 research/imggen/cad 等外部适配器在无后端时诚实返回 simulated/external 占位，不真实执行",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.retry",
           "name": "重试",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/supervisor-operating-model.md",
           "implementation_file": "src/aipd_os/execution/execution_router.py",
           "entry_point": "ExecutionRouter._bounded_retry",
@@ -111,13 +136,19 @@
           "unit_test": "tests/test_execution_router.py",
           "integration_test": null,
           "e2e_evidence": "失败重试字段持久化",
-          "current_limitation": "重试次数为固定有界值"
+          "current_limitation": "重试次数为固定有界值",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.tool_fallback",
           "name": "工具回退",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/capability-floor-policy.md",
           "implementation_file": "src/aipd_os/execution/execution_router.py",
           "entry_point": "ExecutionRouter._fallback",
@@ -126,13 +157,19 @@
           "unit_test": "tests/test_execution_router.py",
           "integration_test": null,
           "e2e_evidence": "fallback_from 字段持久化",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.artifact_registration",
           "name": "工件登记",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/deliverable-contracts.md",
           "implementation_file": "src/aipd_os/execution/runs.py",
           "entry_point": "ExecutionRouter.collect_artifacts",
@@ -141,13 +178,19 @@
           "unit_test": "tests/test_execution_router.py",
           "integration_test": null,
           "e2e_evidence": "artifact_ids 持久化",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.fact_writeback",
           "name": "事实写回",
           "domain": "主管执行",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/state-model.md",
           "implementation_file": "scripts/aipd_supervisor.py",
           "entry_point": "Supervisor._update_facts",
@@ -156,13 +199,19 @@
           "unit_test": "tests/test_supervisor_execution.py",
           "integration_test": null,
           "e2e_evidence": "执行日志/血缘写回，但未写入独立 facts 事实表",
-          "current_limitation": "全库无独立 product_truth/facts 表；主管的 update_facts 仅写 steps_log 字符串标签，未回写结构化事实表"
+          "current_limitation": "全库无独立 product_truth/facts 表；主管的 update_facts 仅写 steps_log 字符串标签，未回写结构化事实表",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.stale_propagation",
           "name": "stale传播",
           "domain": "主管执行",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/supervisor-operating-model.md",
           "implementation_file": "scripts/aipd_supervisor.py",
           "entry_point": "Supervisor._mark_stale",
@@ -171,13 +220,19 @@
           "unit_test": "tests/test_supervisor_execution.py",
           "integration_test": null,
           "e2e_evidence": "stale 血缘标记在关键变更后写入",
-          "current_limitation": "仅写 invalidates 血缘标记，不重建/不重排下游工件"
+          "current_limitation": "仅写 invalidates 血缘标记，不重建/不重排下游工件",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.auto_rework",
           "name": "自动返工",
           "domain": "主管执行",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/supervisor-operating-model.md",
           "implementation_file": "scripts/aipd_supervisor.py",
           "entry_point": "Supervisor._rework",
@@ -186,13 +241,19 @@
           "unit_test": "tests/test_supervisor_execution.py",
           "integration_test": null,
           "e2e_evidence": "失败/过期项复用旧项重试",
-          "current_limitation": "复用旧工作项重试，不新建独立返工项，且无返工次数上限"
+          "current_limitation": "复用旧工作项重试，不新建独立返工项，且无返工次数上限",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "supervisor.pause_at_decision",
           "name": "只在必要决策时暂停",
           "domain": "主管执行",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/decision-policy.md",
           "implementation_file": "scripts/aipd_supervisor.py",
           "entry_point": "Supervisor.run_supervisor / aipd run --until-decision",
@@ -201,7 +262,12 @@
           "unit_test": "tests/test_execution_router.py; tests/test_decision_policy.py",
           "integration_test": null,
           "e2e_evidence": "--until-decision 在决策点停止",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         }
       ]
     },
@@ -212,7 +278,8 @@
           "id": "research.attachment_reading",
           "name": "附件读取",
           "domain": "理论研究",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/research-integration.md",
           "implementation_file": "scripts/research/_env.py; src/aipd_os/execution/adapter.py",
           "entry_point": "research.source_worker",
@@ -221,13 +288,19 @@
           "unit_test": "scripts/research/selftest_postprocess.py",
           "integration_test": null,
           "e2e_evidence": "研究目录可运行",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "research.multi_source_search",
           "name": "多源论文检索",
           "domain": "理论研究",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/research-integration.md",
           "implementation_file": "scripts/research/search_papers_by_{arxiv,crossref,dblp,open_alex,openreview,semantic_scholar}.py",
           "entry_point": "search_papers.py",
@@ -236,13 +309,19 @@
           "unit_test": "scripts/research/selftest_runtime.py",
           "integration_test": null,
           "e2e_evidence": "六源 worker 可分别运行",
-          "current_limitation": "需网络/外部源可用"
+          "current_limitation": "需网络/外部源可用",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "research.fulltext_fetch",
           "name": "全文获取",
           "domain": "理论研究",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/research-integration.md",
           "implementation_file": "scripts/research/_http_runtime.py; source_worker.py",
           "entry_point": "source_worker.fetch",
@@ -251,13 +330,19 @@
           "unit_test": "scripts/research/selftest_runtime.py",
           "integration_test": null,
           "e2e_evidence": "部分源可拉取内容",
-          "current_limitation": "各连接器当前仅取摘要，未实现全文获取与全文/摘要区分"
+          "current_limitation": "各连接器当前仅取摘要，未实现全文获取与全文/摘要区分",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "research.dedup_ranking",
           "name": "去重排序",
           "domain": "理论研究",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/research-integration.md",
           "implementation_file": "scripts/research/postprocess.py",
           "entry_point": "postprocess.run",
@@ -266,13 +351,19 @@
           "unit_test": "scripts/research/selftest_postprocess.py",
           "integration_test": null,
           "e2e_evidence": "后处理可运行",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "research.citation",
           "name": "引用",
           "domain": "理论研究",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/research-integration.md",
           "implementation_file": "scripts/research/postprocess.py",
           "entry_point": "postprocess.attach_citation",
@@ -281,13 +372,19 @@
           "unit_test": "scripts/research/selftest_postprocess.py",
           "integration_test": null,
           "e2e_evidence": "后处理可附加引用标识",
-          "current_limitation": "仅后处理附加引用标识，无独立引用生成/引文格式管线"
+          "current_limitation": "仅后处理附加引用标识，无独立引用生成/引文格式管线",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "research.standards_regulations",
           "name": "标准法规",
           "domain": "理论研究",
           "classification": "external_dependency",
+          "external_dependency": true,
           "declaration_file": "references/research-integration.md",
           "implementation_file": null,
           "entry_point": null,
@@ -296,13 +393,19 @@
           "unit_test": null,
           "integration_test": null,
           "e2e_evidence": null,
-          "current_limitation": "依赖外部法规库/专业数据源，未接入时诚实等待"
+          "current_limitation": "依赖外部法规库/专业数据源，未接入时诚实等待",
+          "probe": {
+            "implementation_file_exists": false,
+            "entry_callable": false,
+            "external_dependency_flag": true
+          }
         },
         {
           "id": "research.patents_competitors",
           "name": "专利和竞品",
           "domain": "理论研究",
           "classification": "external_dependency",
+          "external_dependency": true,
           "declaration_file": "references/research-integration.md",
           "implementation_file": null,
           "entry_point": null,
@@ -311,13 +414,19 @@
           "unit_test": null,
           "integration_test": null,
           "e2e_evidence": null,
-          "current_limitation": "依赖外部专利/竞品数据源，未接入时诚实等待"
+          "current_limitation": "依赖外部专利/竞品数据源，未接入时诚实等待",
+          "probe": {
+            "implementation_file_exists": false,
+            "entry_callable": false,
+            "external_dependency_flag": true
+          }
         },
         {
           "id": "research.evidence_credibility",
           "name": "证据可信度",
           "domain": "理论研究",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/evidence-policy.md",
           "implementation_file": "src/aipd_os/research/credibility.py",
           "entry_point": "credibility.score_evidence",
@@ -326,13 +435,19 @@
           "unit_test": "tests/test_credibility.py",
           "integration_test": null,
           "e2e_evidence": "来源可信度/时间衰减/事实假设确定性评分",
-          "current_limitation": "可信度分级为确定性启发式，仍需真实模型/外部核验提升精度"
+          "current_limitation": "可信度分级为确定性启发式，仍需真实模型/外部核验提升精度",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "research.prompt_injection_isolation",
           "name": "提示注入隔离",
           "domain": "理论研究",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "SECURITY.md / THREAT_MODEL.md",
           "implementation_file": "src/aipd_os/security/prompt_injection.py",
           "entry_point": "isolation.sanitize",
@@ -341,7 +456,12 @@
           "unit_test": "tests/test_prompt_injection.py",
           "integration_test": null,
           "e2e_evidence": "外部内容不改门/不要求发敏感信息",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         }
       ]
     },
@@ -353,6 +473,7 @@
           "name": "理论基础进入规划",
           "domain": "产品手册",
           "classification": "fully_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-chain-workflow.md",
           "implementation_file": "scripts/manual_chain.py",
           "entry_point": "manual_chain.cmd_plan_batches",
@@ -361,13 +482,19 @@
           "unit_test": "tests/test_manual_chain_e2e.py",
           "integration_test": null,
           "e2e_evidence": "批次计划生成",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.plan_first",
           "name": "先规划，不直接生成全册",
           "domain": "产品手册",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-chain-workflow.md",
           "implementation_file": "scripts/manual_chain.py",
           "entry_point": "cmd_plan_batches / cmd_run_batch",
@@ -376,13 +503,19 @@
           "unit_test": "tests/test_manual_chain_e2e.py",
           "integration_test": null,
           "e2e_evidence": "无 batch_plan 时不直接生成",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.anchor_pages",
           "name": "锚点页",
           "domain": "产品手册",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-chain-workflow.md",
           "implementation_file": "scripts/manual_chain.py",
           "entry_point": "cmd_run_batch(anchors=...)",
@@ -391,13 +524,19 @@
           "unit_test": "tests/test_manual_chain_e2e.py",
           "integration_test": null,
           "e2e_evidence": "锚点随批次传递",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.prior_batch_as_attachment",
           "name": "前批页面作为后批附件",
           "domain": "产品手册",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-chain-workflow.md",
           "implementation_file": "scripts/manual_chain.py",
           "entry_point": "cmd_run_batch(prior_batch=...)",
@@ -406,13 +545,19 @@
           "unit_test": "tests/test_manual_chain_e2e.py",
           "integration_test": null,
           "e2e_evidence": "前批页面路径/hash 随批次登记",
-          "current_limitation": "仅收集前批页面路径与 hash 登记入状态，未真实传入图像模型作为附件"
+          "current_limitation": "仅收集前批页面路径与 hash 登记入状态，未真实传入图像模型作为附件",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.visual_bible",
           "name": "Visual Bible",
           "domain": "产品手册",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-chain-workflow.md",
           "implementation_file": "scripts/manual_chain.py",
           "entry_point": "cmd_run_batch(visual_bible=...)",
@@ -421,13 +566,19 @@
           "unit_test": "tests/test_manual_chain_e2e.py",
           "integration_test": null,
           "e2e_evidence": "视觉圣经随批次传递",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.character_consistency",
           "name": "人物一致性",
           "domain": "产品手册",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-quality-system.md",
           "implementation_file": "src/aipd_os/visual_audit/auditor.py",
           "entry_point": "auditor.audit_page",
@@ -436,13 +587,19 @@
           "unit_test": "tests/test_visual_golden.py",
           "integration_test": null,
           "e2e_evidence": "黄金样本评分",
-          "current_limitation": "依赖视觉/图像后端，无后端时走外部任务包"
+          "current_limitation": "依赖视觉/图像后端，无后端时走外部任务包",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.product_structure_consistency",
           "name": "产品结构一致性",
           "domain": "产品手册",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-quality-system.md",
           "implementation_file": "src/aipd_os/visual_audit/auditor.py",
           "entry_point": "auditor.audit_page",
@@ -451,13 +608,19 @@
           "unit_test": "tests/test_visual_golden.py",
           "integration_test": null,
           "e2e_evidence": "黄金样本评分",
-          "current_limitation": "依赖视觉后端"
+          "current_limitation": "依赖视觉后端",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.cmf_consistency",
           "name": "CMF一致性",
           "domain": "产品手册",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-quality-system.md",
           "implementation_file": "src/aipd_os/visual_audit/auditor.py",
           "entry_point": "auditor.audit_page",
@@ -466,13 +629,19 @@
           "unit_test": "tests/test_visual_golden.py",
           "integration_test": null,
           "e2e_evidence": "黄金样本评分",
-          "current_limitation": "依赖视觉后端"
+          "current_limitation": "依赖视觉后端",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.real_image_generation",
           "name": "真实图像生成",
           "domain": "产品手册",
           "classification": "external_dependency",
+          "external_dependency": true,
           "declaration_file": "references/image-generation-batch-policy.md",
           "implementation_file": "src/aipd_os/imggen/adapter.py",
           "entry_point": "imggen.adapter",
@@ -481,13 +650,19 @@
           "unit_test": "tests/test_imggen.py",
           "integration_test": null,
           "e2e_evidence": "后端不可用时走外部任务包，不假装生成",
-          "current_limitation": "imggen 适配器为空壳：即使标 available 也必然抛错，无真实图像模型客户端；未配置后端时向外部任务包诚实降级"
+          "current_limitation": "imggen 适配器为空壳：即使标 available 也必然抛错，无真实图像模型客户端；未配置后端时向外部任务包诚实降级",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": true
+          }
         },
         {
           "id": "manual.real_chinese_typesetting",
           "name": "真实中文排版",
           "domain": "产品手册",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/product-manual-pipeline.md",
           "implementation_file": "src/aipd_os/layout/{composer,renderer}.py",
           "entry_point": "layout.compose_pdf",
@@ -496,13 +671,19 @@
           "unit_test": "tests/test_layout.py",
           "integration_test": null,
           "e2e_evidence": "reportlab 中文 A4 排版",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.parameter_tables_curves",
           "name": "参数表和曲线",
           "domain": "产品手册",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/product-manual-pipeline.md",
           "implementation_file": "src/aipd_os/layout/renderer.py",
           "entry_point": "renderer.render_table/curve",
@@ -511,13 +692,19 @@
           "unit_test": "tests/test_layout.py",
           "integration_test": null,
           "e2e_evidence": "参数表渲染",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.failure_page_local_rework",
           "name": "失败页局部返工",
           "domain": "产品手册",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-chain-workflow.md",
           "implementation_file": "scripts/manual_chain.py",
           "entry_point": "cmd_run_batch(external_pending/rework)",
@@ -526,13 +713,19 @@
           "unit_test": "tests/test_manual_chain_e2e.py",
           "integration_test": null,
           "e2e_evidence": "auditor 产出失败页 rebuild_plan",
-          "current_limitation": "仅产出失败页重建计划（rebuild_plan），无据此仅重跑单页的执行入口"
+          "current_limitation": "仅产出失败页重建计划（rebuild_plan），无据此仅重跑单页的执行入口",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.png_pdf_zip",
           "name": "PNG、PDF 和 ZIP",
           "domain": "产品手册",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/product-manual-pipeline.md",
           "implementation_file": "src/aipd_os/layout/composer.py",
           "entry_point": "layout.build_zip/compose_pdf",
@@ -541,13 +734,19 @@
           "unit_test": "tests/test_layout.py",
           "integration_test": null,
           "e2e_evidence": "多格式输出",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "manual.golden_sample_semantic_audit",
           "name": "黄金样本语义审核",
           "domain": "产品手册",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/benchmark-and-golden-sample-policy.md",
           "implementation_file": "src/aipd_os/visual_audit/golden.py",
           "entry_point": "golden.audit",
@@ -556,7 +755,12 @@
           "unit_test": "tests/test_visual_golden.py",
           "integration_test": null,
           "e2e_evidence": "WBX-1 黄金清单可重复评测",
-          "current_limitation": "黄金样本仅元数据清单，真实对照 PNG 不在仓库；依赖视觉后端，无后端走外部任务包"
+          "current_limitation": "黄金样本仅元数据清单，真实对照 PNG 不在仓库；依赖视觉后端，无后端走外部任务包",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         }
       ]
     },
@@ -567,7 +771,8 @@
           "id": "cad.runtime_preflight",
           "name": "CAD运行时预检",
           "domain": "CAD与生产图纸",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/cad-runtime-acceptance.md",
           "implementation_file": "scripts/runtime_preflight.py; scripts/cad_maturity_gate.py",
           "entry_point": "cad_maturity_gate.cmd/preflight",
@@ -576,13 +781,19 @@
           "unit_test": "tests/test_cad_maturity_gate.py",
           "integration_test": "tests/maturity_consistency_test.py",
           "e2e_evidence": "运行时上限校验",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.text_to_cad",
           "name": "text-to-cad",
           "domain": "CAD与生产图纸",
           "classification": "external_dependency",
+          "external_dependency": true,
           "declaration_file": "references/cad-plugin-installation.md",
           "implementation_file": "src/aipd_os/tool_adapters/cad_adapter.py",
           "entry_point": "cad_adapter",
@@ -591,28 +802,40 @@
           "unit_test": "tests/test_adapters.py",
           "integration_test": null,
           "e2e_evidence": "后端不可用时走外部任务包",
-          "current_limitation": "依赖外部 CAD 内核/插件"
+          "current_limitation": "依赖外部 CAD 内核/插件",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": true
+          }
         },
         {
           "id": "cad.local_native_brep",
           "name": "本地原生B-Rep",
           "domain": "CAD与生产图纸",
-          "classification": "external_dependency",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/local-cad-fallback.md",
-          "implementation_file": "src/aipd_os/tool_adapters/local_brep_adapter.py",
-          "entry_point": "local_brep_adapter",
+          "implementation_file": "src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py",
+          "entry_point": "aipd_os.cad.backends:get_default_backend",
           "run_command": "aipd cad build",
           "input_output": "参数 -> 原生可编辑 B-Rep",
-          "unit_test": "tests/test_adapters.py",
+          "unit_test": "tests/test_cad_golden_loop.py; tests/test_adapters.py",
           "integration_test": null,
-          "e2e_evidence": "依赖本地 CAD 内核",
-          "current_limitation": "依赖外部原生 B-Rep 内核"
+          "e2e_evidence": "真实 CadQuery/OpenCASCADE 内核参数化 B-Rep（STEP/原生源/重载/几何校验/哈希）",
+          "current_limitation": "单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2）；装配/连续运动/CAE/二维图纸/GD&T 仍依赖外部工具，不冒充已完成",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.faceted_fallback",
           "name": "Faceted回退",
           "domain": "CAD与生产图纸",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/cad-convergence-policy.md",
           "implementation_file": "src/aipd_os/tool_adapters/faceted_adapter.py; scripts/faceted_step.py",
           "entry_point": "faceted_adapter",
@@ -621,28 +844,40 @@
           "unit_test": "tests/test_adapters.py; tests/maturity_consistency_test.py",
           "integration_test": null,
           "e2e_evidence": "Faceted 成熟度封顶 C1",
-          "current_limitation": "成熟度最高 C1，不可用于正式图纸/量产"
+          "current_limitation": "成熟度最高 C1，不可用于正式图纸/量产",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.parametric_model",
           "name": "参数化模型",
           "domain": "CAD与生产图纸",
-          "classification": "external_dependency",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/cad-engineering-readiness.md",
-          "implementation_file": "src/aipd_os/tool_adapters/local_brep_adapter.py",
-          "entry_point": null,
+          "implementation_file": "src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py",
+          "entry_point": "aipd_os.cad.backends:get_default_backend",
           "run_command": "aipd cad build",
           "input_output": "参数族 -> 参数化 B-Rep",
-          "unit_test": null,
+          "unit_test": "tests/test_cad_golden_loop.py",
           "integration_test": null,
-          "e2e_evidence": null,
-          "current_limitation": "依赖外部原生 B-Rep 内核"
+          "e2e_evidence": "真实 CadQuery/OpenCASCADE 内核参数化 B-Rep 黄金闭环（改参->重生成->STEP/原生源->重载->几何校验->哈希->写回）",
+          "current_limitation": "单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2，需安装 cad extra）；装配/连续运动/CAE/二维图纸/GD&T 仍依赖外部工具，不冒充已完成",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.assembly_constraints",
           "name": "装配约束",
           "domain": "CAD与生产图纸",
           "classification": "external_dependency",
+          "external_dependency": true,
           "declaration_file": "references/cad-engineering-readiness.md",
           "implementation_file": null,
           "entry_point": null,
@@ -651,13 +886,19 @@
           "unit_test": null,
           "integration_test": null,
           "e2e_evidence": null,
-          "current_limitation": "依赖外部 CAD 内核"
+          "current_limitation": "依赖外部 CAD 内核",
+          "probe": {
+            "implementation_file_exists": false,
+            "entry_callable": false,
+            "external_dependency_flag": true
+          }
         },
         {
           "id": "cad.continuous_kinematics",
           "name": "连续运动学",
           "domain": "CAD与生产图纸",
           "classification": "external_dependency",
+          "external_dependency": true,
           "declaration_file": "references/cad-engineering-readiness.md",
           "implementation_file": null,
           "entry_point": null,
@@ -666,13 +907,19 @@
           "unit_test": null,
           "integration_test": null,
           "e2e_evidence": null,
-          "current_limitation": "依赖外部仿真/运动学工具"
+          "current_limitation": "依赖外部仿真/运动学工具",
+          "probe": {
+            "implementation_file_exists": false,
+            "entry_callable": false,
+            "external_dependency_flag": true
+          }
         },
         {
           "id": "cad.anthropometric_families",
           "name": "人体尺寸族",
           "domain": "CAD与生产图纸",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/cad-engineering-readiness.md",
           "implementation_file": "src/aipd_os/cad/anthropometry.py",
           "entry_point": "anthropometry.get_dimension",
@@ -681,13 +928,19 @@
           "unit_test": "tests/test_anthropometry.py",
           "integration_test": null,
           "e2e_evidence": "成人男女/儿童百分位确定性查询",
-          "current_limitation": "内置族为常用成年男女/儿童百分位示例，未覆盖全部人群数据库"
+          "current_limitation": "内置族为常用成年男女/儿童百分位示例，未覆盖全部人群数据库",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.cae_fatigue",
           "name": "CAE和疲劳",
           "domain": "CAD与生产图纸",
           "classification": "external_dependency",
+          "external_dependency": true,
           "declaration_file": "references/cad-engineering-readiness.md",
           "implementation_file": null,
           "entry_point": null,
@@ -696,13 +949,19 @@
           "unit_test": null,
           "integration_test": null,
           "e2e_evidence": null,
-          "current_limitation": "依赖外部 CAE/有限元工具"
+          "current_limitation": "依赖外部 CAE/有限元工具",
+          "probe": {
+            "implementation_file_exists": false,
+            "entry_callable": false,
+            "external_dependency_flag": true
+          }
         },
         {
           "id": "cad.dfm_dfa",
           "name": "DFM/DFA",
           "domain": "CAD与生产图纸",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/cad-engineering-readiness.md",
           "implementation_file": "templates/cad_engineering_manifest.json; scripts/production_release_gate.py",
           "entry_point": "production_release_gate",
@@ -711,13 +970,19 @@
           "unit_test": "tests/test_production_release_gate.py",
           "integration_test": null,
           "e2e_evidence": "证据门包含 DFM 项",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.tolerance_chain",
           "name": "公差链",
           "domain": "CAD与生产图纸",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/cad-engineering-readiness.md",
           "implementation_file": "scripts/production_release_gate.py",
           "entry_point": "production_release_gate",
@@ -726,13 +991,19 @@
           "unit_test": "tests/test_production_release_gate.py",
           "integration_test": null,
           "e2e_evidence": "证据门含公差/单位/基准",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.gdt",
           "name": "GD&T",
           "domain": "CAD与生产图纸",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/cad-engineering-readiness.md",
           "implementation_file": "scripts/production_release_gate.py",
           "entry_point": "production_release_gate",
@@ -741,13 +1012,19 @@
           "unit_test": "tests/test_production_release_gate.py",
           "integration_test": null,
           "e2e_evidence": "证据门含 GD&T/CTQ 检验",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.2d_drawings",
           "name": "二维图纸",
           "domain": "CAD与生产图纸",
           "classification": "external_dependency",
+          "external_dependency": true,
           "declaration_file": "references/production-cad-deliverables.md",
           "implementation_file": null,
           "entry_point": null,
@@ -756,13 +1033,19 @@
           "unit_test": null,
           "integration_test": null,
           "e2e_evidence": null,
-          "current_limitation": "依赖外部 CAD 内核出图"
+          "current_limitation": "依赖外部 CAD 内核出图",
+          "probe": {
+            "implementation_file_exists": false,
+            "entry_callable": false,
+            "external_dependency_flag": true
+          }
         },
         {
           "id": "cad.bom_consistency",
           "name": "BOM一致性",
           "domain": "CAD与生产图纸",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-to-cad-digital-thread.md",
           "implementation_file": "scripts/production_release_gate.py",
           "entry_point": "production_release_gate",
@@ -771,13 +1054,19 @@
           "unit_test": "tests/test_production_release_gate.py",
           "integration_test": null,
           "e2e_evidence": "证据门含 BOM 一致性",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.inspection_plan",
           "name": "检验计划",
           "domain": "CAD与生产图纸",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/cad-engineering-readiness.md",
           "implementation_file": "scripts/production_release_gate.py",
           "entry_point": "production_release_gate",
@@ -786,13 +1075,19 @@
           "unit_test": "tests/test_production_release_gate.py",
           "integration_test": null,
           "e2e_evidence": "证据门含 CTQ 检验",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "cad.production_release_gate",
           "name": "生产发布门",
           "domain": "CAD与生产图纸",
           "classification": "fully_implemented",
+          "external_dependency": false,
           "declaration_file": "references/gate-model.md",
           "implementation_file": "scripts/production_release_gate.py",
           "entry_point": "production_release_gate.main",
@@ -801,7 +1096,12 @@
           "unit_test": "tests/test_production_release_gate.py",
           "integration_test": null,
           "e2e_evidence": "证据门全项（存在/schema/hash/图号/BOM/单位/GD&T/审批/证据时效）",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": false
+          }
         }
       ]
     },
@@ -812,7 +1112,8 @@
           "id": "industrialize.rfq",
           "name": "RFQ",
           "domain": "工业化与验证",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/tool-and-physical-boundaries.md",
           "implementation_file": "src/aipd_os/tool_adapters/mail_rfq_adapter.py",
           "entry_point": "mail_rfq_adapter",
@@ -821,13 +1122,19 @@
           "unit_test": "tests/test_supply_chain.py",
           "integration_test": null,
           "e2e_evidence": "RFQ 生成/外部任务包",
-          "current_limitation": "真实邮件发送依赖外部邮件通道"
+          "current_limitation": "真实邮件发送依赖外部邮件通道",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "industrialize.email_execution",
           "name": "邮件执行",
           "domain": "工业化与验证",
           "classification": "external_dependency",
+          "external_dependency": true,
           "declaration_file": "references/tool-and-physical-boundaries.md",
           "implementation_file": "src/aipd_os/tool_adapters/mail_rfq_adapter.py",
           "entry_point": "mail_rfq_adapter.send",
@@ -836,13 +1143,19 @@
           "unit_test": null,
           "integration_test": null,
           "e2e_evidence": null,
-          "current_limitation": "依赖外部 Gmail/邮件通道，未接入时诚实等待"
+          "current_limitation": "依赖外部 Gmail/邮件通道，未接入时诚实等待",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": true
+          }
         },
         {
           "id": "industrialize.quote_parsing",
           "name": "报价解析",
           "domain": "工业化与验证",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/tool-and-physical-boundaries.md",
           "implementation_file": "src/aipd_os/supply_chain/quotes.py",
           "entry_point": "quotes.parse_quote_file",
@@ -851,13 +1164,19 @@
           "unit_test": "tests/test_supply_chain.py",
           "integration_test": null,
           "e2e_evidence": "报价解析与归一化",
-          "current_limitation": "附件格式解析范围有限"
+          "current_limitation": "附件格式解析范围有限",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "industrialize.supplier_qualification",
           "name": "供应商资质",
           "domain": "工业化与验证",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/tool-and-physical-boundaries.md",
           "implementation_file": "src/aipd_os/supply_chain/suppliers.py",
           "entry_point": "suppliers.register",
@@ -866,13 +1185,19 @@
           "unit_test": "tests/test_supply_chain.py",
           "integration_test": null,
           "e2e_evidence": "资质证书登记",
-          "current_limitation": "证书真实性需人工/外部核验"
+          "current_limitation": "证书真实性需人工/外部核验",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "industrialize.evt_dvt_pvt_import",
           "name": "EVT/DVT/PVT数据导入",
           "domain": "工业化与验证",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/tool-and-physical-boundaries.md",
           "implementation_file": "src/aipd_os/supply_chain/lab.py; tool_adapters/evt_dvt_pvt_adapter.py",
           "entry_point": "lab.import_lab_csv",
@@ -881,13 +1206,19 @@
           "unit_test": "tests/test_supply_chain.py",
           "integration_test": null,
           "e2e_evidence": "实验室数据导入",
-          "current_limitation": "导入格式范围有限"
+          "current_limitation": "导入格式范围有限",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "industrialize.test_failure_root_cause",
           "name": "测试失败根因",
           "domain": "工业化与验证",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/end-to-end-closure-model.md",
           "implementation_file": "src/aipd_os/supply_chain/analysis.py",
           "entry_point": "analysis.analyze_stage",
@@ -896,13 +1227,19 @@
           "unit_test": "tests/test_supply_chain.py",
           "integration_test": null,
           "e2e_evidence": "失败项分析",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "industrialize.correction_tasks",
           "name": "纠正任务",
           "domain": "工业化与验证",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/end-to-end-closure-model.md",
           "implementation_file": "src/aipd_os/supply_chain/analysis.py",
           "entry_point": "analysis.create_correction_tasks",
@@ -911,13 +1248,19 @@
           "unit_test": "tests/test_supply_chain.py",
           "integration_test": null,
           "e2e_evidence": "纠正任务自动创建",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "industrialize.physical_writeback",
           "name": "实体数据回写",
           "domain": "工业化与验证",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/end-to-end-closure-model.md",
           "implementation_file": "src/aipd_os/supply_chain/analysis.py",
           "entry_point": "analysis.propagate",
@@ -926,13 +1269,19 @@
           "unit_test": "tests/test_supply_chain.py",
           "integration_test": null,
           "e2e_evidence": "影响传播",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "industrialize.certification_status",
           "name": "认证状态",
           "domain": "工业化与验证",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/quality-and-claim-governance.md",
           "implementation_file": "src/aipd_os/supply_chain/certification.py",
           "entry_point": "certification.CertificationRegistry",
@@ -941,7 +1290,12 @@
           "unit_test": "tests/test_certification.py",
           "integration_test": null,
           "e2e_evidence": "未取得认证不宣布已认证",
-          "current_limitation": "状态机确定性实现，证书真实性仍需外部权威核验"
+          "current_limitation": "状态机确定性实现，证书真实性仍需外部权威核验",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         }
       ]
     },
@@ -952,7 +1306,8 @@
           "id": "ux.project_persistence",
           "name": "项目持久化",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/state-model.md",
           "implementation_file": "src/aipd_os/state/db.py",
           "entry_point": "AIPDStateDB",
@@ -961,13 +1316,19 @@
           "unit_test": "tests/test_state_db.py",
           "integration_test": "tests/test_server_local.py",
           "e2e_evidence": "项目数据库持久化",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.checkpoint",
           "name": "checkpoint",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/state-model.md",
           "implementation_file": "src/aipd_os/state/checkpoint.py",
           "entry_point": "checkpoint.save/load",
@@ -976,13 +1337,19 @@
           "unit_test": "tests/test_backup_checkpoint.py",
           "integration_test": null,
           "e2e_evidence": "checkpoint 保存/恢复",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.auto_resume",
           "name": "新会话自动恢复",
           "domain": "跨会话与用户体验",
           "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/state-model.md",
           "implementation_file": "src/aipd_os/experience/resume_summary.py",
           "entry_point": "resume_summary.build",
@@ -991,13 +1358,19 @@
           "unit_test": "tests/test_experience.py",
           "integration_test": null,
           "e2e_evidence": "恢复摘要生成",
-          "current_limitation": "aipd resume 仅输出恢复摘要，不自动调用 supervisor 继续执行；manual 附件链不在状态库/备份范围内无法恢复"
+          "current_limitation": "aipd resume 仅输出恢复摘要，不自动调用 supervisor 继续执行；manual 附件链不在状态库/备份范围内无法恢复",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.no_repeat_questioning",
           "name": "不重复询问",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/interaction-contract-v4.md",
           "implementation_file": "src/aipd_os/experience/resume_summary.py",
           "entry_point": "resume_summary (decisions_to_ask)",
@@ -1006,13 +1379,19 @@
           "unit_test": "tests/test_behavior_contracts.py",
           "integration_test": null,
           "e2e_evidence": "resume-state 契约",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.project_summary",
           "name": "项目摘要",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/interaction-contract-v4.md",
           "implementation_file": "src/aipd_os/experience/project_summary.py; views.py",
           "entry_point": "OwnerView.owner_update",
@@ -1021,13 +1400,19 @@
           "unit_test": "tests/test_experience.py",
           "integration_test": null,
           "e2e_evidence": "所有者视图",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.single_decision_card",
           "name": "单一决策卡",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/interaction-contract-v4.md",
           "implementation_file": "src/aipd_os/experience/decision_card.py",
           "entry_point": "decision_card.build",
@@ -1036,13 +1421,19 @@
           "unit_test": "tests/test_experience.py",
           "integration_test": null,
           "e2e_evidence": "决策卡生成",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.natural_language_approval",
           "name": "自然语言审批",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/interaction-contract-v4.md",
           "implementation_file": "src/aipd_os/experience/instructions.py",
           "entry_point": "instructions.parse",
@@ -1051,13 +1442,19 @@
           "unit_test": "tests/test_behavior_contracts.py",
           "integration_test": null,
           "e2e_evidence": "natural-language-review-parsed 契约",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.manual_preview_diff",
           "name": "手册预览和版本差异",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/interaction-contract-v4.md",
           "implementation_file": "src/aipd_os/experience/artifact_preview.py",
           "entry_point": "artifact_preview",
@@ -1066,13 +1463,19 @@
           "unit_test": "tests/test_experience.py",
           "integration_test": null,
           "e2e_evidence": "工件预览",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.cad_diff",
           "name": "CAD差异",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/interaction-contract-v4.md",
           "implementation_file": "src/aipd_os/experience/views.py",
           "entry_point": "OwnerView",
@@ -1081,13 +1484,19 @@
           "unit_test": "tests/test_experience.py",
           "integration_test": null,
           "e2e_evidence": "版本差异视图",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.bom_diff",
           "name": "BOM差异",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/manual-to-cad-digital-thread.md",
           "implementation_file": "src/aipd_os/experience/views.py",
           "entry_point": "OwnerView",
@@ -1096,13 +1505,19 @@
           "unit_test": "tests/test_experience.py",
           "integration_test": null,
           "e2e_evidence": "BOM 差异视图",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         },
         {
           "id": "ux.risk_external_wait_view",
           "name": "风险和外部等待视图",
           "domain": "跨会话与用户体验",
-          "classification": "fully_implemented",
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/interaction-contract-v4.md",
           "implementation_file": "src/aipd_os/experience/project_summary.py",
           "entry_point": "project_summary",
@@ -1111,7 +1526,12 @@
           "unit_test": "tests/test_experience.py",
           "integration_test": null,
           "e2e_evidence": "风险/外部等待视图",
-          "current_limitation": null
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": false,
+            "external_dependency_flag": false
+          }
         }
       ]
     }
