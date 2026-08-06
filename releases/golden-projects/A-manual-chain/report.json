@@ -1,7 +1,7 @@
 {
   "project_id": "golden-A",
   "name": "连续附件产品手册",
-  "source_commit": "c177a79f55acbffedfc147ba67853a3033866efd",
+  "source_commit": "0934f84d9d8cae26adfc8a088ba3af2dc58c999b",
   "checks": {
     "clean_import_runs": true,
     "batch_continuity": true,
@@ -13,8 +13,8 @@
   "batches": 3,
   "pages": 12,
   "artifacts": {
-    "manual.pdf": "e368b5e08e5ebd17007abec23fa312781f142b683dddc88a6f05c12f92aabdbf",
-    "manual.zip": "b2ad1d963a9329f5e1227363c61cdef7b6516817539a71ab2871c7fa49fca22a",
+    "manual.pdf": "c2631a0c2ebf0c44b2830ba325123a766093fbf2ba196ad1d42aea4f341633ae",
+    "manual.zip": "bdba96bcf71b5413ef582eaf7b35a5d7b046918dc284df7d5df9e9668e5fc13b",
     "cover.png": "22cbceabacab68a0a258881ae4d331ee27e6701e11f4513aa688ce8cd17cb4bf",
     "principle.png": "f03d6013f8f536d1cf84c7b7eec2b573ec3f4648c00b499b030d0d902bb004f7",
     "parameter_table.png": "bb44486480f75de6c65255525d578bc7be8401f65314a2e5bced2753179e616b",
@@ -28,5 +28,5 @@
     "closure.png": "f4e55b6b5b711ef51fd122cadf425d8396e2a8024cb78a032d6ff975f9f572c4",
     "principle_2.png": "fdb5b20994a4875fef401295ec4096cfec8951e9530d946f1ca66b9d248d8ef0"
   },
-  "generated_at": "2026-08-06T08:04:21.667640+00:00"
+  "generated_at": "2026-08-06T08:11:08.025629+00:00"
 }
