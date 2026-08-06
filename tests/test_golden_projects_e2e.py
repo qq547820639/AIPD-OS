@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -53,7 +54,14 @@ def _sha(path: Path) -> str:
 
 
 def _head_sha() -> str:
-    """引用 release/provenance 锚点：最终 tag/HEAD SHA。"""
+    """引用 release/provenance 锚点：最终 tag/HEAD SHA。
+
+    默认取当前 HEAD；若设置 ``AIPD_PIN_COMMIT``（如最终 tag SHA），则锚定到
+    被测试的发布提交，使黄金项目运行产物与最终 tag 一致（强制验收标准）。
+    """
+    pinned = os.environ.get("AIPD_PIN_COMMIT", "").strip()
+    if pinned:
+        return pinned
     r = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(ROOT),
                        capture_output=True, text=True)
     return r.stdout.strip() if r.returncode == 0 else "n/a"
