@@ -29,13 +29,15 @@ for _p in (ROOT, ROOT / "src"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-# v5.3 规范的一键命令全集（17 个）
+# v5.5 规范的一键命令全集（与 SKILL.md「## 0.」清单一致；`version --verbose` 为参数形式，
+# 由 ``aipd version --verbose`` 提供，不占用独立命令名）。
 EXPECTED_COMMANDS = {
     "init", "intake", "resume", "status", "run", "decide",
     "manual plan", "manual generate",
     "cad preflight", "cad build",
     "industrialize", "validate",
     "audit", "release check", "test", "eval", "package",
+    "doctor",
 }
 
 # 命令名：单/双词小写（如 "manual plan"、"cad preflight"、"release check"）
@@ -111,7 +113,7 @@ def main() -> int:
     tested = _tested_commands(registered)
 
     print("=" * 60)
-    print("AIPD-OS v5.3 SKILL.md 质量自审")
+    print("AIPD-OS v5.5 SKILL.md 质量自审")
     print("=" * 60)
 
     # 1) 命令一致性：声明 ⊆ 注册，且声明 == 17 个规范命令
@@ -125,11 +127,11 @@ def main() -> int:
 
     if declared != EXPECTED_COMMANDS:
         failures.append(
-            "SKILL.md 声明集合与 v5.3 规范的 17 命令不一致："
+            "SKILL.md 声明集合与 v5.5 规范的命令全集不一致："
             f"声明={sorted(declared)}；期望={sorted(EXPECTED_COMMANDS)}")
         print(f"  ✗ {failures[-1]}")
     else:
-        print("  ✓ SKILL.md 声明了规范的全部 17 个一键命令")
+        print("  ✓ SKILL.md 声明了规范的全部一键命令")
 
     # 2) 注册-测试覆盖：注册 ⊆ 声明 ∪ 测试
     uncovered = registered - declared - tested

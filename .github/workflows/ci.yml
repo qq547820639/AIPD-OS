@@ -99,8 +99,8 @@ jobs:
           pip install -e ".[full,dev]"
       - name: Install pip-audit
         run: pip install pip-audit
-      - name: Run pip-audit
-        run: pip-audit
+      - name: Run pip-audit (acknowledged CVEs documented in docs/security/dependency-cve-review.md)
+        run: python scripts/audit_dependency_ack.py
 
   license-scan:
     name: License scan

@@ -22,9 +22,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 from aipd_os.imggen.adapter import ImageGenUnavailable
+from aipd_os.layout.fonts import load_font
 
 FIG_SIZE = (1024, 1024)
 FONT_PATH_DEFAULT = "/System/Library/Fonts/STHeiti Medium.ttc"
@@ -36,10 +37,8 @@ def _sha(data: bytes) -> str:
 
 
 def _load_font(size: int) -> Any:
-    try:
-        return ImageFont.truetype(FONT_PATH_DEFAULT, size)
-    except Exception:
-        return ImageFont.load_default()
+    # 跨平台优先 FONT_PATH_DEFAULT，不可用时自动回退；绝不抛 OSError。
+    return load_font(size, FONT_PATH_DEFAULT)
 
 
 @dataclass

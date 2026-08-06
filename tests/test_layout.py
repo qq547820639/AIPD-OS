@@ -6,6 +6,7 @@ from pathlib import Path
 from PIL import Image
 
 from aipd_os.layout.composer import build_zip, compose_pdf
+from aipd_os.layout.fonts import load_font
 from aipd_os.layout.renderer import A4_PX, render_page
 
 SAMPLE = {
@@ -28,6 +29,24 @@ def test_render_page_a4_dimensions(tmp_path) -> None:
     img = Image.open(out)
     assert img.size == A4_PX == (2480, 3508)
     assert img.mode == "RGB"
+
+
+def test_font_loader_falls_back_when_system_font_missing(tmp_path) -> None:
+    """回归：CI(Ubuntu) 上无 macOS 字体时必须回退，绝不抛 ``OSError: cannot open resource``。
+
+    该用例直接守护 P0-1 修复 —— 此前 ``renderer.py``/``providers.py`` 硬编码 macOS
+    字体路径，导致 CI 整批页面被降级为 external_pending。
+    """
+    from PIL import Image, ImageDraw
+
+    # 传入必然不存在的字体路径，应回退到 PIL 内嵌默认字体而非抛 OSError。
+    font = load_font(40, "/nonexistent/STHeiti Century.ttc")
+    img = Image.new("RGB", (200, 100), "white")
+    draw = ImageDraw.Draw(img)
+    draw.text((10, 10), "AIPD 跨平台字体回退", font=font)  # 不应抛异常
+    # 渲染页也应在字体缺失时正常产出（跨平台回退），而非抛 OSError。
+    out = render_page(SAMPLE, str(tmp_path / "p_fallback.png"))
+    assert Path(out).exists() and Path(out).stat().st_size > 0
 
 
 def test_compose_pdf_and_zip_nonempty(tmp_path) -> None:

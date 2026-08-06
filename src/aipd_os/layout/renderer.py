@@ -7,9 +7,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Any, Iterable, List, Optional
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
+
+from aipd_os.layout.fonts import load_font
 
 # A4 @ 300dpi
 A4_PX = (2480, 3508)
@@ -17,11 +19,13 @@ MARGIN = 160
 PAGE_W, PAGE_H = A4_PX
 CONTENT_W = PAGE_W - MARGIN * 2
 
+# 首选字体路径（macOS）；跨平台回退由 aipd_os.layout.fonts.load_font 处理。
 FONT_PATH_DEFAULT = "/System/Library/Fonts/STHeiti Medium.ttc"
 
 
-def _load_font(path: str, size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(path, size)
+def _load_font(path: str, size: int) -> Any:
+    """按给定路径优先加载字体；路径不可用时跨平台回退，绝不抛 OSError。"""
+    return load_font(size, path)
 
 
 def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> List[str]:
