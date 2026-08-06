@@ -25,19 +25,19 @@
   },
   {
     "path": "docs/audit/audit.json",
-    "sha256": "e70ac63778587c0b171a5d60e0758abc730f3d712bd1ad3029125bfed8590ad7"
+    "sha256": "774b0ed1af80af98c715e9ea3b85e169c51e236529130b1de8af232a9a0874c3"
   },
   {
     "path": "docs/audit/capability_matrix.json",
-    "sha256": "5c45ec5881301048d3e14b51319f7c0f15b360a9b2514c097db5a7e9c1ab0ac1"
+    "sha256": "9903ff9ecb37f47b4c26223642ef8afc3531d344d7584a04eabc43e3e8f9c495"
   },
   {
     "path": "docs/audit/capability_matrix.md",
-    "sha256": "8cf6787d14f4a68553d2f12dfa7066226cdd32610450f3818181bbe638f4a63d"
+    "sha256": "02d94e01e5bf6f3260e91fc8d7708ca051dba79e548bb84e0b16772a3df7de70"
   },
   {
     "path": "docs/audit/repository_snapshot.json",
-    "sha256": "a59098533488250b9f990123cbc529ae6b21d418ef3184c14495c367027d4f45"
+    "sha256": "54539894d0a217bc88826f302400927f991cf7f1d9d229d2a8683c2fc08854ce"
   },
   {
     "path": "docs/audit/v5.1-version-truth-audit.json",
@@ -74,6 +74,10 @@
   {
     "path": "docs/audit/v5.4/phase9-evals-golden-audit.md",
     "sha256": "b9a9d2a01bb018f385858b94ff6dd489543841100b9909093f29ecf0ad44ea14"
+  },
+  {
+    "path": "docs/security/dependency-cve-review.md",
+    "sha256": "7e131ca7624fb4374dd055420e0984616bd6fa1770d154d18d68e4bf3ffe0208"
   },
   {
     "path": "evals/cad_evals.json",
@@ -296,6 +300,10 @@
     "sha256": "8234bc291a6b091c67238127a07375102b9fd6f1363b8ce939eced24a3f6ea2d"
   },
   {
+    "path": "scripts/audit_dependency_ack.py",
+    "sha256": "073e7d891abbea9f084123b6e39635f362a838aa77d78970544b06bec8aaf255"
+  },
+  {
     "path": "scripts/audit_repo.py",
     "sha256": "459ceac49cd34fd7b274444be75684b627ee9eab04d1581698bd624c7c55c91d"
   },
@@ -465,15 +473,15 @@
   },
   {
     "path": "scripts/skill_quality_audit.py",
-    "sha256": "ed6ce5588a925396460dc8f9fe7b4947eed9b0dea7711e38f215840f0f826d97"
+    "sha256": "fa3c0212707d2b8943d8ecafed0f5852f3f84ae09a8fad4a5a3d9b128609159f"
   },
   {
     "path": "src/aipd_os.egg-info/PKG-INFO",
-    "sha256": "b01f9c98a065ad8b51ff38ed393c8c360ee38889778ea936a2cb6c95f3bed7ec"
+    "sha256": "c2bf72af6a6e755bfe17ffc05670c19c8912c2145769e6aac66f2899a7a0ccb9"
   },
   {
     "path": "src/aipd_os.egg-info/SOURCES.txt",
-    "sha256": "92826a41599889057a1c75420fb2a7c61c7ce997a26fcf00a2e7be953086b67f"
+    "sha256": "1eec1e2614fbaede80ae1f05abd17d4365acf81fdb65d0f848a2982e799c449d"
   },
   {
     "path": "src/aipd_os.egg-info/dependency_links.txt",
@@ -485,7 +493,7 @@
   },
   {
     "path": "src/aipd_os.egg-info/requires.txt",
-    "sha256": "d95061172cadc93d3bceeb654e0d9a557004fe5c78b2c7fa59a0953718c13abe"
+    "sha256": "99861e80440a291bc44ea87b4d28d0cc66e7eb9ed3baa64d4e5ad25e4a94e0d9"
   },
   {
     "path": "src/aipd_os.egg-info/top_level.txt",
@@ -669,7 +677,7 @@
   },
   {
     "path": "src/aipd_os/imggen/providers.py",
-    "sha256": "2961e72c25ab7a93fdb9acb3ac60ae3283f040e7b717eb19a047babe2fa1b416"
+    "sha256": "8a4ea68ca3b9a30146d4c6a3d0617f0857a871d9a9eb57d4a615f1000f43005d"
   },
   {
     "path": "src/aipd_os/imggen/registry.py",
@@ -684,8 +692,12 @@
     "sha256": "fe8d428e8b2ecd10ccb16bff10d4e015fb491d9d2abb900177a0d134be259eab"
   },
   {
+    "path": "src/aipd_os/layout/fonts.py",
+    "sha256": "ddba176d9fdff39fc275514f61b28229c8bd87b9bf3bdb9a7b109d2f6ded0d5e"
+  },
+  {
     "path": "src/aipd_os/layout/renderer.py",
-    "sha256": "0bc44ade1eca97404da8b62f2893d3c17eceb00df105c730d0ede2b42a2a2357"
+    "sha256": "4947fd3df9c82f419e14132792882ab2332f98fb3c92c1e1aade23e4aa47ad1d"
   },
   {
     "path": "src/aipd_os/logging_utils.py",

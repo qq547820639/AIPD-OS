@@ -151,6 +151,7 @@
       "aipd_os.imggen.registry",
       "aipd_os.layout",
       "aipd_os.layout.composer",
+      "aipd_os.layout.fonts",
       "aipd_os.layout.renderer",
       "aipd_os.logging_utils",
       "aipd_os.research",

@@ -7,13 +7,13 @@
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "size": 6449,
-      "sha256": "09481e3538f6e9d9c5e11d6bd6d60f320de9a9dcc6ff6c27a5d877a79c05bef5"
+      "size": 6551,
+      "sha256": "c51874f2d0408395d5c228f135c9a84d412f4d2f76c29b2c38093c61adeba4d1"
     },
     {
       "path": ".gitignore",
-      "size": 329,
-      "sha256": "fd026a4efd652c1ea5907b4527521c0ccd97393a4282a53e9631339468619129"
+      "size": 339,
+      "sha256": "e113f6eefe715a5365c63de6e85e479037a601d1593231f10c4ffe3e6f5f2ae2"
     },
     {
       "path": ".trae/specs/v5-execution-experience-edition/checklist.md",
@@ -342,23 +342,23 @@
     },
     {
       "path": "docs/audit/audit.json",
-      "size": 10879,
-      "sha256": "e70ac63778587c0b171a5d60e0758abc730f3d712bd1ad3029125bfed8590ad7"
+      "size": 5037,
+      "sha256": "774b0ed1af80af98c715e9ea3b85e169c51e236529130b1de8af232a9a0874c3"
     },
     {
       "path": "docs/audit/capability_matrix.json",
       "size": 51998,
-      "sha256": "5c45ec5881301048d3e14b51319f7c0f15b360a9b2514c097db5a7e9c1ab0ac1"
+      "sha256": "9903ff9ecb37f47b4c26223642ef8afc3531d344d7584a04eabc43e3e8f9c495"
     },
     {
       "path": "docs/audit/capability_matrix.md",
       "size": 18356,
-      "sha256": "8cf6787d14f4a68553d2f12dfa7066226cdd32610450f3818181bbe638f4a63d"
+      "sha256": "02d94e01e5bf6f3260e91fc8d7708ca051dba79e548bb84e0b16772a3df7de70"
     },
     {
       "path": "docs/audit/repository_snapshot.json",
-      "size": 11005,
-      "sha256": "a59098533488250b9f990123cbc529ae6b21d418ef3184c14495c367027d4f45"
+      "size": 4071,
+      "sha256": "54539894d0a217bc88826f302400927f991cf7f1d9d229d2a8683c2fc08854ce"
     },
     {
       "path": "docs/audit/v5.1-version-truth-audit.json",
@@ -404,6 +404,11 @@
       "path": "docs/audit/v5.4/phase9-evals-golden-audit.md",
       "size": 15463,
       "sha256": "b9a9d2a01bb018f385858b94ff6dd489543841100b9909093f29ecf0ad44ea14"
+    },
+    {
+      "path": "docs/security/dependency-cve-review.md",
+      "size": 5186,
+      "sha256": "7e131ca7624fb4374dd055420e0984616bd6fa1770d154d18d68e4bf3ffe0208"
     },
     {
       "path": "evals/cad_evals.json",
@@ -701,6 +706,11 @@
       "sha256": "8234bc291a6b091c67238127a07375102b9fd6f1363b8ce939eced24a3f6ea2d"
     },
     {
+      "path": "scripts/audit_dependency_ack.py",
+      "size": 2351,
+      "sha256": "073e7d891abbea9f084123b6e39635f362a838aa77d78970544b06bec8aaf255"
+    },
+    {
       "path": "scripts/audit_repo.py",
       "size": 15862,
       "sha256": "459ceac49cd34fd7b274444be75684b627ee9eab04d1581698bd624c7c55c91d"
@@ -912,8 +922,8 @@
     },
     {
       "path": "scripts/skill_quality_audit.py",
-      "size": 7182,
-      "sha256": "ed6ce5588a925396460dc8f9fe7b4947eed9b0dea7711e38f215840f0f826d97"
+      "size": 7331,
+      "sha256": "fa3c0212707d2b8943d8ecafed0f5852f3f84ae09a8fad4a5a3d9b128609159f"
     },
     {
       "path": "src/aipd_os/__init__.py",
@@ -1137,8 +1147,8 @@
     },
     {
       "path": "src/aipd_os/imggen/providers.py",
-      "size": 9585,
-      "sha256": "2961e72c25ab7a93fdb9acb3ac60ae3283f040e7b717eb19a047babe2fa1b416"
+      "size": 9623,
+      "sha256": "8a4ea68ca3b9a30146d4c6a3d0617f0857a871d9a9eb57d4a615f1000f43005d"
     },
     {
       "path": "src/aipd_os/imggen/registry.py",
@@ -1156,9 +1166,14 @@
       "sha256": "fe8d428e8b2ecd10ccb16bff10d4e015fb491d9d2abb900177a0d134be259eab"
     },
     {
+      "path": "src/aipd_os/layout/fonts.py",
+      "size": 2992,
+      "sha256": "ddba176d9fdff39fc275514f61b28229c8bd87b9bf3bdb9a7b109d2f6ded0d5e"
+    },
+    {
       "path": "src/aipd_os/layout/renderer.py",
-      "size": 8083,
-      "sha256": "0bc44ade1eca97404da8b62f2893d3c17eceb00df105c730d0ede2b42a2a2357"
+      "size": 8290,
+      "sha256": "4947fd3df9c82f419e14132792882ab2332f98fb3c92c1e1aade23e4aa47ad1d"
     },
     {
       "path": "src/aipd_os/logging_utils.py",
@@ -1622,8 +1637,8 @@
     },
     {
       "path": "tests/test_layout.py",
-      "size": 1545,
-      "sha256": "a96a35419de08f303cf21ee60b8c11b22d1fabc8331baac85dc9e30d08a860c3"
+      "size": 2547,
+      "sha256": "ad75c46c99425fdabfbcae5bd8f5d4ea8c53c90e11135d801f7f826fd0710af7"
     },
     {
       "path": "tests/test_manual_chain_e2e.py",
