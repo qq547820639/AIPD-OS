@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-06T07:38:43",
+  "generated_at": "2026-08-06T11:00:22",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "651dfbc76fc4b5cd3abea07a90740cedf3d0ca76",
-  "version": "5.4.0",
+  "latest_commit_sha": "61a0e74b180ae4c72ff7c4811d5ceb29a644a5d5",
+  "version": "5.5.0",
   "classification_enum": [
     "fully_implemented",
     "partially_implemented",

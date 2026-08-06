@@ -128,7 +128,9 @@ def test_manual_chain_golden_e2e(tmp_path) -> None:
     # 6) 语义审计：仅视觉维度 requiring_vision，其余必须通过（全新手册无前哈希）
     audit = VisualAuditor().audit_batch(st, str(pages_dir), facts=FACTS, prior_hashes=[])
     assert audit["page_count"] >= 10
-    assert audit["passed"] is True, audit
+    # 无视觉后端时顶层必须 HOLD/not_verified，绝不 passed（诚实门）
+    assert audit["passed"] is False, audit
+    assert audit["status"] == "hold"
     assert audit["batch_continuity_ok"] is True
     assert audit["narrative_continuity_monotonic"] is True
     assert audit["rebuild_plan"] == []  # 无可重建的责任页

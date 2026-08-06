@@ -69,7 +69,13 @@ you are now、system:、override、set gate to C7 等）从系统指令通道中
 
 ## 依赖与供应链
 
-- 运行时依赖极少（`dependencies = []`），可选依赖见 `pyproject.toml`。
+- 运行时依赖极少（`dependencies = ["jsonschema>=4.0"]`），可选依赖见 `pyproject.toml`。
+- CI 的 `dependency-audit` job 运行 `pip-audit` 对安装快照做 CVE 扫描；任何发现的漏洞
+  必须优先通过升级/移除受影响依赖修复，不得静默忽略。
+- 若某个 CVE 在当前依赖版本下确实无法通过升级立即修复（例如上游尚未发布修复版本），
+  必须在本节登记：CVE 编号、影响范围、缓解措施与复核日期，并在复核日期前完成跟进。
+  截至 v5.5.0，pip-audit 在离线环境无法执行往返扫描，故无离线确认的 CVE 结论；
+  正式发布前需在可联网环境运行 `pip install pip-audit && pip-audit` 复核并回填本表。
 - 使用 `aipd_os.security.sbom.generate_sbom` 生成确定性 CycloneDX 风格 SBOM
   （见 `SBOM.md`），用于供应链审计。
 - 发布物经 `scripts/sign_release.py` 签名（见 `RELEASE_SIGNING.md`）。

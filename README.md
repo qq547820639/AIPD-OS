@@ -1,6 +1,14 @@
-# AIPD Orchestrator v5.3.0
+# AIPD Orchestrator v5.5.0
 
 AI全链路产品开发与交付主管：一个对话入口，自主推进理论基础、产品定义、连续附件产品手册、工程CAD、工业化、供应链、EVT/DVT/PVT和生产发布。
+
+## v5.5新增
+
+- **P0-2 版本统一 5.5.0**：pyproject / 包版本 / 状态服务 / 发布脚本 / README 全部对齐到 5.5.0；
+- **`aipd doctor`**：一键体检，报告包版本、依赖可用性、配置、外部能力（视觉后端 / 模型端点 / 图像后端 / CAD 内核 / 邮件）、数据库、对象存储与权限，支持 `--json`；
+- **`aipd version --verbose`**：打印包版本、Git HEAD、构建时间、能力矩阵版本与发布清单哈希；
+- **P0-1 CI 加固**：Actions 升级到 v5（消除 Node 20 弃用告警）、真实集成测试、`release-ready` 发布门禁；
+- **P0-3 视觉发布门**：`VisualAuditor` + `GoldenGapEvaluator` 接入手工发布门禁，无视觉后端时一律 HOLD/`not_verified`，绝不假通过。
 
 ## v5.3新增
 

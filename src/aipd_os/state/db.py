@@ -506,6 +506,29 @@ class AIPDStateDB:
             c.execute("INSERT OR IGNORE INTO fact_evidence(fact_id,project_id,tenant_id,evidence_id,relation) "
                       "VALUES(?,?,?,?,?)", (fact_id, project_id, tenant_id, evidence_id, relation))
 
+    def list_evidence_for_fact(self, tenant_id: str, project_id: str, fact_id: str) -> List[Dict[str, Any]]:
+        """返回关联到某事实的证据列表（含关系）。"""
+        with self.connect() as c:
+            rows = c.execute(
+                "SELECT e.*, fe.relation FROM evidence e "
+                "JOIN fact_evidence fe ON fe.evidence_id=e.evidence_id "
+                "AND fe.project_id=e.project_id AND fe.tenant_id=e.tenant_id "
+                "WHERE fe.tenant_id=? AND fe.project_id=? AND fe.fact_id=? ORDER BY e.created_at",
+                (tenant_id, project_id, fact_id)).fetchall()
+        return [dict(r) for r in rows]
+
+    def update_evidence_metadata(self, tenant_id: str, project_id: str, evidence_id: str,
+                                 metadata: Dict[str, Any]) -> None:
+        """整体替换单条证据的 metadata_json。"""
+        with self.connect() as c:
+            cur = c.execute("SELECT version_no FROM evidence WHERE tenant_id=? AND project_id=? "
+                            "AND evidence_id=?", (tenant_id, project_id, evidence_id)).fetchone()
+            if not cur:
+                raise KeyError(evidence_id)
+            c.execute("UPDATE evidence SET metadata_json=?, version_no=version_no+1 "
+                      "WHERE tenant_id=? AND project_id=? AND evidence_id=? AND version_no=?",
+                      (_json(metadata), tenant_id, project_id, evidence_id, cur["version_no"]))
+
     # ------------------------------------------------------------ decisions
     def propose_decision(self, tenant_id: str, project_id: str, topic: str,
                          recommendation: str, options: Any, trigger: Optional[str] = None) -> str:

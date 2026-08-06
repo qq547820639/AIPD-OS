@@ -15,6 +15,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -973,6 +974,293 @@ def cmd_package(args):
 
 
 # --------------------------------------------------------------------------
+# version —— 打印包版本；--verbose 打印 Git HEAD / 构建时间 / 能力矩阵版本 / 清单哈希
+# --------------------------------------------------------------------------
+def cmd_version(args):
+    from aipd_os import __version__
+
+    result = {"command": "version", "version": __version__}
+    if getattr(args, "verbose", False):
+        repo = _repo_root()
+        try:
+            head = subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                capture_output=True, text=True, check=True,
+            ).stdout.strip()
+        except Exception:  # noqa: BLE001 - 非 git 环境时如实置空
+            head = None
+        try:
+            import aipd_os
+            build_time = datetime.fromtimestamp(
+                Path(aipd_os.__file__).stat().st_mtime, tz=timezone.utc).isoformat()
+        except Exception:  # noqa: BLE001
+            build_time = None
+        cm_path = repo / "docs" / "audit" / "capability_matrix.json"
+        cm_version = None
+        if cm_path.exists():
+            try:
+                cm_version = json.loads(cm_path.read_text(encoding="utf-8")).get("version")
+            except Exception:  # noqa: BLE001
+                cm_version = None
+        manifest_path = repo / "RELEASE_MANIFEST.json"
+        manifest_hash = _sha256(manifest_path) if manifest_path.exists() else None
+        result.update({
+            "git_head": head,
+            "build_time": build_time,
+            "capability_matrix_version": cm_version,
+            "release_manifest_sha256": manifest_hash,
+        })
+    if getattr(args, "json", False):
+        print(json.dumps(result, ensure_ascii=False))
+    elif args.verbose:
+        print(f"aipd version: {result['version']}")
+        print(f"git HEAD: {result['git_head']}")
+        print(f"build time: {result['build_time']}")
+        print(f"capability matrix version: {result['capability_matrix_version']}")
+        print(f"release manifest sha256: {result['release_manifest_sha256']}")
+    else:
+        print(__version__)
+    return 0
+
+
+# --------------------------------------------------------------------------
+# doctor —— 一键体检：依赖 / 配置 / 外部能力 / 数据库 / 对象存储 / 权限
+# --------------------------------------------------------------------------
+def _doctor_check(checks, name, status, detail):
+    checks.append({"name": name, "status": status, "detail": detail})
+
+
+def _check_repo_permissions(repo: Path) -> tuple:
+    targets = [repo]
+    from aipd_os.config import get_settings
+    db_dir = get_settings().db_dir
+    if db_dir and db_dir != "data":
+        p = Path(db_dir)
+        targets.append(p if p.is_dir() else p.parent)
+    for t in targets:
+        try:
+            with tempfile.NamedTemporaryFile(dir=str(t), delete=True):
+                pass
+        except Exception as exc:  # noqa: BLE001
+            return False, f"{t}: {exc}"
+    return True, "writable"
+
+
+def cmd_doctor(args):
+    from aipd_os import __version__
+    from aipd_os.config import get_settings
+
+    repo = _repo_root()
+    checks: List[Dict[str, Any]] = []
+
+    # 1) 包版本
+    _doctor_check(checks, "version", "ok", __version__)
+
+    # 2) 依赖可用性
+    deps = {
+        "jsonschema": "jsonschema",
+        "PIL": "PIL",
+        "reportlab": "reportlab",
+        "requests": "requests",
+        "yaml": "yaml",
+        "cryptography": "cryptography",
+    }
+    for label, mod in deps.items():
+        try:
+            __import__(mod)
+            status, detail = "ok", "import ok"
+        except ImportError:
+            status, detail = "missing", f"import failed: {mod}"
+        _doctor_check(checks, f"dependency.{label}", status, detail)
+
+    # 3) 配置
+    s = get_settings()
+    _doctor_check(checks, "config.mode", "ok", s.mode)
+    _doctor_check(checks, "config.db_dir", "ok", s.db_dir)
+    _doctor_check(checks, "config.log_level", "ok", s.log_level)
+    _doctor_check(checks, "config.files",
+                  "ok" if s.config_files else "info",
+                  ", ".join(str(p) for p in s.config_files) or "none")
+
+    # 4) 外部能力（配置 vs external_dependency）
+    external_envs = {
+        "vision_backend": "AIPD_VISION_BACKEND",
+        "model_endpoint": "AIPD_EVAL_MODEL_ENDPOINT",
+        "image_backend": "AIPD_IMGGEN_BACKEND",
+        "mail": "AIPD_MAIL_PROVIDER",
+    }
+    for name, env in external_envs.items():
+        val = os.environ.get(env, "").strip()
+        status = "ok" if val else "external_dependency"
+        detail = val or "not configured (external_dependency)"
+        _doctor_check(checks, f"capability.{name}", status, detail)
+    cq_ok = importlib.util.find_spec("cadquery") is not None
+    _doctor_check(checks, "capability.cad_kernel",
+                  "ok" if cq_ok else "external_dependency",
+                  "cadquery available" if cq_ok else "cadquery not installed (external_dependency)")
+
+    # 5) 数据库
+    try:
+        from aipd_os.state.db import AIPDStateDB
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tf:
+            db_path = tf.name
+        try:
+            db = AIPDStateDB(str(db_path))
+            db.ensure_default_tenant()
+            _doctor_check(checks, "database", "ok", "AIPDStateDB init + default tenant ok")
+        finally:
+            try:
+                os.unlink(db_path)
+            except OSError:
+                pass
+    except Exception as exc:  # noqa: BLE001
+        _doctor_check(checks, "database", "fail", str(exc))
+
+    # 6) 对象存储
+    try:
+        from aipd_os.state.objects import ObjectStore
+        with tempfile.TemporaryDirectory() as td:
+            store = ObjectStore(td)
+            store.put("probe", "probe-key", b"probe")
+            _doctor_check(checks, "object_store", "ok", "ObjectStore put ok")
+    except Exception as exc:  # noqa: BLE001
+        _doctor_check(checks, "object_store", "fail", str(exc))
+
+    # 7) 权限
+    perm_ok, perm_detail = _check_repo_permissions(repo)
+    _doctor_check(checks, "permissions", "ok" if perm_ok else "fail", perm_detail)
+
+    failed = [c for c in checks if c["status"] == "fail"]
+    result = {"command": "doctor", "ok": not failed, "version": __version__, "checks": checks}
+    if getattr(args, "json", False):
+        print(json.dumps(result, ensure_ascii=False))
+    else:
+        print(f"AIPD-OS doctor v{__version__}")
+        for c in checks:
+            print(f"[{c['status']:>18}] {c['name']}: {c['detail']}")
+        print("体检结论：" + ("通过（无硬失败）" if result["ok"] else f"存在 {len(failed)} 项硬失败"))
+    return 0 if result["ok"] else 1
+
+
+# --------------------------------------------------------------------------
+# P2 所有者 UX：operate / dashboard / onboard / reset / recover
+# --------------------------------------------------------------------------
+def cmd_operate(args):
+    """自然语言操作闭环：意图→影响→受影响制品→成本/时间→可撤销预览→批准→自动返工→自动验收→摘要。"""
+    from aipd_os.experience.intent_engine import parse_intent
+    from aipd_os.experience.operations import ProgressTracker, run_operation_loop
+    from aipd_os.state.db import AIPDStateDB
+
+    db = AIPDStateDB(args.db)
+    pid = args.project or _resolve_project(db)
+    intent = parse_intent(args.intent, db, pid, DEFAULT_TENANT)
+    tracker = ProgressTracker()
+    result = run_operation_loop(db, pid, intent, tenant_id=DEFAULT_TENANT,
+                                approved=args.approve, progress=tracker,
+                                should_cancel=(lambda: False))
+
+    if getattr(args, "json", False):
+        print(json.dumps(result, ensure_ascii=False, default=str))
+        return 0
+
+    status = result["status"]
+    if status == "needs_clarification":
+        print("需要澄清：")
+        print(f"· {result['clarifying_question']}")
+    elif status == "needs_approval":
+        print("该操作需要您批准后才会执行（当前未执行任何变更）：")
+        print(f"· {result['why_need_decide']}")
+        print(f"· {result['impact']['human_estimate']}")
+        print("· 可撤销预览已生成；确认后请用 --approve 执行。")
+    elif status == "cancelled":
+        print("操作已取消，未验收。")
+    else:
+        print("操作闭环已完成：")
+        for line in result["impact"]["propagated_impact"]:
+            print(f"· {line}")
+        print(f"· 自动返工 {result['rework']['count']} 项，自动验收 {result['acceptance']['count']} 项，摘要已更新。")
+    return 0
+
+
+def cmd_dashboard(args):
+    """统一 Owner Dashboard：默认只展示 10 个所有者区块；--json 输出纯 JSON。"""
+    from aipd_os.experience.owner_dashboard import (
+        build_dashboard, render_dashboard_json, render_dashboard_text)
+    from aipd_os.state.db import AIPDStateDB
+
+    db = AIPDStateDB(args.db)
+    pid = args.project or _resolve_project(db)
+    view = build_dashboard(db, pid, DEFAULT_TENANT)
+    if getattr(args, "json", False):
+        print(render_dashboard_json(view))
+    else:
+        print(render_dashboard_text(view, compact=args.compact))
+    return 0
+
+
+def cmd_onboard(args):
+    """首次使用引导：一句话建项 → 立即产出第一份结果 → 能力/外部配置 → 示例 → 恢复/重置。"""
+    from aipd_os.experience.onboarding import onboard
+    from aipd_os.state.db import AIPDStateDB
+
+    db = AIPDStateDB(args.db)
+    r = onboard(db, args.idea, args.project, DEFAULT_TENANT)
+    if getattr(args, "json", False):
+        print(json.dumps(r, ensure_ascii=False, default=str))
+        return 0
+    print(f"项目已创建：{r['name']}（{r['project_id']}）")
+    print(f"目标：{r['goal']}")
+    print("已立即产出：")
+    for p in r["produced"]:
+        print(f"  · {p['label']}：{p['detail']}")
+    print("能力与外部配置：")
+    for c in r["capabilities"]:
+        print(f"  [{c['status']}] {c['name']}（{c['env']}）")
+    print("示例项目：")
+    for e in r["examples"][:5]:
+        print(f"  · {e['name']}：{e['goal']}")
+    print(r["reset"])
+    print(r["recover"])
+    return 0
+
+
+def cmd_reset(args):
+    """重置项目：先备份再删除。"""
+    from aipd_os.experience.onboarding import reset_project
+    from aipd_os.state.db import AIPDStateDB
+
+    db = AIPDStateDB(args.db)
+    r = reset_project(db, args.project, DEFAULT_TENANT)
+    result = {"command": "reset", "ok": True, **r}
+
+    def prose():
+        print(f"已重置项目 {r['project_id']}；备份保存在 {r['backup']}。")
+        print("如需恢复请使用 `aipd recover --backup <dir>` 或 `aipd resume --backup`。")
+    _emit(args, result, prose)
+    return 0
+
+
+def cmd_recover(args):
+    """失败恢复：回滚最近可撤销操作；或从备份恢复数据库。"""
+    from aipd_os.experience.onboarding import recover_project
+    from aipd_os.experience.operations import revert_operation
+    from aipd_os.state.db import AIPDStateDB
+
+    if args.backup:
+        r = recover_project(args.db, args.project, args.backup)
+        result = {"command": "recover", "ok": True, **r}
+        _emit(args, result, lambda: print(f"已从备份恢复：{r['restored']}"))
+        return 0
+
+    db = AIPDStateDB(args.db)
+    pid = args.project or _resolve_project(db)
+    r = revert_operation(db, pid, DEFAULT_TENANT)
+    result = {"command": "recover", "ok": True, "project_id": pid, **r}
+    _emit(args, result, lambda: print(f"失败恢复：{r['note']}"))
+    return 0
+
+
+# --------------------------------------------------------------------------
 # 命令分发表
 # --------------------------------------------------------------------------
 COMMAND_FUNCS: Dict[str, Any] = {
@@ -1005,6 +1293,15 @@ COMMAND_FUNCS: Dict[str, Any] = {
     "test": cmd_test,
     "eval": cmd_eval,
     "package": cmd_package,
+    # v5.5 新增：运维体检与详细版本
+    "version": cmd_version,
+    "doctor": cmd_doctor,
+    # P2 所有者 UX
+    "operate": cmd_operate,
+    "dashboard": cmd_dashboard,
+    "onboard": cmd_onboard,
+    "reset": cmd_reset,
+    "recover": cmd_recover,
 }
 
 PLANNED_COMMANDS = list(COMMAND_FUNCS.keys())

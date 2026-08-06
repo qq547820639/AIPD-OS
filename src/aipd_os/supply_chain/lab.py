@@ -28,7 +28,7 @@ REPORT_EXTENSIONS = (".pdf", ".docx")
 
 def _normalize_lab_record(record: Dict[str, Any], stage: str) -> Dict[str, Any]:
     record = dict(record or {})
-    return {
+    normalized = {
         "stage": str(record.get("stage") or stage).strip().lower(),
         "test_item": str(record.get("test_item", "")).strip(),
         "sample_id": str(record.get("sample_id", "")).strip(),
@@ -36,6 +36,11 @@ def _normalize_lab_record(record: Dict[str, Any], stage: str) -> Dict[str, Any]:
         "pass_fail": str(record.get("pass_fail", "")).strip().lower(),
         "notes": str(record.get("notes", "")).strip(),
     }
+    # 保留根因等扩展字段，供后续根因提取等下游分析使用
+    for extra in ("root_cause", "failure_mode", "comment"):
+        if extra in record and record.get(extra) is not None:
+            normalized[extra] = record[extra]
+    return normalized
 
 
 def _records_from_rows(rows: List[Dict[str, Any]], stage: str, source: str, fmt: str) -> Dict[str, Any]:

@@ -18,7 +18,7 @@ _logger = get_logger("aipd.cli")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aipd",
-        description="AIPD-OS v5.0 命令行工具",
+        description="AIPD-OS v5.5 命令行工具",
     )
     parser.add_argument(
         "--version",
@@ -85,7 +85,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("run-evals", help="运行评估套件")
     p.add_argument("--evals", default="evals/evals.json")
-    p.add_argument("--provider", choices=["fake", "model"], default="fake")
+    p.add_argument("--provider",
+                   choices=["fake", "deterministic-fixture", "contract-test",
+                            "model", "real-model", "pure-contract"],
+                   default="fake")
     p.add_argument("--out")
     p.add_argument("--threshold", type=float, default=0.1)
     p.add_argument("--baseline")
@@ -231,7 +234,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("eval", help="运行评估套件。"
                                     " Example: aipd eval --evals evals/evals.json --provider fake --out evals_out")
     p.add_argument("--evals", default="evals/evals.json")
-    p.add_argument("--provider", choices=["fake", "model"], default="fake")
+    p.add_argument("--provider",
+                   choices=["fake", "deterministic-fixture", "contract-test",
+                            "model", "real-model", "pure-contract"],
+                   default="fake")
     p.add_argument("--out")
     p.add_argument("--threshold", type=float, default=0.1)
     p.add_argument("--json", action="store_true")
@@ -245,11 +251,64 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["package"])
 
+    # ---- v5.5 新增：运维体检与详细版本 ----
+    p = sub.add_parser("version", help="打印包版本。搭配 --verbose 打印 Git HEAD / 构建时间 / 能力矩阵版本 / 发布清单哈希。"
+                                       " Example: aipd version --verbose")
+    p.add_argument("--verbose", action="store_true")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["version"])
+
+    p = sub.add_parser("doctor", help="一键体检：包版本、依赖可用性、配置、外部能力、数据库、对象存储与权限。"
+                                      " Example: aipd doctor --json")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["doctor"])
+
+    # ---- P2 所有者 UX ----
+    p = sub.add_parser("operate", help="自然语言操作闭环：意图→影响→受影响制品→成本/时间→可撤销预览→批准→自动返工→自动验收→摘要。"
+                                       " Example: aipd operate --db state.db --project p1 --intent '成本降低20%并且外观更工业化'")
+    p.add_argument("--db", required=True)
+    p.add_argument("--project")
+    p.add_argument("--intent", required=True, help="一句自然语言所有者指令")
+    p.add_argument("--approve", action="store_true", help="绕过批准门禁直接执行（供 CI/脚本）")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["operate"])
+
+    p = sub.add_parser("dashboard", help="统一 Owner Dashboard：默认只展示 10 个所有者区块；--compact 紧凑移动端；--json 输出纯 JSON。"
+                                         " Example: aipd dashboard --db state.db --project p1")
+    p.add_argument("--db", required=True)
+    p.add_argument("--project")
+    p.add_argument("--compact", action="store_true", help="紧凑/窄终端友好输出")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["dashboard"])
+
+    p = sub.add_parser("onboard", help="首次使用引导：一句话建项→立即产出第一份结果→展示能力与需外部配置项→Provider 引导→示例项目→恢复/重置。"
+                                       " Example: aipd onboard --db state.db --idea '做一款外骨骼'")
+    p.add_argument("--db", required=True)
+    p.add_argument("--idea", required=True, help="一句话产品想法")
+    p.add_argument("--project")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["onboard"])
+
+    p = sub.add_parser("reset", help="重置项目（先备份再删除）。"
+                                     " Example: aipd reset --db state.db --project p1")
+    p.add_argument("--db", required=True)
+    p.add_argument("--project", required=True)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["reset"])
+
+    p = sub.add_parser("recover", help="失败恢复：回滚最近可撤销操作；或 --backup 从备份恢复数据库。"
+                                       " Example: aipd recover --db state.db --project p1")
+    p.add_argument("--db", required=True)
+    p.add_argument("--project")
+    p.add_argument("--backup", help="备份目录（可选，无则回滚可撤销操作）")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["recover"])
+
     return parser
 
 
 def _cmd_usage(args: argparse.Namespace) -> int:
-    print("AIPD-OS v5.0 支持的命令：")
+    print("AIPD-OS v5.5 支持的命令：")
     for cmd in PLANNED_COMMANDS:
         print(f"  aipd {cmd}")
     return 0

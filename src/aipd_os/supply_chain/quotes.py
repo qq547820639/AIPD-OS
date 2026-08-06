@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import csv
+import io
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -23,7 +24,7 @@ CANONICAL_CSV_HEADER = [
     "lead_time_days",
 ]
 
-SUPPORTED_EXTENSIONS = (".csv", ".json")
+SUPPORTED_EXTENSIONS = (".csv", ".json", ".xlsx", ".pdf")
 
 
 def _now() -> str:
@@ -73,7 +74,121 @@ def _records_from_rows(rows: List[Dict[str, Any]], source: str) -> Dict[str, Any
         "format": "dict",
         "records": records,
         "count": len(records),
+        "errors": [],
     }
+
+
+def _records_result(rows: List[Dict[str, Any]], source: str, fmt: str) -> Dict[str, Any]:
+    records = [normalize_quote(r) for r in rows]
+    return {
+        "source": source,
+        "format": fmt,
+        "records": records,
+        "count": len(records),
+        "errors": [],
+    }
+
+
+def _not_verified_result(source: str, fmt: str, error: str) -> Dict[str, Any]:
+    """无法解析时返回空记录 + 错误，数据保持 not_verified（绝不虚构）。"""
+    return {
+        "source": source,
+        "format": fmt,
+        "records": [],
+        "count": 0,
+        "errors": [{"error": error, "external_dependency": True, "not_verified": True}],
+    }
+
+
+def _parse_rows_from_xlsx(rows: List[tuple]) -> List[Dict[str, Any]]:
+    if not rows:
+        return []
+    header = [str(h).strip().lower() if h is not None else "" for h in rows[0]]
+    parsed: List[Dict[str, Any]] = []
+    for line in rows[1:]:
+        rec: Dict[str, Any] = {}
+        for i, col in enumerate(header):
+            rec[col] = line[i] if i < len(line) else None
+        parsed.append(rec)
+    return parsed
+
+
+def _parse_quote_xlsx(p: Path) -> Dict[str, Any]:
+    """解析 .xlsx 报价；需要 openpyxl，缺失时返回 not_verified 结构。"""
+    try:
+        import openpyxl  # noqa: WPS433
+    except ImportError:
+        return _not_verified_result(
+            str(p), "xlsx",
+            "openpyxl 未安装，无法解析 xlsx 报价；请安装 openpyxl 或走外部工具（数据保持 not_verified）",
+        )
+    try:
+        wb = openpyxl.load_workbook(str(p), data_only=True)
+        ws = wb.active
+        rows = list(ws.iter_rows(values_only=True))
+    except Exception as exc:  # noqa: BLE001 - 解析失败保持 not_verified
+        return _not_verified_result(str(p), "xlsx", f"xlsx 解析失败: {exc}")
+    return _records_result(_parse_rows_from_xlsx(rows), str(p), "xlsx")
+
+
+def _rows_from_pdf_text(text: str) -> Dict[str, Any]:
+    """从 PDF 提取的纯文本中尝试结构化报价。
+
+    仅做确定性启发式：先尝试 CSV 行解析，再尝试 JSON。无法提取时返回
+    空记录 + 错误（not_verified）。
+    """
+    text = (text or "").strip()
+    if not text:
+        return {"records": [], "errors": ["PDF 文本为空，无法提取报价"]}
+    # 尝试 CSV 行
+    trimmed = "\n".join(ln for ln in text.splitlines() if ln.strip())
+    try:
+        reader = csv.DictReader(io.StringIO(trimmed))
+        rows = list(reader)
+        if rows and any(rows):
+            return {"records": rows, "errors": []}
+    except Exception:  # noqa: BLE001
+        pass
+    # 尝试 JSON
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict):
+            rows = data.get("records") or data.get("quotes") or []
+        elif isinstance(data, list):
+            rows = data
+        else:
+            rows = []
+        if rows:
+            return {"records": rows, "errors": []}
+    except Exception:  # noqa: BLE001
+        pass
+    return {"records": [], "errors": ["无法从 PDF 文本提取结构化报价（数据保持 not_verified）"]}
+
+
+def _parse_quote_pdf(p: Path) -> Dict[str, Any]:
+    """解析 .pdf 报价；通过简单的文本提取器（pypdf/PyPDF2，可选）。
+
+    缺少解析库或无法提取结构化报价时，返回 not_verified 结构（不虚构）。
+    """
+    try:
+        from pypdf import PdfReader  # noqa: WPS433
+    except ImportError:
+        try:
+            from PyPDF2 import PdfReader  # noqa: WPS433
+        except ImportError:
+            return _not_verified_result(
+                str(p), "pdf",
+                "pypdf/PyPDF2 未安装，无法解析 pdf 报价；请安装 pypdf 或走外部工具（数据保持 not_verified）",
+            )
+    try:
+        reader = PdfReader(str(p))
+        text = "\n".join((page.extract_text() or "") for page in reader.pages)
+    except Exception as exc:  # noqa: BLE001
+        return _not_verified_result(str(p), "pdf", f"pdf 解析失败: {exc}")
+    extracted = _rows_from_pdf_text(text)
+    if extracted["errors"]:
+        return _not_verified_result(str(p), "pdf", "; ".join(extracted["errors"]))
+    return _records_result(extracted["records"], str(p), "pdf")
 
 
 def parse_quote_file(path: Union[str, Path, List[Dict[str, Any]]]) -> Dict[str, Any]:
@@ -102,6 +217,7 @@ def parse_quote_file(path: Union[str, Path, List[Dict[str, Any]]]) -> Dict[str, 
             "header": CANONICAL_CSV_HEADER,
             "records": records,
             "count": len(records),
+            "errors": [],
         }
 
     if ext == ".json":
@@ -119,7 +235,14 @@ def parse_quote_file(path: Union[str, Path, List[Dict[str, Any]]]) -> Dict[str, 
             "format": "json",
             "records": records,
             "count": len(records),
+            "errors": [],
         }
+
+    if ext == ".xlsx":
+        return _parse_quote_xlsx(p)
+
+    if ext == ".pdf":
+        return _parse_quote_pdf(p)
 
     raise ValueError(
         f"不支持的报价文件格式: {ext or '(无扩展名)'}；支持: {', '.join(SUPPORTED_EXTENSIONS)}"

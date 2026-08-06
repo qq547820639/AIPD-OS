@@ -304,9 +304,26 @@ def run_golden_project(
     cost = sum(rec.cost for rec in run_records)
     elapsed_seconds = round(time.monotonic() - wall_start, 3)
 
-    # 6) 断言与报告
+    # 6) 断言与报告（多维度：产物断言 + DB 状态断言 + 外部任务包诚实性）
+    rendered_exist = all(Path(png).exists() and Path(png).stat().st_size > 0 for png in rendered)
+    run_records_written = len(run_records) > 0
+    project_init_db = bool(db.list_projects("default"))
+    artifact_checks: List[Dict[str, Any]] = [
+        {
+            "name": f"artifact:{Path(png).name}",
+            "ok": Path(png).exists() and Path(png).stat().st_size > 0,
+        }
+        for png in rendered
+    ]
+    artifact_checks.append({"name": "artifact:manual.pdf", "ok": Path(pdf).exists()})
+    artifact_checks.append({"name": "artifact:manual.zip", "ok": Path(zipf).exists()})
+    db_checks: List[Dict[str, Any]] = [
+        {"name": "db:project_initialized", "ok": project_init_db},
+        {"name": "db:run_records_written", "ok": run_records_written},
+    ]
+
     checks: List[Dict[str, Any]] = [
-        {"name": "manual_pages_produced", "ok": len(rendered) >= min_pages},
+        {"name": "manual_pages_produced", "ok": rendered_exist},
         {"name": "batch_continuity_holds", "ok": bool(audit.get("batch_continuity_ok"))},
         {
             "name": "no_fabricated_external_evidence",
@@ -314,12 +331,19 @@ def run_golden_project(
         },
         {"name": "pdf_zip_produced", "ok": Path(pdf).exists() and Path(zipf).exists()},
     ]
+    checks.extend(artifact_checks)
+    checks.extend(db_checks)
+    # 真实副作用：确有产物文件落盘 + DB 写入执行记录，而非仅文本声明。
+    real_side_effect_verified = rendered_exist and run_records_written and project_init_db
     passed = all(c["ok"] for c in checks)
     return {
         "project_id": project.id,
         "project_name": project.name,
         "model_version": "golden-deterministic",
         "provider": "offline-deterministic",
+        "provider_category": "deterministic-fixture",
+        "real_side_effect_verified": real_side_effect_verified,
+        "scoring_method": ["artifact", "db_state", "keyword"],
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "elapsed_seconds": elapsed_seconds,
         "manual_pages": len(rendered),

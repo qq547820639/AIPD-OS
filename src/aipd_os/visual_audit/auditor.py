@@ -171,11 +171,19 @@ class VisualAuditor:
         non_vision_fail = any(
             (not d.get("passed")) and (not d.get("requiring_vision")) for d in dims.values()
         )
-        passed = (not non_vision_fail) and (not vision_pending or True)
+        # 视觉待审维度存在时，页面不得 passed（保持 HOLD/not_verified，绝不假通过）。
+        passed = (not non_vision_fail) and (not vision_pending)
+        if passed:
+            status = "verified"
+        elif vision_pending:
+            status = "hold"
+        else:
+            status = "failed"
 
         return {
             "page_id": page_defn.get("page_id"),
             "passed": passed,
+            "status": status,
             "non_vision_passed": not non_vision_fail,
             "dimensions": dims,
             "pixel_statistics_only": pixel_statistics_only,
@@ -243,8 +251,16 @@ class VisualAuditor:
             and monotonic
             and batch_continuity
         )
+        # 顶层状态：任何视觉待审页面 → hold（not_verified），绝不 passed。
+        if overall:
+            batch_status = "verified"
+        elif any(r.get("status") == "hold" or r.get("vision_pending") for r in results):
+            batch_status = "hold"
+        else:
+            batch_status = "failed"
         return {
             "passed": overall,
+            "status": batch_status,
             "page_count": len(results),
             "pages": results,
             "failing_pages": failing,

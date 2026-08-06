@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # 已知来源类型 -> 基础得分
 SOURCE_CREDIBILITY = {
@@ -100,11 +100,87 @@ def separate_facts_from_assumptions(evidence_list: List[Dict[str, Any]]) -> Dict
     return {"facts": facts, "assumptions": assumptions}
 
 
+# ------------------------------------------------------------------ 来源元数据
+# 来源类型 -> 元数据（名称、性质、是否官方/一手）
+SOURCE_METADATA: Dict[str, Dict[str, Any]] = {
+    "peer_reviewed": {"label": "同行评审文献", "official": False, "first_hand": True},
+    "official_standard": {"label": "官方标准", "official": True, "first_hand": True},
+    "patent": {"label": "专利文献", "official": True, "first_hand": True},
+    "industry_report": {"label": "行业报告", "official": False, "first_hand": False},
+    "vendor_claim": {"label": "厂商宣称", "official": False, "first_hand": True},
+    "forum": {"label": "社区讨论", "official": False, "first_hand": False},
+    "unknown": {"label": "未知来源", "official": False, "first_hand": False},
+}
+
+
+def source_metadata(source: str) -> Dict[str, Any]:
+    """返回来源元数据；未知来源返回 unknown 元数据。"""
+    return SOURCE_METADATA.get(source or "", SOURCE_METADATA["unknown"])
+
+
+def timeliness(days_old: float) -> Dict[str, Any]:
+    """时效评级：新鲜 / 一般 / 陈旧。"""
+    if days_old < 0:
+        return {"freshness": "unknown"}
+    if days_old <= 180:
+        return {"freshness": "fresh", "fresh": True}
+    if days_old <= 730:
+        return {"freshness": "aging", "fresh": False}
+    return {"freshness": "stale", "fresh": False}
+
+
+def confidence_tag(confidence: float) -> str:
+    """置信度离散化标签。"""
+    if confidence >= 0.7:
+        return "high"
+    if confidence >= 0.4:
+        return "medium"
+    return "low"
+
+
+# ------------------------------------------------------------------ 冲突解析
+def resolve_conflicts(findings: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """解析同一 key 的多条证据冲突。
+
+    不静默选择某一方：当存在事实性冲突时，返回 ``conflict=True`` 并列出冲突项，
+    由调用方决定如何处理；仅在无冲突时标记 resolved。
+    """
+    if not findings:
+        return {"conflict": False, "groups": [], "resolved": True}
+
+    groups: Dict[str, List[Dict[str, Any]]] = {}
+    for item in findings:
+        key = item.get("key") or "unknown"
+        groups.setdefault(key, []).append(item)
+
+    conflicts = []
+    for key, items in groups.items():
+        values = {_norm_value(i.get("value")) for i in items if "value" in i}
+        if len(values) > 1:
+            conflicts.append({"key": key, "items": items, "distinct_values": sorted(values)})
+
+    return {
+        "conflict": len(conflicts) > 0,
+        "groups": groups,
+        "conflicts": conflicts,
+        "resolved": len(conflicts) == 0,
+    }
+
+
+def _norm_value(value: Any) -> str:
+    return str(value).strip().lower()
+
+
 __all__ = [
     "SOURCE_CREDIBILITY",
+    "SOURCE_METADATA",
     "source_credibility",
+    "source_metadata",
     "time_decay",
+    "timeliness",
+    "confidence_tag",
     "assumption_factor",
     "score_evidence",
     "separate_facts_from_assumptions",
+    "resolve_conflicts",
 ]

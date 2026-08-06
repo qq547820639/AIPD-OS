@@ -18,6 +18,29 @@ _CASE_TAG = re.compile(r"\[eval case:\s*([^\]]+)\]")
 # 请求体默认模型名（可被 AIPD_EVAL_MODEL_VERSION 覆盖）。
 _DEFAULT_MODEL = "gpt-4o-mini"
 
+# ---------------------------------------------------------------------------
+# Provider 类别（诚实报告的核心：把夹具与真实模型严格区分）
+# ---------------------------------------------------------------------------
+# 确定性脚本化夹具：contract-test。其「通过」绝不代表真实模型行为。
+PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE = "deterministic-fixture"
+# 真实模型端点：真实网络调用，纳入「模型行为通过率」。
+PROVIDER_CATEGORY_REAL_MODEL = "real-model"
+# 纯契约：由实际应用代码驱动（无模型、无夹具）。
+PROVIDER_CATEGORY_PURE_CONTRACT = "pure-contract"
+
+PROVIDER_CATEGORIES = (
+    PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE,
+    PROVIDER_CATEGORY_REAL_MODEL,
+    PROVIDER_CATEGORY_PURE_CONTRACT,
+)
+
+# 各类别的展示标签（报告中明确标注，绝不让夹具被误读为真实模型）。
+CATEGORY_LABELS = {
+    PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE: "deterministic-fixture (contract-test)",
+    PROVIDER_CATEGORY_REAL_MODEL: "real-model",
+    PROVIDER_CATEGORY_PURE_CONTRACT: "pure-contract (code-driven)",
+}
+
 
 class ModelNotConfiguredError(RuntimeError):
     """真实模型未配置（缺端点或密钥）。评估器应把该 case 诚实标记为外部依赖。"""
@@ -28,6 +51,16 @@ class CompletionProvider:
 
     def model(self) -> str:
         return "unknown"
+
+    def category(self) -> str:
+        """返回 provider 类别（deterministic-fixture / real-model / pure-contract）。"""
+        return PROVIDER_CATEGORY_PURE_CONTRACT
+
+    def endpoint_type(self) -> str:
+        return ""
+
+    def real_network_call(self) -> bool:
+        return False
 
     def complete(self, messages: List[Dict[str, Any]]) -> str:
         raise NotImplementedError
@@ -43,6 +76,15 @@ class RecordedCompletionProvider(CompletionProvider):
 
     def model(self) -> str:
         return self._model_version
+
+    def category(self) -> str:
+        return PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE
+
+    def endpoint_type(self) -> str:
+        return "scripted"
+
+    def real_network_call(self) -> bool:
+        return False
 
     def complete(self, messages: List[Dict[str, Any]]) -> str:
         case_id = ""
@@ -85,6 +127,15 @@ class EnvCompletionProvider(CompletionProvider):
 
     def model(self) -> str:
         return self._model_version
+
+    def category(self) -> str:
+        return PROVIDER_CATEGORY_REAL_MODEL
+
+    def endpoint_type(self) -> str:
+        return "openai-compatible-chat"
+
+    def real_network_call(self) -> bool:
+        return True
 
     def complete(self, messages: List[Dict[str, Any]]) -> str:
         if not self._endpoint or not self._key:
@@ -133,4 +184,9 @@ __all__ = [
     "RecordedCompletionProvider",
     "EnvCompletionProvider",
     "ModelNotConfiguredError",
+    "PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE",
+    "PROVIDER_CATEGORY_REAL_MODEL",
+    "PROVIDER_CATEGORY_PURE_CONTRACT",
+    "PROVIDER_CATEGORIES",
+    "CATEGORY_LABELS",
 ]

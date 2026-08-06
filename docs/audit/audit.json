@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-08-06T04:45:18",
+  "generated_at": "2026-08-06T11:00:12",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "67fb368bdc56afc4e489f12dd8aaf80893b8490c",
-  "latest_commit_time": "2026-08-06 04:16:36 +0800",
-  "version": "5.2.0",
+  "latest_commit_sha": "61a0e74b180ae4c72ff7c4811d5ceb29a644a5d5",
+  "latest_commit_time": "2026-08-06 07:45:32 +0800",
+  "version": "5.5.0",
   "file_tree": {
     "top_entries": [
       ".git/",
@@ -24,6 +24,7 @@
       "Dockerfile",
       "docs/",
       "evals/",
+      "evals_out/",
       "LICENSE",
       "migrations/",
       "pyproject.toml",
@@ -46,7 +47,7 @@
       "THREAT_MODEL.md"
     ],
     "per_dir_file_count": {
-      ".git": 7,
+      ".git": 9,
       ".github": 0,
       ".pytest_cache": 3,
       ".ruff_cache": 2,
@@ -57,14 +58,15 @@
       "build": 0,
       "docs": 1,
       "evals": 13,
+      "evals_out": 0,
       "migrations": 2,
       "references": 36,
       "releases": 0,
-      "scripts": 29,
+      "scripts": 31,
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 37
+      "tests": 53
     }
   },
   "tags": [],
@@ -80,66 +82,215 @@
       "dependency-audit",
       "license-scan",
       "package-build",
-      "audit"
+      "audit",
+      "skill-quality-and-coverage",
+      "release-ready"
     ]
   },
   "release_manifest_verification": {
     "present": true,
-    "version": "5.1.0",
+    "version": "5.4.0",
     "parsed": true,
-    "total_files": 211,
-    "hash_matches": 205,
-    "hash_mismatch_count": 6,
+    "total_files": 308,
+    "hash_matches": 269,
+    "hash_mismatch_count": 39,
     "mismatches": [
       {
-        "path": "docs/audit/audit.json",
+        "path": ".github/workflows/ci.yml",
         "reason": "hash_mismatch",
-        "expected": "7ef3078b441f295dd57c926e2979076b0af205528d3c499db4fe58f2b16e1604",
-        "actual": "f8ddbbdab93387ee3f907a78700da6fa456c1236ffe417baa44b38046a87758c"
+        "expected": "b4273fe30c8f4840f36e47f756e8ec5d34e8a7c24b7bb524ce47cddcf8a0a854",
+        "actual": "09481e3538f6e9d9c5e11d6bd6d60f320de9a9dcc6ff6c27a5d877a79c05bef5"
       },
       {
-        "path": "docs/audit/v5.1-version-truth-audit.json",
+        "path": ".gitignore",
         "reason": "hash_mismatch",
-        "expected": "ff761617e46de3f8f3c0b660417f3cf57accb117abc420df565fc11aed0c3737",
-        "actual": "837321ad459c6264b4447b0e1672d8a1ac2d9ee921c73f4f6f14e621f263217e"
+        "expected": "4aae3bad57efd4857e172221a305be127dcf13278389cc90919d56ca97582651",
+        "actual": "fd026a4efd652c1ea5907b4527521c0ccd97393a4282a53e9631339468619129"
       },
       {
-        "path": "docs/audit/v5.1-version-truth-audit.md",
+        "path": ".trae/specs/v5.4-verifiable-completion-audit-edition/checklist.md",
         "reason": "hash_mismatch",
-        "expected": "585950f225c5192b1fc3ac32b10031715a5bd93fc19d9410efef6eb645a1bf9d",
-        "actual": "a07f37b6f7b5fbecc2a7a95f5507153e058806f65d1f348b66c11ca10bc5c197"
+        "expected": "bb1cd19f584d2471cd924b39adff8667dde7edd8be81d6cbd43706ac383f0d1a",
+        "actual": "490dd3168d722959f384bef93c2ba092e6c5188329087df9594bdb8448425d50"
       },
       {
-        "path": "src/aipd_os.egg-info/PKG-INFO",
+        "path": ".trae/specs/v5.4-verifiable-completion-audit-edition/tasks.md",
         "reason": "hash_mismatch",
-        "expected": "885334ad08a84af0c7b222dc9d0eaa807b8447267ae065a7082b5bea3edc2fed",
-        "actual": "b01f9c98a065ad8b51ff38ed393c8c360ee38889778ea936a2cb6c95f3bed7ec"
+        "expected": "3747371b67b6d0ae7493e415ec62674ad9dd2f0cdd98415cea5b906bbff196d6",
+        "actual": "ab3738cfbb68fd19ecb180084bc34b0483875f85ac47b94e6b6eafa4a0d15f3b"
       },
       {
-        "path": "src/aipd_os.egg-info/SOURCES.txt",
+        "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "8de8008078370330737232c98de0bc25ae71728c740a185b205cd13095fbb66d",
-        "actual": "92826a41599889057a1c75420fb2a7c61c7ce997a26fcf00a2e7be953086b67f"
+        "expected": "c7fcdfdb7d6e610e98ecd73513a9730d9f75b5f3f374cf3a8eb2321720c35ea1",
+        "actual": "4468db6a67a9ad79328bb897ce29d83efcd25970f052a4b59affe5441c82819d"
+      },
+      {
+        "path": "QUICKSTART.md",
+        "reason": "hash_mismatch",
+        "expected": "d6bac6bf49a23ccad9485b8813664c7231848f356a8d9aa6060288283bf0842b",
+        "actual": "70d76bdd6cf5651fbf2c5a8f8bc1e20e459ae521e61723535b8c6d336251584b"
+      },
+      {
+        "path": "README.md",
+        "reason": "hash_mismatch",
+        "expected": "02256fd36f00e08964834327efdac51f055cadec71f1edbf3d750a9945f971ff",
+        "actual": "eaf30a1c53d5e5f84f2bd68e26cd230844c2d8d1143863518ca8905ca470e071"
+      },
+      {
+        "path": "SECURITY.md",
+        "reason": "hash_mismatch",
+        "expected": "df5ba93e62762b2460a3182727f17c61234a6afcb76010e1e60f8593d1f65d03",
+        "actual": "4bb2d4e367a82d91fb847cdbf776f2e06c87f9c88b9ce79037e4debf5b48df44"
+      },
+      {
+        "path": "SKILL.md",
+        "reason": "hash_mismatch",
+        "expected": "58784185f4f9849bf5209e38bdf64f8b2f3c709685035e7cc9ea8f3c03f91a4f",
+        "actual": "ed07416633be3698418f888dccf63c7724b4348aa6af03d44de3c28c4e5291d2"
+      },
+      {
+        "path": "pyproject.toml",
+        "reason": "hash_mismatch",
+        "expected": "e239ac06f049da8c274770b7e6d067e0f60302c3b7dcc42143a0b384d76e1f10",
+        "actual": "7dbd2ba95656b81a14108fff18d5a8ef8df51db51f6dcb127319d8e901fa140b"
+      },
+      {
+        "path": "scripts/manual_chain.py",
+        "reason": "hash_mismatch",
+        "expected": "d75c105955684eccfcc5a7a7f6e63fb82de64fdf5a0e640547e4561c705b7149",
+        "actual": "0ae6adf50497573f3c76c19b6b7cf398debc32d22a8b4324001efc5908bbab6e"
+      },
+      {
+        "path": "scripts/manual_chain_gate.py",
+        "reason": "hash_mismatch",
+        "expected": "a80adab8ae4aacd448a0efd2d6cfac45996f8e1a233ac274677d5cf2ab5a6544",
+        "actual": "8012c6c4142bc918b4c2c1ba955dbc5dcc922693b47b36a4676cf5435be46821"
+      },
+      {
+        "path": "scripts/regenerate_release_manifest.py",
+        "reason": "hash_mismatch",
+        "expected": "49af058ab531ddca885999264a3087a2698ec6f59cb19fbb6cef6e44325400a3",
+        "actual": "bf96cf95896bcca5bcd10b3aae74a40e0d0ba331c17a81ad12136a9bfff7360a"
+      },
+      {
+        "path": "src/aipd_os/__init__.py",
+        "reason": "hash_mismatch",
+        "expected": "e953db69d52520b5893b3d34fbf7d784a32b920dc539c1790c72aeaa9b56447f",
+        "actual": "31afb3270ecfbba11867c71fa4b185e37b3b7be7b2ab82c74389b77705c5c0b9"
+      },
+      {
+        "path": "src/aipd_os/cad/__init__.py",
+        "reason": "hash_mismatch",
+        "expected": "74c2963e5bae4d5dfe3267b78dbfe4b299bc6817087b56cf6d2b1bd01914ee92",
+        "actual": "804e55200cdd3c5633bb1395340a9c2023993bd73292492fa4e9a0ffdf6922cc"
+      },
+      {
+        "path": "src/aipd_os/cli/commands.py",
+        "reason": "hash_mismatch",
+        "expected": "cf3bbb0325da2d2cda5c9c9ca078b3e64bf7f4f03d4e3ff8eb88ef18f09f563e",
+        "actual": "3218b2306e10e396d66cf8b11ec00796dde9f22088a1e041c3ab303620d2373b"
+      },
+      {
+        "path": "src/aipd_os/cli/main.py",
+        "reason": "hash_mismatch",
+        "expected": "282c8c883bcd574531d80c508e215563063acdf0c574bcffb295d483e4dc9b09",
+        "actual": "1781a102ab6f06eba1930642b7e19f07ccdb1d730925415b1455a7c4de8c0fe3"
+      },
+      {
+        "path": "src/aipd_os/evals_runner/__init__.py",
+        "reason": "hash_mismatch",
+        "expected": "0481280e816f48673410460d9e3afe0ad851bc7ce1b7f41c5b99ee9cdb725e8f",
+        "actual": "b5f1044870924ab6f228696e71f8ca18b7ca198214847e6e1a8e82b93930c645"
+      },
+      {
+        "path": "src/aipd_os/evals_runner/cli.py",
+        "reason": "hash_mismatch",
+        "expected": "22892975ff4a4fa557539ebc00d1ce79d9d49c532b5c7c85f0810d89f668e259",
+        "actual": "e3a9ab6c2073b02412e9a6b00198158c2cf856b43fbc5c67c34a7cfffd7b45c6"
       },
       {
         "path": "src/aipd_os/evals_runner/completion.py",
         "reason": "hash_mismatch",
-        "expected": "e42c2598763624c8031dc0548e7536e6a6c5f4577d13e1649eabca051bce72e9",
-        "actual": "70b5fa2d24ac51877eb590e4bf93d667d6a8345a503db997ed87f9284e616c39"
+        "expected": "70b5fa2d24ac51877eb590e4bf93d667d6a8345a503db997ed87f9284e616c39",
+        "actual": "eb6e332e8b5a1f82643ead9212dcbdd399edda7956c801397f6b7c08e6042fa3"
       }
     ]
   },
   "untracked_or_generated": [
-    " M .github/workflows/ci.yml",
-    " M pyproject.toml",
-    " M src/aipd_os/evals_runner/completion.py",
-    "?? .trae/specs/v5.2-capability-matrix-truth-edition/",
-    "?? docs/audit/capability_matrix.json",
-    "?? docs/audit/capability_matrix.md",
-    "?? docs/audit/repository_snapshot.json",
-    "?? scripts/capability_matrix.py",
-    "?? tests/test_capability_matrix.py",
-    "?? tests/test_completion_endpoint.py",
+    "A  .trae/specs/v5.5-real-closure-trust-ux-edition/checklist.md",
+    "A  .trae/specs/v5.5-real-closure-trust-ux-edition/spec.md",
+    "A  .trae/specs/v5.5-real-closure-trust-ux-edition/tasks.md",
+    "A  src/aipd_os/cad/backends.py",
+    "A  src/aipd_os/cad/evidence.py",
+    "A  src/aipd_os/cad/maturity.py",
+    "A  src/aipd_os/cad/writeback.py",
+    "A  src/aipd_os/execution/closure.py",
+    "A  src/aipd_os/execution/closure_core.py",
+    "A  src/aipd_os/experience/impact_analysis.py",
+    "A  src/aipd_os/experience/intent_engine.py",
+    "A  src/aipd_os/experience/onboarding.py",
+    "A  src/aipd_os/experience/operations.py",
+    "A  src/aipd_os/experience/owner_dashboard.py",
+    "A  src/aipd_os/imggen/providers.py",
+    "A  src/aipd_os/imggen/registry.py",
+    "A  src/aipd_os/research/documents.py",
+    "A  src/aipd_os/research/expiry.py",
+    "A  src/aipd_os/research/fetchers.py",
+    "A  src/aipd_os/research/models.py",
+    "A  src/aipd_os/research/retrieval.py",
+    "A  src/aipd_os/research/writeback.py",
+    "A  src/aipd_os/state/recovery.py",
+    "A  src/aipd_os/state/state_backend.py",
+    "A  src/aipd_os/supply_chain/mail.py",
+    "A  src/aipd_os/supply_chain/persistence.py",
+    "A  src/aipd_os/supply_chain/stages.py",
+    "A  src/aipd_os/supply_chain/writeback.py",
+    "A  tests/test_cad_maturity.py",
+    "A  tests/test_evals_honesty.py",
+    "A  tests/test_execution_closure.py",
+    "A  tests/test_imggen_chain.py",
+    "A  tests/test_integration_smoke.py",
+    "A  tests/test_manual_chain_gate_visual.py",
+    "A  tests/test_owner_ux.py",
+    "A  tests/test_recovery.py",
+    "A  tests/test_research_chain.py",
+    "M  .github/workflows/ci.yml",
+    "M  CHANGELOG.md",
+    "M  QUICKSTART.md",
+    "M  README.md",
+    "M  SECURITY.md",
+    "M  SKILL.md",
+    "M  pyproject.toml",
+    "M  scripts/manual_chain.py",
+    "M  scripts/manual_chain_gate.py",
+    "M  scripts/regenerate_release_manifest.py",
+    "M  src/aipd_os/__init__.py",
+    "M  src/aipd_os/cad/__init__.py",
+    "M  src/aipd_os/cli/commands.py",
+    "M  src/aipd_os/cli/main.py",
+    "M  src/aipd_os/evals_runner/__init__.py",
+    "M  src/aipd_os/evals_runner/cli.py",
+    "M  src/aipd_os/evals_runner/completion.py",
+    "M  src/aipd_os/evals_runner/golden_projects.py",
+    "M  src/aipd_os/evals_runner/runner.py",
+    "M  src/aipd_os/evals_runner/scoring.py",
+    "M  src/aipd_os/evals_runner/versioning.py",
+    "M  src/aipd_os/execution/__init__.py",
+    "M  src/aipd_os/experience/__init__.py",
+    "M  src/aipd_os/imggen/__init__.py",
+    "M  src/aipd_os/research/__init__.py",
+    "M  src/aipd_os/research/credibility.py",
+    "M  src/aipd_os/state/__init__.py",
+    "M  src/aipd_os/state/db.py",
+    "M  src/aipd_os/supply_chain/__init__.py",
+    "M  src/aipd_os/supply_chain/certification.py",
+    "M  src/aipd_os/supply_chain/lab.py",
+    "M  src/aipd_os/supply_chain/quotes.py",
+    "M  src/aipd_os/visual_audit/auditor.py",
+    "M  tests/test_manual_chain_e2e.py",
+    "M  tests/test_packaging.py",
+    "M  tests/test_supply_chain.py",
     "generated src/aipd_os.egg-info"
   ],
   "legacy_cad_conflicts": [],

@@ -102,7 +102,16 @@ aipd audit --repo . --out docs/audit                                 # 生成能
 aipd release check --target C7 --repo .                             # 发布就绪检查
 aipd test                                                           # 运行测试套件
 aipd eval --evals evals/evals.json                                  # 运行评估套件
-aipd package --version 5.3.0 --no-tests                              # 构建发布包
+aipd package --version 5.5.0 --no-tests                              # 构建发布包
+```
+
+## 12. 体检与版本于详细（v5.5）
+
+```bash
+aipd doctor                 # 一键体检：依赖、外部能力、数据库、对象存储、权限
+aipd doctor --json          # 机器可读体检结果
+aipd version                # 打印包版本
+aipd version --verbose      # 打印版本 + Git HEAD + 构建时间 + 能力矩阵版本 + 发布清单哈希
 ```
 
 ## 更多

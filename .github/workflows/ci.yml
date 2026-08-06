@@ -14,8 +14,8 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install
@@ -29,8 +29,8 @@ jobs:
     name: Integration tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install
@@ -39,13 +39,15 @@ jobs:
           pip install -e ".[full,dev]"
       - name: Run integration tests
         run: python -m pytest tests/ -m integration -q
+      - name: Run integration smoke (real end-to-end chains)
+        run: python -m pytest tests/test_integration_smoke.py -q
 
   schema-validation:
     name: Schema validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install
@@ -59,8 +61,8 @@ jobs:
     name: Maturity consistency
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install
@@ -74,7 +76,7 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install gitleaks
         run: |
           curl -sSfL https://github.com/zricethezav/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz \
@@ -87,8 +89,8 @@ jobs:
     name: Dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install
@@ -104,8 +106,8 @@ jobs:
     name: License scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install
@@ -121,8 +123,8 @@ jobs:
     name: Package build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install build
@@ -137,8 +139,8 @@ jobs:
     name: Version truth audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install
@@ -156,8 +158,8 @@ jobs:
     name: Skill quality and coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install
@@ -168,3 +170,36 @@ jobs:
         run: python scripts/skill_quality_audit.py
       - name: Run command coverage and capability matrix tests
         run: python -m pytest tests/test_command_coverage.py tests/test_capability_matrix.py -q
+
+  # 发布门禁：仅当所有 CI job 成功后才生成正式发布产物。
+  # 该 job 复核测试套件与发布清单有效性，通过后才允许触发正式发布流水线。
+  release-ready:
+    name: Release ready gate
+    needs:
+      - unit
+      - integration
+      - schema-validation
+      - maturity-consistency
+      - secret-scan
+      - dependency-audit
+      - license-scan
+      - package-build
+      - audit
+      - skill-quality-and-coverage
+    # 明确注释：本 job 不降级任何既有 job 的失败语义；任一上游失败都会阻止发布。
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -e ".[full,dev]"
+      - name: Run full test suite (excluding external-capability integration)
+        run: python -m pytest tests/ -m "not model_eval" -q
+      - name: Validate release manifest consistency
+        run: python -m pytest tests/test_packaging.py -q
+      - name: Verify version truth
+        run: python scripts/audit_repo.py

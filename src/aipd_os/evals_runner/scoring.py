@@ -7,9 +7,28 @@
 from __future__ import annotations
 
 import re
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 SemCheck = Callable[[str], bool]
+
+# 评分维度（每个 case 记录其实际使用的评分方法）。
+GRADER_KEYWORD = "keyword"
+GRADER_STRUCTURED = "structured"
+GRADER_STATE = "state"
+GRADER_ARTIFACT = "artifact"
+GRADER_DB_STATE = "db_state"
+GRADER_JUDGE = "judge"
+
+GRADER_LABELS = {
+    GRADER_KEYWORD: "keyword must/must_not",
+    GRADER_STRUCTURED: "structured-output contract validation",
+    GRADER_STATE: "deterministic state assertion",
+    GRADER_ARTIFACT: "artifact assertion",
+    GRADER_DB_STATE: "db state assertion",
+    GRADER_JUDGE: "independent judge rubric",
+}
+
+JudgeFn = Callable[[str], Dict[str, Any]]
 
 
 def score_response(text: str, must: List[str], must_not: List[str]) -> Dict:
@@ -151,4 +170,162 @@ def semantic_check(contract: str, text: str) -> bool:
     return checker(text)
 
 
-__all__ = ["score_response", "semantic_checks", "semantic_check"]
+# ---------------------------------------------------------------------------
+# 组合式多维度评分（替代纯关键词子串评分）
+# ---------------------------------------------------------------------------
+def evaluate_output(
+    case_gen,
+    output: str,
+    *,
+    state: Optional[Dict[str, Any]] = None,
+    artifacts: Optional[List[Dict[str, Any]]] = None,
+    db: Optional[Dict[str, Any]] = None,
+    judge: Optional[JudgeFn] = None,
+) -> Dict[str, Any]:
+    """对单个 case 的输出做组合评分，并如实记录实际使用的评分维度。
+
+    维度（按可用性启用）：
+    - keyword：must/must_not 子串判定（对话类 + 结构化契约文本的保底）。
+    - structured：结构化输出契约验证（对 ``case.contracts`` 跑确定性语义检查器）。
+    - state：确定性状态断言（``state`` 为 ``[{'name','expected','actual'}]`` 列表）。
+    - artifact：产物断言（``artifacts`` 中每个产物是否存在）。
+    - db_state：DB 状态断言（``db`` 为 ``[{'name','expected','actual'}]`` 列表）。
+    - judge：可选独立评分者（传入 ``judge(output) -> {'passed': bool, ...}``）。
+
+    返回 ``{'score', 'passed', 'graders', 'checks', 'failure_type'}``。
+    """
+    checks: List[Dict[str, Any]] = []
+    graders: List[str] = []
+    output = output or ""
+
+    must = list(getattr(case_gen, "must", []) or [])
+    must_not = list(getattr(case_gen, "must_not", []) or [])
+    contracts = list(getattr(case_gen, "contracts", []) or [])
+
+    # 1) keyword must/must_not
+    if must or must_not:
+        sc = score_response(output, must, must_not)
+        graders.append(GRADER_KEYWORD)
+        checks.append(
+            {
+                "method": GRADER_KEYWORD,
+                "name": "must/must_not",
+                "ok": bool(sc["passed"]),
+                "detail": {
+                    "missing_must": sc["missing_must"],
+                    "violated_must_not": sc["violated_must_not"],
+                },
+            }
+        )
+
+    # 2) structured-output contract validation
+    if contracts:
+        graders.append(GRADER_STRUCTURED)
+        for c in contracts:
+            ok = semantic_check(c, output)
+            checks.append(
+                {
+                    "method": GRADER_STRUCTURED,
+                    "name": f"contract:{c}",
+                    "ok": bool(ok),
+                    "detail": {"contract": c},
+                }
+            )
+
+    # 3) deterministic state assertions
+    if state:
+        graders.append(GRADER_STATE)
+        for assertion in state:
+            name = assertion.get("name", "state")
+            expected = assertion.get("expected")
+            actual = assertion.get("actual")
+            ok = actual == expected
+            checks.append(
+                {
+                    "method": GRADER_STATE,
+                    "name": f"state:{name}",
+                    "ok": bool(ok),
+                    "detail": {"expected": expected, "actual": actual},
+                }
+            )
+
+    # 4) artifact assertions
+    if artifacts:
+        graders.append(GRADER_ARTIFACT)
+        for art in artifacts:
+            name = art.get("name", "artifact")
+            exists = bool(art.get("exists"))
+            checks.append(
+                {
+                    "method": GRADER_ARTIFACT,
+                    "name": f"artifact:{name}",
+                    "ok": exists,
+                    "detail": {"path": art.get("path"), "sha256": art.get("sha256")},
+                }
+            )
+
+    # 5) db state assertions
+    if db:
+        graders.append(GRADER_DB_STATE)
+        for assertion in db:
+            name = assertion.get("name", "db")
+            expected = assertion.get("expected")
+            actual = assertion.get("actual")
+            ok = actual == expected
+            checks.append(
+                {
+                    "method": GRADER_DB_STATE,
+                    "name": f"db:{name}",
+                    "ok": bool(ok),
+                    "detail": {"expected": expected, "actual": actual},
+                }
+            )
+
+    # 6) optional independent judge rubric
+    if judge is not None:
+        graders.append(GRADER_JUDGE)
+        verdict = judge(output) or {}
+        ok = bool(verdict.get("passed"))
+        checks.append(
+            {
+                "method": GRADER_JUDGE,
+                "name": "independent_judge",
+                "ok": ok,
+                "detail": verdict,
+            }
+        )
+
+    if not checks:
+        return {
+            "score": 0.0,
+            "passed": False,
+            "graders": [],
+            "checks": [],
+            "failure_type": ["no_grader_applied"],
+        }
+
+    passed = all(c["ok"] for c in checks)
+    score = round(sum(1 for c in checks if c["ok"]) / len(checks), 4)
+    failure_type = [c["name"] for c in checks if not c["ok"]]
+    return {
+        "score": score,
+        "passed": passed,
+        "graders": graders,
+        "checks": checks,
+        "failure_type": failure_type,
+    }
+
+
+__all__ = [
+    "score_response",
+    "semantic_checks",
+    "semantic_check",
+    "evaluate_output",
+    "GRADER_KEYWORD",
+    "GRADER_STRUCTURED",
+    "GRADER_STATE",
+    "GRADER_ARTIFACT",
+    "GRADER_DB_STATE",
+    "GRADER_JUDGE",
+    "GRADER_LABELS",
+]

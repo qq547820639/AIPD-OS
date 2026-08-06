@@ -11,6 +11,21 @@ from aipd_os.execution.adapter import AdapterError, ToolAdapter
 from aipd_os.execution.registry import AdapterRegistry
 from aipd_os.execution.runs import RunStore
 from aipd_os.execution.execution_router import ExecutionRouter
+from aipd_os.execution.closure import ClosureRun, RunClosure
+from aipd_os.execution.closure_core import (
+    ClosureStep,
+    ClosureStore,
+    CostLedger,
+    ProgressEvent,
+    RunControl,
+    ReworkMachine,
+    ArtifactVerifier,
+    verify_file,
+    sha256_file,
+    check_maturity_floor,
+    MaturityFloorError,
+    build_failure_message,
+)
 
 __all__ = [
     "ExecutionRecord",
@@ -20,4 +35,19 @@ __all__ = [
     "AdapterRegistry",
     "RunStore",
     "ExecutionRouter",
+    # P1-1 真实闭环
+    "ClosureRun",
+    "RunClosure",
+    "ClosureStep",
+    "ClosureStore",
+    "CostLedger",
+    "ProgressEvent",
+    "RunControl",
+    "ReworkMachine",
+    "ArtifactVerifier",
+    "verify_file",
+    "sha256_file",
+    "check_maturity_floor",
+    "MaturityFloorError",
+    "build_failure_message",
 ]

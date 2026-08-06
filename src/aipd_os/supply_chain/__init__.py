@@ -21,6 +21,31 @@ from aipd_os.supply_chain.analysis import (
     propagate_impact,
     update_facts,
 )
+from aipd_os.supply_chain.certification import (
+    Certification,
+    CertificationRegistry,
+    import_certificate_file,
+    expiring_certs,
+)
+from aipd_os.supply_chain.mail import (
+    MailConnector,
+    SmtpConnector,
+    ImapConnector,
+    LocalMailService,
+    MailError,
+    ExternalDependencyError,
+    MailMessage,
+    SendResult,
+    retry_with_backoff,
+)
+from aipd_os.supply_chain.stages import (
+    import_stage_report,
+    extract_root_cause,
+    propose_corrective_actions,
+    verify_regression,
+)
+from aipd_os.supply_chain.persistence import SupplyChainStore
+from aipd_os.supply_chain.writeback import PhysicalWriteback
 
 __all__ = [
     "normalize_quote",
@@ -38,4 +63,23 @@ __all__ = [
     "mark_regression",
     "propagate_impact",
     "update_facts",
+    "Certification",
+    "CertificationRegistry",
+    "import_certificate_file",
+    "expiring_certs",
+    "MailConnector",
+    "SmtpConnector",
+    "ImapConnector",
+    "LocalMailService",
+    "MailError",
+    "ExternalDependencyError",
+    "MailMessage",
+    "SendResult",
+    "retry_with_backoff",
+    "import_stage_report",
+    "extract_root_cause",
+    "propose_corrective_actions",
+    "verify_regression",
+    "SupplyChainStore",
+    "PhysicalWriteback",
 ]

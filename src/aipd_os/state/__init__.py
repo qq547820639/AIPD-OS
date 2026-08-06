@@ -16,10 +16,14 @@ from .db import (AIPDStateDB, OptimisticLockError, ProjectNotFoundError,
 from .health import health_check
 from .migrations import MIGRATIONS, current_version, migrate, rollback
 from .objects import ObjectStore
+from .recovery import (APPROVAL_CATEGORIES, OBJECT_TYPES, AmbiguousProjectError,
+                       ApprovalRequiredError, UnifiedStateService)
 from .server import StateService, main, run_http
 from .audit import AuditLogger
+from .state_backend import (DEFAULT_TENANT, ExternalDependencyError, LocalStateBackend,
+                            RemoteStateBackend, StateBackend)
 
-__version__ = "5.4.0"
+__version__ = "5.5.0"
 
 __all__ = [
     "AIPDStateDB", "OptimisticLockError", "ProjectNotFoundError", "TenantNotFoundError",
@@ -27,4 +31,8 @@ __all__ = [
     "migrate", "rollback", "MIGRATIONS", "current_version", "BackupManager",
     "CheckpointManager", "AuditLogger", "health_check", "ObjectStore",
     "StateService", "run_http", "main",
+    # P1-5 跨会话恢复：统一状态服务 / 对象存储分层 / 备份恢复 / 恢复摘要
+    "UnifiedStateService", "StateBackend", "LocalStateBackend", "RemoteStateBackend",
+    "ExternalDependencyError", "AmbiguousProjectError", "ApprovalRequiredError",
+    "OBJECT_TYPES", "APPROVAL_CATEGORIES", "DEFAULT_TENANT",
 ]

@@ -50,7 +50,7 @@ def _sha256(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", default="5.4.0")
+    parser.add_argument("--version", default="5.5.0")
     args = parser.parse_args()
     repo = _REPO
 
