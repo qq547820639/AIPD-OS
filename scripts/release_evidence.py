@@ -154,8 +154,13 @@ def _default_source_commit(repo: Path) -> str:
 # --------------------------------------------------------------------------
 # 2) BUNDLE_MANIFEST
 # --------------------------------------------------------------------------
-def generate_bundle_manifest(bundle: Path) -> dict:
-    """对发布压缩包逐条计算条目 sha256，记录 bundle 自身摘要。"""
+def generate_bundle_manifest(bundle: Path, repo_root: Path | None = None) -> dict:
+    """对发布压缩包逐条计算条目 sha256，记录 bundle 自身摘要。
+
+    ``bundle_path`` 记录为**相对路径**（相对 ``repo_root``，缺省当前工作目录），
+    保证 ``BUNDLE_MANIFEST.json`` 可 relocatable —— 不绑定开发机绝对路径，
+    换机/解压后仍能定位 bundle。``bundle`` 字段保留文件名。
+    """
     if not bundle.is_file():
         raise FileNotFoundError(f"bundle not found: {bundle}")
     bundle_sha = _sha256_path(bundle)
@@ -176,10 +181,14 @@ def generate_bundle_manifest(bundle: Path) -> dict:
         entries.append({"path": bundle.name, "size": bundle.stat().st_size,
                         "sha256": bundle_sha})
     entries.sort(key=lambda e: e["path"])
+    base = (repo_root or Path.cwd()).resolve()
+    bundle_path = os.path.relpath(str(bundle.resolve()), str(base))
+    # 统一正斜杠，保证跨平台可解析（Windows 分隔符也会被 os.path 识别）。
+    bundle_path = bundle_path.replace(os.sep, "/")
     return {
         "name": "AIPD-OS bundle manifest",
         "bundle": bundle.name,
-        "bundle_path": str(bundle),
+        "bundle_path": bundle_path,
         "bundle_sha256": bundle_sha,
         "bundle_size": bundle.stat().st_size,
         "entry_count": len(entries),
@@ -225,7 +234,12 @@ def _dependency_lock(repo: Path) -> dict:
 
 
 def _parse_pytest_report(path: Path) -> dict:
-    """解析 pytest 机器可读 JSON 报告；失败则返回不可用信息（不硬编码）。"""
+    """解析 pytest 机器可读 JSON 报告；失败则返回不可用信息（不硬编码）。
+
+    v5.8.1 Commit 15（§38-39 Audit Freshness）：携带 source_commit /
+    package_version / generated_at —— Release Gate 据此判定报告是否
+    STALE（report.source_commit != git HEAD 时不得作为 release PASS 证据）。
+    """
     if not path.is_file():
         return {"present": False, "path": str(path)}
     try:
@@ -255,6 +269,12 @@ def _parse_pytest_report(path: Path) -> dict:
         "failed": failed,
         "total": total,
         "errors": summary.get("error") if isinstance(summary, dict) else None,
+        # v5.8.1 Commit 15：audit freshness 字段（pytest-json-report 无则缺省 None）
+        "source_commit": data.get("source_commit") if isinstance(data, dict) else None,
+        "package_version": (data.get("package_version")
+                            if isinstance(data, dict) else None),
+        "generated_at": (data.get("created") or data.get("generated_at")
+                         if isinstance(data, dict) else None),
     }
 
 
@@ -295,7 +315,7 @@ def write_evidence(repo: Path, out_dir: Path, version: str,
     results = {}
     bundle_manifest = None
     if bundle is not None and bundle.is_file():
-        bundle_manifest = generate_bundle_manifest(bundle)
+        bundle_manifest = generate_bundle_manifest(bundle, repo_root=repo)
         bundle_manifest["version"] = version
         (out_dir / "BUNDLE_MANIFEST.json").write_text(
             json.dumps(bundle_manifest, ensure_ascii=False, indent=2) + "\n",

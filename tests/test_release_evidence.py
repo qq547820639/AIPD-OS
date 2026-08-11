@@ -67,10 +67,16 @@ def _make_repo(tmp_path, commit_evidence: bool, tag: str | None):
     _git(repo, "add", "-A")
     _git(repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "seed")
 
-    # 测试报告（pytest 机器可读 JSON）
+    # 测试报告（pytest 机器可读 JSON；v5.8.1 Commit 15：必须携带 source_commit/
+    # package_version/generated_at —— Audit Freshness 门禁要求）
+    head = _git(repo, "rev-parse", "HEAD")
     report = repo / "report.json"
-    report.write_text(json.dumps({"summary": {"passed": 10, "failed": 0, "total": 10}}),
-                      encoding="utf-8")
+    report.write_text(json.dumps({
+        "summary": {"passed": 10, "failed": 0, "total": 10},
+        "source_commit": head,
+        "package_version": "5.6.0",
+        "created": "2026-01-01T00:00:00Z",
+    }), encoding="utf-8")
 
     bundle = repo / "aipd-os-5.6.0.zip"
     # 第一轮：生成 SOURCE_MANIFEST / PROVENANCE（无 bundle）
@@ -281,3 +287,18 @@ def test_audit_reproducible_in_unpacked_release(tmp_path, keys_env):
     sm = report["source_manifest_verification"]
     assert sm["present"] is True
     assert sm["hash_mismatch_count"] == 0
+
+def test_release_ready_fails_on_stale_test_report(clean_repo):
+    """v5.8.1 Commit 15（§38-39）：test_report.source_commit != HEAD → STALE，
+    不能作为 release PASS 证据。"""
+    prov_path = clean_repo / "PROVENANCE.json"
+    prov = json.loads(prov_path.read_text(encoding="utf-8"))
+    assert prov["test_report"]["source_commit"]
+    prov["test_report"]["source_commit"] = "0" * 40  # 篡改为错误 commit
+    prov_path.write_text(json.dumps(prov), encoding="utf-8")
+    r = _run_gate(clean_repo, None)
+    out = json.loads(r.stdout)
+    assert out["release_ready"] is False, out
+    by_name = {c["check"]: c for c in out["checks"]}
+    assert by_name["test_numbers_from_report"]["passed"] is False
+    assert "STALE" in " ".join(by_name["test_numbers_from_report"]["detail"])

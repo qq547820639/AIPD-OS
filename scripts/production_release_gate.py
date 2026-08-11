@@ -338,10 +338,10 @@ def _regenerate_source_manifest(repo: Path) -> dict:
     return release_evidence.generate_source_manifest(repo)
 
 
-def _regenerate_bundle_manifest(bundle: Path) -> dict:
+def _regenerate_bundle_manifest(repo: Path, bundle: Path) -> dict:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import release_evidence  # noqa: E402
-    return release_evidence.generate_bundle_manifest(bundle)
+    return release_evidence.generate_bundle_manifest(bundle, repo_root=repo)
 
 
 def _check_workspace_clean(repo: Path):
@@ -400,9 +400,14 @@ def _check_bundle_manifest_zero_diff(repo: Path):
         return False, ['BUNDLE_MANIFEST.json missing']
     disk = _load_json(disk_path)
     bundle = disk.get('bundle_path')
-    if not bundle or not Path(bundle).is_file():
+    if not bundle:
+        return False, ['BUNDLE_MANIFEST bundle_path missing']
+    cand = Path(bundle)
+    if not cand.is_absolute():
+        cand = repo / cand
+    if not cand.is_file():
         return False, [f'bundle not found: {bundle}']
-    fresh = _regenerate_bundle_manifest(Path(bundle))
+    fresh = _regenerate_bundle_manifest(repo, cand)
     disk_entries = {(e.get('path'), e.get('sha256')) for e in disk.get('entries', [])}
     fresh_entries = {(e.get('path'), e.get('sha256')) for e in fresh.get('entries', [])}
     if disk.get('bundle_sha256') != fresh.get('bundle_sha256'):
@@ -412,8 +417,13 @@ def _check_bundle_manifest_zero_diff(repo: Path):
     return True, []
 
 
-def _check_test_report(provenance):
-    """测试数字必须来自机器报告（解析 pytest JSON），不得硬编码。"""
+def _check_test_report(provenance, repo=None, tag=None):
+    """测试数字必须来自机器报告（解析 pytest JSON），不得硬编码。
+
+    v5.8.1 Commit 15（§38-39 Audit Freshness）：report.source_commit 必须
+    等于 git HEAD（或发布 tag 指向的提交），否则报告 STALE，不能作为
+    release PASS 证据。
+    """
     tr = provenance.get('test_report') or {}
     if not tr.get('present'):
         return False, ['test_report not present in PROVENANCE']
@@ -426,7 +436,27 @@ def _check_test_report(provenance):
         return False, ['test_report missing passed/failed/total']
     if isinstance(failed, int) and failed > 0:
         return False, [f'test_report has {failed} failed']
-    return True, [f'passed={passed} failed={failed} total={total}']
+    # Audit Freshness：报告必须绑定当前 HEAD/tag 指向的提交
+    report_sc = tr.get('source_commit')
+    if not report_sc:
+        return False, ['test_report missing source_commit (STALE, cannot gate release)']
+    head = None
+    if repo is not None:
+        head = _run_git(repo, ['rev-parse', 'HEAD'])
+    if tag:
+        tag_sha = _run_git(repo, ['rev-list', '-n1', tag])
+        if head and tag_sha:
+            anchor = tag_sha  # 发布锚点：tag 指向的提交
+        else:
+            anchor = head
+    else:
+        anchor = head
+    if anchor and report_sc != anchor:
+        return False, [
+            f'test_report source_commit {report_sc} != {anchor} '
+            f'({"tag " + tag if tag else "HEAD"}): report STALE, cannot gate release']
+    return True, [f'passed={passed} failed={failed} total={total} '
+                  f'source_commit={report_sc}']
 
 
 def _check_signature(bundle):
@@ -523,8 +553,8 @@ def run_release_ready(repo: Path, tag: str | None, test_report: Path | None) -> 
     ok, errs = _check_bundle_manifest_zero_diff(repo)
     add('bundle_manifest_zero_diff', ok, errs or 'zero diff')
 
-    # 5) 测试数字来自机器报告
-    ok, detail = _check_test_report(provenance or {})
+    # 5) 测试数字来自机器报告（+ v5.8.1 Commit 15：source_commit==HEAD 防 STALE）
+    ok, detail = _check_test_report(provenance or {}, repo=repo, tag=tag)
     add('test_numbers_from_report', ok, detail)
 
     # 6) 签名可验证（Ed25519）

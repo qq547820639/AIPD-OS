@@ -337,6 +337,9 @@ def audit_repo(repo_root, pin_commit: str | None = None) -> dict:
 
     return {
         "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
+        # v5.8.1 Commit 15（§38-39 Audit Freshness）：source_commit + package_version
+        "source_commit": latest_commit_sha,
+        "package_version": _parse_version(root),
         "repo_root": str(root),
         "default_branch": default_branch,
         "latest_commit_sha": latest_commit_sha,
