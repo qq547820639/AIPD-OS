@@ -1,64 +1,216 @@
 # AIPD Orchestrator v5.6.0
 
-AI全链路产品开发与交付主管：一个对话入口，自主推进理论基础、产品定义、连续附件产品手册、工程CAD、工业化、供应链、EVT/DVT/PVT和生产发布。
+> 一句话：**把你的产品想法，从一句话推进到可以交付的成果——全程有 AI 帮你跑腿，重大决定由你把关。**
 
-## v5.5新增
+AIPD（AI Product Development，AI 产品开发）是一款面向**产品负责人、创业者、工程师和管理者**的 AI 开发助手。它不是一个聊天机器人，而是一位「产品开发主管」：你告诉它你想做什么，它会自主推进研究、设计、工程、制造准备等各个阶段，只在真正需要你拍板的时候停下来问你。
 
-- **P0-2 版本统一 5.5.0**：pyproject / 包版本 / 状态服务 / 发布脚本 / README 全部对齐到 5.5.0；
-- **`aipd doctor`**：一键体检，报告包版本、依赖可用性、配置、外部能力（视觉后端 / 模型端点 / 图像后端 / CAD 内核 / 邮件）、数据库、对象存储与权限，支持 `--json`；
-- **`aipd version --verbose`**：打印包版本、Git HEAD、构建时间、能力矩阵版本与发布清单哈希；
-- **P0-1 CI 加固**：Actions 升级到 v5（消除 Node 20 弃用告警）、真实集成测试、`release-ready` 发布门禁；
-- **P0-3 视觉发布门**：`VisualAuditor` + `GoldenGapEvaluator` 接入手工发布门禁，无视觉后端时一律 HOLD/`not_verified`，绝不假通过。
+---
 
-## v5.3新增
+## 一、产品简介
 
-- **风险 RYG / 外部等待所有者视图**：Supervisor 提供风险红黄绿（RYG）分级与外部等待（blocked_external）的所有者视图，等待外部输入期间继续其他独立工作；
-- **确定性可信度 / 人体测量 / 认证模块**：credibility、anthropometry、certification 三个确定性模块，事实与认知一律可追溯、不虚构；
-- **视觉审计诚实护栏**：视觉落差评估拒绝为“看起来像”背书，防止视觉意图覆盖安全；
-- **命令覆盖一致性测试**：`tests/test_command_coverage.py` 校验声明 / 注册 / 测试三向不变量；
-- **SKILL.md v5.3 刷新**：17 个一键命令按工作流分组声明，专业细节集中到 `references/`；
-- **17 个一键命令**（`aipd <cmd>`）：`init` / `intake` / `resume` / `status` / `run` / `decide` / `manual plan` / `manual generate` / `cad preflight` / `cad build` / `industrialize` / `validate` / `audit` / `release check` / `test` / `eval` / `package`。
+### 它解决什么问题？
 
-## v5.2新增
+做产品最难的不是动手，而是**全程组织**：想法要不要做？技术可不可行？客户是谁？成本多少？图纸、手册、工艺、供应链、测试……每一步都要有人盯。一个人（或小团队）往往顾此失彼。
 
-- **能力矩阵审计产物**：`aipd audit --repo . --out docs/audit` 生成 `repository_snapshot.json` / `capability_matrix.json` / `capability_matrix.md`，对六大域全部能力按 7 类（fully_implemented / partially_implemented / protocol_only / template_only / external_dependency / not_implemented / not_verifiable）分类并给出证据字段；
-- **真实/可插拔模型评测**：`EnvCompletionProvider` 接入 OpenAI 兼容 HTTP 端点（`AIPD_EVAL_MODEL_ENDPOINT/KEY/VERSION`）真实调用；未配置时诚实标记 `external_dependency`，绝不返回伪造输出；
-- **干净环境安装修复**：`mcp` 移出 `[full]` 至独立 `server-mcp` extra，Python 3.9 下 `pip install -e ".[full,dev]"` 可成功；CI 安装完整依赖。
+AIPD 把这件事接了下来：
 
-## v5.1新增
+- 你负责**说清楚想要什么、在关键节点做决定**；
+- AIPD 负责**按专业流程推进其余工作**，并把每一步的依据、来源、状态都留痕。
 
-- **版本真实性审计**：`scripts/audit_repo.py` 生成可再生成的审计报告（`docs/audit/`），校验 git 提交、pyproject 版本、`RELEASE_MANIFEST.json` 逐文件哈希、CI job 与遗留 CAD 冲突；
-- **供应链与验证执行器**（`supply_chain/`）：报价、供应商、实验室与分析，配套升级 supplier / mail_rfq / evt_dvt_pvt 适配器；
-- **生产发布证据门禁**（`evidence_checks`）：`gdt_covers_ctq`、`ctq_has_inspection`、`drawing_cad_same_revision` 等；
-- **WBX-1 黄金样本视觉落差评估**（`visual_audit/golden.py`）；
-- **行为评估扩展至 15 项**（`evals.json` v1.2）；
-- **16 个一键命令**（`init` / `intake` / `resume` / `status` / `run` / `decide` / `manual plan` / `manual generate` / `cad preflight` / `cad build` / `industrialize` / `validate` / `release check` / `test` / `eval` / `package`），支持 `--json` 模式；
-- **提示注入隔离增强**：高风险动作需人工批准。见 `SECURITY.md` / `THREAT_MODEL.md`。
+### 它适合谁？
 
-## v5.0新增
+| 角色 | 能获得什么 |
+|---|---|
+| 产品负责人 / 创业者 | 快速验证想法、形成结构化产品定义，不遗漏关键环节 |
+| 工程师 | 从需求到 CAD、验证、制造准备的全程工程推进助手 |
+| 管理者 | 随时掌握项目进度、风险、待决策事项，数据可追溯 |
+| 任何人 | 只需会描述想法、会读进度、会做选择，不需要会写代码 |
 
-- **统一执行层（Execution Router / Tool Adapters）**：按能力选择工具适配器，重试与降级切换，持久化执行记录与证据；
-- **CAD C0–C7 统一**：统一成熟度推进（设计意图→生产放行），配合 maturity gate / capability gate / production release gate；
-- **手册链自主执行**：连续附件产品手册 + 独立视觉审计；
-- **状态服务生产化**：多租户授权、迁移、备份、检查点、追加式审计、健康检查、对象存储、静态加密；
-- **Owner Experience 层**：决策卡片与所有者自然语言视图，一键命令（init-project / restore-project / run-supervisor / project-summary / submit-decision / run-manual-chain / run-cad-chain / run-tests / run-evals / build-release）；
-- **Evals Runner**：生命周期门禁与质量回归评估；
-- **安全**：提示注入隔离（外部内容始终作为数据）、敏感数据打码与显式权限、确定性 SBOM、发布物签名。见 `SECURITY.md` / `THREAT_MODEL.md` / `SBOM.md` / `RELEASE_SIGNING.md`；
-- **工程化**：CI（单元/集成/schema/secret 扫描）、`CONTRIBUTING.md`、`CODE_OF_CONDUCT.md`。
+### 一个类比
 
-## v4.0新增
+想象你请了一位**经验丰富的产品总监**：你把想法告诉他，他列出工作计划、按部就班地干活，每完成一个里程碑就向你汇报，遇到「方向选择、花钱投入、安全相关」的大事才来敲你的门。AIPD 就是这位总监——只不过它 24 小时在线，且每一步都有记录可查。
 
-- 主管工作队列与生命周期状态机；
-- 统一事实、证据、资产谱系、能力注册和成熟度声明；
-- 决策策略：只在方向、价值、安全、不可逆投入和放行时询问；
-- v3手册链与CAD链作为专业子系统保留；
-- 工具能力地板和声明门；
-- 后段变更自动回写手册、规格、BOM和CAD；
-- 用户成功提示词与手册作为黄金执行轨迹。
+---
 
-理论文档：`references/AIPD-OS-v4.0.docx`。
+## 二、核心功能
+
+### 🧠 想法 → 结构化产品定义
+- 用一句话描述你的想法，AIPD 会把它整理成清晰的产品定义：**目标、要解决的问题、目标用户、期望结果、限制条件**。
+- 关键假设（比如「老人康复存在依从性问题」）会被单独列出，作为**待验证的命题**——AI 不会假装它已经知道答案。
+
+### 🔍 研究 & 证据管理
+- 自动检索外部资料（论文、专利、竞品信息）作为**证据**，并诚实标注「已找到资料」≠「已被证实」。
+- 每个结论都有来源、检索状态、可信度分类，你可以随时回查「这句话是从哪来的」。
+
+### 🧭 分阶段推进（工作主管）
+AIPD 沿专业流程自主推进，分为 9 个阶段，从想法一直走到生产发布：
+
+```
+想法 → 理论/研究 → 产品定义 → 手工/文档 → 工程基线
+     → CAD 设计 → 工业化 → 验证 → 生产发布
+```
+
+每个阶段只有完成后才进入下一阶段，任何一步的证据不足都会如实告诉你，而不是假装成功。
+
+### ✋ 决策中心（你才是老板）
+- 只有在**方向分歧、价值取舍、不可逆投入（如开模、采购）、安全或合规影响**时，AIPD 才停下来征求你的意见。
+- 每次询问会给你：问题是什么、AI 的建议、2-4 个选项、每个选项的影响（成本/时间/风险），以及批准后会发生什么。
+- 普通工作（检索、返工、批量处理）AIPD 自己完成，不打扰你。
+
+### 📊 随时可见的项目状态
+- 一个命令查看：项目进行到哪个阶段、完成了什么、有哪些**外部依赖未解决**、有哪些**风险**（红黄绿分级）、有哪些**事等你拍板**。
+- 支持图形化网页界面（本地浏览器打开），也支持命令行文字版和 JSON 格式（方便接入其他工具）。
+
+### 🛠️ 专业子系统（按需使用）
+| 子系统 | 说明 |
+|---|---|
+| 产品手册 | 自动规划并生成连续附件产品手册，含视觉质量检查 |
+| CAD 工程 | 从设计意图到生产放行的成熟度推进（C0→C7），带几何校验 |
+| 供应链 / 工业化 | 报价、供应商、实验室数据登记，EVT/DVT/PVT 阶段跟踪 |
+| 生产发布门禁 | 发布前自动核对：测试是否通过、证据是否齐全、签名是否有效 |
+
+### 🔐 诚实与安全（默认行为）
+- **绝不假装成功**：外部能力不可用时，明确告诉你「这项需要外部资源」，而不是返回一个假的成功结果。
+- **证据可追溯**：每个事实、决策、产物都记录来源和变更历史。
+- **重要操作需确认**：高风险动作（如正式发布）需要你批准，AI 不能擅自执行。
+- **数据隔离与加密**：多租户隔离，敏感信息静态加密存储。
+
+---
+
+## 三、快速上手指南
+
+> 前提：已在电脑上安装 Python 3.9+，并安装 AIPD（`pip install aipd-os` 或从项目源码 `pip install -e .`）。下面的示例使用命令行；你也可以直接运行 `aipd ui` 用浏览器操作。
+
+### 第 1 步：从一个想法开始（30 秒）
+
+```bash
+aipd onboard --db state.db --idea "我想做一个利用 AI 帮助独居老人居家康复的产品"
+```
+
+AIPD 会创建你的第一个项目，并把想法整理成初步的产品定义。记下显示的项目 ID（例如 `p1`）。
+
+> 💡 也可以使用 `aipd intake --db state.db --prompt "你的想法"` 达到同样效果。
+
+### 第 2 步：让 AI 推进工作
+
+```bash
+aipd run --project p1 --db state.db --until-decision
+```
+
+- 如果一切顺利，它会一路推进到某个阶段完成；
+- 如果遇到需要你决定的事，它会停下来，并列出待决策事项。
+
+### 第 3 步：查看项目状态
+
+```bash
+aipd status --db state.db
+```
+
+你会看到：当前阶段、已完成工作、待决策项、外部依赖、风险等一目了然的概览。
+
+### 第 4 步：做出你的决定
+
+当有决策等待你时：
+
+```bash
+aipd decide --db state.db --decision-id D-001 --choice "按 AI 推荐路径继续"
+```
+
+批准后，AIPD 会继续推进。所有决策都会留档，供日后追溯。
+
+### 第 5 步：随时体检（可选）
+
+```bash
+aipd doctor
+```
+
+一键检查环境是否健康：依赖是否齐全、外部能力（视觉、CAD、邮件等）是否可用、数据库是否正常。
+
+> 📺 想全程用浏览器操作？运行 `aipd ui --db state.db`，然后打开 http://127.0.0.1:8080 即可。
+
+---
+
+## 四、常见使用场景
+
+### 场景 1：验证一个新想法值不值得做
+```
+aipd onboard --db state.db --idea "一款给独居老人用的智能服药提醒器"
+aipd run --project p1 --db state.db --until-decision
+aipd status --db state.db
+```
+→ AIPD 会推进研究阶段，检索相关证据、整理关键假设，让你快速判断想法是否站得住。
+
+### 场景 2：已有明确需求，直接开始工程
+```
+aipd init --db state.db --project p1 --name "智能药盒" --goal "开发一款带提醒与联网上报的药盒"
+aipd run --project p1 --db state.db
+```
+→ 跳过想法探索，直接进入工程推进；遇到设计取舍时再请你决策。
+
+### 场景 3：管理一个进行中的项目
+```
+aipd resume --db state.db          # 查看上次进行到哪、下一步该做什么
+aipd status --db state.db          # 总览：阶段/风险/待决策
+aipd decide --db state.db          # 处理待决策事项
+aipd run --project p1 --db state.db  # 继续推进
+```
+
+### 场景 4：生成产品手册 / 推进 CAD / 准备生产
+```
+aipd manual plan --db state.db                 # 规划手册批次
+aipd cad preflight --manifest cad_manifest.json  # CAD 发布前检查
+aipd industrialize --db state.db               # 登记报价/供应商/验证数据
+aipd validate --manifest manifest.json --target C5  # 验证是否达到目标成熟度
+```
+
+### 场景 5：发布前自查
+```
+aipd release check    # 核对：测试数字、证据完整性、签名有效性
+```
+→ 全部通过才允许正式发布；任何一项不满足都会明确列出，绝不「放水」。
+
+---
+
+## 五、常见问题与排障
+
+**Q1：AIPD 会自己做所有决定吗？**
+不会。它只在「方向分歧、价值取舍、不可逆投入、安全合规」时才征求你的意见；日常执行类工作自行完成。所有决策都需要你确认后才执行。
+
+**Q2：它说「外部能力不可用」是什么意思？**
+有些功能（如论文检索、CAD 真实内核、视觉检查）需要外部服务或专业软件。未配置时，AIPD 会诚实告诉你「这项暂时做不了」，并指导你配置或人工回填，而不会返回一个假的成功结果。
+
+**Q3：我的数据安全吗？**
+项目数据默认存储在本地数据库；敏感字段加密存储；多租户之间相互隔离；所有写操作都有审计记录。生产环境部署时需配置强密钥（详见部署文档）。
+
+**Q4：`aipd run` 跑了一下就停了，正常吗？**
+正常。停下来的原因通常有三类：① 需要你决策（`aipd status` 查看待决策项）；② 依赖外部能力（需要配置或人工介入）；③ 当前阶段工作已全部完成。用 `aipd status` 一看便知。
+
+**Q5：想重来或恢复怎么办？**
+- `aipd resume`：恢复上次会话进度；
+- `aipd recover`：回滚最近一次可撤销操作，或从备份恢复数据库；
+- `aipd reset`：重置项目（会先备份）。
+
+**Q6：界面显示「blocked_external」是什么？**
+意思是：当前步骤需要外部资源（如真实网络检索、真实 CAD 内核），当前环境不可用。按提示配置相关外部能力，或人工完成后回填结果即可继续。
+
+**Q7：我可以用中文交流吗？**
+可以。AIPD 的中文界面与自然语言决策全程支持中文输入。
+
+---
+
+## 附录：面向开发者
+
+- 理论文档：[`references/AIPD-OS-v4.0.docx`](references/AIPD-OS-v4.0.docx)
+- 安全模型：[`SECURITY.md`](SECURITY.md) · 威胁模型：[`THREAT_MODEL.md`](THREAT_MODEL.md)
+- 参与贡献：[`CONTRIBUTING.md`](CONTRIBUTING.md) · 行为准则：[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+- 版本历史与架构说明见 `docs/` 目录
 
 运行自测：
+
 ```bash
 python scripts/selftest_v4.py
 ```
+
+---
+
+*AIPD Orchestrator v5.6.0 — 让你的每个产品想法，都有条不紊地走向现实。*
