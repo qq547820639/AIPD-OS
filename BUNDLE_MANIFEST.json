@@ -1,7 +1,7 @@
 {
   "name": "AIPD-OS bundle manifest",
   "bundle": "aipd-os-5.6.0.zip",
-  "bundle_path": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/build/release/aipd-os-5.6.0.zip",
+  "bundle_path": "build/release/aipd-os-5.6.0.zip",
   "bundle_sha256": "005c680fd6abe845186009f0991796873b832835066321d3dabb2d157aa23d91",
   "bundle_size": 2076508,
   "entry_count": 285,
