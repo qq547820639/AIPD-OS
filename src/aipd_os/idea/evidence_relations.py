@@ -11,11 +11,12 @@ evidence 的来源可信度是不同概念。
 """
 from __future__ import annotations
 
-from contextlib import suppress
+import sqlite3
 from dataclasses import dataclass
 from typing import Any
 
 from aipd_os.state.db import AIPDStateDB, now_iso
+from aipd_os.state.lineage import LineageNodeRef, LineageService
 
 # 关系类型
 RELATION_TYPES = frozenset({
@@ -26,10 +27,33 @@ RELATION_TYPES = frozenset({
 # review_status
 REVIEW_STATUSES = frozenset({"pending", "reviewed", "rejected"})
 
+# 旧 DB 中「无评价」的 legacy 哨兵值（v5.8 默认 0.5 = 伪精确，Commit 3 起
+# 模型默认 None；读取时 0.5 视为 legacy_unscored 而非真实测量）。
+LEGACY_UNSCORED_SENTINEL = 0.5
+
+# Claim↔Evidence lineage 关系映射（Commit 9）：
+# supports/partially_supports → supported_by；contradicts → contradicted_by；
+# inconclusive/not_applicable 不建边（无法表达支持/反驳语义）。
+_RELATION_TO_LINEAGE = {
+    "supports": "supported_by",
+    "partially_supports": "supported_by",
+    "contradicts": "contradicted_by",
+}
+
+
+def _legacy_unscored(value: Any) -> bool:
+    """判断 DB 读取值是否为 legacy 未评分哨兵（0.5）。"""
+    return isinstance(value, (int, float)) and float(value) == LEGACY_UNSCORED_SENTINEL
+
 
 @dataclass
 class EvidenceRelation:
-    """一条 Claim↔Evidence 关系（tenant+project scoped，version_no 乐观锁）。"""
+    """一条 Claim↔Evidence 关系（tenant+project scoped，version_no 乐观锁）。
+
+    strength: Optional[float] —— **只有显式评分才填**（None=未评分）。
+    不把不知道的装成知道：无评价时不默认 50%。旧 DB 的 0.5 读取时按
+    legacy_unscored 处理为 None（不假设旧 0.5 是真实测量）。
+    """
 
     relation_id: str
     tenant_id: str = "default"
@@ -37,7 +61,7 @@ class EvidenceRelation:
     claim_id: str = ""
     evidence_id: str = ""
     relation_type: str = "supports"
-    strength: float = 0.5
+    strength: float | None = None
     applicability: str = ""
     reasoning_summary: str = ""
     limitations: str = ""
@@ -56,8 +80,8 @@ class EvidenceRelation:
             raise ValueError(
                 f"invalid review_status {self.review_status!r}; "
                 f"expected one of {sorted(REVIEW_STATUSES)}")
-        if not 0.0 <= self.strength <= 1.0:
-            raise ValueError("strength must be in [0,1]")
+        if self.strength is not None and not 0.0 <= self.strength <= 1.0:
+            raise ValueError("strength must be in [0,1] or None (unscored)")
         if self.version_no < 1:
             raise ValueError("version_no must be >= 1")
 
@@ -82,6 +106,10 @@ class EvidenceRelation:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> EvidenceRelation:
+        strength = data.get("strength")
+        if _legacy_unscored(strength):
+            # 旧 DB 的 0.5 = legacy_unscored 哨兵 → None（不假设是真实测量）
+            strength = None
         return cls(
             relation_id=data["relation_id"],
             tenant_id=data.get("tenant_id", "default"),
@@ -89,7 +117,7 @@ class EvidenceRelation:
             claim_id=data.get("claim_id", ""),
             evidence_id=data.get("evidence_id", ""),
             relation_type=data.get("relation_type", "supports"),
-            strength=data.get("strength", 0.5),
+            strength=strength,
             applicability=data.get("applicability", ""),
             reasoning_summary=data.get("reasoning_summary", ""),
             limitations=data.get("limitations", ""),
@@ -113,20 +141,22 @@ class EvidenceRelationScopeError(ValueError):
     """跨 scope 引用拒绝（claim/evidence 不属于同 tenant+project）。"""
 
 
+class EvidenceRelationConflictError(Exception):
+    """同 (claim_id, evidence_id, relation_type, scope) 关系已存在（Commit 7）。
+
+    由 :meth:`EvidenceRelationService.add` 在唯一键冲突时抛出；幂等语义请用
+    :meth:`EvidenceRelationService.get_or_create`。
+    """
+
+
 class EvidenceRelationService:
     def __init__(self, db: AIPDStateDB) -> None:
         self._db = db
 
     # ------------------------------------------------------------- helpers
     def _next_id(self, prefix: str = "REL") -> str:
-        with self._db.connect() as c:
-            rows = c.execute("SELECT relation_id FROM claim_evidence_relations").fetchall()
-        nums = []
-        for r in rows:
-            if isinstance(r["relation_id"], str) and r["relation_id"].startswith(prefix + "-"):
-                with suppress(ValueError):
-                    nums.append(int(r["relation_id"].rsplit("-", 1)[1]))
-        return f"{prefix}-{max(nums, default=0) + 1:03d}"
+        """并发安全 ID：基于 id_sequences 表原子分配（v5.8.1 Commit 7）。"""
+        return self._db.next_sequence("relation", prefix)
 
     @staticmethod
     def _row_to_relation(row: Any) -> EvidenceRelation:
@@ -161,7 +191,13 @@ class EvidenceRelationService:
 
     # --------------------------------------------------------------- CRUD
     def add(self, rel: EvidenceRelation, actor: str = "system") -> EvidenceRelation:
-        """创建 Claim↔Evidence 关系（校验 claim/evidence 同 scope）。"""
+        """创建 Claim↔Evidence 关系（校验 claim/evidence 同 scope）。
+
+        v5.8.1 Commit 7：不再 ``INSERT OR REPLACE`` —— 重复 (claim_id,
+        evidence_id, relation_type) 唯一键冲突时抛
+        :class:`EvidenceRelationConflictError`（不删除旧行、不重置
+        created_at/version_no）。幂等语义请用 :meth:`get_or_create`。
+        """
         self._ensure_claim_in_scope(rel.tenant_id, rel.project_id, rel.claim_id)
         self._ensure_evidence_in_scope(rel.tenant_id, rel.project_id, rel.evidence_id)
         if rel.relation_id in ("", None):
@@ -175,17 +211,28 @@ class EvidenceRelationService:
                 created_by=actor, version_no=rel.version_no,
                 created_at=rel.created_at, updated_at=rel.updated_at)
         ts = now_iso()
-        with self._db.connect() as c:
-            c.execute(
-                "INSERT OR REPLACE INTO claim_evidence_relations("
-                "relation_id,project_id,tenant_id,claim_id,evidence_id,relation_type,"
-                "strength,applicability,reasoning_summary,limitations,review_status,"
-                "created_by,version_no,created_at,updated_at) "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (rel.relation_id, rel.project_id, rel.tenant_id, rel.claim_id,
-                 rel.evidence_id, rel.relation_type, rel.strength, rel.applicability,
-                 rel.reasoning_summary, rel.limitations, rel.review_status,
-                 actor, rel.version_no, ts, ts))
+        try:
+            with self._db.connect() as c:
+                c.execute(
+                    "INSERT INTO claim_evidence_relations("
+                    "relation_id,project_id,tenant_id,claim_id,evidence_id,relation_type,"
+                    "strength,applicability,reasoning_summary,limitations,review_status,"
+                    "created_by,version_no,created_at,updated_at) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (rel.relation_id, rel.project_id, rel.tenant_id, rel.claim_id,
+                     rel.evidence_id, rel.relation_type,
+                     # strength=None（未评分）→ DB 存 legacy 哨兵 0.5（NOT NULL）；
+                     # 模型层读取时再映射回 None（legacy_unscored）。
+                     rel.strength if rel.strength is not None
+                     else LEGACY_UNSCORED_SENTINEL,
+                     rel.applicability, rel.reasoning_summary, rel.limitations,
+                     rel.review_status, actor, rel.version_no, ts, ts))
+        except sqlite3.IntegrityError as exc:
+            raise EvidenceRelationConflictError(
+                f"relation already exists for claim {rel.claim_id!r} / "
+                f"evidence {rel.evidence_id!r} / type {rel.relation_type!r} "
+                f"in tenant {rel.tenant_id!r}/project {rel.project_id!r} "
+                "(use get_or_create for idempotent semantics)") from exc
         created = EvidenceRelation(
             relation_id=rel.relation_id, tenant_id=rel.tenant_id,
             project_id=rel.project_id, claim_id=rel.claim_id,
@@ -195,7 +242,51 @@ class EvidenceRelationService:
             review_status=rel.review_status, created_by=actor,
             version_no=rel.version_no, created_at=ts, updated_at=ts)
         self._audit(actor, "evidence_relation.add", created)
+        # v5.8.1 Commit 9：Claim → Evidence lineage 边（supported_by/contradicted_by）
+        self._link_lineage(rel, actor)
         return created
+
+    def _link_lineage(self, rel: EvidenceRelation, actor: str) -> None:
+        """为新建 relation 建 Claim→Evidence lineage 边（Commit 9）。
+
+        仅 supports/partially_supports → supported_by、contradicts →
+        contradicted_by；inconclusive/not_applicable 不建边。
+        """
+        lineage_type = _RELATION_TO_LINEAGE.get(rel.relation_type)
+        if lineage_type is None:
+            return
+        lineage = LineageService(self._db)
+        claim_node = LineageNodeRef(
+            node_type="claim", node_id=rel.claim_id,
+            tenant_id=rel.tenant_id, project_id=rel.project_id)
+        ev_node = LineageNodeRef(
+            node_type="evidence", node_id=rel.evidence_id,
+            tenant_id=rel.tenant_id, project_id=rel.project_id)
+        lineage.add_edge(claim_node, ev_node, lineage_type,
+                         provenance={"source": "evidence_relation",
+                                     "relation_type": rel.relation_type},
+                         actor=actor)
+
+    def get_or_create(self, rel: EvidenceRelation,
+                      actor: str = "system") -> tuple[EvidenceRelation, bool]:
+        """幂等创建：同 (claim_id, evidence_id, relation_type, scope) 已存在 →
+        返回 (现有 relation, False)；否则创建 → (新 relation, True)。
+
+        v5.8.1 Commit 7：供可能重复的调用方（如 research link）使用，避免误抛
+        :class:`EvidenceRelationConflictError`。
+        """
+        self._ensure_claim_in_scope(rel.tenant_id, rel.project_id, rel.claim_id)
+        self._ensure_evidence_in_scope(rel.tenant_id, rel.project_id, rel.evidence_id)
+        with self._db.connect() as c:
+            row = c.execute(
+                "SELECT * FROM claim_evidence_relations "
+                "WHERE claim_id=? AND evidence_id=? AND relation_type=? "
+                "AND project_id=? AND tenant_id=?",
+                (rel.claim_id, rel.evidence_id, rel.relation_type,
+                 rel.project_id, rel.tenant_id)).fetchone()
+        if row is not None:
+            return self._row_to_relation(row), False
+        return self.add(rel, actor=actor), True
 
     def get(self, tenant_id: str, project_id: str, relation_id: str) -> EvidenceRelation:
         with self._db.connect() as c:
@@ -230,13 +321,21 @@ class EvidenceRelationService:
             raise ValueError(f"invalid relation_type {fields['relation_type']!r}")
         if "review_status" in fields and fields["review_status"] not in REVIEW_STATUSES:
             raise ValueError(f"invalid review_status {fields['review_status']!r}")
-        if "strength" in fields and not 0.0 <= fields["strength"] <= 1.0:
-            raise ValueError("strength must be in [0,1]")
+        if "strength" in fields and fields["strength"] is not None \
+                and not 0.0 <= fields["strength"] <= 1.0:
+            raise ValueError("strength must be in [0,1] or None (unscored)")
         before = self.get(tenant_id, project_id, relation_id)
         set_cols = sorted(fields)
+        # strength=None（未评分）→ DB 存 legacy 哨兵 0.5（NOT NULL）
+        params: list[Any] = []
+        for k in set_cols:
+            v = fields[k]
+            if k == "strength" and v is None:
+                v = LEGACY_UNSCORED_SENTINEL
+            params.append(v)
         set_sql = ", ".join([f"{col}=?" for col in set_cols]
                               + ["updated_at=?", "version_no=version_no+1"])
-        params = [fields[k] for k in set_cols] + [now_iso()]
+        params = params + [now_iso()]
         with self._db.connect() as c:
             cur = c.execute(
                 f"UPDATE claim_evidence_relations SET {set_sql} "
@@ -249,13 +348,43 @@ class EvidenceRelationService:
         self._audit(actor, "evidence_relation.update", after, before=before.to_dict())
         return after
 
+    def review(self, tenant_id: str, project_id: str, relation_id: str,
+               review_status: str, actor: str = "system",
+               expected_version: int | None = None) -> EvidenceRelation:
+        """显式评审 relation（reviewed / rejected），Commit 4 review semantics。
+
+        - 只允许 ``reviewed`` / ``rejected``（把 pending 置回 pending 无意义，
+          用 :meth:`update` 即可）；
+        - ``expected_version`` 缺省时自动读取当前版本（便捷路径；并发敏感场景
+          应显式传版本号以利用乐观锁）；
+        - audit（action=evidence_relation.review）。
+        """
+        if review_status not in REVIEW_STATUSES:
+            raise ValueError(
+                f"invalid review_status {review_status!r}; "
+                f"expected one of {sorted(REVIEW_STATUSES)}")
+        if review_status == "pending":
+            raise ValueError(
+                "review() 只接受 reviewed/rejected；重置为 pending 请用 update()")
+        if expected_version is None:
+            expected_version = self.get(tenant_id, project_id, relation_id).version_no
+        before = self.get(tenant_id, project_id, relation_id)
+        updated = self.update(tenant_id, project_id, relation_id,
+                              expected_version=expected_version, actor=actor,
+                              review_status=review_status)
+        self._db.add_audit(actor, "evidence_relation.review", project_id, tenant_id,
+                           before=before.to_dict(), after=updated.to_dict())
+        return updated
+
 
 __all__ = [
     "EvidenceRelation",
     "RELATION_TYPES",
     "REVIEW_STATUSES",
+    "LEGACY_UNSCORED_SENTINEL",
     "EvidenceRelationService",
     "EvidenceRelationNotFoundError",
     "EvidenceRelationOptimisticLockError",
     "EvidenceRelationScopeError",
+    "EvidenceRelationConflictError",
 ]

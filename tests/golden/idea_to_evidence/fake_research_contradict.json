@@ -1,11 +1,18 @@
 {
   "sources": [
-    {"title": "Golden Paper: visual feedback ineffective",
-     "url": "https://example.invalid/golden-contr",
-     "identifier": "golden-paper-2"}
+    {"source": {
+      "title": "Golden Paper: visual feedback ineffective",
+      "url": "https://example.invalid/golden-contr",
+      "identifier": "golden-paper-2",
+      "doi": "10.1000/golden-contr",
+      "year": 2022,
+      "authors": ["G. Reviewer"],
+      "venue": "J. HCI"
+    }, "relation": {
+      "type": "contradicts",
+      "reasoning_summary": "golden fixture: contradicts claim (non-medical, test only)"
+    }}
   ],
-  "evidence_relation": "contradicts",
   "provider": "golden-fake-research",
-  "reasoning_summary": "golden fixture: contradicts claim (non-medical, test only)",
   "EPISTEMIC_NOTE": "FIXTURE ONLY: 非真实研究结论；仅用于测试系统行为。"
 }

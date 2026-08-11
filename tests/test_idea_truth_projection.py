@@ -1,9 +1,11 @@
-"""v5.8 Commit 14：Idea Truth projection + maturity（I0/I1/I2）测试。
+"""v5.8 Commit 14 / v5.8.1 Commit 3-4：Idea Truth projection + maturity 测试。
 
 覆盖：
-- projection 正确列出 known/assumption/evidence/contradicted/unknown/gaps；
+- projection 正确分类 supported_claims/assumption/evidence/contradicted/
+  unknown/gaps（review-aware：只统计 reviewed relation）；
 - snapshot 不可变（序列化后修改源不影响 snapshot）；
-- maturity I0→I1→I2 判定正确（确定性）；
+- maturity I0→I1→I2 判定正确（保守规则：key claims 全部检索+评审才 I2）；
+- lifecycle_status 与 maturity 分离（Commit 3）；
 - 无 fake evidence（relation 必须有真实 evidence_id —— EvidenceRelationService
   已强制校验，测试断言 relation 的 evidence_id 真实存在于 evidence 表）；
 - tenant/project scoped。
@@ -64,17 +66,20 @@ def env(tmp_path):
     relations = EvidenceRelationService(db)
     graph = EvidenceGraph(db)
 
-    # claim_known: supports；claim_contra: contradicts
+    # claim_known: supports（reviewed）；claim_contra: contradicts（reviewed）
     ev_sup = db.add_evidence("default", "P1", kind="paper", title="sup",
                              url="https://example.invalid/sup")
     ev_con = db.add_evidence("default", "P1", kind="paper", title="con",
                              url="https://example.invalid/con")
-    relations.add(EvidenceRelation(relation_id="", tenant_id="default",
-                                   project_id="P1", claim_id=claim_known.claim_id,
-                                   evidence_id=ev_sup, relation_type="supports"))
-    relations.add(EvidenceRelation(relation_id="", tenant_id="default",
-                                   project_id="P1", claim_id=claim_contra.claim_id,
-                                   evidence_id=ev_con, relation_type="contradicts"))
+    rel_sup = relations.add(EvidenceRelation(relation_id="", tenant_id="default",
+                                             project_id="P1", claim_id=claim_known.claim_id,
+                                             evidence_id=ev_sup, relation_type="supports"))
+    rel_con = relations.add(EvidenceRelation(relation_id="", tenant_id="default",
+                                             project_id="P1", claim_id=claim_contra.claim_id,
+                                             evidence_id=ev_con, relation_type="contradicts"))
+    # v5.8.1 Commit 4：显式评审后 relations 才进入统计
+    relations.review("default", "P1", rel_sup.relation_id, "reviewed")
+    relations.review("default", "P1", rel_con.relation_id, "reviewed")
     return {"db": db, "idea": idea,
             "claims": (claim_known, claim_contra, claim_unknown, claim_gap),
             "relations": relations, "graph": graph}
@@ -85,23 +90,33 @@ def _projection(env):
 
 
 # ---------------------------------------------------------------------------
-# 1) projection 正确分类
+# 1) projection 正确分类（review-aware）
 # ---------------------------------------------------------------------------
 def test_projection_classifies_claims(env):
     idea = env["idea"]
     p = _projection(env).project(idea.idea_id)
 
-    assert p["maturity"] == "I2"  # 有真实 evidence
+    assert p["maturity"] == "I2"  # key claim (mechanism) 已评审 → I2
     assert p["counts"]["total_claims"] == 4
-    assert p["counts"]["known"] == 1       # supports
-    assert p["counts"]["contradicted"] == 1  # contradicts
-    assert p["counts"]["evidence"] == 2    # 有 relation 的 claim 数
-    assert p["counts"]["unknown"] == 1     # epistemic U
-    assert p["counts"]["gaps"] == 2        # claim_unknown + claim_gap 均无 relation
-    # known 列表内容
-    assert p["known"][0]["statement"] == "视觉反馈改善动作完成"
+    assert p["counts"]["supported_claims"] == 1  # reviewed supports
+    assert p["counts"]["contradicted"] == 1      # reviewed contradicts
+    assert p["counts"]["evidence"] == 2          # 有 reviewed relation 的 claim 数
+    assert p["counts"]["unknown"] == 1           # epistemic U
+    assert p["counts"]["gaps"] == 2              # claim_unknown + claim_gap 无 reviewed relation
+    assert p["counts"]["evidence_gaps"] == 2
+    assert p["counts"]["pending_relations"] == 0
+    assert p["counts"]["rejected_relations"] == 0
+    # known 是 DEPRECATED 兼容字段（= supported_claims，只含 reviewed supports）
+    assert p["known"] == p["supported_claims"]
+    # supported_claims 列表内容
+    assert p["supported_claims"][0]["statement"] == "视觉反馈改善动作完成"
     # contradicted
     assert p["contradicted"][0]["statement"] == "姿态估计可识别动作"
+    # assessments
+    assert p["assessments"][env["claims"][0].claim_id]["status"] == "SUPPORTED"
+    assert p["assessments"][env["claims"][1].claim_id]["status"] == "CONTRADICTED"
+    assert p["assessments"][env["claims"][2].claim_id]["status"] == "NOT_SEARCHED"
+    assert p["assessments"][env["claims"][3].claim_id]["status"] == "NOT_SEARCHED"
 
 
 def test_projection_assumption_lists_a_claims(env):
@@ -124,26 +139,27 @@ def test_snapshot_immutable_after_source_change(env):
     assert isinstance(snap, IdeaTruthSnapshot)
     before_gaps = snap.projection["counts"]["gaps"]
 
-    # 修改源：给 claim_gap 加 evidence（通过 db + relation service）
+    # 修改源：给 claim_gap 加 evidence 并评审（reviewed）
     claim_gap = env["claims"][3]
     ev_new = db.add_evidence("default", "P1", kind="paper", title="new",
                              url="https://example.invalid/new")
-    env["relations"].add(EvidenceRelation(relation_id="", tenant_id="default",
-                                          project_id="P1",
-                                          claim_id=claim_gap.claim_id,
-                                          evidence_id=ev_new,
-                                          relation_type="supports"))
+    new_rel = env["relations"].add(EvidenceRelation(relation_id="", tenant_id="default",
+                                                    project_id="P1",
+                                                    claim_id=claim_gap.claim_id,
+                                                    evidence_id=ev_new,
+                                                    relation_type="supports"))
+    env["relations"].review("default", "P1", new_rel.relation_id, "reviewed")
 
     # snapshot 不受影响（深拷贝）
     assert snap.projection["counts"]["gaps"] == before_gaps
     assert json.loads(snap.to_json())["projection"]["counts"]["gaps"] == before_gaps
-    # 新 projection 反映变化：claim_gap 有证据后仅剩 claim_unknown 是 gap
+    # 新 projection 反映变化：claim_gap 有 reviewed 证据后仅剩 claim_unknown 是 gap
     after = _projection(env).project(idea.idea_id)
     assert after["counts"]["gaps"] == 1
 
 
 # ---------------------------------------------------------------------------
-# 3) maturity I0→I1→I2 判定
+# 3) maturity I0→I1→I2 判定（保守规则）
 # ---------------------------------------------------------------------------
 def test_maturity_evaluation(env):
     db = env["db"]
@@ -151,12 +167,12 @@ def test_maturity_evaluation(env):
     idea = env["idea"]
     ideas = IdeaService(db)
 
-    # I0：raw idea 无 claims
+    # I0：无 claims
     raw = ideas.create(Idea(idea_id="", tenant_id="default", project_id="P1",
                             title="Raw", raw_input="r", lifecycle_status="raw"))
     assert IdeaMaturity.evaluate(raw, graph) == IdeaMaturity.I0_RAW_IDEA
 
-    # I1：有 claims 但无 evidence
+    # I1：有 claims 但无 evidence（key claim 未检索）
     structured = ideas.create(Idea(idea_id="", tenant_id="default", project_id="P1",
                                    title="Structured", raw_input="r",
                                    lifecycle_status="structured"))
@@ -165,13 +181,41 @@ def test_maturity_evaluation(env):
                                   statement="c1", epistemic_status="A"))
     assert IdeaMaturity.evaluate(structured, graph) == IdeaMaturity.I1_STRUCTURED_IDEA
 
-    # I2：idea 的 claims 有真实 evidence
+    # I2：key claim（mechanism）已检索 + 评审
     assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I2_EVIDENCE_BACKED_IDEA
 
-    # from_lifecycle 映射
+    # from_lifecycle：DEPRECATED —— 旧值保留兼容映射；新值抛错
     assert IdeaMaturity.from_lifecycle("raw") == IdeaMaturity.I0_RAW_IDEA
     assert IdeaMaturity.from_lifecycle("structured") == IdeaMaturity.I1_STRUCTURED_IDEA
     assert IdeaMaturity.from_lifecycle("evidence_backed") == IdeaMaturity.I2_EVIDENCE_BACKED_IDEA
+    with pytest.raises(ValueError, match="no longer encodes maturity"):
+        IdeaMaturity.from_lifecycle("active")
+
+
+def test_idea_lifecycle_independent_from_maturity(env):
+    """Commit 3：lifecycle_status（对象生命状态）与 maturity（derived）分离。
+
+    lifecycle=active 的 idea 可能 I0/I1/I2；lifecycle 不携带成熟度。
+    """
+    db = env["db"]
+    graph = env["graph"]
+    ideas = IdeaService(db)
+    # 旧值 raw/structured/evidence_backed 读取时兼容映射为 active
+    for legacy in ("raw", "structured", "evidence_backed"):
+        idea = ideas.create(Idea(idea_id="", tenant_id="default", project_id="P1",
+                                 title=legacy, raw_input="r",
+                                 lifecycle_status=legacy))
+        assert idea.lifecycle_status == "active"
+        got = ideas.get("default", "P1", idea.idea_id)
+        assert got.lifecycle_status == "active"
+    # env idea：lifecycle=active 且 maturity=I2（maturity 由 graph 判定，非 lifecycle）
+    assert env["idea"].lifecycle_status == "active"
+    assert IdeaMaturity.evaluate(env["idea"], graph) == IdeaMaturity.I2_EVIDENCE_BACKED_IDEA
+    # active + 无 claims → I0（lifecycle 相同但 maturity 不同）
+    raw = ideas.create(Idea(idea_id="", tenant_id="default", project_id="P1",
+                            title="no claims", raw_input="r"))
+    assert raw.lifecycle_status == "active"
+    assert IdeaMaturity.evaluate(raw, graph) == IdeaMaturity.I0_RAW_IDEA
 
 
 # ---------------------------------------------------------------------------
@@ -198,3 +242,134 @@ def test_projection_tenant_project_scoped(env):
     from aipd_os.idea import IdeaNotFoundError
     with pytest.raises(IdeaNotFoundError):
         p2.project(idea.idea_id)
+
+
+# ---------------------------------------------------------------------------
+# 6) Commit 4：保守 I2 + review semantics
+# ---------------------------------------------------------------------------
+def _idea_with_claims(db, claim_types):
+    """建 idea + 指定 claim_type 的 claims（默认 A）。"""
+    ideas = IdeaService(db)
+    idea = ideas.create(Idea(idea_id="", tenant_id="default", project_id="P1",
+                             title="I", raw_input="r"))
+    claims = []
+    for t in claim_types:
+        claims.append(ClaimService(db).create(
+            Claim(claim_id="", tenant_id="default", project_id="P1",
+                  idea_id=idea.idea_id, claim_type=t,
+                  statement=f"claim-{t}", epistemic_status="A")))
+    return idea, claims
+
+
+def _add_reviewed_relation(db, relations, claim, rtype="supports"):
+    ev = db.add_evidence("default", "P1", kind="paper", title="t",
+                         url="https://example.invalid/t")
+    rel = relations.add(EvidenceRelation(relation_id="", tenant_id="default",
+                                         project_id="P1", claim_id=claim.claim_id,
+                                         evidence_id=ev, relation_type=rtype))
+    relations.review("default", "P1", rel.relation_id, "reviewed")
+    return rel
+
+
+def test_one_relation_does_not_make_whole_idea_i2(env):
+    """一条 pending/inconclusive relation 不使整个 Idea 升 I2。"""
+    db = env["db"]
+    graph = env["graph"]
+    relations = env["relations"]
+    idea, claims = _idea_with_claims(db, ["problem", "user"])  # 2 个 key claims
+    # 只给 problem 挂一条 pending + inconclusive relation
+    ev = db.add_evidence("default", "P1", kind="paper", title="t",
+                         url="https://example.invalid/t")
+    relations.add(EvidenceRelation(relation_id="", tenant_id="default",
+                                   project_id="P1", claim_id=claims[0].claim_id,
+                                   evidence_id=ev, relation_type="inconclusive"))
+    assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I1_STRUCTURED_IDEA
+
+
+def test_pending_support_does_not_count_as_supported(env):
+    """pending supports 不进入 supported_claims / known（Commit 4）。"""
+    db = env["db"]
+    graph = env["graph"]
+    relations = env["relations"]
+    idea, claims = _idea_with_claims(db, ["problem", "user"])
+    ev = db.add_evidence("default", "P1", kind="paper", title="t",
+                         url="https://example.invalid/t")
+    relations.add(EvidenceRelation(relation_id="", tenant_id="default",
+                                   project_id="P1", claim_id=claims[0].claim_id,
+                                   evidence_id=ev, relation_type="supports"))
+    # 未评审：不算 supported、不算 searched 完成 → I1
+    assert graph.get_supporting_evidence("default", "P1", claims[0].claim_id) == []
+    p = IdeaTruthProjection(db, graph, "default", "P1").project(idea.idea_id)
+    assert p["counts"]["supported_claims"] == 0
+    assert p["counts"]["pending_relations"] == 1
+    assert p["counts"]["not_searched_claims"] == 2
+    assert p["maturity"] == "I1"
+
+
+def test_rejected_relation_does_not_affect_truth(env):
+    """rejected relation 不参与支持/反驳计数，单独列出。"""
+    db = env["db"]
+    graph = env["graph"]
+    relations = env["relations"]
+    idea, claims = _idea_with_claims(db, ["problem", "user"])
+    ev = db.add_evidence("default", "P1", kind="paper", title="t",
+                         url="https://example.invalid/t")
+    rel = relations.add(EvidenceRelation(relation_id="", tenant_id="default",
+                                         project_id="P1", claim_id=claims[0].claim_id,
+                                         evidence_id=ev, relation_type="supports"))
+    relations.review("default", "P1", rel.relation_id, "rejected")
+    p = IdeaTruthProjection(db, graph, "default", "P1").project(idea.idea_id)
+    assert p["counts"]["supported_claims"] == 0
+    assert p["counts"]["contradicted"] == 0
+    assert p["counts"]["rejected_relations"] == 1
+    assert p["counts"]["pending_relations"] == 0
+    assert p["maturity"] == "I1"
+
+
+def test_maturity_requires_key_claim_coverage(env):
+    """I2 需要所有 key claims 完成检索+评审（缺少任一 → I1；补全后 → I2）。"""
+    db = env["db"]
+    graph = env["graph"]
+    relations = env["relations"]
+    idea, claims = _idea_with_claims(db, ["problem", "user", "mechanism"])
+    # 只检索+评审 problem（其余 key claims 未检索）→ I1
+    _add_reviewed_relation(db, relations, claims[0], "supports")
+    assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I1_STRUCTURED_IDEA
+    # 补全 user / mechanism → I2
+    _add_reviewed_relation(db, relations, claims[1], "supports")
+    assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I1_STRUCTURED_IDEA
+    _add_reviewed_relation(db, relations, claims[2], "supports")
+    assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I2_EVIDENCE_BACKED_IDEA
+    # key_claims 辅助
+    assert {c.claim_type for c in IdeaMaturity.key_claims(graph, idea)} == \
+        {"problem", "user", "mechanism"}
+
+
+def test_key_claims_exclude_non_key_types(env):
+    """business/regulatory/safety 等非 key claim 不阻塞 I2（确定性规则）。"""
+    db = env["db"]
+    graph = env["graph"]
+    relations = env["relations"]
+    idea, claims = _idea_with_claims(db, ["safety", "business"])
+    # 非 key claims：无任何 reviewed evidence → I1（保守基线）
+    assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I1_STRUCTURED_IDEA
+    # 至少一条 reviewed evidence（挂在任一 claim 上）→ I2
+    _add_reviewed_relation(db, relations, claims[0], "supports")
+    assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I2_EVIDENCE_BACKED_IDEA
+
+
+def test_conflict_visible_in_projection(env):
+    """reviewed contradicts 在 projection 中可见（contradicted + MIXED assessment）。"""
+    db = env["db"]
+    graph = env["graph"]
+    relations = env["relations"]
+    idea, claims = _idea_with_claims(db, ["problem", "user"])
+    _add_reviewed_relation(db, relations, claims[0], "supports")
+    _add_reviewed_relation(db, relations, claims[0], "contradicts")
+    _add_reviewed_relation(db, relations, claims[1], "supports")
+    p = IdeaTruthProjection(db, graph, "default", "P1").project(idea.idea_id)
+    assert p["counts"]["supported_claims"] == 2  # problem + user 都有 reviewed supports
+    assert p["counts"]["contradicted"] == 1      # problem 有 reviewed contradicts
+    assert p["assessments"][claims[0].claim_id]["status"] == "MIXED"
+    assert p["assessments"][claims[1].claim_id]["status"] == "SUPPORTED"
+    assert p["maturity"] == "I2"

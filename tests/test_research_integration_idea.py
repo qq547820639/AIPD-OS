@@ -19,6 +19,7 @@ from aipd_os.execution.execution_router import ExecutionRouter
 from aipd_os.execution.registry import AdapterRegistry
 from aipd_os.execution.runs import RunStore
 from aipd_os.idea import (
+    EVIDENCE_ASSESS_RELATION_CAPABILITY,
     RESEARCH_CAPABILITIES,
     Claim,
     ClaimService,
@@ -35,8 +36,10 @@ from aipd_os.idea import (
 )
 from aipd_os.state.db import AIPDStateDB
 from tests.fixtures.idea.research_fixtures import (
-    FAKE_CONTRADICT_RESULT,
+    FAKE_CONTRADICT_RESULT_PER_SOURCE,
+    FAKE_PER_SOURCE_RESULT,
     FAKE_SUPPORT_RESULT,
+    FAKE_SUPPORT_RESULT_PER_SOURCE,
     EmptyFakeResearchProvider,
     FakeResearchProvider,
 )
@@ -119,9 +122,14 @@ def test_unavailable_provider_adapter_honest(env):
 
 
 # ---------------------------------------------------------------------------
-# 2) Fake provider → evidence + relation（supports/contradicts）→ graph 反映
+# 2) Fake provider → evidence + relation（per-source；Search ≠ Assessment）
 # ---------------------------------------------------------------------------
-def test_fake_provider_supports_relation(env):
+def test_search_result_defaults_to_inconclusive(env):
+    """Commit 5：检索到 sources 但无显式评估 → relation_type=inconclusive + pending。
+
+    legacy FAKE_SUPPORT_RESULT 顶层声明 evidence_relation 不再被当作
+    「检索→支持」的推理；source 无 per-source relation → 保守 inconclusive。
+    """
     claim_sup, _ = env["claims"]
     provider = FakeResearchProvider(capability_id="research.academic_search",
                                     result=FAKE_SUPPORT_RESULT)
@@ -131,10 +139,17 @@ def test_fake_provider_supports_relation(env):
         claim_id=claim_sup.claim_id, tenant_id="default", project_id="P1",
         capability="research.academic_search",
         inputs={"query": "home-based rehab adherence"}), actor="alice")
-    assert out["relation_type"] == "supports"
+    assert out["relation_type"] == "inconclusive"
     assert len(out["evidence_ids"]) == 1
-    # graph 反映
-    rels = env["graph"].get_supporting_evidence("default", "P1", claim_sup.claim_id)
+    assert out["relations"][0]["review_status"] == "pending"
+    assert out["relations"][0]["relation_type"] == "inconclusive"
+    # 未评审：语义 getter 不返回
+    assert env["graph"].get_supporting_evidence(
+        "default", "P1", claim_sup.claim_id) == []
+    # 评审后进入 inconclusive 视图
+    env["relations"].review("default", "P1",
+                            out["relations"][0]["relation_id"], "reviewed")
+    rels = env["graph"].get_inconclusive_evidence("default", "P1", claim_sup.claim_id)
     assert [r.evidence_id for r in rels] == out["evidence_ids"]
     assert provider.execute_count == 1
     # 证据真实存在于 canonical evidence 表
@@ -143,12 +158,34 @@ def test_fake_provider_supports_relation(env):
     # audit
     actions = [r["action"] for r in env["db"].list_audit(limit=100)]
     assert "evidence_relation.add" in actions
+    assert "evidence_relation.review" in actions
+
+
+def test_fake_provider_supports_relation_per_source(env):
+    """per-source contract：source.relation.type=supports → supports（仍 pending）。"""
+    claim_sup, _ = env["claims"]
+    provider = FakeResearchProvider(capability_id="research.academic_search",
+                                    result=FAKE_SUPPORT_RESULT_PER_SOURCE)
+    router = _make_router(env, provider)
+    integ = _integration(env, router=router)
+    out = integ.link_evidence_for_claim(EvidenceRequest(
+        claim_id=claim_sup.claim_id, tenant_id="default", project_id="P1",
+        capability="research.academic_search",
+        inputs={"query": "home-based rehab adherence"}), actor="alice")
+    assert out["relation_type"] == "supports"
+    assert out["relations"][0]["review_status"] == "pending"  # 显式评估后 review
+    assert len(out["evidence_ids"]) == 1
+    # 评审后进入支持视图
+    env["relations"].review("default", "P1",
+                            out["relations"][0]["relation_id"], "reviewed")
+    rels = env["graph"].get_supporting_evidence("default", "P1", claim_sup.claim_id)
+    assert [r.evidence_id for r in rels] == out["evidence_ids"]
 
 
 def test_fake_provider_contradicts_relation(env):
     _, claim_con = env["claims"]
     provider = FakeResearchProvider(capability_id="research.academic_search",
-                                    result=FAKE_CONTRADICT_RESULT)
+                                    result=FAKE_CONTRADICT_RESULT_PER_SOURCE)
     router = _make_router(env, provider)
     integ = _integration(env, router=router)
     out = integ.link_evidence_for_claim(EvidenceRequest(
@@ -156,8 +193,34 @@ def test_fake_provider_contradicts_relation(env):
         capability="research.academic_search",
         inputs={"query": "pose estimation rehab accuracy"}))
     assert out["relation_type"] == "contradicts"
+    assert out["relations"][0]["review_status"] == "pending"
+    # 评审后 contradicts 进入语义视图
+    env["relations"].review("default", "P1",
+                            out["relations"][0]["relation_id"], "reviewed")
     rels = env["graph"].get_contradicting_evidence("default", "P1", claim_con.claim_id)
     assert len(rels) == 1
+
+
+def test_each_source_can_have_different_relation(env):
+    """Paper A supports / Paper B contradicts / Paper C irrelevant → 三条独立 relation。"""
+    claim_sup, _ = env["claims"]
+    provider = FakeResearchProvider(capability_id="research.academic_search",
+                                    result=FAKE_PER_SOURCE_RESULT)
+    router = _make_router(env, provider)
+    integ = _integration(env, router=router)
+    out = integ.link_evidence_for_claim(EvidenceRequest(
+        claim_id=claim_sup.claim_id, tenant_id="default", project_id="P1",
+        capability="research.academic_search", inputs={"query": "q"}), actor="alice")
+    assert len(out["evidence_ids"]) == 3
+    assert out["relation_type"] == "mixed"  # 三种不同类型
+    by_id = {r["evidence_id"]: r for r in out["relations"]}
+    assert {by_id[eid]["relation_type"] for eid in out["evidence_ids"]} == \
+        {"supports", "contradicts", "inconclusive"}
+    # 三条 relation 各自独立（evidence_id 不同）
+    assert len({r["relation_id"] for r in out["relations"]}) == 3
+    # Paper C（无 relation）→ inconclusive + pending
+    rel_c = next(r for r in out["relations"] if r["relation_type"] == "inconclusive")
+    assert rel_c["review_status"] == "pending"
 
 
 # ---------------------------------------------------------------------------
@@ -172,12 +235,32 @@ def test_capability_routed_by_id_not_provider_name(env):
     out = integ.link_evidence_for_claim(EvidenceRequest(
         claim_id=claim_sup.claim_id, tenant_id="default", project_id="P1",
         capability="research.related_work", inputs={"topic": "rehab"}))
-    assert out["relation_type"] == "supports"
+    # legacy fixture（无 per-source relation）→ 保守 inconclusive
+    assert out["relation_type"] == "inconclusive"
     # capability 声明（ProviderRegistry schema 兼容）
     decl = research_capability_declaration("research.related_work")
     assert decl["id"] == "research.related_work"
     assert decl["domain"] == "research"
     assert RESEARCH_CAPABILITIES  # 能力注册骨架非空
+
+
+# ---------------------------------------------------------------------------
+# 3b) Commit 5：Search ≠ Assessment 拆层
+# ---------------------------------------------------------------------------
+def test_assess_relation_capability_declared(env):
+    """evidence.assess_relation 是独立 capability（Search 不承担评估）。"""
+    assert EVIDENCE_ASSESS_RELATION_CAPABILITY == "evidence.assess_relation"
+    assert EVIDENCE_ASSESS_RELATION_CAPABILITY in RESEARCH_CAPABILITIES
+    # Search provider 的 assess_relation 诚实不可用（external_dependency）
+    claim_sup, _ = env["claims"]
+    provider = FakeResearchProvider(capability_id="research.academic_search",
+                                    result=FAKE_SUPPORT_RESULT_PER_SOURCE)
+    with pytest.raises(ResearchCapabilityUnavailable, match="assess_relation"):
+        provider.assess_relation({"claim_id": claim_sup.claim_id})
+    # UnavailableResearchProvider 同样诚实
+    up = UnavailableResearchProvider("research.academic_search")
+    with pytest.raises(ResearchCapabilityUnavailable):
+        up.assess_relation({"claim_id": claim_sup.claim_id})
 
 
 # ---------------------------------------------------------------------------

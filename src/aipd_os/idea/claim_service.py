@@ -6,12 +6,16 @@
 """
 from __future__ import annotations
 
-from contextlib import suppress
 from typing import Any
 
 from aipd_os.state.db import FACT_STATUSES, AIPDStateDB, now_iso
 
-from .claims import CLAIM_LIFECYCLE_STATUSES, CLAIM_TYPES, Claim
+from .claims import (
+    CLAIM_LIFECYCLE_STATUSES,
+    CLAIM_TYPES,
+    LEGACY_UNSCORED_SENTINEL,
+    Claim,
+)
 
 # 可编辑字段白名单
 _CLAIM_EDITABLE = {
@@ -38,14 +42,8 @@ class ClaimService:
 
     # ------------------------------------------------------------- helpers
     def _next_id(self, prefix: str = "CLM") -> str:
-        with self._db.connect() as c:
-            rows = c.execute("SELECT claim_id FROM claims").fetchall()
-        nums = []
-        for r in rows:
-            if isinstance(r["claim_id"], str) and r["claim_id"].startswith(prefix + "-"):
-                with suppress(ValueError):
-                    nums.append(int(r["claim_id"].rsplit("-", 1)[1]))
-        return f"{prefix}-{max(nums, default=0) + 1:03d}"
+        """并发安全 ID：基于 id_sequences 表原子分配（v5.8.1 Commit 7）。"""
+        return self._db.next_sequence("claim", prefix)
 
     @staticmethod
     def _row_to_claim(row: Any) -> Claim:
@@ -89,8 +87,12 @@ class ClaimService:
                 "version_no,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (claim.claim_id, claim.project_id, claim.tenant_id, claim.idea_id,
                  claim.claim_type, claim.statement, claim.epistemic_status,
-                 claim.lifecycle_status, claim.confidence, claim.source,
-                 claim.version_no, ts, ts))
+                 claim.lifecycle_status,
+                 # confidence=None（未评分）→ DB 存 legacy 哨兵 0.5（NOT NULL）；
+                 # 模型层读取时再映射回 None（legacy_unscored）。
+                 claim.confidence if claim.confidence is not None
+                 else LEGACY_UNSCORED_SENTINEL,
+                 claim.source, claim.version_no, ts, ts))
         created = Claim(
             claim_id=claim.claim_id, tenant_id=claim.tenant_id,
             project_id=claim.project_id, idea_id=claim.idea_id,
@@ -128,13 +130,21 @@ class ClaimService:
                 and fields["lifecycle_status"] not in CLAIM_LIFECYCLE_STATUSES):
             raise ValueError(
                 f"invalid lifecycle_status {fields['lifecycle_status']!r}")
-        if "confidence" in fields and not 0.0 <= fields["confidence"] <= 1.0:
-            raise ValueError("confidence must be in [0,1]")
+        if "confidence" in fields and fields["confidence"] is not None \
+                and not 0.0 <= fields["confidence"] <= 1.0:
+            raise ValueError("confidence must be in [0,1] or None (unscored)")
         before = self.get(tenant_id, project_id, claim_id)
         set_cols = sorted(fields)
+        # confidence=None（未评分）→ DB 存 legacy 哨兵 0.5（NOT NULL）
+        params: list[Any] = []
+        for k in set_cols:
+            v = fields[k]
+            if k == "confidence" and v is None:
+                v = LEGACY_UNSCORED_SENTINEL
+            params.append(v)
         set_sql = ", ".join([f"{col}=?" for col in set_cols]
                               + ["updated_at=?", "version_no=version_no+1"])
-        params = [fields[k] for k in set_cols] + [now_iso()]
+        params = params + [now_iso()]
         with self._db.connect() as c:
             cur = c.execute(
                 f"UPDATE claims SET {set_sql} "

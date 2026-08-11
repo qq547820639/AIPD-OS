@@ -12,6 +12,18 @@
 """
 from __future__ import annotations
 
+from .claim_assessment import (
+    ASSESSMENT_CONTRADICTED,
+    ASSESSMENT_INSUFFICIENT,
+    ASSESSMENT_MIXED,
+    ASSESSMENT_NOT_APPLICABLE,
+    ASSESSMENT_NOT_SEARCHED,
+    ASSESSMENT_PARTIALLY_SUPPORTED,
+    ASSESSMENT_STATUSES,
+    ASSESSMENT_SUPPORTED,
+    CLAIM_ASSESSMENT_V1,
+    assess,
+)
 from .claim_service import (
     ClaimNotFoundError,
     ClaimOptimisticLockError,
@@ -25,6 +37,7 @@ from .claims import (
     CLAIM_LIFECYCLE_SUPERSEDED,
     CLAIM_TYPES,
     DEFAULT_EPISTEMIC_STATUS,
+    LEGACY_UNSCORED_SENTINEL,
     Claim,
 )
 from .decomposer import (
@@ -45,23 +58,24 @@ from .evidence_relations import (
     RELATION_TYPES,
     REVIEW_STATUSES,
     EvidenceRelation,
+    EvidenceRelationConflictError,
     EvidenceRelationNotFoundError,
     EvidenceRelationOptimisticLockError,
     EvidenceRelationScopeError,
     EvidenceRelationService,
 )
-from .maturity import IdeaMaturity
+from .maturity import KEY_CLAIM_TYPES, IdeaMaturity
 from .models import (
     EMPTY_CONSTRAINTS_JSON,
+    IDEA_LIFECYCLE_ACTIVE,
     IDEA_LIFECYCLE_ARCHIVED,
-    IDEA_LIFECYCLE_EVIDENCE_BACKED,
-    IDEA_LIFECYCLE_RAW,
     IDEA_LIFECYCLE_STATUSES,
-    IDEA_LIFECYCLE_STRUCTURED,
+    IDEA_LIFECYCLE_SUPERSEDED,
     Idea,
 )
 from .projections import IdeaTruthProjection, IdeaTruthSnapshot
 from .research_provider import (
+    EVIDENCE_ASSESS_RELATION_CAPABILITY,
     RESEARCH_CAPABILITIES,
     EvidenceRequest,
     ResearchCapabilityUnavailable,
@@ -71,6 +85,7 @@ from .research_provider import (
     UnavailableResearchProvider,
     research_capability_declaration,
 )
+from .serializers import parse_constraints, serialize_constraints
 from .service import (
     IdeaNotFoundError,
     IdeaOptimisticLockError,
@@ -80,10 +95,9 @@ from .service import (
 __all__ = [
     # models
     "Idea",
-    "IDEA_LIFECYCLE_RAW",
-    "IDEA_LIFECYCLE_STRUCTURED",
-    "IDEA_LIFECYCLE_EVIDENCE_BACKED",
+    "IDEA_LIFECYCLE_ACTIVE",
     "IDEA_LIFECYCLE_ARCHIVED",
+    "IDEA_LIFECYCLE_SUPERSEDED",
     "IDEA_LIFECYCLE_STATUSES",
     "EMPTY_CONSTRAINTS_JSON",
     # service
@@ -92,6 +106,7 @@ __all__ = [
     "IdeaOptimisticLockError",
     # maturity / decomposer / projections
     "IdeaMaturity",
+    "KEY_CLAIM_TYPES",
     "IdeaDecompositionProvider",
     "IdeaDecompositionProviderAdapter",
     "IdeaDecompositionUnavailable",
@@ -103,10 +118,24 @@ __all__ = [
     "FAILED_VALIDATION",
     "IDEA_DECOMPOSE_CAPABILITY",
     "STRUCTURED_CANDIDATE_SCHEMA",
+    "serialize_constraints",
+    "parse_constraints",
     "IdeaTruthProjection",
     "IdeaTruthSnapshot",
+    # claim assessment (Commit 3)
+    "CLAIM_ASSESSMENT_V1",
+    "ASSESSMENT_STATUSES",
+    "ASSESSMENT_NOT_SEARCHED",
+    "ASSESSMENT_INSUFFICIENT",
+    "ASSESSMENT_SUPPORTED",
+    "ASSESSMENT_PARTIALLY_SUPPORTED",
+    "ASSESSMENT_MIXED",
+    "ASSESSMENT_CONTRADICTED",
+    "ASSESSMENT_NOT_APPLICABLE",
+    "assess",
     # research provider / integration
     "RESEARCH_CAPABILITIES",
+    "EVIDENCE_ASSESS_RELATION_CAPABILITY",
     "ResearchProvider",
     "UnavailableResearchProvider",
     "ResearchCapabilityUnavailable",
@@ -122,6 +151,7 @@ __all__ = [
     "ClaimScopeError",
     "CLAIM_TYPES",
     "DEFAULT_EPISTEMIC_STATUS",
+    "LEGACY_UNSCORED_SENTINEL",
     "CLAIM_LIFECYCLE_ACTIVE",
     "CLAIM_LIFECYCLE_SUPERSEDED",
     "CLAIM_LIFECYCLE_ARCHIVED",
@@ -129,6 +159,7 @@ __all__ = [
     # evidence relations / graph
     "EvidenceRelation",
     "EvidenceRelationService",
+    "EvidenceRelationConflictError",
     "EvidenceRelationNotFoundError",
     "EvidenceRelationOptimisticLockError",
     "EvidenceRelationScopeError",

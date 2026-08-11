@@ -7,27 +7,54 @@
 """
 from __future__ import annotations
 
+from .audit import AuditLogger
 from .auth import AuthError, AuthManager
 from .backup import BackupManager
 from .checkpoint import CheckpointManager
 from .crypto import decrypt_secret, encrypt_secret
-from .db import (AIPDStateDB, OptimisticLockError, ProjectNotFoundError,
-                 SENSITIVE_KEYS, TenantNotFoundError)
+from .db import (
+                 SENSITIVE_KEYS,
+                 AIPDStateDB,
+                 OptimisticLockError,
+                 ProjectNotFoundError,
+                 TenantNotFoundError,
+)
 from .health import health_check
+from .lineage import (
+                 DEFAULT_MAX_DEPTH,
+                 LINEAGE_RELATION_TYPES,
+                 LineageCycleError,
+                 LineageEdge,
+                 LineageNodeRef,
+                 LineageRelationError,
+                 LineageScopeError,
+                 LineageService,
+)
 from .migrations import MIGRATIONS, current_version, migrate, rollback
 from .objects import ObjectStore
-from .recovery import (APPROVAL_CATEGORIES, OBJECT_TYPES, AmbiguousProjectError,
-                       ApprovalRequiredError, UnifiedStateService)
+from .recovery import (
+                 APPROVAL_CATEGORIES,
+                 OBJECT_TYPES,
+                 AmbiguousProjectError,
+                 ApprovalRequiredError,
+                 UnifiedStateService,
+)
 from .server import StateService, main, run_http
-from .audit import AuditLogger
-from .state_backend import (DEFAULT_TENANT, ExternalDependencyError, LocalStateBackend,
-                            RemoteStateBackend, StateBackend)
+from .state_backend import (
+                 DEFAULT_TENANT,
+                 ExternalDependencyError,
+                 LocalStateBackend,
+                 RemoteStateBackend,
+                 StateBackend,
+)
 
 __version__ = "5.6.0"
 
 __all__ = [
     "AIPDStateDB", "OptimisticLockError", "ProjectNotFoundError", "TenantNotFoundError",
     "SENSITIVE_KEYS", "AuthManager", "AuthError", "encrypt_secret", "decrypt_secret",
+    "LineageService", "LineageNodeRef", "LineageEdge", "LINEAGE_RELATION_TYPES",
+    "DEFAULT_MAX_DEPTH", "LineageScopeError", "LineageRelationError", "LineageCycleError",
     "migrate", "rollback", "MIGRATIONS", "current_version", "BackupManager",
     "CheckpointManager", "AuditLogger", "health_check", "ObjectStore",
     "StateService", "run_http", "main",

@@ -1,11 +1,30 @@
 {
   "sources": [
-    {"title": "Golden Paper: adherence in home-based rehab",
-     "url": "https://example.invalid/golden-adherence",
-     "identifier": "golden-paper-1"}
+    {"source": {
+      "title": "Golden Paper: adherence in home-based rehab",
+      "url": "https://example.invalid/golden-adherence",
+      "identifier": "golden-paper-1",
+      "doi": "10.1000/golden-adherence",
+      "year": 2023,
+      "authors": ["G. Author"],
+      "venue": "J. Rehab"
+    }, "relation": {
+      "type": "supports",
+      "reasoning_summary": "golden fixture: supports claim (non-medical, test only)"
+    }},
+    {"source": {
+      "title": "Golden Paper: related but inconclusive evidence",
+      "url": "https://example.invalid/golden-inconclusive",
+      "identifier": "golden-paper-3",
+      "doi": "10.1000/golden-inconclusive",
+      "year": 2021,
+      "authors": ["G. Uncertain"],
+      "venue": "J. Ambiguous"
+    }, "relation": {
+      "type": "inconclusive",
+      "reasoning_summary": "golden fixture: inconclusive relation (non-medical, test only)"
+    }}
   ],
-  "evidence_relation": "supports",
   "provider": "golden-fake-research",
-  "reasoning_summary": "golden fixture: supports claim (non-medical, test only)",
   "EPISTEMIC_NOTE": "FIXTURE ONLY: 非真实研究结论；仅用于测试系统行为。"
 }

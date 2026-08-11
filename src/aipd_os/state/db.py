@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import sqlite3
@@ -162,6 +163,10 @@ CREATE TABLE IF NOT EXISTS dependencies (
   target_type TEXT NOT NULL,
   target_id TEXT NOT NULL,
   relation TEXT NOT NULL DEFAULT 'affects',
+  -- v5.8.1 Commit 9：generic lineage 扩展列（migration v6）
+  created_at TEXT NOT NULL DEFAULT '',
+  provenance TEXT NOT NULL DEFAULT '{}',
+  version_no INTEGER NOT NULL DEFAULT 1,
   UNIQUE(project_id, tenant_id, source_type, source_id, target_type, target_id, relation)
 );
 CREATE TABLE IF NOT EXISTS risks (
@@ -282,6 +287,13 @@ CREATE TABLE IF NOT EXISTS claim_evidence_relations (
   PRIMARY KEY (relation_id, project_id, tenant_id),
   UNIQUE (claim_id, evidence_id, relation_type, project_id, tenant_id)
 );
+-- v5.8.1 Commit 7：id_sequences —— 并发安全 ID 分配（migration v5）。
+-- 本 SCHEMA 常量仅是「目标 schema 参考」（见文件头 authority 注释）；
+-- 实际建库由 migration runner（migrations.py）负责。
+CREATE TABLE IF NOT EXISTS id_sequences (
+  name TEXT PRIMARY KEY,
+  next_val INTEGER NOT NULL
+);
 """
 
 
@@ -306,14 +318,21 @@ class TenantNotFoundError(Exception):
 
 
 class AIPDStateDB:
-    """多租户多项目 SQLite 状态存储。"""
+    """多租户多项目 SQLite 状态存储。
+
+    v5.8.1 Commit 8（schema authority 收口）：**migration runner 是唯一
+    schema authority** —— 新建库/既有库升级统一走 ``migrations.migrate()``
+    （v1..v5 全链），不再旁路 ``executescript(SCHEMA)``。
+    ``db.SCHEMA`` 仅作为「目标 schema 参考」保留（不再被 __init__ 执行）。
+    """
 
     def __init__(self, db_path: str, encryption_key: str = ""):
         self.path = Path(db_path)
         self._encryption_key = encryption_key
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.connect() as c:
-            c.executescript(SCHEMA)
+        # 唯一 schema authority：迁移 runner（v1..v5 全链；幂等）
+        from .migrations import migrate
+        migrate(str(self.path))
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
@@ -330,6 +349,27 @@ class AIPDStateDB:
             conn.close()
 
     # ------------------------------------------------------------------ helper
+    def next_sequence(self, name: str, prefix: str,
+                      digits: int = 3) -> str:
+        """原子分配带格式的 display id（v5.8.1 Commit 7）。
+
+        基于 ``id_sequences`` 表（migration v5）的 atomic UPSERT：
+        - 首次调用插入 (name, 1) → 返回 ``{prefix}-001``；
+        - 后续调用 ``ON CONFLICT DO UPDATE next_val=next_val+1`` → 串行化，
+          无 scan-max 并发 race（SQLite 写锁保证同一时刻只有一个递增）。
+        """
+        with self.connect() as c:
+            c.execute(
+                "INSERT INTO id_sequences(name, next_val) VALUES(?, ?) "
+                "ON CONFLICT(name) DO UPDATE SET next_val = next_val + 1",
+                (name, 1))
+            row = c.execute(
+                "SELECT next_val FROM id_sequences WHERE name=?", (name,)).fetchone()
+            if row is None:
+                raise RuntimeError(f"id_sequences missing row for {name!r}")
+            n = int(row["next_val"])
+        return f"{prefix}-{n:0{digits}d}"
+
     def _update(self, c: sqlite3.Connection, table: str, set_cols: List[str],
                 set_values: List[Any], where_cols: List[str], where_values: List[Any],
                 expected_version: int) -> int:
@@ -568,14 +608,162 @@ class AIPDStateDB:
                      metadata: Optional[Dict[str, Any]] = None,
                      accessed_at: Optional[str] = None) -> str:
         ts = now_iso()
+        # v5.8.1 Commit 15（QA）：evidence_id 走 id_sequences 原子分配
+        # （同 idea/claim/relation 一致；保留 E-001 display 格式）。
+        eid = self.next_sequence("evidence", "E")
         with self.connect() as c:
-            eid = self._next_id(c, "evidence", "evidence_id", "E")
             c.execute("INSERT INTO evidence(evidence_id,project_id,tenant_id,kind,title,url,identifier,"
                       "accessed_at,quality,summary,metadata_json,created_at,version_no) "
                       "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                       (eid, project_id, tenant_id, kind, title, url, identifier, accessed_at or ts,
                        quality, summary, _json(metadata or {}), ts, 1))
         return eid
+
+    # ------------------------------------------------------------------
+    # Evidence 去重 identity（v5.8.1 Commit 6）
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _canonical_url(url: str) -> str:
+        """规范化 URL 用于 identity：去空白、去尾斜杠、小写。"""
+        return str(url or "").strip().rstrip("/").lower()
+
+    @staticmethod
+    def _normalize_id(value: Any) -> str:
+        """规范化 identity 标识（doi/arxiv_id/identifier）。"""
+        return str(value or "").strip().lower()
+
+    @staticmethod
+    def _title_year_hash(title: str, year: Any) -> str:
+        """normalized(title+year) hash（低优先 identity）。"""
+        raw = f"{str(title or '').strip().lower()}|{year or ''}".encode()
+        return hashlib.sha256(raw).hexdigest()[:32]
+
+    @staticmethod
+    def _evidence_identity_keys(row: dict[str, Any]) -> set:
+        """从一条 evidence 行推导 identity keys（set of (kind, value)）。
+
+        来源：metadata_json.source_metadata.{doi,arxiv_id}、identifier 列、
+        canonical url 列、normalized(title+year) hash。
+        """
+        keys = set()
+        try:
+            md = json.loads(row.get("metadata_json") or "{}")
+        except (ValueError, TypeError):
+            md = {}
+        src_md = md.get("source_metadata") or {}
+        if src_md.get("doi"):
+            keys.add(("doi", AIPDStateDB._normalize_id(src_md["doi"])))
+        if src_md.get("arxiv_id"):
+            keys.add(("arxiv_id", AIPDStateDB._normalize_id(src_md["arxiv_id"])))
+        if row.get("identifier"):
+            keys.add(("identifier", AIPDStateDB._normalize_id(row["identifier"])))
+        if row.get("url"):
+            keys.add(("url", AIPDStateDB._canonical_url(row["url"])))
+        keys.add(("title_year", AIPDStateDB._title_year_hash(
+            row.get("title"), src_md.get("year"))))
+        return keys
+
+    def get_or_create_evidence(self, tenant_id: str, project_id: str, *,
+                               kind: str, title: str, url: str | None = None,
+                               identifier: str | None = None,
+                               doi: str | None = None,
+                               arxiv_id: str | None = None,
+                               metadata: dict[str, Any] | None = None) -> str:
+        """按 identity 去重的 evidence 写入（v5.8.1 Commit 6）。
+
+        同一 tenant+project 内按 identity 去重，优先级：
+        doi → arxiv_id → OpenAlex/Semantic Scholar id（identifier）→
+        normalized canonical URL → normalized(title+year) hash。
+
+        - 命中已有 Evidence → 返回现有 evidence_id（把新 provenance/
+          retrieval_context 合并进 metadata，不新建）；
+        - 未命中 → 新建 Evidence 并返回新 evidence_id。
+
+        doi/arxiv_id 存储在 metadata_json.source_metadata（避免 schema 变更；
+        去重以 metadata 为准）。
+        """
+        metadata = dict(metadata or {})
+        # 确保 identity 字段进入 source_metadata
+        src_md = dict(metadata.get("source_metadata") or {})
+        if doi and not src_md.get("doi"):
+            src_md["doi"] = doi
+        if arxiv_id and not src_md.get("arxiv_id"):
+            src_md["arxiv_id"] = arxiv_id
+        metadata["source_metadata"] = src_md
+
+        # candidate identity keys（优先级顺序）
+        candidate_keys: list[tuple] = []
+        if doi:
+            candidate_keys.append(("doi", self._normalize_id(doi)))
+        if arxiv_id:
+            candidate_keys.append(("arxiv_id", self._normalize_id(arxiv_id)))
+        if identifier:
+            candidate_keys.append(("identifier", self._normalize_id(identifier)))
+        if url:
+            candidate_keys.append(("url", self._canonical_url(url)))
+        candidate_keys.append(("title_year", self._title_year_hash(
+            title, src_md.get("year"))))
+
+        with self.connect() as c:
+            rows = c.execute(
+                "SELECT * FROM evidence WHERE tenant_id=? AND project_id=?",
+                (tenant_id, project_id)).fetchall()
+        row_keys = [self._evidence_identity_keys(dict(r)) for r in rows]
+        for kind_key, value in candidate_keys:
+            for row, keys in zip(rows, row_keys):
+                if (kind_key, value) in keys:
+                    # 命中：合并 provenance / retrieval_context 到 metadata
+                    return self._merge_evidence_provenance(
+                        tenant_id, project_id, dict(row), metadata)
+
+        ts = now_iso()
+        with self.connect() as c:
+            eid = self._next_id(c, "evidence", "evidence_id", "E")
+            c.execute(
+                "INSERT INTO evidence(evidence_id,project_id,tenant_id,kind,title,"
+                "url,identifier,accessed_at,quality,summary,metadata_json,"
+                "created_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (eid, project_id, tenant_id, kind, title, url, identifier, ts,
+                 None, None, _json(metadata), ts, 1))
+        return eid
+
+    def _merge_evidence_provenance(self, tenant_id: str, project_id: str,
+                                   existing: dict[str, Any],
+                                   new_metadata: dict[str, Any]) -> str:
+        """把新 provenance / retrieval_context 合并进已有 evidence 的 metadata。"""
+        try:
+            md = json.loads(existing.get("metadata_json") or "{}")
+        except (ValueError, TypeError):
+            md = {}
+        # 合并 provenance（latest wins；只填非空）
+        prov = new_metadata.get("provenance") or {}
+        if prov:
+            merged_prov = dict(md.get("provenance") or {})
+            for k, v in prov.items():
+                if v is not None and v != "":
+                    merged_prov[k] = v
+            md["provenance"] = merged_prov
+        # 追加 retrieval_context 到 retrieval_history（并把旧 retrieval_context 迁移进历史）
+        rc = new_metadata.get("retrieval_context")
+        if rc:
+            history = md.setdefault("retrieval_history", [])
+            old_rc = md.get("retrieval_context")
+            if old_rc and old_rc not in history:
+                history.append(old_rc)
+            history.append(rc)
+            md["retrieval_context"] = rc  # 最新一次检索上下文
+        # 合并 identity 字段（source_metadata doi/arxiv_id 补齐空缺）
+        src_md = dict(md.get("source_metadata") or {})
+        for k, v in (new_metadata.get("source_metadata") or {}).items():
+            if k in ("doi", "arxiv_id") and not src_md.get(k) and v:
+                src_md[k] = v
+        md["source_metadata"] = src_md
+        with self.connect() as c:
+            c.execute(
+                "UPDATE evidence SET metadata_json=?, version_no=version_no+1 "
+                "WHERE tenant_id=? AND project_id=? AND evidence_id=?",
+                (_json(md), tenant_id, project_id, existing["evidence_id"]))
+        return existing["evidence_id"]
 
     def list_evidence(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
         with self.connect() as c:

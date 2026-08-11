@@ -125,8 +125,14 @@ def test_cross_project_claim_rejected(env):
 
 
 # ---------------------------------------------------------------------------
-# 3) graph 查询 API
+# 3) graph 查询 API（v5.8.1 Commit 4：语义 getter 只统计 reviewed）
 # ---------------------------------------------------------------------------
+def _review_all(relations, claim_id, actor="alice"):
+    """把 claim 的全部 relation 标为 reviewed（Commit 4 review semantics）。"""
+    for rel in relations.list_for_claim("default", "P1", claim_id):
+        relations.review("default", "P1", rel.relation_id, "reviewed", actor=actor)
+
+
 def test_graph_supporting_contradicting_inconclusive(env):
     db = env["db"]
     claim_a, _ = env["claims"]
@@ -139,6 +145,7 @@ def test_graph_supporting_contradicting_inconclusive(env):
     relations.add(_rel(claim_a, ev_sup, "supports"))
     relations.add(_rel(claim_a, ev_con, "contradicts"))
     relations.add(_rel(claim_a, ev_inc, "inconclusive"))
+    _review_all(relations, claim_a.claim_id)
 
     assert {r.evidence_id for r in graph.get_supporting_evidence(
         "default", "P1", claim_a.claim_id)} == {ev_sup}
@@ -147,6 +154,23 @@ def test_graph_supporting_contradicting_inconclusive(env):
     assert {r.evidence_id for r in graph.get_inconclusive_evidence(
         "default", "P1", claim_a.claim_id)} == {ev_inc}
     assert len(graph.get_claim_evidence("default", "P1", claim_a.claim_id)) == 3
+
+
+def test_pending_support_does_not_count_as_supported(env):
+    """Commit 4：pending supports 不进 get_supporting_evidence（未评审不算支持）。"""
+    db = env["db"]
+    claim_a, _ = env["claims"]
+    relations = env["relations"]
+    graph = env["graph"]
+    ev_sup = _evidence(db, title="ev-pending-sup")
+    relations.add(_rel(claim_a, ev_sup, "supports"))  # 默认 pending
+    assert graph.get_supporting_evidence("default", "P1", claim_a.claim_id) == []
+    # 评审后进入支持
+    relations.review("default", "P1",
+                     relations.list_for_claim("default", "P1", claim_a.claim_id)[0].relation_id,
+                     "reviewed")
+    assert [r.evidence_id for r in graph.get_supporting_evidence(
+        "default", "P1", claim_a.claim_id)] == [ev_sup]
 
 
 def test_graph_project_scoped(env):
@@ -158,7 +182,8 @@ def test_graph_project_scoped(env):
     relations.add(_rel(claim_a, ev, "supports"))
     # 其他 project 查不到该 claim 的 relations
     assert graph.get_claim_evidence("default", "P2", claim_a.claim_id) == []
-    with pytest.raises(Exception):
+    from aipd_os.idea import ClaimNotFoundError
+    with pytest.raises(ClaimNotFoundError):
         graph.get_claim("default", "P2", claim_a.claim_id)
 
 
@@ -168,9 +193,12 @@ def test_graph_unknown_claims_and_evidence_gaps(env):
     relations = env["relations"]
     graph = env["graph"]
 
-    # 两个 claim 都默认 A（unknown）；claim_a 有证据，claim_b 无证据 → gap
+    # 两个 claim 都默认 A（unknown）；claim_a 有证据（reviewed），claim_b 无证据 → gap
     ev = _evidence(db, title="ev-gap")
     relations.add(_rel(claim_a, ev, "supports"))
+    relations.review("default", "P1",
+                     relations.list_for_claim("default", "P1", claim_a.claim_id)[0].relation_id,
+                     "reviewed")
 
     unknown = graph.get_unknown_claims("default", "P1")
     assert {c.claim_id for c in unknown} == {claim_a.claim_id, claim_b.claim_id}
@@ -185,6 +213,10 @@ def test_graph_unknown_claims_and_evidence_gaps(env):
     assert summary["inconclusive"] == 0
     assert summary["unknown"] == 2
     assert summary["gaps"] == 1
+    assert summary["pending_relations"] == 0
+    assert summary["not_searched_claims"] == 1  # claim_b 未检索
+    assert summary["assessments"][claim_a.claim_id] == "SUPPORTED"
+    assert summary["assessments"][claim_b.claim_id] == "NOT_SEARCHED"
 
 
 def test_graph_not_applicable_counts_neither_support_nor_contradict(env):
@@ -194,11 +226,15 @@ def test_graph_not_applicable_counts_neither_support_nor_contradict(env):
     graph = env["graph"]
     ev = _evidence(db, title="ev-na")
     relations.add(_rel(claim_a, ev, "not_applicable"))
+    relations.review("default", "P1",
+                     relations.list_for_claim("default", "P1", claim_a.claim_id)[0].relation_id,
+                     "reviewed")
     summary = graph.get_idea_evidence_summary("default", "P1", env["idea"].idea_id)
     assert summary["supporting"] == 0
     assert summary["contradicting"] == 0
-    # not_applicable 不算 gap（有关系存在）
+    # not_applicable 不算 gap（有关系存在且已评审）
     assert summary["gaps"] == 1  # 另一个 claim 无证据
+    assert summary["assessments"][claim_a.claim_id] == "INSUFFICIENT"
 
 
 def test_reuses_canonical_evidence_table(env):
@@ -212,7 +248,93 @@ def test_reuses_canonical_evidence_table(env):
     # evidence 真实存在于 canonical evidence 表
     evs = db.list_evidence("default", "P1")
     assert any(e["evidence_id"] == ev_id for e in evs)
-    # 可直接 link 并查询
+    # 可直接 link 并查询（review 后进入支持视图）
     relations.add(_rel(claim_a, ev_id, "supports"))
+    relations.review("default", "P1",
+                     relations.list_for_claim("default", "P1", claim_a.claim_id)[0].relation_id,
+                     "reviewed")
     rels = graph.get_supporting_evidence("default", "P1", claim_a.claim_id)
     assert [r.evidence_id for r in rels] == [ev_id]
+
+
+# ---------------------------------------------------------------------------
+# 4) Commit 4：EvidenceRelationService.review 显式评审
+# ---------------------------------------------------------------------------
+def test_review_explicit_method(env):
+    """review() 显式评审 relation（reviewed/rejected）+ audit。"""
+    db = env["db"]
+    claim_a, _ = env["claims"]
+    relations = env["relations"]
+    rel = relations.add(_rel(claim_a, _evidence(db, title="ev-r"), "supports"),
+                        actor="alice")
+    assert rel.review_status == "pending"
+    # reviewed
+    reviewed = relations.review("default", "P1", rel.relation_id, "reviewed",
+                                actor="bob")
+    assert reviewed.review_status == "reviewed"
+    assert reviewed.version_no == rel.version_no + 1
+    # rejected
+    rejected = relations.review("default", "P1", rel.relation_id, "rejected",
+                                actor="bob", expected_version=reviewed.version_no)
+    assert rejected.review_status == "rejected"
+    # audit：evidence_relation.review 存在
+    actions = [r["action"] for r in db.list_audit(limit=100)]
+    assert "evidence_relation.review" in actions
+
+
+def test_review_rejects_invalid_status(env):
+    """review() 只接受 reviewed/rejected；pending 或非法值拒绝。"""
+    db = env["db"]
+    claim_a, _ = env["claims"]
+    relations = env["relations"]
+    rel = relations.add(_rel(claim_a, _evidence(db, title="ev-inv"), "supports"))
+    with pytest.raises(ValueError, match="reviewed/rejected"):
+        relations.review("default", "P1", rel.relation_id, "pending")
+    with pytest.raises(ValueError, match="review_status"):
+        relations.review("default", "P1", rel.relation_id, "bogus")
+
+
+def test_review_optimistic_lock_conflict(env):
+    """review() 传旧版本 → 乐观锁冲突（不静默覆盖）。"""
+    db = env["db"]
+    claim_a, _ = env["claims"]
+    relations = env["relations"]
+    rel = relations.add(_rel(claim_a, _evidence(db, title="ev-lock"), "supports"))
+    relations.review("default", "P1", rel.relation_id, "reviewed",
+                     expected_version=rel.version_no)
+    from aipd_os.idea import EvidenceRelationOptimisticLockError
+    with pytest.raises(EvidenceRelationOptimisticLockError):
+        relations.review("default", "P1", rel.relation_id, "rejected",
+                         expected_version=rel.version_no)
+
+
+def test_evidence_summary_review_aware(env):
+    """Commit 12：summary pending 不计入 supporting；reviewed 计入
+    reviewed_supporting；rejected 单独计数（与 projection 同口径）。"""
+    db = env["db"]
+    claim_a, _ = env["claims"]
+    relations = env["relations"]
+    graph = env["graph"]
+    ev = _evidence(db, title="ev-summary")
+    # pending supports → 不进入 supporting
+    rel = relations.add(_rel(claim_a, ev, "supports"))
+    summary = graph.get_idea_evidence_summary("default", "P1", env["idea"].idea_id)
+    assert summary["reviewed_supporting"] == 0
+    assert summary["supporting"] == 0
+    assert summary["pending_relations"] == 1
+    assert summary["assessments"][claim_a.claim_id] == "NOT_SEARCHED"
+    # reviewed supports → reviewed_supporting=1
+    relations.review("default", "P1", rel.relation_id, "reviewed")
+    summary = graph.get_idea_evidence_summary("default", "P1", env["idea"].idea_id)
+    assert summary["reviewed_supporting"] == 1
+    assert summary["supporting"] == 1
+    assert summary["pending_relations"] == 0
+    assert summary["assessments"][claim_a.claim_id] == "SUPPORTED"
+    # rejected contradicts → 单独计数，不算 contradicting
+    ev2 = _evidence(db, title="ev-rejected")
+    rel2 = relations.add(_rel(claim_a, ev2, "contradicts"))
+    relations.review("default", "P1", rel2.relation_id, "rejected")
+    summary = graph.get_idea_evidence_summary("default", "P1", env["idea"].idea_id)
+    assert summary["reviewed_contradicting"] == 0
+    assert summary["rejected_relations"] == 1
+    assert summary["contradicting"] == 0

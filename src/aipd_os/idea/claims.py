@@ -35,10 +35,24 @@ CLAIM_LIFECYCLE_STATUSES = frozenset({
     CLAIM_LIFECYCLE_ACTIVE, CLAIM_LIFECYCLE_SUPERSEDED, CLAIM_LIFECYCLE_ARCHIVED,
 })
 
+# 旧 DB 中「无评价」的 legacy 哨兵值（v5.8 默认 0.5 = 伪精确，Commit 3 起
+# 模型默认 None；读取时 0.5 视为 legacy_unscored 而非真实测量）。
+LEGACY_UNSCORED_SENTINEL = 0.5
+
+
+def _legacy_unscored(value: Any) -> bool:
+    """判断 DB 读取值是否为 legacy 未评分哨兵（0.5）。"""
+    return isinstance(value, (int, float)) and float(value) == LEGACY_UNSCORED_SENTINEL
+
 
 @dataclass
 class Claim:
-    """一条 Candidate Claim（tenant+project+idea scoped，version_no 乐观锁）。"""
+    """一条 Candidate Claim（tenant+project+idea scoped，version_no 乐观锁）。
+
+    confidence: Optional[float] —— **只有显式评分才填**（None=未评分）。
+    不把不知道的装成知道：无评价时不默认 50%。旧 DB 的 0.5 读取时按
+    legacy_unscored 处理为 None（不假设旧 0.5 是真实测量）。
+    """
 
     claim_id: str
     tenant_id: str = "default"
@@ -48,7 +62,7 @@ class Claim:
     statement: str = ""
     epistemic_status: str = DEFAULT_EPISTEMIC_STATUS
     lifecycle_status: str = CLAIM_LIFECYCLE_ACTIVE
-    confidence: float = 0.5
+    confidence: float | None = None
     source: str = ""
     version_no: int = 1
     created_at: str | None = None
@@ -67,8 +81,8 @@ class Claim:
             raise ValueError(
                 f"invalid lifecycle_status {self.lifecycle_status!r}; "
                 f"expected one of {sorted(CLAIM_LIFECYCLE_STATUSES)}")
-        if not 0.0 <= self.confidence <= 1.0:
-            raise ValueError("confidence must be in [0,1]")
+        if self.confidence is not None and not 0.0 <= self.confidence <= 1.0:
+            raise ValueError("confidence must be in [0,1] or None (unscored)")
         if self.version_no < 1:
             raise ValueError("version_no must be >= 1")
 
@@ -91,6 +105,10 @@ class Claim:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Claim:
+        confidence = data.get("confidence")
+        if _legacy_unscored(confidence):
+            # 旧 DB 的 0.5 = legacy_unscored 哨兵 → None（不假设是真实测量）
+            confidence = None
         return cls(
             claim_id=data["claim_id"],
             tenant_id=data.get("tenant_id", "default"),
@@ -100,7 +118,7 @@ class Claim:
             statement=data.get("statement", ""),
             epistemic_status=data.get("epistemic_status", DEFAULT_EPISTEMIC_STATUS),
             lifecycle_status=data.get("lifecycle_status", CLAIM_LIFECYCLE_ACTIVE),
-            confidence=data.get("confidence", 0.5),
+            confidence=confidence,
             source=data.get("source", ""),
             version_no=data.get("version_no", 1),
             created_at=data.get("created_at"),

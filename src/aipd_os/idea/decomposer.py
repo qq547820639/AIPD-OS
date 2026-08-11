@@ -32,10 +32,12 @@ from aipd_os.providers.sdk import (
     Provider as SdkProvider,
 )
 from aipd_os.state.db import AIPDStateDB
+from aipd_os.state.lineage import LineageNodeRef, LineageService
 
 from .claim_service import ClaimService
 from .claims import CLAIM_TYPES, Claim
 from .models import Idea
+from .serializers import serialize_constraints
 from .service import IdeaService
 
 # 分解能力不可用的明确标记（调用方据此诚实降级，不伪造结构化 Idea）。
@@ -225,33 +227,64 @@ class IdeaDecomposer:
         return errors
 
     # ------------------------------------------------------------- persist
-    def _persist(self, candidate: StructuredCandidate,
-                 actor: str) -> dict[str, Any]:
-        idea = self._ideas.create(Idea(
-            idea_id="", tenant_id=self._tenant, project_id=self._project,
-            title=candidate.title, raw_input="",
-            goal=candidate.goal, problem=candidate.problem,
-            target_user=candidate.target_user,
-            desired_outcome=candidate.desired_outcome,
-            constraints_json=str({"constraints": candidate.constraints}),
-            source=candidate.source,
-            lifecycle_status="structured",
-        ), actor=actor)
+    def _create_claims(self, candidate: StructuredCandidate,
+                       idea_id: str, actor: str) -> list[dict[str, Any]]:
+        """为指定 idea 创建 Candidate Claims（默认 A，绝不 V）。"""
         created_claims = []
         for c in candidate.claims:
             claim = self._claims.create(Claim(
                 claim_id="", tenant_id=self._tenant, project_id=self._project,
-                idea_id=idea.idea_id, claim_type=c["claim_type"],
+                idea_id=idea_id, claim_type=c["claim_type"],
                 statement=c["statement"], epistemic_status="A",  # 默认 A，绝不 V
                 source="idea_decomposer",
             ), actor=actor)
             created_claims.append(claim.to_dict())
+        # v5.8.1 Commit 9：Idea → Claim 建 derived_from lineage 边
+        self._link_idea_to_claims(idea_id, created_claims, actor)
+        return created_claims
+
+    def _link_idea_to_claims(self, idea_id: str,
+                             claims: list[dict[str, Any]],
+                             actor: str) -> None:
+        """为 idea 的每个 claim 建 derived_from 边（generic lineage，Commit 9）。"""
+        lineage = LineageService(self._db)
+        idea_node = LineageNodeRef(
+            node_type="idea", node_id=idea_id,
+            tenant_id=self._tenant, project_id=self._project)
+        for c in claims:
+            claim_node = LineageNodeRef(
+                node_type="claim", node_id=c["claim_id"],
+                tenant_id=self._tenant, project_id=self._project)
+            lineage.add_edge(idea_node, claim_node, "derived_from",
+                             provenance={"source": "idea_decomposer",
+                                         "claim_type": c.get("claim_type", "")},
+                             actor=actor)
+
+    def _persist(self, candidate: StructuredCandidate, raw_input: str,
+                 actor: str) -> dict[str, Any]:
+        """创建新的 Structured Idea（raw_input 保留、constraints 用真 JSON）。"""
+        idea = self._ideas.create(Idea(
+            idea_id="", tenant_id=self._tenant, project_id=self._project,
+            title=candidate.title, raw_input=raw_input,  # raw_input 绝不置空
+            goal=candidate.goal, problem=candidate.problem,
+            target_user=candidate.target_user,
+            desired_outcome=candidate.desired_outcome,
+            constraints_json=serialize_constraints(candidate.constraints),
+            source=candidate.source,
+            lifecycle_status="active",  # 对象生命状态（Commit 3）
+        ), actor=actor)
+        created_claims = self._create_claims(candidate, idea.idea_id, actor)
         return {"idea": idea.to_dict(), "claims": created_claims}
 
     # ------------------------------------------------------------- orchestrate
     def decompose_and_persist(self, raw_input: str,
                               actor: str = "system") -> dict[str, Any]:
-        """Raw Idea → Structured Idea + Candidate Claims（默认 A/U，绝不 V）。
+        """【独立 API】从 raw input 创建**新** Structured Idea + Candidate Claims。
+
+        v5.8.1 起该方法是独立的「新建」路径：每次调用都会创建新的 Idea 记录
+        （IdeaService.create → 新 idea_id）。需要保持 Idea 身份连续性（I0→I1
+        推进同一个 Idea）时，应使用 :meth:`decompose_existing` —— CLI/Supervisor
+        正式路径以 :meth:`decompose_existing` 为准。
 
         无 provider / provider 不可用 → :class:`IdeaDecompositionUnavailable`
         （不写 DB）；校验失败 → :class:`IdeaDecompositionValidationError`
@@ -267,13 +300,71 @@ class IdeaDecomposer:
         errors = self.validate(candidate)
         if errors:
             raise IdeaDecompositionValidationError(errors)
-        result = self._persist(candidate, actor)
+        result = self._persist(candidate, raw_input, actor)
         self._db.add_audit(actor, "idea.decompose", self._project, self._tenant,
                            before={"raw_input": raw_input},
                            after={"idea_id": result["idea"]["idea_id"],
                                   "claims": len(result["claims"]),
                                   "status": "ok"})
         return result
+
+    def decompose_existing(self, idea_id: str,
+                           actor: str = "system") -> dict[str, Any]:
+        """对已存在的 Idea 做结构化（Idea 身份连续性，I0→I1 同一记录推进）。
+
+        与 :meth:`decompose_and_persist`（新建 Idea）不同：
+        - load 已存在 Idea（tenant/project scope 校验，跨 scope 拒绝）；
+        - call provider 使用 ``idea.raw_input`` 作为分解输入；
+        - schema validate candidate（FAILED_VALIDATION 不写库）；
+        - **transactionally update 同一个 Idea**（IdeaService.update，
+          保持 idea_id / raw_input / created_at 不变；title / goal / problem /
+          target_user / desired_outcome / constraints_json 更新；
+          lifecycle_status → ``active``（对象生命状态；Commit 3））；
+        - 为**该 idea_id** 创建 Candidate Claims；
+        - audit（action=idea.structure）；
+        - 返回**同一个 idea_id**（结构同 :meth:`decompose_and_persist`）。
+
+        无 provider / provider 不可用 → :class:`IdeaDecompositionUnavailable`；
+        idea 不存在 → :class:`IdeaNotFoundError`；raw_input 为空 → ValueError
+        （诚实失败，不伪造结构化结果）。
+        """
+        if self._provider is None or not self._provider.available():
+            raise IdeaDecompositionUnavailable(
+                "idea decomposition capability unavailable; provide a registered "
+                "IdeaDecompositionProvider (CAPABILITY_UNAVAILABLE)")
+        existing = self._ideas.get(self._tenant, self._project, idea_id)
+        raw_input = existing.raw_input
+        if not raw_input:
+            raise ValueError(
+                f"idea {idea_id} has empty raw_input; cannot structure "
+                "(no user input to decompose)")
+        candidate = self._provider.decompose(
+            raw_input, {"raw_input": raw_input, "tenant_id": self._tenant,
+                        "project_id": self._project, "idea_id": idea_id})
+        errors = self.validate(candidate)
+        if errors:
+            raise IdeaDecompositionValidationError(errors)
+        updated = self._ideas.update(
+            self._tenant, self._project, idea_id,
+            expected_version=existing.version_no, actor=actor,
+            title=candidate.title, goal=candidate.goal,
+            problem=candidate.problem, target_user=candidate.target_user,
+            desired_outcome=candidate.desired_outcome,
+            constraints_json=serialize_constraints(candidate.constraints),
+            source=candidate.source,
+            lifecycle_status="active")  # 对象生命状态（Commit 3）
+        created_claims = self._create_claims(candidate, idea_id, actor)
+        self._db.add_audit(
+            actor, "idea.structure", self._project, self._tenant,
+            before={"idea_id": idea_id,
+                    "lifecycle_status": existing.lifecycle_status,
+                    "version_no": existing.version_no},
+            after={"idea_id": idea_id,
+                   "lifecycle_status": updated.lifecycle_status,
+                   "version_no": updated.version_no,
+                   "claims": len(created_claims),
+                   "status": "ok"})
+        return {"idea": updated.to_dict(), "claims": created_claims}
 
 
 __all__ = [

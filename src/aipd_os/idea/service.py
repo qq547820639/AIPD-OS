@@ -2,16 +2,16 @@
 
 全部操作 tenant+project scoped、audited（写入 audit_log）、versioned
 （version_no 乐观锁）。不建第二个 DB —— 复用 AIPDStateDB 的 sqlite 文件
-与 ideas 表（migration v2 / db.py SCHEMA）。
+与 ideas 表（migration v2）。
 """
 from __future__ import annotations
 
-from contextlib import suppress
 from typing import Any
 
 from aipd_os.state.db import AIPDStateDB, now_iso
 
 from .models import IDEA_LIFECYCLE_STATUSES, Idea
+from .serializers import parse_constraints
 
 # 可编辑字段白名单
 _IDEA_EDITABLE = {
@@ -34,14 +34,12 @@ class IdeaService:
 
     # ------------------------------------------------------------- helpers
     def _next_id(self, prefix: str = "IDEA") -> str:
-        with self._db.connect() as c:
-            rows = c.execute("SELECT idea_id FROM ideas").fetchall()
-        nums = []
-        for r in rows:
-            if isinstance(r["idea_id"], str) and r["idea_id"].startswith(prefix + "-"):
-                with suppress(ValueError):
-                    nums.append(int(r["idea_id"].rsplit("-", 1)[1]))
-        return f"{prefix}-{max(nums, default=0) + 1:03d}"
+        """并发安全 ID：基于 id_sequences 表原子分配（v5.8.1 Commit 7）。
+
+        替代旧的 scan-max（SELECT 全部 → max+1）——多 worker 并发不再产生
+        重复 ID / PK 冲突。
+        """
+        return self._db.next_sequence("idea", prefix)
 
     @staticmethod
     def _row_to_idea(row: Any) -> Idea:
@@ -138,6 +136,13 @@ class IdeaService:
 
     def list_ids(self, tenant_id: str, project_id: str) -> list[str]:
         return [i.idea_id for i in self.list(tenant_id, project_id)]
+
+    # ------------------------------------------------------- constraints
+    def get_constraints(self, tenant_id: str, project_id: str,
+                        idea_id: str) -> list[str]:
+        """读取 Idea 的约束列表（经 serializer 解析，兼容旧 repr 遗留数据）。"""
+        idea = self.get(tenant_id, project_id, idea_id)
+        return parse_constraints(idea.constraints_json)
 
 
 __all__ = [

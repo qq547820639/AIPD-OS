@@ -4,15 +4,247 @@
 并支持按目标版本回滚到任意历史版本（执行 ``down``）。
 
 迁移列表中的每个条目：``{"version": int, "name": str, "up": [sql|callable], "down": [sql|callable]}``。
+
+v5.8.1 Commit 8：**migration runner 是唯一 schema authority**——
+- V1 迁移使用**冻结的历史 SQL 文本**（:data:`V1_INITIAL_SCHEMA`），不再 import
+  ``db.SCHEMA``（活 schema 常量）；:data:`V1_FROZEN_SHA256` 冻结校验防漂移；
+- ``db.SCHEMA`` 仅作为「目标 schema 参考」保留（AIPDStateDB 建库走本 runner）。
 """
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-from .db import SCHEMA as V1_INITIAL_SCHEMA
+# v1 初始 schema（多租户多项目）—— **冻结的历史 SQL 文本**（Commit 8）。
+# 不可 import db.SCHEMA（活常量会随代码演进而改变 v1 语义）。
+V1_INITIAL_SCHEMA = r"""
+PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS tenants (
+  tenant_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS users (
+  user_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS user_access (
+  user_id TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  tenant_id TEXT NOT NULL,
+  project_id TEXT,
+  PRIMARY KEY (user_id, tenant_id, project_id)
+);
+CREATE TABLE IF NOT EXISTS sessions (
+  session_id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  token TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS projects (
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  goal TEXT NOT NULL,
+  gate TEXT NOT NULL DEFAULT 'G0',
+  status TEXT NOT NULL DEFAULT 'active',
+  version TEXT NOT NULL DEFAULT '0.1.0',
+  owner_policy TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  version_no INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (project_id, tenant_id)
+);
+CREATE TABLE IF NOT EXISTS facts (
+  fact_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  key TEXT NOT NULL,
+  value_json TEXT NOT NULL,
+  unit TEXT,
+  tolerance TEXT,
+  conditions TEXT,
+  status TEXT NOT NULL,
+  confidence REAL NOT NULL DEFAULT 0.5,
+  source TEXT,
+  version TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  version_no INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (fact_id, project_id, tenant_id),
+  UNIQUE(project_id, tenant_id, key, version)
+);
+CREATE TABLE IF NOT EXISTS evidence (
+  evidence_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL,
+  url TEXT,
+  identifier TEXT,
+  accessed_at TEXT,
+  quality TEXT,
+  summary TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  version_no INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (evidence_id, project_id, tenant_id)
+);
+CREATE TABLE IF NOT EXISTS fact_evidence (
+  fact_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  evidence_id TEXT NOT NULL,
+  relation TEXT NOT NULL DEFAULT 'supports',
+  PRIMARY KEY (fact_id, project_id, tenant_id, evidence_id, relation)
+);
+CREATE TABLE IF NOT EXISTS decisions (
+  decision_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  topic TEXT NOT NULL,
+  trigger TEXT,
+  recommendation TEXT,
+  options_json TEXT NOT NULL DEFAULT '[]',
+  status TEXT NOT NULL DEFAULT 'proposed',
+  choice TEXT,
+  comment TEXT,
+  created_at TEXT NOT NULL,
+  resolved_at TEXT,
+  version_no INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (decision_id, project_id, tenant_id)
+);
+CREATE TABLE IF NOT EXISTS deliverables (
+  deliverable_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  path TEXT,
+  status TEXT NOT NULL DEFAULT 'planned',
+  version TEXT,
+  gate TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL,
+  version_no INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (deliverable_id, project_id, tenant_id)
+);
+CREATE TABLE IF NOT EXISTS dependencies (
+  dependency_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  source_type TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  relation TEXT NOT NULL DEFAULT 'affects',
+  UNIQUE(project_id, tenant_id, source_type, source_id, target_type, target_id, relation)
+);
+CREATE TABLE IF NOT EXISTS risks (
+  risk_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  probability TEXT,
+  impact TEXT,
+  mitigation TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  owner TEXT NOT NULL DEFAULT 'AI',
+  trigger TEXT,
+  updated_at TEXT NOT NULL,
+  version_no INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (risk_id, project_id, tenant_id)
+);
+CREATE TABLE IF NOT EXISTS changes (
+  change_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  object_type TEXT NOT NULL,
+  object_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  before_json TEXT,
+  after_json TEXT,
+  reason TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS gates (
+  gate_record_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  gate TEXT NOT NULL,
+  result TEXT NOT NULL,
+  checks_json TEXT NOT NULL DEFAULT '{}',
+  approved_by TEXT NOT NULL DEFAULT 'AI-internal',
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS audit_log (
+  entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  actor TEXT NOT NULL,
+  action TEXT NOT NULL,
+  project_id TEXT,
+  tenant_id TEXT,
+  timestamp TEXT NOT NULL,
+  before_json TEXT,
+  after_json TEXT
+);
+CREATE TABLE IF NOT EXISTS checkpoints (
+  checkpoint_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  data_json TEXT NOT NULL,
+  summary_json TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS backups (
+  backup_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  backup_path TEXT NOT NULL,
+  checksum TEXT NOT NULL,
+  size INTEGER,
+  created_at TEXT NOT NULL
+);
+"""
+
+# v1 冻结文本的 SHA-256（Commit 8：防漂移校验，见 test_frozen_v1_schema_does_not_drift）
+V1_FROZEN_SHA256 = "a014a959286d1bfea11717d4e4f54a39bcbb5c4c9b2ad49e2d0f249f49fc52c7"
+
+
+def _v1_frozen_sha256() -> str:
+    """重算 v1 冻结文本的 SHA-256（用于漂移校验）。"""
+    return hashlib.sha256(V1_INITIAL_SCHEMA.encode("utf-8")).hexdigest()
+
+
+def _dependencies_columns(conn: sqlite3.Connection) -> set:
+    """dependencies 表现有列名集合。"""
+    rows = conn.execute("PRAGMA table_info(dependencies)").fetchall()
+    return {r[1] for r in rows}
+
+
+def _add_lineage_columns(conn: sqlite3.Connection) -> None:
+    """幂等添加 lineage 扩展列（v6 up）。"""
+    cols = _dependencies_columns(conn)
+    additions = [
+        ("created_at", "created_at TEXT NOT NULL DEFAULT ''"),
+        ("provenance", "provenance TEXT NOT NULL DEFAULT '{}'"),
+        ("version_no", "version_no INTEGER NOT NULL DEFAULT 1"),
+    ]
+    for col, ddl in additions:
+        if col not in cols:
+            conn.execute(f"ALTER TABLE dependencies ADD COLUMN {ddl}")
+
+
+def _drop_lineage_columns(conn: sqlite3.Connection) -> None:
+    """回滚 lineage 扩展列（v6 down；列不存在时跳过）。"""
+    cols = _dependencies_columns(conn)
+    for col in ("created_at", "provenance", "version_no"):
+        if col in cols:
+            conn.execute(f"ALTER TABLE dependencies DROP COLUMN {col}")
+
 
 # v1 初始 schema（多租户多项目）
 MIGRATIONS: List[Dict[str, Any]] = [
@@ -99,6 +331,54 @@ MIGRATIONS: List[Dict[str, Any]] = [
         ],
         "down": ["DROP TABLE IF EXISTS claim_evidence_relations;"],
     },
+    # v5.8.1 Commit 7：id_sequences —— 并发安全 ID 分配（atomic sequence table）。
+    # 从存量 ideas/claims/claim_evidence_relations 的 display id（IDEA-001 等）
+    # 推导 next_val（= 现有最大值），避免新建行与存量 id 冲突。
+    {
+        "version": 5,
+        "name": "id_sequences",
+        "up": [
+            "CREATE TABLE IF NOT EXISTS id_sequences ("
+            " name TEXT PRIMARY KEY,"
+            " next_val INTEGER NOT NULL);",
+            # seed：next_val = 现有最大编号（首次 next_sequence 会 +1 后返回）
+            "INSERT INTO id_sequences(name, next_val) SELECT 'idea', "
+            " COALESCE(MAX(CAST(substr(idea_id, 6) AS INTEGER)), 0) "
+            " FROM ideas WHERE idea_id LIKE 'IDEA-%';",
+            "INSERT INTO id_sequences(name, next_val) SELECT 'claim', "
+            " COALESCE(MAX(CAST(substr(claim_id, 5) AS INTEGER)), 0) "
+            " FROM claims WHERE claim_id LIKE 'CLM-%';",
+            "INSERT INTO id_sequences(name, next_val) SELECT 'relation', "
+            " COALESCE(MAX(CAST(substr(relation_id, 5) AS INTEGER)), 0) "
+            " FROM claim_evidence_relations WHERE relation_id LIKE 'REL-%';",
+        ],
+        "down": ["DROP TABLE IF EXISTS id_sequences;"],
+    },
+    # v5.8.1 Commit 9：Generic Lineage —— 复用 dependencies 表（本来就是通用
+    # 有向边存储：source_type/source_id/target_type/target_id/relation + scope）。
+    # 补 created_at / provenance / version_no 三列（已有行取默认值；幂等：
+    # 列已存在时跳过，避免重建 v1-era 库时 duplicate column）。
+    {
+        "version": 6,
+        "name": "generic_lineage",
+        "up": [_add_lineage_columns],
+        "down": [_drop_lineage_columns],
+    },
+    # v5.8.1 Commit 15（QA 观察）：evidence_id 改为 id_sequences 原子分配
+    # （同 idea/claim/relation 一致）。从存量 evidence 推导 next_val
+    # （E-001 → substr(evidence_id,3)="001"），避免新行与存量 id 冲突。
+    {
+        "version": 7,
+        "name": "evidence_sequence_seed",
+        "up": [
+            "INSERT OR IGNORE INTO id_sequences(name, next_val) SELECT 'evidence', "
+            " COALESCE(MAX(CAST(substr(evidence_id, 3) AS INTEGER)), 0) "
+            " FROM evidence WHERE evidence_id LIKE 'E-%';",
+        ],
+        "down": [
+            "DELETE FROM id_sequences WHERE name='evidence';",
+        ],
+    },
 ]
 
 
@@ -182,4 +462,13 @@ def current_version(db_path: str) -> int:
     return max(versions) if versions else 0
 
 
-__all__ = ["MIGRATIONS", "migrate", "rollback", "applied_versions", "current_version"]
+__all__ = [
+    "MIGRATIONS",
+    "migrate",
+    "rollback",
+    "applied_versions",
+    "current_version",
+    "V1_INITIAL_SCHEMA",
+    "V1_FROZEN_SHA256",
+    "_v1_frozen_sha256",
+]

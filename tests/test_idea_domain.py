@@ -50,7 +50,8 @@ def test_idea_crud(env):
     db, svc = env
     idea = svc.create(_idea())
     assert idea.idea_id.startswith("IDEA-")
-    assert idea.lifecycle_status == "raw"
+    # v5.8.1 Commit 3：lifecycle_status 只表达对象生命状态（默认 active）
+    assert idea.lifecycle_status == "active"
 
     got = svc.get("default", "P1", idea.idea_id)
     assert got.title == "外骨骼助力"
@@ -130,70 +131,77 @@ def test_idea_writes_are_audited(env):
 
 
 # ---------------------------------------------------------------------------
-# 5) migration v1→v2（及 v3/v4） + rollback
+# 5) migration v1→v5（idea/claim/relation/id_sequences） + rollback
 # ---------------------------------------------------------------------------
 def test_migration_applies_idea_claim_relation_tables(tmp_path):
     db_path = str(tmp_path / "m.db")
     applied = migrations.migrate(db_path)
-    assert applied == [1, 2, 3, 4]
-    assert migrations.current_version(db_path) == 4
+    # v5.8.1 Commit 7/9：v5=id_sequences，v6=generic lineage 列
+    assert applied == [1, 2, 3, 4, 5, 6, 7]
+    assert migrations.current_version(db_path) == 7
     conn = sqlite3.connect(db_path)
     tables = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
     conn.close()
-    assert NEW_TABLES <= tables
+    assert tables >= NEW_TABLES
+    assert {"id_sequences"} <= tables
 
 
 def test_migration_v2_creates_ideas_on_v1_era_db(tmp_path):
-    """模拟 v1-era 库（无 ideas/claims/relations 表）→ migrate 后 v2/v3/v4 补齐。"""
+    """模拟 v1-era 库（无 ideas/claims/relations 表）→ migrate 后 v2/v3/v4/v5 补齐。"""
     db_path = str(tmp_path / "m.db")
     migrations.migrate(db_path)
     conn = sqlite3.connect(db_path)
+    conn.execute("DROP TABLE id_sequences")
     conn.execute("DROP TABLE claim_evidence_relations")
     conn.execute("DROP TABLE claims")
     conn.execute("DROP TABLE ideas")
-    conn.execute("DELETE FROM schema_migrations WHERE version IN (2,3,4)")
+    conn.execute("DELETE FROM schema_migrations WHERE version IN (2,3,4,5,6,7)")
     conn.commit()
     conn.close()
     assert migrations.current_version(db_path) == 1
     applied = migrations.migrate(db_path)
-    assert applied == [2, 3, 4]
+    assert applied == [2, 3, 4, 5, 6, 7]
     conn = sqlite3.connect(db_path)
     tables = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
     conn.close()
-    assert NEW_TABLES <= tables
+    assert tables >= NEW_TABLES
+    assert {"id_sequences"} <= tables
 
 
 def test_migration_rollback_drops_idea_tables(tmp_path):
     db_path = str(tmp_path / "m.db")
     migrations.migrate(db_path)
     rolled = migrations.rollback(db_path, target=1)
-    assert rolled == [4, 3, 2]
+    assert rolled == [7, 6, 5, 4, 3, 2]
     assert migrations.current_version(db_path) == 1
     conn = sqlite3.connect(db_path)
     tables = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
     conn.close()
     assert not (NEW_TABLES & tables)
+    assert "id_sequences" not in tables
     # 再迁移 → 表恢复
     migrations.migrate(db_path)
     conn = sqlite3.connect(db_path)
     tables = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
     conn.close()
-    assert NEW_TABLES <= tables
+    assert tables >= NEW_TABLES
+    assert {"id_sequences"} <= tables
 
 
 def test_migration_ups_idempotent_on_existing_db(tmp_path):
-    """AIPDStateDB SCHEMA 已建表时 migrate 幂等（CREATE IF NOT EXISTS 不报错）。"""
+    """AIPDStateDB 已建表（migration runner）时 migrate 幂等（CREATE IF NOT EXISTS 不报错）。"""
     db_path = str(tmp_path / "s.db")
-    db = AIPDStateDB(db_path)  # SCHEMA 含 ideas/claims/relations
+    AIPDStateDB(db_path)  # __init__ 走 migrate() 建全部表
     applied = migrations.migrate(db_path)
-    assert applied == [1, 2, 3, 4]  # v2-v4 的 up 为 no-op
-    assert migrations.current_version(db_path) == 4
+    assert applied == []  # 已全部应用
+    assert migrations.current_version(db_path) == 7
     conn = sqlite3.connect(db_path)
     tables = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
     conn.close()
-    assert NEW_TABLES <= tables
+    assert tables >= NEW_TABLES
+    assert {"id_sequences"} <= tables
