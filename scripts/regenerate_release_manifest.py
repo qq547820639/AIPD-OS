@@ -18,6 +18,11 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parent.parent
 
 # 排除：清单自身、发布产物、虚拟环境、构建与缓存目录
+# 注意：`.venv`（不带尾斜杠）同时覆盖 `.venv/` 与 `.venv-ci/`；
+# 嵌套层级的 `*.dist-info/` 与 `__pycache__/` 由 _excluded() 额外排除
+# （修复历史上 BUNDLE_MANIFEST.json 打包了 5.5.0 dist-info 残留的卫生问题）。
+# 本脚本只负责生成清单本身，不重建现有 bundle —— 发布物重建是发布动作，
+# 不在此阶段执行。
 _EXCLUDE_PREFIXES = (
     # 发布证据文件彼此是“生成式证据”：SOURCE/BUNDLE/PROVENANCE/RELEASE 清单
     # 的内容会随清单生成而变化，若互相登记对方，任何一个重新生成都会使其余
@@ -29,7 +34,7 @@ _EXCLUDE_PREFIXES = (
     "releases/",
     "build/",
     "dist/",
-    ".venv/",
+    ".venv",
     ".pytest_cache/",
     ".ruff_cache/",
     ".mypy_cache/",
@@ -38,6 +43,22 @@ _EXCLUDE_PREFIXES = (
     # 审计报告是生成式证据，内容随清单生成而变化，排除以打破循环哈希。
     "docs/audit/",
 )
+
+
+def _excluded(rel: str) -> bool:
+    """判断相对路径是否应从清单中排除。
+
+    除根级前缀外，还会排除任意嵌套层级的 ``*.dist-info`` 与 ``__pycache__``
+    目录（pip/缓存可能把它们放在仓库内任意子目录）。
+    """
+    if rel.startswith(_EXCLUDE_PREFIXES):
+        return True
+    parts = rel.split("/")
+    if any(p.endswith(".dist-info") for p in parts):
+        return True
+    if "__pycache__" in parts:
+        return True
+    return False
 
 
 def _tracked_files(repo: Path) -> list[str]:
@@ -64,7 +85,7 @@ def main() -> int:
 
     files: list[dict] = []
     for rel in _tracked_files(repo):
-        if rel.startswith(_EXCLUDE_PREFIXES):
+        if _excluded(rel):
             continue
         p = repo / rel
         if not p.is_file():

@@ -147,7 +147,8 @@ def _rows_from_pdf_text(text: str) -> Dict[str, Any]:
         rows = list(reader)
         if rows and any(rows):
             return {"records": rows, "errors": []}
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 - 多格式解析回退：CSV 失败则尝试 JSON，属预期分支
+        # noqa: EMPTY_EXCEPT - 解析不匹配当前格式时静默进入下一格式尝试
         pass
     # 尝试 JSON
     try:
@@ -160,7 +161,8 @@ def _rows_from_pdf_text(text: str) -> Dict[str, Any]:
             rows = []
         if rows:
             return {"records": rows, "errors": []}
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 - 多格式解析回退：JSON 失败则返回 not_verified
+        # noqa: EMPTY_EXCEPT - 解析失败由下方统一返回「无法提取」错误
         pass
     return {"records": [], "errors": ["无法从 PDF 文本提取结构化报价（数据保持 not_verified）"]}
 

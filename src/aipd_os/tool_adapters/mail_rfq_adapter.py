@@ -29,6 +29,10 @@ class MailRfqAdapter(ToolAdapter):
             errors.append("'supplier' 必填")
         return errors
 
+    def side_effect_mode(self) -> str:
+        """RFQ 涉及外部邮件/询价副作用：自动重试可能重复对外发送 → 禁止重试。"""
+        return "EXTERNAL_SIDE_EFFECT"
+
     def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
         supplier = input.get("supplier")
         if not supplier:

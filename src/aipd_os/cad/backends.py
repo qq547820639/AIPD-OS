@@ -20,6 +20,7 @@ C2（上限为 C1）。
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import re
 from abc import ABC, abstractmethod
@@ -30,7 +31,6 @@ from aipd_os.cad.evidence import make_artifact_record, sha256_file
 from aipd_os.cad.maturity import (
     EXTERNAL_DEPENDENCY,
     FULL,
-    NOT_IMPLEMENTED,
 )
 
 # 可选的真实内核；缺失时 CadQueryBackend 不可用。
@@ -188,6 +188,44 @@ _SOURCE_PARAM_NAME = 'PARAMETERS'
 _SOURCE_NAME_NAME = 'MODEL_NAME'
 
 
+def validate_param(name: str, value: Any) -> str | None:
+    """以 GOLDEN_PARAM_SPEC 为唯一来源校验单个参数；返回错误信息或 None。
+
+    合法要求：参数存在于契约中、数值类型、且 ``value >= spec['min']``
+    （min 可为 0.0，例如 fillet_radius/chamfer 的 0 值契约合法）。
+    """
+    spec = GOLDEN_PARAM_SPEC.get(name)
+    if spec is None:
+        return f'unknown parameter: {name}'
+    if not isinstance(value, (int, float)):
+        return f'{name} must be a number, got {value!r}'
+    v = float(value)
+    if v < float(spec['min']):
+        return f'{name} must be >= {spec["min"]}, got {v!r}'
+    return None
+
+
+def validate_geometry_params(params: dict[str, Any]) -> list[str]:
+    """以 GOLDEN_PARAM_SPEC 为唯一来源校验全部参数 + 交叉规则。
+
+    交叉规则：``hole_diameter < min(length, width)``（孔必须在板平面内）。
+    返回错误信息列表（空表示合法）。
+    """
+    errors: list[str] = []
+    for name in GOLDEN_PARAM_SPEC:
+        err = validate_param(name, params.get(name))
+        if err is not None:
+            errors.append(err)
+    hd = params.get('hole_diameter')
+    length = params.get('length')
+    width = params.get('width')
+    if (isinstance(hd, (int, float)) and isinstance(length, (int, float))
+            and isinstance(width, (int, float))
+            and float(hd) >= min(float(length), float(width))):
+        errors.append('hole_diameter must be smaller than the plate plan size')
+    return errors
+
+
 def _default_golden_params() -> Dict[str, float]:
     return {k: float(spec['default']) for k, spec in GOLDEN_PARAM_SPEC.items()}
 
@@ -232,10 +270,11 @@ def _render_native_source(model_name: str, params: Dict[str, Any]) -> str:
         "    L = float(p['length']); W = float(p['width']); T = float(p['thickness'])",
         "    HD = float(p['hole_diameter']); n = max(1, int(p['hole_count']))",
         "    FR = float(p['fillet_radius']); CH = float(p['chamfer'])",
-        "    plate = (cq.Workplane('XY')",
-        "             .box(L, W, T)",
-        "             .edges('|Z').fillet(FR)",
-        "             .faces('>Z').edges().chamfer(CH))",
+        "    plate = cq.Workplane('XY').box(L, W, T)",
+        "    if FR > 0:  # 0 半径 = 不应用圆角（契约合法）",
+        "        plate = plate.edges('|Z').fillet(FR)",
+        "    if CH > 0:  # 0 倒角 = 不应用倒角（契约合法）",
+        "        plate = plate.faces('>Z').edges().chamfer(CH)",
         "    for i in range(n):",
         "        cx = (L / (n + 1)) * (i + 1) - L / 2",
         "        plate = plate.faces('>Z').workplane().center(cx, 0).hole(HD)",
@@ -349,11 +388,10 @@ class CadQueryBackend(CadBackend):
         params = dict(model['parameters'])
         if name not in GOLDEN_PARAM_SPEC:
             raise KeyError(f"unknown parameter: {name}")
-        v = float(value)
-        if v < float(GOLDEN_PARAM_SPEC[name]['min']):
-            raise ValueError(
-                f"{name} must be >= {GOLDEN_PARAM_SPEC[name]['min']}, got {v!r}")
-        params[name] = v
+        err = validate_param(name, value)
+        if err is not None:
+            raise ValueError(err)
+        params[name] = float(value)
         return self._make_model(model['name'], params,
                                 source_path=model.get('source_path'))
 
@@ -366,12 +404,12 @@ class CadQueryBackend(CadBackend):
         L = float(p['length']); W = float(p['width']); T = float(p['thickness'])
         HD = float(p['hole_diameter']); n = max(1, int(p['hole_count']))
         FR = float(p['fillet_radius']); CH = float(p['chamfer'])
-        plate = (
-            cq.Workplane('XY')
-            .box(L, W, T)
-            .edges('|Z').fillet(FR)
-            .faces('>Z').edges().chamfer(CH)
-        )
+        plate = cq.Workplane('XY').box(L, W, T)
+        # 0 半径/0 倒角 = 不应用该特征（契约 min=0.0 合法；内核不接受 0 值操作）。
+        if FR > 0:
+            plate = plate.edges('|Z').fillet(FR)
+        if CH > 0:
+            plate = plate.faces('>Z').edges().chamfer(CH)
         for i in range(n):
             cx = (L / (n + 1)) * (i + 1) - L / 2
             plate = plate.faces('>Z').workplane().center(cx, 0).hole(HD)
@@ -390,6 +428,23 @@ class CadQueryBackend(CadBackend):
             'face_count': len(shape.faces().vals()),
             'is_valid': bool(solid.isValid()),
         }
+
+    def _semantic_geometry_hash(self, shape: Any) -> str:
+        """对几何语义的规范化 JSON 做 sha256（P0-14）。
+
+        语义 = volume_mm3 / bbox / solid_count / face_count（``is_valid`` 不纳入，
+        因为它是构建过程状态而非几何身份）。规范化：sort_keys + 紧凑分隔符。
+
+        .. note::
+
+           ``semantic_geometry_hash`` ≠ 字节级 ``sha256``。前者标识「几何身份」
+           （同参同形），后者标识「磁盘字节」。发布/血缘证据必须声明使用哪个
+           hash，二者不可互换。
+        """
+        m = self._measure(shape)
+        semantic = {k: m[k] for k in ('volume_mm3', 'bbox', 'solid_count', 'face_count')}
+        canonical = json.dumps(semantic, sort_keys=True, separators=(',', ':'))
+        return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
 
     def regenerate(self, model: Any) -> Any:
         """按当前参数真实重生成几何，并在模型上派生测量结果。"""
@@ -411,7 +466,8 @@ class CadQueryBackend(CadBackend):
         _normalize_step_timestamp(Path(path))
         rec = make_artifact_record(
             path, tool=self.name, tool_version=self.tool_version(),
-            for_level='C2')
+            for_level='C2',
+            semantic_hash=self._semantic_geometry_hash(shape))
         rec['extra'] = self._measure(shape)
         return rec
 
@@ -424,18 +480,9 @@ class CadQueryBackend(CadBackend):
             path, tool=self.name, tool_version=self.tool_version(), for_level='C2')
 
     def geometry_validity_check(self, model: Any) -> Dict[str, Any]:
-        """几何有效性检查：参数约束 + 真实内核 isValid / 体积 / 包围盒。"""
+        """几何有效性检查：GOLDEN_PARAM_SPEC 单源校验 + 真实内核 isValid。"""
         p = model['parameters']
-        errors: List[str] = []
-        for k, spec in GOLDEN_PARAM_SPEC.items():
-            v = p.get(k)
-            if not (isinstance(v, (int, float))) or v <= 0:
-                errors.append(f'{k} must be a positive number, got {v!r}')
-            elif v < float(spec['min']):
-                errors.append(f'{k} must be >= {spec["min"]}, got {v!r}')
-        if float(p.get('hole_diameter', 0)) >= min(
-                float(p.get('length', 0)), float(p.get('width', 0))):
-            errors.append('hole_diameter must be smaller than the plate plan size')
+        errors = validate_geometry_params(p)
         checks: Dict[str, Any] = {'parameter_constraints': not errors}
 
         if self._cq is not None and not errors:
@@ -458,9 +505,9 @@ class CadQueryBackend(CadBackend):
 # 确定性本地适配器：无真实内核时诚实降级
 # ---------------------------------------------------------------------------
 
-DEFAULT_PARAMETERS: Dict[str, float] = {
-    'length': 100.0, 'width': 50.0, 'thickness': 10.0, 'hole_diameter': 8.0,
-}
+# 契约后端的默认参数：与 GOLDEN_PARAM_SPEC 对齐（全部键，取 spec default），
+# 保证与 CadQueryBackend 的校验行为一致（P0-15 单源）。
+DEFAULT_PARAMETERS: dict[str, float] = _default_golden_params()
 
 
 class ContractBackend(CadBackend):
@@ -502,13 +549,17 @@ class ContractBackend(CadBackend):
         return {'name': data.get('name', 'contract_plate'), 'parameters': params}
 
     def list_parameters(self, model: Any) -> List[Dict[str, Any]]:
-        return [{'name': k, 'value': float(v), 'unit': 'mm'}
+        return [{'name': k, 'value': float(v),
+                 'unit': GOLDEN_PARAM_SPEC.get(k, {}).get('unit', 'mm')}
                 for k, v in model['parameters'].items()]
 
     def edit_parameter(self, model: Any, name: str, value: Any) -> Any:
         params = dict(model['parameters'])
         if name not in params:
             raise KeyError(f"unknown parameter: {name}")
+        err = validate_param(name, value)
+        if err is not None:
+            raise ValueError(err)
         params[name] = float(value)
         return {'name': model['name'], 'parameters': params}
 
@@ -542,17 +593,12 @@ class ContractBackend(CadBackend):
             note='contract/NATIVE placeholder only; not a real native CAD file')
 
     def geometry_validity_check(self, model: Any) -> Dict[str, Any]:
+        """几何有效性检查：与 CadQueryBackend 共用 GOLDEN_PARAM_SPEC 单源校验。"""
         p = model['parameters']
-        errors: List[str] = []
-        for k, v in p.items():
-            if not (isinstance(v, (int, float)) and v > 0):
-                errors.append(f'{k} must be a positive number, got {v!r}')
-        if float(p.get('hole_diameter', 0)) >= min(
-                float(p.get('length', 0)), float(p.get('width', 0))):
-            errors.append('hole_diameter must be smaller than the plate plan size')
+        errors = validate_geometry_params(p)
         valid = not errors
         return {'valid': valid, 'errors': errors,
-                'checks': {'positive_finite': not errors}}
+                'checks': {'parameter_constraints': not errors}}
 
 
 def get_default_backend() -> CadBackend:
@@ -564,6 +610,7 @@ def get_default_backend() -> CadBackend:
 
 __all__ = [
     'CadBackend', 'CadQueryBackend', 'ContractBackend', 'get_default_backend',
-    'GOLDEN_PARAM_SPEC', '_default_golden_params', '_render_native_source',
+    'GOLDEN_PARAM_SPEC', 'validate_param', 'validate_geometry_params',
+    'DEFAULT_PARAMETERS', '_default_golden_params', '_render_native_source',
     '_parse_source_model', '_CADQUERY_AVAILABLE',
 ]

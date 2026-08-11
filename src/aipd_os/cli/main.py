@@ -18,7 +18,7 @@ _logger = get_logger("aipd.cli")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aipd",
-        description="AIPD-OS v5.5 命令行工具",
+        description="AIPD-OS v5.6 命令行工具",
     )
     parser.add_argument(
         "--version",
@@ -317,7 +317,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _cmd_usage(args: argparse.Namespace) -> int:
-    print("AIPD-OS v5.5 支持的命令：")
+    print("AIPD-OS v5.6 支持的命令：")
     for cmd in PLANNED_COMMANDS:
         print(f"  aipd {cmd}")
     return 0

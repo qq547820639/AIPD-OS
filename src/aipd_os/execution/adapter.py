@@ -155,6 +155,20 @@ class ToolAdapter(ABC):
         """返回降级链（按顺序尝试的能力标识）。"""
         return []
 
+    # ---- 副作用与重试策略 ----
+    def side_effect_mode(self) -> str:
+        """声明本适配器的副作用模式，决定失败后是否允许自动重试。
+
+        - ``PURE``：无副作用（幂等），失败可安全重试（默认）；
+        - ``IDEMPOTENT``：有副作用但自带幂等（重复执行不产生重复效果）；
+        - ``EXTERNAL_SIDE_EFFECT``：对外部系统产生副作用（如发送邮件、
+          登记外部报价/供应商文件），自动重试可能重复执行 → 禁止重试；
+        - ``NON_RETRYABLE``：不可重试。
+
+        取值见 :data:`aipd_os.execution.models.SIDE_EFFECT_MODES`。
+        """
+        return "PURE"
+
 
 __all__ = [
     "now",

@@ -534,9 +534,19 @@ class WebConsole:
         pid = project_id or self.require_project()
         intent = parse_intent(intent_text, self.db, pid, self.tenant_id)
         tracker = ProgressTracker()
+        # 不自动批准：requires_approval 的操作停在预览，须经决策中心显式批准。
         result = run_operation_loop(
-            self.db, pid, intent, tenant_id=self.tenant_id, approved=True,
+            self.db, pid, intent, tenant_id=self.tenant_id, approved=False,
             progress=tracker, should_cancel=self.runs.request_cancel)
+        if result.get("status") == "needs_approval":
+            # run_operation_loop 的 needs_approval 分支本身不落库；这里补一条
+            # 待审决策，供决策中心展示并显式批准（批准后由后续 run 触发执行）。
+            self.db.propose_decision(
+                self.tenant_id, pid,
+                topic=str(intent_text)[:120] or "运行需要批准",
+                recommendation="按 AI 推荐继续执行",
+                options=["按 AI 推荐继续执行", "暂停并补充信息", "改为人工介入"],
+                trigger="owner_web_requires_approval")
         self.runs.start(intent_text, tracker.events(), result)
         return self.runs.snapshot()
 

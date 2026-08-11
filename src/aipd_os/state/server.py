@@ -13,43 +13,86 @@ from __future__ import annotations
 
 import inspect
 import json
+import logging
 import os
+import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 from . import migrations
 from .audit import AuditLogger
-from .auth import AuthManager
+from .auth import AuthError, AuthManager
 from .backup import BackupManager
 from .checkpoint import CheckpointManager
-from .db import AIPDStateDB, ProjectNotFoundError, OptimisticLockError
+from .db import AIPDStateDB
 from .health import health_check
 from .objects import ObjectStore
 
 DEFAULT_TENANT = "default"
+
+# 免令牌的公共引导 RPC：首次注册/登录必须可匿名调用，否则无法获得令牌。
+PUBLIC_RPC_METHODS = frozenset({"auth_login", "auth_register"})
+
+# 视为「弱/缺失」的 secret 取值（空串 / 历史默认值）。
+_WEAK_SECRET_VALUES = ("", "change-me-secret")
+# 生产模式（server）要求的最小 secret 长度。
+MIN_STRONG_SECRET_LEN = 16
 
 
 class StateService:
     """多租户多项目状态服务（本地模式 = 纯 Python API）。"""
 
     def __init__(self, db_path: str, encryption_key: str = "",
-                 secret: str = "change-me-secret", object_dir: Optional[str] = None,
+                 secret: str | None = None, object_dir: str | None = None,
                  backup_dir: Optional[str] = None, retention_days: int = 90,
-                 default_tenant: str = DEFAULT_TENANT):
+                 default_tenant: str = DEFAULT_TENANT,
+                 insecure_dev_mode: bool = False,
+                 require_strong_secret: bool = False):
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         migrations.migrate(db_path)
         self.db_path = str(db_path)
         self.default_tenant = default_tenant
         self.retention_days = retention_days
+        self.insecure_dev_mode = insecure_dev_mode
         self.db = AIPDStateDB(db_path, encryption_key=encryption_key)
-        self.auth = AuthManager(self.db, secret)
+        self.auth = AuthManager(self.db, self._resolve_secret(
+            secret, insecure_dev_mode=insecure_dev_mode,
+            require_strong_secret=require_strong_secret))
         self.checkpoints = CheckpointManager(self.db)
-        self.audit = AuditLogger(self.db)
+        self._audit_logger = AuditLogger(self.db)
         base = Path(db_path).parent
         self.objects = ObjectStore(object_dir or str(base / "objects"), retention_days=retention_days)
         self.backup = BackupManager(db_path, backup_dir=str(base / "backups"))
         self.db.ensure_default_tenant(default_tenant)
+
+    @staticmethod
+    def _resolve_secret(secret: str | None, insecure_dev_mode: bool,
+                        require_strong_secret: bool) -> str:
+        """解析服务 secret：弱/缺失时按模式 fail-closed 或降级。
+
+        - 强 secret（>=16 字符且非默认值）直接使用；
+        - 弱/缺失 secret：``insecure_dev_mode`` 允许并 WARNING；
+          ``require_strong_secret``（server 模式）fail-closed 抛错；
+          否则（本地模式）生成随机临时 secret 并 WARNING。
+        """
+        weak = (secret is None or secret in _WEAK_SECRET_VALUES
+                or len(secret) < MIN_STRONG_SECRET_LEN)
+        if not weak:
+            return secret
+        if insecure_dev_mode:
+            logging.warning("insecure dev mode: weak secret allowed (AIPD_INSECURE_DEV_MODE=1)")
+            return secret or "change-me-secret"
+        if require_strong_secret:
+            raise RuntimeError(
+                "missing or weak AIPD_SECRET: server mode requires a strong secret "
+                f"(>= {MIN_STRONG_SECRET_LEN} chars and not 'change-me-secret'); "
+                "set AIPD_SECRET, or set AIPD_INSECURE_DEV_MODE=1 to allow a weak "
+                "secret in dev only")
+        logging.warning(
+            "no strong AIPD_SECRET provided; using a random ephemeral secret "
+            "(local mode only; auth tokens will not survive restart)")
+        return secrets.token_hex(32)
 
     # ----------------------------------------------------------- dispatch
     def call(self, method: str, **params: Any) -> Any:
@@ -65,14 +108,16 @@ class StateService:
 
     def _audit(self, actor: Optional[str], action: str, tenant_id: str,
                project_id: str, before: Any = None, after: Any = None) -> None:
-        self.audit.log(actor or "system", action, project_id, tenant_id, before, after)
+        self._audit_logger.log(actor or "system", action, project_id, tenant_id, before, after)
 
     # ------------------------------------------------------------- auth
     def auth_register(self, user_id: str, tenant_id: str, username: str, password: str,
                       project_id: Optional[str] = None) -> str:
         self.db.ensure_default_tenant(tenant_id)
         self.auth.register_user(user_id, tenant_id, username, password)
-        self.auth.grant_access(user_id, tenant_id, project_id)
+        # 仅当显式传入 project_id 时授予该项目访问权；不再隐式授予租户通配。
+        if project_id is not None:
+            self.auth.grant_access(user_id, tenant_id, project_id)
         token = self.auth.issue_token(user_id)
         self._audit(user_id, "register", tenant_id, project_id or "")
         return token
@@ -86,7 +131,11 @@ class StateService:
     def auth_verify(self, user: str, token: str) -> bool:
         return self.auth.authenticate(user, token)
 
-    def grant_access(self, user_id: str, tenant_id: str, project_id: Optional[str] = None) -> None:
+    def grant_access(self, user_id: str, tenant_id: str, project_id: str | None = None,
+                     actor: str | None = None) -> None:
+        """授权操作仅限租户管理员（actor=None 视为内部/系统调用，跳过校验）。"""
+        if actor is not None:
+            self.auth.require_tenant_admin(actor, tenant_id)
         self.auth.grant_access(user_id, tenant_id, project_id)
 
     # ----------------------------------------------------------- projects
@@ -95,6 +144,9 @@ class StateService:
                      actor: Optional[str] = None) -> Dict[str, Any]:
         self.db.ensure_default_tenant(tenant_id)
         self.db.init_project(tenant_id, project_id, name, goal, owner_policy)
+        # 项目创建者自动成为该项目成员。
+        if actor is not None:
+            self.auth.grant_access(actor, tenant_id, project_id)
         after = self.db.summary(tenant_id, project_id)
         self._audit(actor, "init_project", tenant_id, project_id, after=after)
         return after
@@ -105,10 +157,17 @@ class StateService:
         return self.db.summary(tenant_id, project_id)
 
     def list_projects(self, tenant_id: str, actor: Optional[str] = None) -> Dict[str, Any]:
+        projects = self.db.list_projects(tenant_id)
+        if actor is not None and not self.db.has_tenant_admin(actor, tenant_id):
+            # 非管理员仅能看到自己有访问权的项目。
+            projects = [p for p in projects
+                        if self.db.has_access(actor, tenant_id, p["project_id"])]
         return {"tenant_id": tenant_id,
-                "projects": [{k: v for k, v in p.items()} for p in self.db.list_projects(tenant_id)]}
+                "projects": [{k: v for k, v in p.items()} for p in projects]}
 
-    def get_project(self, tenant_id: str, project_id: str) -> Dict[str, Any]:
+    def get_project(self, tenant_id: str, project_id: str,
+                    actor: str | None = None) -> dict[str, Any]:
+        self._authorize(actor, tenant_id, project_id)
         return self.db.get_project(tenant_id, project_id)
 
     def update_project(self, tenant_id: str, project_id: str, expected_version: int,
@@ -129,7 +188,9 @@ class StateService:
         self._audit(actor, "add_fact", tenant_id, project_id, after={"fact_id": fid, "key": key})
         return fid
 
-    def list_facts(self, tenant_id: str, project_id: str) -> Dict[str, Any]:
+    def list_facts(self, tenant_id: str, project_id: str,
+                   actor: str | None = None) -> dict[str, Any]:
+        self._authorize(actor, tenant_id, project_id)
         return {"facts": self.db.list_facts(tenant_id, project_id)}
 
     # ------------------------------------------------------------ decisions
@@ -149,7 +210,9 @@ class StateService:
                     after={"decision_id": decision_id, "choice": choice})
         return "ok"
 
-    def list_decisions(self, tenant_id: str, project_id: str) -> Dict[str, Any]:
+    def list_decisions(self, tenant_id: str, project_id: str,
+                       actor: str | None = None) -> dict[str, Any]:
+        self._authorize(actor, tenant_id, project_id)
         return {"decisions": self.db.list_decisions(tenant_id, project_id)}
 
     # ------------------------------------------------------------ evidence
@@ -158,6 +221,7 @@ class StateService:
                      quality: Optional[str] = None, summary: Optional[str] = None,
                      metadata: Optional[Dict[str, Any]] = None,
                      actor: Optional[str] = None) -> str:
+        self._authorize(actor, tenant_id, project_id)
         eid = self.db.add_evidence(tenant_id, project_id, kind, title, url, identifier,
                                    quality, summary, metadata)
         self._audit(actor, "add_evidence", tenant_id, project_id, after={"evidence_id": eid, "title": title})
@@ -168,6 +232,7 @@ class StateService:
                  probability: Optional[str] = None, impact: Optional[str] = None,
                  mitigation: Optional[str] = None, status: str = "open",
                  actor: Optional[str] = None) -> str:
+        self._authorize(actor, tenant_id, project_id)
         rid = self.db.add_risk(tenant_id, project_id, title, probability, impact, mitigation, status)
         self._audit(actor, "add_risk", tenant_id, project_id, after={"risk_id": rid, "title": title})
         return rid
@@ -178,16 +243,20 @@ class StateService:
                         version: Optional[str] = None, gate: Optional[str] = None,
                         metadata: Optional[Dict[str, Any]] = None,
                         actor: Optional[str] = None) -> str:
+        self._authorize(actor, tenant_id, project_id)
         return self.db.add_deliverable(tenant_id, project_id, dtype, path, status, version, gate, metadata)
 
     # ------------------------------------------------------------ checkpoints
     def save_checkpoint(self, tenant_id: str, project_id: str, data: Any,
                         summary: Any = None, actor: Optional[str] = None) -> int:
+        self._authorize(actor, tenant_id, project_id)
         cid = self.db.save_checkpoint(tenant_id, project_id, data, summary)
         self._audit(actor, "save_checkpoint", tenant_id, project_id, after={"checkpoint_id": cid})
         return cid
 
-    def restore_checkpoint(self, tenant_id: str, project_id: str) -> Any:
+    def restore_checkpoint(self, tenant_id: str, project_id: str,
+                           actor: str | None = None) -> Any:
+        self._authorize(actor, tenant_id, project_id)
         return self.checkpoints.restore_latest(project_id, tenant_id)
 
     def resume_summary(self, tenant_id: str, project_id: str,
@@ -202,50 +271,68 @@ class StateService:
 
     # -------------------------------------------------------------- objects
     def object_put(self, project_id: str, key: str, data_b64: str,
-                   tenant_id: str = DEFAULT_TENANT) -> str:
+                   tenant_id: str = DEFAULT_TENANT, actor: str | None = None) -> str:
         import base64
+        self._authorize(actor, tenant_id, project_id)
         return self.objects.put(project_id, key, base64.b64decode(data_b64), tenant_id)
 
-    def object_get_b64(self, project_id: str, key: str, tenant_id: str = DEFAULT_TENANT) -> str:
+    def object_get_b64(self, project_id: str, key: str, tenant_id: str = DEFAULT_TENANT,
+                       actor: str | None = None) -> str:
         import base64
+        self._authorize(actor, tenant_id, project_id)
         return base64.b64encode(self.objects.get(project_id, key, tenant_id)).decode("ascii")
 
-    def object_list(self, project_id: str, tenant_id: str = DEFAULT_TENANT) -> Dict[str, Any]:
+    def object_list(self, project_id: str, tenant_id: str = DEFAULT_TENANT,
+                    actor: str | None = None) -> dict[str, Any]:
+        self._authorize(actor, tenant_id, project_id)
         return {"objects": self.objects.list(project_id, tenant_id)}
 
-    def object_delete(self, project_id: str, key: str, tenant_id: str = DEFAULT_TENANT) -> str:
+    def object_delete(self, project_id: str, key: str, tenant_id: str = DEFAULT_TENANT,
+                      actor: str | None = None) -> str:
+        self._authorize(actor, tenant_id, project_id)
         self.objects.delete(project_id, key, tenant_id)
         return "ok"
 
     # --------------------------------------------------------------- backup
-    def create_backup(self, out_dir: Optional[str] = None) -> str:
+    def create_backup(self, out_dir: str | None = None, actor: str | None = None) -> str:
+        if actor is not None:
+            self.auth.require_tenant_admin(actor, self.default_tenant)
         path = self.backup.create_backup(self.db_path, out_dir)
         manifest = json.loads((Path(path) / "manifest.json").read_text(encoding="utf-8"))
         self.db.add_backup(path, manifest["checksum"], manifest["size"])
         return path
 
-    def list_backups(self) -> Dict[str, Any]:
+    def list_backups(self, actor: str | None = None) -> dict[str, Any]:
+        if actor is not None:
+            self.auth.require_tenant_admin(actor, self.default_tenant)
         return {"backups": self.backup.list_backups()}
 
-    def restore_backup(self, backup_dir: str, target: Optional[str] = None) -> str:
+    def restore_backup(self, backup_dir: str, target: str | None = None,
+                       actor: str | None = None) -> str:
+        if actor is not None:
+            self.auth.require_tenant_admin(actor, self.default_tenant)
         return self.backup.restore_backup(backup_dir, target or self.db_path)
 
-    def retention_prune(self, retention_days: Optional[int] = None) -> Dict[str, Any]:
+    def retention_prune(self, retention_days: int | None = None,
+                        actor: str | None = None) -> dict[str, Any]:
+        if actor is not None:
+            self.auth.require_tenant_admin(actor, self.default_tenant)
         days = retention_days if retention_days is not None else self.retention_days
         removed = self.backup.retention_prune(self.backup.list_backups(), days)
         return {"removed": removed}
 
     # ---------------------------------------------------------------- audit
-    def audit(self, limit: int = 100) -> Dict[str, Any]:
-        return {"records": self.audit.read(limit)}
+    def audit(self, limit: int = 100, actor: str | None = None) -> dict[str, Any]:
+        if actor is not None:
+            self.auth.require_tenant_admin(actor, self.default_tenant)
+        return {"records": self._audit_logger.read(limit)}
+
+    #: ``audit`` 的明确命名别名（避免与实例属性命名歧义）。
+    list_audit_events = audit
 
     # --------------------------------------------------------------- health
     def health(self) -> Dict[str, Any]:
         return health_check(self.db_path)
-
-
-class AuthError(Exception):
-    pass
 
 
 class UnauthorizedError(Exception):
@@ -258,11 +345,14 @@ class UnauthorizedError(Exception):
 # 注意：该传输是认证的。每个 POST /rpc 请求必须携带有效令牌
 # ``{"user": ..., "token": ..., "method": ..., "params": ...}``，令牌由
 # ``auth_login`` / ``auth_register`` 签发；未认证请求返回 HTTP 401。
-# 认证后的 actor 身份会注入到支持 ``actor`` 的方法，从而触发项目级授权。
+# 例外：``auth_login`` / ``auth_register`` 属于公共引导方法（PUBLIC_RPC_METHODS），
+# 免令牌可调用，否则首次注册/登录将形成引导死锁。
+# 认证后的 actor 身份会覆盖注入到支持 ``actor`` 的方法（客户端无法冒充），
+# 从而触发项目级授权；授权失败返回 HTTP 403，未认证返回 401。
 # =========================================================================
 
 class _RpcHandler(BaseHTTPRequestHandler):
-    service: "StateService" = None  # type: ignore
+    service: StateService = None  # type: ignore
 
     def _send_json(self, status: int, payload: Any) -> None:
         body = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
@@ -295,11 +385,20 @@ class _RpcHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"result": result})
         except UnauthorizedError as exc:
             self._send_json(401, {"error": str(exc), "error_type": "unauthorized"})
+        except AuthError as exc:
+            # 授权失败（项目/租户无权限）→ 403 Forbidden，而非 400。
+            self._send_json(403, {"error": str(exc), "error_type": "forbidden"})
         except Exception as exc:  # noqa: BLE001 - 统一返回错误
             self._send_json(400, {"error": str(exc), "error_type": type(exc).__name__})
 
     def _authenticate(self, req: Dict[str, Any]) -> str:
-        """校验请求中的 user/token；失败抛 :class:`UnauthorizedError`，成功返回 user_id。"""
+        """校验请求中的 user/token；公共引导方法免令牌。失败抛 :class:`UnauthorizedError`。
+
+        返回 user_id（公共方法返回空串，表示不注入 actor）。
+        """
+        method = req.get("method")
+        if method in PUBLIC_RPC_METHODS:
+            return ""
         user = req.get("user")
         token = req.get("token")
         if not user or not token:
@@ -309,7 +408,14 @@ class _RpcHandler(BaseHTTPRequestHandler):
         return user
 
     def _inject_actor(self, method: str, params: Dict[str, Any], actor: str) -> Dict[str, Any]:
-        """对支持 actor 的方法注入认证身份，使 :meth:`StateService._authorize` 生效。"""
+        """对支持 actor 的方法注入认证身份，使 :meth:`StateService._authorize` 生效。
+
+        认证后的 actor 身份**必须覆盖**客户端在 params 中提供的任何 ``actor``
+        值（防止冒充：``setdefault`` 会让客户端 actor 优先，等于认证可被绕过）。
+        公共引导方法返回空 actor，不注入。
+        """
+        if not actor:
+            return params
         handler = getattr(self.service, method, None)
         if handler is None:
             return params
@@ -318,14 +424,16 @@ class _RpcHandler(BaseHTTPRequestHandler):
         except (TypeError, ValueError):
             return params
         if "actor" in params_sig:
-            params.setdefault("actor", actor)
+            # 覆盖而非 setdefault：客户端塞入的 actor=None / actor=其他用户
+            # 一律以认证身份为准，杜绝冒充与授权绕过。
+            params["actor"] = actor
         return params
 
     def log_message(self, *args):  # 默认会打印到 stderr，静默处理
         pass
 
 
-def run_http(service: "StateService", host: str = "0.0.0.0", port: int = 8000) -> ThreadingHTTPServer:
+def run_http(service: StateService, host: str = "0.0.0.0", port: int = 8000) -> ThreadingHTTPServer:
     """启动 HTTP/JSON 状态服务（阻塞）。"""
     _RpcHandler.service = service
     httpd = ThreadingHTTPServer((host, port), _RpcHandler)
@@ -343,12 +451,17 @@ def main(argv: Optional[list] = None) -> None:
     parser.add_argument("--host", default=os.environ.get("AIPD_HOST", "0.0.0.0"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("AIPD_PORT", "8000")))
     parser.add_argument("--encryption-key", default=os.environ.get("AIPD_ENCRYPTION_KEY", ""))
-    parser.add_argument("--secret", default=os.environ.get("AIPD_SECRET", "change-me-secret"))
+    parser.add_argument("--secret", default=os.environ.get("AIPD_SECRET"))
+    parser.add_argument("--insecure-dev-mode", action="store_true",
+                        default=os.environ.get("AIPD_INSECURE_DEV_MODE", "")
+                        not in ("", "0", "false", "False"))
     parser.add_argument("--retention-days", type=int, default=int(os.environ.get("AIPD_RETENTION_DAYS", "90")))
     args = parser.parse_args(argv)
 
     svc = StateService(args.db, encryption_key=args.encryption_key, secret=args.secret,
-                       retention_days=args.retention_days)
+                       retention_days=args.retention_days,
+                       insecure_dev_mode=args.insecure_dev_mode,
+                       require_strong_secret=(args.mode == "server"))
     if args.mode == "server":
         run_http(svc, args.host, args.port)
     else:

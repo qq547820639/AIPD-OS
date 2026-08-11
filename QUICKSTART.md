@@ -1,6 +1,6 @@
 # 快速开始（Quick Start）
 
-AIPD-OS v5.3 —— AI 产品工程决策操作系统。从一行产品构想开始，逐步推进到
+AIPD-OS v5.6.0 —— AI 产品工程决策操作系统。从一行产品构想开始，逐步推进到
 工程基线、CAD、工业化、验证与生产发布。
 
 ## 0. 准备
@@ -71,12 +71,12 @@ aipd run-evals
 ## 10. 构建并签名发布物
 
 ```bash
-aipd build-release --version 5.0.0
-AIPD_RELEASE_SIGNING_KEY=your-key python3 scripts/sign_release.py dist/aipd-os-5.0.0.tar.gz
+aipd build-release --version 5.6.0
+AIPD_RELEASE_SIGNING_KEY=your-key python3 scripts/sign_release.py dist/aipd-os-5.6.0.tar.gz
 aipd project-summary --db state.db --project p1   # 复核门禁与决策
 ```
 
-## 11. v5.3 一键命令（简化入口）
+## 11. v5.6 一键命令（简化入口）
 
 17 个一键命令按工作流分组（核心流程 / 手册链 / CAD / 工业化 / 审计与发布）：
 
@@ -102,10 +102,10 @@ aipd audit --repo . --out docs/audit                                 # 生成能
 aipd release check --target C7 --repo .                             # 发布就绪检查
 aipd test                                                           # 运行测试套件
 aipd eval --evals evals/evals.json                                  # 运行评估套件
-aipd package --version 5.5.0 --no-tests                              # 构建发布包
+aipd package --version 5.6.0 --no-tests                              # 构建发布包
 ```
 
-## 12. 体检与版本于详细（v5.5）
+## 12. 体检与版本于详细（v5.6）
 
 ```bash
 aipd doctor                 # 一键体检：依赖、外部能力、数据库、对象存储、权限

@@ -17,7 +17,9 @@
   能力不假成功；已配置本地真实内核被真正调用；制品有哈希/来源/版本/证据；
   用户默认看不到内部代号；发布报告与最终 tag SHA 一致（引用 release/provenance）。
 
-真实运行产物写入 ``releases/golden-projects/<id>/`` 供交付物引用。
+真实运行产物默认写入**测试临时目录**（pytest tmp_path）；仅当显式
+``AIPD_GOLDEN_RELEASE=1`` 或 ``AIPD_PIN_COMMIT`` 已设置（发布时有意再生成）
+才写入 tracked 的 ``releases/golden-projects/<id>/`` 供交付物引用。
 """
 from __future__ import annotations
 
@@ -28,7 +30,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pytest
 
@@ -39,6 +41,17 @@ if str(SRC) not in sys.path:
 
 MANUAL = ROOT / "scripts" / "manual_chain.py"
 RELEASE_DIR = ROOT / "releases" / "golden-projects"
+
+
+def _golden_release_enabled() -> bool:
+    """是否写入 tracked 的 releases/golden-projects/（发布证据 pin 模式）。
+
+    默认（测试运行）写临时目录；仅当显式 ``AIPD_GOLDEN_RELEASE=1`` 或
+    ``AIPD_PIN_COMMIT`` 已设置（发布时有意再生成）才写 tracked 目录。
+    """
+    if os.environ.get("AIPD_GOLDEN_RELEASE") == "1":
+        return True
+    return bool(os.environ.get("AIPD_PIN_COMMIT", "").strip())
 
 
 def _now() -> str:
@@ -68,9 +81,19 @@ def _head_sha() -> str:
 
 
 def _write_release(project_id: str, report: Dict[str, Any],
-                   artifacts: List[Path]) -> Path:
-    """把黄金项目真实运行产物写入 releases/golden-projects/<id>/。"""
-    out = RELEASE_DIR / project_id
+                   artifacts: List[Path], out_dir: Optional[Path] = None) -> Path:
+    """把黄金项目真实运行产物写入输出目录。
+
+    默认写调用方提供的临时目录（``out_dir``）；pin 模式
+    （AIPD_GOLDEN_RELEASE=1 或 AIPD_PIN_COMMIT 已设置）下才写 tracked 的
+    ``releases/golden-projects/<id>/``，用于发布时有意再生成证据。
+    """
+    if _golden_release_enabled():
+        out = RELEASE_DIR / project_id
+    else:
+        if out_dir is None:
+            raise ValueError("non-pin mode requires out_dir (pytest tmp_path)")
+        out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     for a in artifacts:
         dest = out / a.name
@@ -109,10 +132,23 @@ def test_golden_project_A_manual_chain(tmp_path) -> None:
     cwd.mkdir()
     state = cwd / "state.json"
     facts = cwd / "facts.json"
-    facts.write_text(json.dumps({"params": {
-        "peak_torque": 120, "weight": 8.5, "battery_capacity": 60,
-        "max_speed": 20, "input_voltage": 48, "max_load": 100,
-    }}, ensure_ascii=False), encoding="utf-8")
+    facts.write_text(json.dumps({
+        "params": {
+            "peak_torque": 120, "weight": 8.5, "battery_capacity": 60,
+            "max_speed": 20, "input_voltage": 48, "max_load": 100,
+        },
+        # CS7：缺省字段改为显式 TBD；golden 项目提供完整事实以保证
+        # cmf/curve 页完整性审计通过（non_vision_passed=True）。
+        "cmf": {"color": "工程橙", "material": "铝合金6061", "finish": "阳极氧化"},
+        "curve": [{"label": "效率曲线", "points": [[0, 10], [1, 20], [2, 18], [3, 30]]},
+                  {"label": "输出扭矩", "points": [[0, 5], [1, 12], [2, 20], [3, 28]]}],
+        "characters": [{"appearance": "工程人员形象"}],
+        "principle": ["系统通过电机驱动谐波减速器，将助力传递至关节。"],
+        "modules": [{"name": "动力模块", "desc": "高密度无刷电机与谐波减速器"}],
+        "scenes": [{"title": "物流搬运", "desc": "仓库装卸环节缓解腰部劳损"}],
+        "qa": [{"q": "电池续航多久", "a": "约 4-6 小时"}],
+        "closure": [{"text": "本产品致力于降低重体力作业风险。"}],
+    }, ensure_ascii=False), encoding="utf-8")
 
     # ---- 1) 干净安装可运行：从一句需求初始化 + 计划 ----
     _cli(cwd, "init", "--state", str(state), "--project-id", "golden-A",
@@ -247,7 +283,8 @@ def test_golden_project_A_manual_chain(tmp_path) -> None:
     }
     assert report["checks"]["release_report_matches_head"] is True
     out_dir = _write_release("A-manual-chain", report,
-                             artifacts=[pdf, zipf] + rendered)
+                             artifacts=[pdf, zipf] + rendered,
+                             out_dir=tmp_path / "release")
     assert (out_dir / "report.json").is_file()
     assert _sha(out_dir / "manual.pdf") == _sha(pdf)
 
@@ -260,7 +297,7 @@ def test_golden_project_B_cad_engineering_change(tmp_path) -> None:
     """从一句需求开始：参数化托架建模 → 改参 → 工程变更传播 → 发布检查。"""
     cq = pytest.importorskip("cadquery")
 
-    from aipd_os.cad.backends import CadQueryBackend, GOLDEN_PARAM_SPEC
+    from aipd_os.cad.backends import GOLDEN_PARAM_SPEC, CadQueryBackend
     from aipd_os.cad.evidence import verify_artifact
     from aipd_os.cad.writeback import propagate_cad_change
     from aipd_os.product_truth.lineage import LineageGraph
@@ -428,7 +465,8 @@ def test_golden_project_B_cad_engineering_change(tmp_path) -> None:
     }
     assert report["checks"]["release_report_matches_head"] is True
     out_dir = _write_release("B-cad-engineering-change", report,
-                             artifacts=[step0, native0, step1, native1])
+                             artifacts=[step0, native0, step1, native1],
+                             out_dir=tmp_path / "release")
     assert (out_dir / "report.json").is_file()
 
 
@@ -438,17 +476,20 @@ def test_golden_project_B_cad_engineering_change(tmp_path) -> None:
 
 def test_golden_project_C_supply_chain(tmp_path, monkeypatch) -> None:
     """从一句需求开始：RFQ → 报价解析 → 实验数据 → 纠正任务 → 发布检查。"""
+    from aipd_os.execution.adapter import AdapterError
     from aipd_os.state.checkpoint import CheckpointManager
     from aipd_os.state.db import AIPDStateDB
     from aipd_os.supply_chain.analysis import (
-        analyze_stage, create_correction_tasks, mark_regression, update_facts)
+        analyze_stage,
+        create_correction_tasks,
+        mark_regression,
+        update_facts,
+    )
     from aipd_os.supply_chain.lab import import_lab_csv
-    from aipd_os.supply_chain.mail import (
-        ExternalDependencyError, LocalMailService, MailAttachment)
+    from aipd_os.supply_chain.mail import LocalMailService, MailAttachment
     from aipd_os.supply_chain.quotes import QuoteRegistry, parse_quote_file
     from aipd_os.supply_chain.writeback import PhysicalWriteback
     from aipd_os.tool_adapters.builtin import build_registry
-    from aipd_os.execution.adapter import AdapterError
 
     head = _head_sha()
     cwd = tmp_path / "C"
@@ -586,5 +627,6 @@ def test_golden_project_C_supply_chain(tmp_path, monkeypatch) -> None:
     }
     assert report["checks"]["release_report_matches_head"] is True
     out_dir = _write_release("C-supply-chain", report,
-                             artifacts=[quote_csv, lab_csv])
+                             artifacts=[quote_csv, lab_csv],
+                             out_dir=tmp_path / "release")
     assert (out_dir / "report.json").is_file()

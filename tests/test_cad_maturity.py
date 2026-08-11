@@ -135,10 +135,15 @@ def test_geometry_validity_valid():
 def test_geometry_validity_invalid_negative_param():
     backend = ContractBackend()
     model = backend.load_native_model(None)
-    bad = backend.edit_parameter(model, 'thickness', -5.0)
-    check = backend.geometry_validity_check(bad)
-    assert check['valid'] is False
-    assert any('thickness' in e for e in check['errors'])
+    # CS9：edit_parameter 现在与 CadQueryBackend 一致，负数在编辑期即拒绝；
+    # 此处直接构造含非法参数的模型，验证 geometry_validity_check 拒绝。
+    with pytest.raises(ValueError):
+        backend.edit_parameter(model, "thickness", -5.0)
+    bad = dict(model["parameters"])
+    bad["thickness"] = -5.0
+    check = backend.geometry_validity_check({"name": "bad", "parameters": bad})
+    assert check["valid"] is False
+    assert any("thickness" in e for e in check["errors"])
 
 
 # ---------------------------------------------------------------------------

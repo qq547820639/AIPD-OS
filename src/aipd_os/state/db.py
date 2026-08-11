@@ -328,16 +328,27 @@ class AIPDStateDB:
         return dict(row) if row else None
 
     def grant_access(self, user_id: str, tenant_id: str, project_id: Optional[str] = None) -> None:
+        # project_id 为 None 时写入 '*'（规范化租户通配），不再写 NULL 行。
+        effective = project_id if project_id is not None else "*"
         with self.connect() as c:
             c.execute("INSERT OR IGNORE INTO user_access(user_id,tenant_id,project_id) VALUES(?,?,?)",
-                      (user_id, tenant_id, project_id))
+                      (user_id, tenant_id, effective))
 
     def has_access(self, user_id: str, tenant_id: str, project_id: Optional[str] = None) -> bool:
         with self.connect() as c:
             row = c.execute(
                 "SELECT 1 FROM user_access WHERE user_id=? AND tenant_id=? "
-                "AND (project_id=? OR project_id='*')",
+                "AND (project_id=? OR project_id='*' OR project_id IS NULL)",
                 (user_id, tenant_id, project_id)).fetchone()
+        return row is not None
+
+    def has_tenant_admin(self, user_id: str, tenant_id: str) -> bool:
+        """用户是否为该租户管理员：存在 ``project_id='*'`` 或 NULL 的通配授权行。"""
+        with self.connect() as c:
+            row = c.execute(
+                "SELECT 1 FROM user_access WHERE user_id=? AND tenant_id=? "
+                "AND (project_id='*' OR project_id IS NULL)",
+                (user_id, tenant_id)).fetchone()
         return row is not None
 
     # ------------------------------------------------------------- sessions
@@ -401,6 +412,7 @@ class AIPDStateDB:
                 try:
                     nums.append(int(value.split("-")[-1]))
                 except ValueError:
+                    # noqa: EMPTY_EXCEPT - 跳过非数字后缀的既有 id（合法 id 过滤）
                     pass
         return f"{prefix}-{max(nums, default=0) + 1:03d}"
 

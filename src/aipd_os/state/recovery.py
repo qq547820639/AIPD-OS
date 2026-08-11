@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import shutil
 import sqlite3
 from datetime import datetime, timezone
@@ -26,6 +27,8 @@ from .state_backend import (
     RemoteStateBackend,
     StateBackend,
 )
+
+logger = logging.getLogger("aipd.recovery")
 
 # 统一状态服务承载的对象类型
 OBJECT_TYPES = {"attachment", "manual_batch", "visual_bible", "generation_task", "rework_plan"}
@@ -219,8 +222,9 @@ class UnifiedStateService:
             self.db.add_audit("system", "unified_backup", None, tenant,
                               after={"backup_dir": str(bundle),
                                      "object_count": obj_count})
-        except sqlite3.Error:
-            pass
+        except sqlite3.Error as exc:
+            # 备份本体已落盘；仅审计登记失败时记录，不阻断备份返回。
+            logger.warning("unified_backup audit write failed: %s", exc)
         return {"backup_dir": str(bundle), "db_sha256": db_sha,
                 "object_count": obj_count, "index_sha256": idx_sha}
 
@@ -260,8 +264,9 @@ class UnifiedStateService:
             self.db.add_audit("system", "unified_restore", None, tenant,
                               after={"backup_dir": str(bundle),
                                      "object_count": obj_count})
-        except sqlite3.Error:
-            pass
+        except sqlite3.Error as exc:
+            # 恢复本体已完成；仅审计登记失败时记录，不阻断恢复返回。
+            logger.warning("unified_restore audit write failed: %s", exc)
         return {"restored_db": str(self.db.path), "object_count": obj_count,
                 "index_entries": self._count_index_entries()}
 

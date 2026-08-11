@@ -40,6 +40,10 @@ class ValidationDataAdapter(ToolAdapter):
             errors.append("'files' 至少提供一个数据文件")
         return errors
 
+    def side_effect_mode(self) -> str:
+        """导入验证数据会写入实验室记录并传播影响：禁止自动重试。"""
+        return "EXTERNAL_SIDE_EFFECT"
+
     def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
         stage = str(input.get("stage", "evt")).lower()
         files = input.get("files", [])

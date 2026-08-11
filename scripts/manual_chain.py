@@ -5,9 +5,13 @@
 真实批次执行：plan-batches（生成 >=N 页批次计划）、run-batch（真实驱动图像适配器+排版渲染器，
 保存完整批次上下文到 batch_runs；图像后端不可用时诚实生成外部任务包并标记 external_pending）。
 """
-import argparse, json, hashlib, os, sys
-from pathlib import Path
+import argparse
+import hashlib
+import json
+import os
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 # 允许独立运行 / 被测试子进程调用时导入 src 下的 aipd_os 包
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
@@ -141,7 +145,9 @@ def _build_defn(entry, facts):
     """从 Product Truth / 内容模型构建页面定义（正文与规格取事实，而非硬编码文案）。
 
     facts 支持内容模型字段：params / product / modules / scenes / cmf / qa / closure /
-    characters / camera / lighting。缺省字段回退到默认文案，保证向后兼容。
+    characters / camera / lighting / principle / tagline / curve。缺省字段一律回退为
+    显式 ``TBD`` 标记（绝不伪造「看起来合理」的产品事实），并把缺失字段写入
+    ``truth_gaps`` 便于审计。
     """
     role = entry["role"]; pid = entry["page_id"]; pn = entry["page_number"]
     facts = facts or {}
@@ -155,26 +161,50 @@ def _build_defn(entry, facts):
     characters = (facts.get("characters", []) if facts else []) or []
     camera = (facts.get("camera", {}) if facts else {}) or {}
     lighting = (facts.get("lighting", {}) if facts else {}) or {}
-    product_name = product.get("name", "外骨骼助力系统")
+
+    gaps = []
+    if not product.get("name"):
+        gaps.append("product.name")
+    if not product.get("tagline"):
+        gaps.append("tagline")
+    if not params:
+        gaps.append("params")
+    if not facts.get("principle"):
+        gaps.append("principle")
+    if not modules:
+        gaps.append("modules")
+    if not scenes:
+        gaps.append("scenes")
+    if not cmf:
+        gaps.append("cmf")
+    if not qa_list:
+        gaps.append("qa")
+    if not closure_list:
+        gaps.append("closure")
+    if not characters:
+        gaps.append("characters")
+    if not facts.get("curve"):
+        gaps.append("curve")
+
+    product_name = product.get("name", "未指定（TBD）")
     defn = {"page_id": pid, "role": role, "title": "", "body": [], "caption": "",
             "param_table": [], "curve": None, "page_number": pn,
             "footer": "AIPD-OS 产品手册", "rendered_by_us": True,
-            "expected_character": characters[0].get("appearance", "工业级外骨骼助力产品，工程橙与金属灰")
-                if characters else "工业级外骨骼助力产品，工程橙与金属灰",
-            "expected_cmf": dict(cmf) if cmf else {"color": "金属灰/工程橙", "material": "铝合金6061", "finish": "阳极氧化"},
+            "expected_character": (characters[0].get("appearance", "TBD")
+                                   if characters else "TBD"),
+            "expected_cmf": dict(cmf),
             "product_structure": {"name": product_name, "structure": product.get("structure", "")},
-            "camera": camera, "lighting": lighting}
+            "camera": camera, "lighting": lighting,
+            "truth_gaps": sorted(set(gaps))}
     if role == "cover":
         defn["title"] = f"{product_name} 产品手册"
-        defn["body"] = [
-            product.get("tagline", "本手册涵盖工作原理、技术参数、核心模块、用户场景、CMF 设计、性能曲线与常见问题。")
-        ] or ["本手册涵盖工作原理、技术参数、核心模块、用户场景、CMF 设计、性能曲线与常见问题。"]
+        defn["body"] = ([product.get("tagline")] if product.get("tagline")
+                        else ["TBD：缺少产品事实数据（facts.tagline）"])
         defn["caption"] = "封面说明"
     elif role == "principle":
         defn["title"] = "工作原理"
         defn["body"] = (facts.get("principle", []) if facts else []) or [
-            "系统通过电机驱动谐波减速器，将助力传递至外骨骼关节，实现重物搬运时的主动助力。",
-            "控制单元实时采集关节力矩，结合人体运动意图输出补偿力矩。"]
+            "TBD：缺少工作原理描述（facts.principle）"]
     elif role == "parameter_table":
         defn["title"] = "技术参数表"
         defn["param_table"] = [{"param": k, "label": PARAM_LABELS.get(k, k), "value": v,
@@ -182,41 +212,41 @@ def _build_defn(entry, facts):
     elif role == "module":
         defn["title"] = "核心模块"
         defn["body"] = [f"{m.get('name', '模块')}：{m.get('desc', '')}" for m in modules] or [
-            "动力模块：高密度无刷电机与谐波减速器。",
-            "控制模块：力矩感知与运动意图识别。",
-            "供电模块：高容量锂电池组。"]
+            "TBD：缺少核心模块数据（facts.modules）"]
         defn["modules"] = list(modules)
     elif role == "user_scene":
         defn["title"] = "用户场景"
         defn["body"] = [f"{s.get('title', '场景')}：{s.get('desc', '')}" for s in scenes] or [
-            "物流搬运：仓库装卸环节有效缓解腰部劳损。",
-            "制造车间：产线搬运与装配作业。",
-            "应急救援：长时间负重行进场景。"]
+            "TBD：缺少用户场景数据（facts.scenes）"]
     elif role == "cmf":
         defn["title"] = "CMF 设计"
         defn["body"] = ([f"色彩：{cmf.get('color', '')}", f"材质：{cmf.get('material', '')}",
                          f"表面处理：{cmf.get('finish', '')}"] if cmf else [
-            "色彩：工程橙强调识别度，金属灰体现专业质感。",
-            "材质：铝合金6061 保证强度与轻量化。",
-            "表面处理：阳极氧化提升耐磨与耐腐蚀。"])
+            "TBD：缺少 CMF 数据（facts.cmf）"])
     elif role == "curve":
         defn["title"] = "性能曲线"
-        defn["body"] = ["下图展示不同负载下的助力效率与输出扭矩曲线。"]
-        defn["caption"] = "图 2：负载-效率曲线"
-        defn["curve"] = [{"label": "效率曲线", "points": [[0, 10], [1, 20], [2, 18], [3, 30], [4, 40], [5, 38]]},
-                         {"label": "输出扭矩", "points": [[0, 5], [1, 12], [2, 20], [3, 28], [4, 40], [5, 46]]}]
+        curve_data = (facts.get("curve") if facts else None)
+        if curve_data:
+            defn["body"] = ["下图展示不同负载下的助力效率与输出扭矩曲线。"]
+            defn["caption"] = "图 2：负载-效率曲线"
+            defn["curve"] = curve_data
+        else:
+            defn["body"] = ["TBD：缺少性能数据（facts.params/curve）"]
+            defn["caption"] = "TBD：缺少性能数据（facts.params/curve）"
+            defn["curve"] = None
     elif role == "qa":
         defn["title"] = "常见问题"
         defn["body"] = [f"Q：{q.get('q', '')} A：{q.get('a', '')}" for q in qa_list] or [
-            "Q：电池续航多久？A：依据负载与工况约 4-6 小时。",
-            "Q：如何保养？A：定期清洁并检查连接件转矩。"]
+            "TBD：缺少常见问题数据（facts.qa）"]
     elif role == "closure":
         defn["title"] = "结语"
         defn["body"] = [c.get("text", "") for c in closure_list] or [
-            "本产品致力于降低重体力作业风险，提升作业效率与职业健康水平。",
-            "更多详情请联系技术支持。"]
+            "TBD：缺少结语数据（facts.closure）"]
     if not defn["title"]: defn["title"] = pid
-    if not defn["body"]: defn["body"] = ["本节内容。"]
+    # parameter_table 由 param_table 驱动（渲染表格），正文可为空；
+    # 其余角色缺数据时已在各自分支写入显式 TBD。
+    if not defn["body"] and role != "parameter_table":
+        defn["body"] = ["TBD：本节内容待补充（缺少对应 facts 字段）"]
     return defn
 
 
@@ -480,7 +510,7 @@ def _find_page_defn(d, page_id):
 def cmd_rebuild_page(a):
     # 仅重建指定失败页：重新生成该页配图 + 整页，并对其重新审计（不触碰其它页）
     from aipd_os.imggen.adapter import ImageGenAdapter
-    from aipd_os.imggen.providers import BatchRequest, PriorBatchContent
+    from aipd_os.imggen.providers import BatchRequest
     from aipd_os.layout.renderer import render_page
     from aipd_os.visual_audit import VisualAuditor
 

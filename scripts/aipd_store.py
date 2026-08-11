@@ -177,7 +177,8 @@ class AIPDStore:
         for value in values:
             if isinstance(value,str) and value.startswith(prefix+'-'):
                 try: nums.append(int(value.split('-')[-1]))
-                except ValueError: pass
+                except ValueError:  # noqa: EMPTY_EXCEPT - 跳过非数字后缀 id
+                    pass
         return f"{prefix}-{max(nums, default=0)+1:03d}"
 
     def add_fact(self, key: str, value: Any, status: str, unit: str | None=None, tolerance: str | None=None,
@@ -267,10 +268,12 @@ class AIPDStore:
             for k in list(d):
                 if k.endswith('_json') and d[k]:
                     try: d[k[:-5]]=json.loads(d.pop(k))
-                    except json.JSONDecodeError: pass
+                    except json.JSONDecodeError:  # noqa: EMPTY_EXCEPT - 遗留字段 JSON 解析失败保留原样
+                        pass
                 elif k=='value_json':
                     try: d['value']=json.loads(d.pop(k))
-                    except json.JSONDecodeError: pass
+                    except json.JSONDecodeError:  # noqa: EMPTY_EXCEPT - 遗留字段 JSON 解析失败保留原样
+                        pass
             out.append(d)
         return out
 

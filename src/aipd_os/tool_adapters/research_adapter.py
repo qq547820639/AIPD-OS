@@ -1,17 +1,28 @@
 """研究适配器（'research.search_papers'）。
 
-配置了 ``AIPD_RESEARCH_API_KEY`` 时才视为可用；否则诚实写出外部任务包，
+配置了 ``AIPD_RESEARCH_API_KEY`` 时才视为可用；未配置时诚实写出外部任务包，
 分类为 ``external_blocked``，绝不伪造论文检索结果。
+
+配置 key 后，通过 Semantic Scholar Graph API 做真实检索
+（标准库 ``urllib``，无第三方依赖）。任何 HTTP 错误 / 超时 / 解析失败都会
+转化为 ``external_blocked``（诚实 NOT_VERIFIED），绝不返回 simulated 占位。
 """
 
 from __future__ import annotations
 
+import json
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Any, Dict
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
 from aipd_os.tool_adapters._common import env, meta, token_meta
 
 _API_KEY_ENV = "AIPD_RESEARCH_API_KEY"
+_SEMANTIC_SCHOLAR_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
+_REQUEST_TIMEOUT_S = 20
+_USER_AGENT = "AIPD-OS/1.0 (research adapter)"
 
 
 class ResearchAdapter(ToolAdapter):
@@ -38,6 +49,38 @@ class ResearchAdapter(ToolAdapter):
             errors.append("'query' 必填")
         return errors
 
+    def _fetch_semantic_scholar(self, query: str, limit: int) -> dict[str, Any]:
+        """真实调用 Semantic Scholar Graph API，返回解析后的 JSON dict。
+
+        HTTP 错误 / 超时 / JSON 解析失败一律抛出 :class:`AdapterError`
+        （classification=external_blocked）。
+        """
+        url = _SEMANTIC_SCHOLAR_URL + "?" + urllib.parse.urlencode({
+            "query": query,
+            "limit": limit,
+            "fields": "title,authors,year,url,abstract",
+        })
+        req = urllib.request.Request(
+            url, headers={"User-Agent": _USER_AGENT, "Accept": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=_REQUEST_TIMEOUT_S) as resp:
+                raw = resp.read().decode("utf-8")
+        except Exception as exc:  # noqa: BLE001 - HTTP/超时/网络错误统一转 external_blocked
+            raise external_blocked_error(
+                self.capability_id(),
+                f"Semantic Scholar 检索失败（HTTP/超时/网络）：{exc}。"
+                "请人工在目标库完成检索并把结果（标题/作者/年份/链接/摘要）回填。",
+                work_id=None,
+            ) from exc
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise external_blocked_error(
+                self.capability_id(),
+                "Semantic Scholar 返回无法解析的 JSON；请人工检索并回填结果。",
+                work_id=None,
+            ) from exc
+
     def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
         if not self._is_available():
             raise external_blocked_error(
@@ -46,23 +89,33 @@ class ResearchAdapter(ToolAdapter):
                 "请人工在目标库完成检索并把结果（标题/作者/年份/链接/摘要）回填。",
                 work_id=input.get("work_id"),
             )
-        # 此处为“模拟”检索：仅当 API key 存在时，返回确定性的占位来源，
-        # 并明确标注 simulated=True，坚持诚实原则。
         query = input.get("query", "unknown")
         n = int(input.get("n", 3))
+        payload = self._fetch_semantic_scholar(query, n)
+
+        data = payload.get("data") or []
         sources = []
-        for i in range(n):
-            sources.append(
-                {
-                    "title": f"Simulated source {i + 1} for: {query}",
-                    "authors": ["AIPD simulated"],
-                    "year": 2024,
-                    "url": f"https://example.invalid/{abs(hash(query)) % 100000}/{i}",
-                    "summary": "占位来源（simulated）——需真实 API 检索后替换。",
-                    "simulated": True,
-                }
-            )
-        result = {"sources": sources, "query": query, "_meta": token_meta(query, cost_per_1k=0.5)}
+        for paper in data[:n]:
+            if not isinstance(paper, dict):
+                continue
+            authors = [a.get("name", "") for a in (paper.get("authors") or [])
+                       if isinstance(a, dict) and a.get("name")]
+            source: dict[str, Any] = {
+                "title": paper.get("title", ""),
+                "authors": authors,
+                "year": paper.get("year"),
+                "url": paper.get("url", ""),
+            }
+            if paper.get("abstract"):
+                source["abstract"] = paper["abstract"]
+            sources.append(source)
+
+        result = {
+            "sources": sources,
+            "query": query,
+            "provider": "semantic-scholar",
+            "_meta": token_meta(query, cost_per_1k=0.5),
+        }
         return result
 
     def normalize(self, result: Any) -> Dict[str, Any]:

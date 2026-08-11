@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 def sha256_file(path: Path) -> str:
@@ -34,6 +34,7 @@ def make_artifact_record(
     for_level: Optional[str] = None,
     note: Optional[str] = None,
     extra: Optional[Dict[str, Any]] = None,
+    semantic_hash: Optional[str] = None,
 ) -> Dict[str, Any]:
     """为一个已经写入磁盘的产物构造证据记录。
 
@@ -43,6 +44,7 @@ def make_artifact_record(
     :param for_level: 该产物支撑的成熟度层级（如 ``C1``）。
     :param note: 诚实性备注（例如说明该产物是 faceted 临时件）。
     :param extra: 附加字段。
+    :param semantic_hash: 可选的语义几何哈希（几何身份，与字节 sha256 不同）。
     :return: 含 path / sha256 / tool / tool_version / timestamp /
         maturity_evidence / note 的记录 dict。
     """
@@ -57,6 +59,8 @@ def make_artifact_record(
         'timestamp': utc_now_iso(),
         'maturity_evidence': [for_level] if for_level else [],
     }
+    if semantic_hash is not None:
+        record['semantic_geometry_hash'] = semantic_hash
     if note:
         record['note'] = note
     if extra:

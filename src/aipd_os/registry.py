@@ -266,6 +266,7 @@ def probe_entry_callable(entry_spec: Optional[str], repo_root=None) -> bool:
             try:
                 sys.path.remove(str(scripts_dir))
             except ValueError:
+                # noqa: EMPTY_EXCEPT - 清理 sys.path 失败（路径本就不在）可安全忽略
                 pass
 
 

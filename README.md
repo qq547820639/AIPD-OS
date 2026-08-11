@@ -1,4 +1,4 @@
-# AIPD Orchestrator v5.5.0
+# AIPD Orchestrator v5.6.0
 
 AI全链路产品开发与交付主管：一个对话入口，自主推进理论基础、产品定义、连续附件产品手册、工程CAD、工业化、供应链、EVT/DVT/PVT和生产发布。
 

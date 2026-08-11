@@ -32,13 +32,21 @@ ERROR_CLASSIFICATIONS = {
 
 RETRYABLE_CLASSIFICATIONS = {"transient", "tool_error"}
 
+# 副作用模式：决定失败后是否允许自动退避重试。
+#   - PURE：无副作用，失败可安全重试（默认）；
+#   - IDEMPOTENT：有副作用但自带幂等（重复执行不产生重复效果），可重试；
+#   - EXTERNAL_SIDE_EFFECT：对外部系统产生副作用（发邮件/登记外部报价等），
+#     重试可能重复执行 → 禁止自动重试；
+#   - NON_RETRYABLE：不可重试。
+SIDE_EFFECT_MODES = {"PURE", "IDEMPOTENT", "EXTERNAL_SIDE_EFFECT", "NON_RETRYABLE"}
+
 
 # 可重试的错误分类：仅当错误被归为可重试时才进行退避重试
 @dataclass
 class ExecutionRecord:
     """一次工具执行的规范化记录。
 
-    字段集合为固定契约，禁止随意增删；新增持久化数据请放入
+    字段集合为固定契约，禁止随意删改；新增持久化数据请放入
     ``result`` / ``artifact`` 等扩展字段或 store 的附加列。
     """
 
@@ -65,6 +73,9 @@ class ExecutionRecord:
     capability: str = ""
     retry_parent: str = ""
     fallback_from: str = ""
+    idempotency_key: str = ""
+    side_effect_mode: str = "PURE"
+    remote_operation_id: str = ""
 
     @property
     def started_at(self) -> str:
@@ -75,6 +86,16 @@ class ExecutionRecord:
     def completed_at(self) -> str:
         """与 end_time 等价的时间戳（两种命名风格兼容）。"""
         return self.end_time
+
+    @property
+    def execution_id(self) -> str:
+        """执行标识（run_id 的兼容别名）。"""
+        return self.run_id
+
+    @property
+    def attempt_number(self) -> int:
+        """当前尝试序号：重试 lineage 长度 + 1（首次尝试为 1）。"""
+        return len(self.retry_lineage) + 1
 
     @property
     def adapter_id(self) -> str:
@@ -107,7 +128,7 @@ class ExecutionRecord:
         return self.artifacts
 
     def unified_record(self) -> Dict[str, Any]:
-        """返回包含全部 19 个统一运行记录字段的 dict。"""
+        """返回包含全部统一运行记录字段的 dict（向后追加，不删旧字段）。"""
         return {
             "run_id": self.run_id,
             "project_id": self.project_id,
@@ -128,6 +149,9 @@ class ExecutionRecord:
             "error_type": self.error_type,
             "evidence_ids": self.evidence_ids,
             "artifact_ids": self.artifact_ids,
+            "idempotency_key": self.idempotency_key,
+            "side_effect_mode": self.side_effect_mode,
+            "remote_operation_id": self.remote_operation_id,
         }
 
     def to_dict(self) -> Dict[str, Any]:
@@ -171,6 +195,9 @@ class ExecutionRecord:
             capability=row.get("capability", "") or "",
             retry_parent=row.get("retry_parent", "") or "",
             fallback_from=row.get("fallback_from", "") or "",
+            idempotency_key=row.get("idempotency_key", "") or "",
+            side_effect_mode=row.get("side_effect_mode", "") or "PURE",
+            remote_operation_id=row.get("remote_operation_id", "") or "",
         )
 
 
@@ -196,6 +223,7 @@ __all__ = [
     "STATUS_CHOICES",
     "ERROR_CLASSIFICATIONS",
     "RETRYABLE_CLASSIFICATIONS",
+    "SIDE_EFFECT_MODES",
     "ExecutionRecord",
     "ToolResult",
 ]

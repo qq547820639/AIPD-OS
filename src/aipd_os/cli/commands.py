@@ -1112,6 +1112,7 @@ def cmd_doctor(args):
             try:
                 os.unlink(db_path)
             except OSError:
+                # noqa: EMPTY_EXCEPT - 清理探测用临时 db 文件：不存在/被占用时忽略
                 pass
     except Exception as exc:  # noqa: BLE001
         _doctor_check(checks, "database", "fail", str(exc))

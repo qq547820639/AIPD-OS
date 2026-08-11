@@ -165,6 +165,7 @@ UNIFIED_KEYS = {
     "started_at", "completed_at", "status", "cost", "token_usage",
     "retry_parent", "fallback_from", "error_type", "evidence_ids",
     "artifact_ids",
+    "idempotency_key", "side_effect_mode", "remote_operation_id",
 }
 
 

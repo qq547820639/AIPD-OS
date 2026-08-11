@@ -317,6 +317,7 @@ def audit_repo(repo_root, pin_commit: str | None = None) -> dict:
             else:
                 top_entries.append(name)
     except OSError:
+        # noqa: EMPTY_EXCEPT - 目录统计尽力而为：权限/IO 失败不阻断审计
         pass
 
     ci_jobs = _parse_ci_jobs(root)

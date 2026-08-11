@@ -11,7 +11,7 @@ import hashlib
 import hmac
 import secrets
 import time
-from typing import Any, Optional
+from typing import Optional
 
 from .db import AIPDStateDB
 
@@ -24,7 +24,9 @@ class AuthError(Exception):
 
 
 class AuthManager:
-    def __init__(self, db: AIPDStateDB, secret: str = "change-me-secret"):
+    def __init__(self, db: AIPDStateDB, secret: Optional[str] = None):
+        if secret is None:
+            raise ValueError("AuthManager requires a secret")
         self._db = db
         self._secret = secret.encode("utf-8")
 
@@ -81,7 +83,7 @@ class AuthManager:
                 return False
         except ValueError:
             return False
-        expected = hmac.new(self._secret, f"{user_id}.{expiry}".encode("utf-8"),
+        expected = hmac.new(self._secret, f"{user_id}.{expiry}".encode(),
                             hashlib.sha256).hexdigest()
         return hmac.compare_digest(sig, expected)
 
@@ -95,6 +97,13 @@ class AuthManager:
             raise AuthError(f"unknown user {user!r}")
         if not self._db.has_access(user, tenant_id, project_id):
             raise AuthError(f"user {user!r} has no access to {tenant_id}/{project_id}")
+
+    def require_tenant_admin(self, user: str, tenant_id: str) -> None:
+        """无租户管理员权限时抛 :class:`AuthError`。"""
+        if not self._db.get_user(user):
+            raise AuthError(f"unknown user {user!r}")
+        if not self._db.has_tenant_admin(user, tenant_id):
+            raise AuthError(f"user {user!r} is not a tenant admin of {tenant_id!r}")
 
 
 __all__ = ["AuthManager", "AuthError"]

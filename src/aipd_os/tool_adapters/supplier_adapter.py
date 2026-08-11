@@ -34,6 +34,10 @@ class SupplierAdapter(ToolAdapter):
             errors.append("'files' 至少提供一个文件路径")
         return errors
 
+    def side_effect_mode(self) -> str:
+        """登记供应商文件/报价会对外部供应商记录产生副作用：禁止自动重试。"""
+        return "EXTERNAL_SIDE_EFFECT"
+
     def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
         files = input.get("files", [])
         supplier_meta = input.get("supplier_meta") or {}

@@ -47,14 +47,60 @@ def test_research_unavailable_writes_task_package(tmp_path, monkeypatch):
     assert ei.value.task_package and Path(ei.value.task_package).is_file()
 
 
-def test_research_available_simulated(monkeypatch):
+def test_research_available_real_sources(monkeypatch):
+    """配置 key + Semantic Scholar 正常响应 → 返回真实 sources，无 simulated 标记。"""
+    import json
+    import urllib.request
+
     monkeypatch.setenv("AIPD_RESEARCH_API_KEY", "dummy")
     reg = build_registry()
     a = reg.get("research.search_papers")
     assert a.discover()["available"] is True
+
+    class FakeResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return json.dumps({"data": [
+                {"title": "Real Paper", "authors": [{"name": "Alice"}],
+                 "year": 2023, "url": "https://api.semanticscholar.org/paper/1",
+                 "abstract": "real abstract"},
+            ]}).encode("utf-8")
+
+    def fake_urlopen(req, timeout=0):
+        return FakeResp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     out = a.execute({"query": "q", "n": 2})
     assert "sources" in out
-    assert len(out["sources"]) == 2
+    assert len(out["sources"]) == 1
+    assert out["sources"][0]["title"] == "Real Paper"
+    assert out["sources"][0]["authors"] == ["Alice"]
+    assert "simulated" not in out["sources"][0]
+
+
+def test_research_http_error_external_blocked(monkeypatch, tmp_path):
+    """配置 key + HTTP 错误 → external_blocked（不抛透传异常、不伪造结果）。"""
+    import urllib.error
+    import urllib.request
+
+    monkeypatch.setenv("AIPD_OUTPUT_DIR", str(tmp_path))
+    monkeypatch.setenv("AIPD_RESEARCH_API_KEY", "dummy")
+    reg = build_registry()
+    a = reg.get("research.search_papers")
+
+    def fake_urlopen(req, timeout=0):
+        raise urllib.error.HTTPError(req.full_url, 429, "rate limited", {}, None)
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(AdapterError) as ei:
+        a.execute({"query": "q"})
+    assert ei.value.classification == "external_blocked"
+    assert ei.value.task_package and Path(ei.value.task_package).is_file()
 
 
 def test_faceted_writes_real_step_artifact(tmp_path, monkeypatch):

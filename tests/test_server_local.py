@@ -86,11 +86,11 @@ def test_http_transport_requires_auth(tmp_path):
                                    "params": {"tenant_id": "default", "project_id": "p1"}})
         assert status == 200, body
         assert body["result"]["project"]["project_id"] == "p1"
-        # 4) 有效令牌但无项目授权：仍被拒绝（授权生效）
+        # 4) 有效令牌但无项目授权：仍被拒绝（授权生效 → 403 Forbidden）
         status, body = _rpc(port, {"user": "u1", "token": token,
                                    "method": "project_summary",
                                    "params": {"tenant_id": "default", "project_id": "other"}})
-        assert status == 400, body
+        assert status == 403, body
         assert "has no access" in body["error"]
     finally:
         httpd.shutdown()

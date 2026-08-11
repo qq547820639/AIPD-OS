@@ -30,8 +30,11 @@ DB_PATH = os.environ.get("AIPD_DB_DIR", str(Path.home() / ".aipd-projects" / "st
 _service = StateService(
     DB_PATH,
     encryption_key=os.environ.get("AIPD_ENCRYPTION_KEY", ""),
-    secret=os.environ.get("AIPD_SECRET", "change-me-secret"),
+    secret=os.environ.get("AIPD_SECRET"),
     retention_days=int(os.environ.get("AIPD_RETENTION_DAYS", "90")),
+    insecure_dev_mode=os.environ.get("AIPD_INSECURE_DEV_MODE", "")
+    not in ("", "0", "false", "False"),
+    require_strong_secret=True,  # MCP 服务视为服务模式：缺/弱 secret 时 fail-closed
 )
 
 

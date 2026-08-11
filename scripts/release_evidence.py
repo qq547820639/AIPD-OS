@@ -209,6 +209,7 @@ def _dependency_lock(repo: Path) -> dict:
         if freeze.returncode == 0:
             lock["pip_freeze"] = freeze.stdout.strip()
     except (OSError, subprocess.SubprocessError):
+        # noqa: EMPTY_EXCEPT - pip freeze 尽力而为：失败仅置 pip_freeze=None
         pass
     for name in LOCKFILES:
         p = repo / name

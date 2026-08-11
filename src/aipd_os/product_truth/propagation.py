@@ -4,10 +4,16 @@
 为每个受影响项生成一个有次数上限的返工任务（``max_rework_attempts``），
 超出上限即停止并标记 ``blocked``（防返工风暴）。返工产生新版本并执行验证，
 成功后关闭 stale。内置环检测、退避与 attempts 计数，并产出 owner 可读的变更说明。
+
+诚实性（P0-10）：``run_rework`` 必须有真实的 ``rework_fn`` 执行器才会标记
+``succeeded`` 并 bump 版本；未提供执行器时直接 ``blocked``，**绝不伪造成功**。
+
+作用域：返工任务表带 ``tenant_id`` / ``project_id``，继承 store 的 scope，
+所有 SQL 均按 store scope 过滤。
 """
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 from .lineage import LineageGraph
 from .models import ReworkTask, now_iso
@@ -66,31 +72,41 @@ class PropagationEngine:
         ts = now_iso()
         task.created_at = ts
         task.updated_at = ts
+        tenant = self._store.tenant_id
+        project = self._store.project_id
         with self._store.connect() as c:
             c.execute(
-                "INSERT INTO rework_tasks(task_id,truth_id,reason,attempts,max_attempts,"
-                "status,backoff_until,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                (task.task_id, task.truth_id, task.reason, task.attempts,
-                 task.max_attempts, task.status, task.backoff_until, ts, ts))
+                "INSERT INTO rework_tasks(task_id,tenant_id,project_id,truth_id,reason,"
+                "attempts,max_attempts,status,backoff_until,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (task.task_id, tenant, project, task.truth_id, task.reason,
+                 task.attempts, task.max_attempts, task.status, task.backoff_until, ts, ts))
         return task
 
     def _next_task_id(self) -> str:
+        tenant = self._store.tenant_id
+        project = self._store.project_id
         with self._store.connect() as c:
-            rows = c.execute("SELECT task_id FROM rework_tasks").fetchall()
+            rows = c.execute(
+                "SELECT task_id FROM rework_tasks WHERE tenant_id=? AND project_id=?",
+                (tenant, project)).fetchall()
         nums = []
         for r in rows:
             if r["task_id"].startswith("RW-"):
                 try:
                     nums.append(int(r["task_id"].rsplit("-", 1)[1]))
                 except ValueError:
+                    # noqa: EMPTY_EXCEPT - 跳过非数字后缀的既有任务 id（合法 id 过滤）
                     pass
         return f"RW-{max(nums, default=0) + 1:03d}"
 
     def list_tasks(self, status: Optional[str] = None) -> List[ReworkTask]:
-        sql = "SELECT * FROM rework_tasks"
-        params: List[object] = []
+        tenant = self._store.tenant_id
+        project = self._store.project_id
+        sql = "SELECT * FROM rework_tasks WHERE tenant_id=? AND project_id=?"
+        params: List[object] = [tenant, project]
         if status is not None:
-            sql += " WHERE status=?"
+            sql += " AND status=?"
             params.append(status)
         sql += " ORDER BY created_at"
         with self._store.connect() as c:
@@ -105,9 +121,12 @@ class PropagationEngine:
         return out
 
     def get_task(self, task_id: str) -> ReworkTask:
+        tenant = self._store.tenant_id
+        project = self._store.project_id
         with self._store.connect() as c:
-            r = c.execute("SELECT * FROM rework_tasks WHERE task_id=?",
-                          (task_id,)).fetchone()
+            r = c.execute(
+                "SELECT * FROM rework_tasks WHERE task_id=? AND tenant_id=? AND project_id=?",
+                (task_id, tenant, project)).fetchone()
         if not r:
             raise KeyError(task_id)
         return ReworkTask(
@@ -123,10 +142,14 @@ class PropagationEngine:
             return
         ts = now_iso()
         set_sql = ", ".join([f"{k}=?" for k in set_cols] + ["updated_at=?"])
-        values = list(fields[k] for k in set_cols) + [ts]
+        values = list(fields[k] for k in set_cols) + [ts, task_id,
+                                                      self._store.tenant_id,
+                                                      self._store.project_id]
         with self._store.connect() as c:
-            c.execute(f"UPDATE rework_tasks SET {set_sql} WHERE task_id=?",
-                      values + [task_id])
+            c.execute(
+                f"UPDATE rework_tasks SET {set_sql} "
+                "WHERE task_id=? AND tenant_id=? AND project_id=?",
+                values)
 
     # ------------------------------------------------------------- 有界返工
     def run_rework(self, task_id: str,
@@ -134,8 +157,10 @@ class PropagationEngine:
         """执行一次返工尝试。
 
         - 递增 attempts；若已达到上限 → blocked（抛 ReworkExhaustedError）。
-        - 调用 rework_fn(truth_id) 执行验证；返回 True 表示成功：bump 新版本、
-          关闭 stale、标记 succeeded；False 则退避重试，达到上限即 blocked。
+        - ``rework_fn`` 为 None（无返工执行器）时：直接标记 blocked，**绝不
+          伪造成功**——不 bump 版本、不标 succeeded。
+        - 否则调用 rework_fn(truth_id) 执行验证；返回 True 表示成功：bump
+          新版本、关闭 stale、标记 succeeded；False 则退避重试，达到上限即 blocked。
         """
         task = self.get_task(task_id)
         if task.status == "succeeded":
@@ -151,10 +176,19 @@ class PropagationEngine:
             raise ReworkExhaustedError(
                 f"rework for {task.truth_id} exhausted after {task.max_attempts} attempts")
 
+        if rework_fn is None:
+            # 无返工执行器：拒绝假成功（P0-10）。
+            self._set_task(task_id, attempts=new_attempts, status="blocked")
+            self._store.set_status(task.truth_id, "blocked")
+            return {
+                "task": self.get_task(task_id).to_dict(),
+                "reworked": False, "status": "blocked",
+                "reason": "no rework executor provided; refusing fake success",
+            }
+
         self._set_task(task_id, attempts=new_attempts, status="running")
-        fn = rework_fn or self._default_rework
         try:
-            ok = fn(task.truth_id)
+            ok = rework_fn(task.truth_id)
         except Exception:
             ok = False
 
@@ -189,9 +223,6 @@ class PropagationEngine:
             "reworked": False, "status": "pending",
             "backoff_seconds": backoff,
         }
-
-    def _default_rework(self, truth_id: str) -> bool:
-        return True
 
     def _backoff_iso(self, seconds: int) -> str:
         from datetime import datetime, timedelta, timezone

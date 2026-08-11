@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from aipd_os.execution.models import ExecutionRecord, STATUS_CHOICES
+from aipd_os.execution.models import ExecutionRecord
 
 _SCHEMA = r"""
 CREATE TABLE IF NOT EXISTS execution_runs(
@@ -42,6 +42,9 @@ CREATE TABLE IF NOT EXISTS execution_runs(
  capability TEXT NOT NULL DEFAULT '',
  retry_parent TEXT NOT NULL DEFAULT '',
  fallback_from TEXT NOT NULL DEFAULT '',
+ idempotency_key TEXT NOT NULL DEFAULT '',
+ side_effect_mode TEXT NOT NULL DEFAULT 'PURE',
+ remote_operation_id TEXT NOT NULL DEFAULT '',
  artifacts_json TEXT NOT NULL DEFAULT '[]',
  result_json TEXT NOT NULL DEFAULT '{}');
 """
@@ -61,11 +64,16 @@ def _ensure_columns(c) -> None:
     """就地迁移：CREATE TABLE IF NOT EXISTS 不会给已存在的表补列，
     这里通过 PRAGMA 检查并用 ALTER TABLE 补齐缺失的新增列。"""
     cols = {r[1] for r in c.execute("PRAGMA table_info(execution_runs)").fetchall()}
-    for name in ("project_id", "adapter_id", "capability", "retry_parent", "fallback_from"):
+    for name in ("project_id", "adapter_id", "capability", "retry_parent", "fallback_from",
+                 "idempotency_key", "remote_operation_id"):
         if name not in cols:
             c.execute(
                 f"ALTER TABLE execution_runs ADD COLUMN {name} TEXT NOT NULL DEFAULT ''"
             )
+    if "side_effect_mode" not in cols:
+        c.execute(
+            "ALTER TABLE execution_runs ADD COLUMN side_effect_mode TEXT NOT NULL DEFAULT 'PURE'"
+        )
 
 
 class RunStore:
@@ -107,6 +115,9 @@ class RunStore:
         capability: str = "",
         retry_parent: str = "",
         fallback_from: str = "",
+        idempotency_key: str = "",
+        side_effect_mode: str = "PURE",
+        remote_operation_id: str = "",
     ) -> str:
         run_id = self._new_run_id()
         ts = _now()
@@ -114,8 +125,9 @@ class RunStore:
             c.execute(
                 "INSERT INTO execution_runs(run_id,work_id,tool,provider,version,input_hash,"
                 "output_hash,start_time,status,retry_lineage_json,cost,tokens_in,tokens_out,"
-                "project_id,adapter_id,capability,retry_parent,fallback_from)"
-                " VALUES(?,?,?,?,?,?,?,?,?,?,0,0,0,?,?,?,?,?)",
+                "project_id,adapter_id,capability,retry_parent,fallback_from,idempotency_key,"
+                "side_effect_mode,remote_operation_id)"
+                " VALUES(?,?,?,?,?,?,?,?,?,?,0,0,0,?,?,?,?,?,?,?,?)",
                 (
                     run_id,
                     work_id,
@@ -132,6 +144,9 @@ class RunStore:
                     capability,
                     retry_parent,
                     fallback_from,
+                    idempotency_key,
+                    side_effect_mode,
+                    remote_operation_id,
                 ),
             )
         return run_id
@@ -158,6 +173,9 @@ class RunStore:
             "capability",
             "retry_parent",
             "fallback_from",
+            "idempotency_key",
+            "side_effect_mode",
+            "remote_operation_id",
             "result",
             "artifacts",
             "evidence_references",
@@ -233,6 +251,38 @@ class RunStore:
                     "SELECT * FROM execution_runs ORDER BY start_time"
                 ).fetchall()
         return [ExecutionRecord.from_db_row(dict(r)) for r in rows]
+
+    # ------------------------------------------------------------ 幂等查询
+    def find_by_idempotency_key(self, key: str) -> Optional[ExecutionRecord]:
+        """按幂等键取最新一条执行记录（无则 None）。"""
+        with self.connect() as c:
+            row = c.execute(
+                "SELECT * FROM execution_runs WHERE idempotency_key=? "
+                "ORDER BY start_time DESC, rowid DESC LIMIT 1", (key,)).fetchone()
+        if row is None:
+            return None
+        return ExecutionRecord.from_db_row(dict(row))
+
+    def list_by_idempotency_key(self, key: str) -> List[ExecutionRecord]:
+        """按幂等键列出全部执行记录（按开始时间升序）。"""
+        with self.connect() as c:
+            rows = c.execute(
+                "SELECT * FROM execution_runs WHERE idempotency_key=? ORDER BY start_time",
+                (key,)).fetchall()
+        return [ExecutionRecord.from_db_row(dict(r)) for r in rows]
+
+    def get_result(self, run_id: str) -> Dict[str, Any]:
+        """读取运行记录持久化的 result_json；未存储/解析失败返回空 dict。"""
+        with self.connect() as c:
+            row = c.execute(
+                "SELECT result_json FROM execution_runs WHERE run_id=?",
+                (run_id,)).fetchone()
+        if row is None:
+            raise KeyError(run_id)
+        try:
+            return json.loads(row["result_json"] or "{}")
+        except (json.JSONDecodeError, TypeError):
+            return {}
 
 
 __all__ = ["RunStore", "canonical_hash"]
