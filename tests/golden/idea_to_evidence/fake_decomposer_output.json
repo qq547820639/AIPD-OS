@@ -1,0 +1,20 @@
+{
+  "title": "AI 独居老人居家康复助手",
+  "goal": "利用 AI 视觉与运动指导帮助独居老人安全完成居家康复训练",
+  "problem": "独居老人缺乏康复训练陪伴，动作依从性与正确性难以保证",
+  "target_user": "60 岁以上独居、患慢性运动功能障碍的老年人",
+  "desired_outcome": "老人能独立完成每日 20 分钟康复训练，动作正确率提升",
+  "constraints": ["单摄像头即可", "离线可运行", "不依赖护工在场"],
+  "claims": [
+    {"claim_type": "problem", "statement": "独居老人居家康复存在依从性不足的问题"},
+    {"claim_type": "user", "statement": "60 岁以上独居老人是主要目标用户"},
+    {"claim_type": "behavior", "statement": "视觉反馈可能改善康复动作完成度"},
+    {"claim_type": "mechanism", "statement": "AI 姿态估计可识别康复动作正确性"},
+    {"claim_type": "technology", "statement": "单目摄像头可支撑居家动作识别"},
+    {"claim_type": "product", "statement": "离线本地推理满足隐私与可靠性要求"},
+    {"claim_type": "safety", "statement": "动作纠正提示不应鼓励超出安全范围的动作"},
+    {"claim_type": "engineering", "statement": "需要低算力设备上的实时推理方案"}
+  ],
+  "source": "golden_fixture",
+  "EPISTEMIC_NOTE": "FIXTURE ONLY: 非真实医学事实；仅用于测试系统行为。"
+}

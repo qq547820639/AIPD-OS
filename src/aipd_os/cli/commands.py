@@ -115,7 +115,8 @@ def cmd_init_project(args: argparse.Namespace) -> int:
     db.ensure_default_tenant(DEFAULT_TENANT)
     db.init_project(DEFAULT_TENANT, args.project_id, args.name, args.goal)
     # 同时在数据库上初始化监督器生命周期（共享同一 db 文件）
-    sup = _import_module("aipd_supervisor").Supervisor(args.db)
+    sup = _import_module("aipd_supervisor").Supervisor(
+        args.db, tenant_id=DEFAULT_TENANT, project_id=args.project_id, state_db=db)
     sup.init_lifecycle()
     log_event(_logger, "init_project", project_id=args.project_id, db=args.db)
     print(f"项目已初始化：{args.name}（{args.project_id}）")
@@ -161,8 +162,11 @@ def cmd_run_supervisor(args: argparse.Namespace) -> int:
     from aipd_os.experience.decision_card import build_decision_card
     from aipd_os.state.db import AIPDStateDB
 
-    sup = _import_module("aipd_supervisor").Supervisor(args.db)
-    results = sup.run_supervisor(steps=args.steps or 1)
+    db = AIPDStateDB(args.db)
+    pid = getattr(args, "project", None) or _resolve_project(db)
+    sup = _import_module("aipd_supervisor").Supervisor(
+        args.db, tenant_id=DEFAULT_TENANT, project_id=pid, state_db=db)
+    results = sup.run_supervisor(steps=args.steps or 1, project_id=pid)
     completed = [r for r in results if r.get("action") == "complete"]
     decisions = [r for r in results if r.get("action") == "decision"]
     rework = [r for r in results if r.get("action") == "internal_rework"]
@@ -179,8 +183,6 @@ def cmd_run_supervisor(args: argparse.Namespace) -> int:
 
     for r in decisions:
         did = r["decision"]["decision_id"]
-        db = AIPDStateDB(args.db)
-        pid = _resolve_project(db)
         card = build_decision_card(db, pid, decision_id=did, tenant_id=DEFAULT_TENANT)
         print(f"  [决策] {card['decision_id']}：{card['topic']}")
         print(f"    AI 建议：{card['ai_recommendation']}")
@@ -341,11 +343,30 @@ def _release_include_roots(repo: Path) -> List[Path]:
     return roots
 
 
+# 发布包必须排除的本地/缓存/垃圾路径片段（任意嵌套层级）。
+# 覆盖：虚拟环境、pytest/ruff/mypy 缓存、字节码缓存、pip 元数据目录。
+_RELEASE_EXCLUDE_PART = frozenset({
+    ".venv", ".venv-ci", ".pytest_cache", ".ruff_cache", ".mypy_cache",
+    "__pycache__", ".pytest", "src/aipd_os.egg-info",
+})
+_RELEASE_EXCLUDE_SUFFIX = (".pyc", ".pyo", ".dist-info", ".egg-info")
+
+
+def _is_release_excluded(rel: str) -> bool:
+    """判断相对路径是否应从发布包中排除（垃圾/缓存/虚拟环境等）。"""
+    parts = rel.split("/")
+    if any(p in _RELEASE_EXCLUDE_PART for p in parts):
+        return True
+    if any(p.endswith(_RELEASE_EXCLUDE_SUFFIX) for p in parts):
+        return True
+    return False
+
+
 def _collect_release_files(repo: Path) -> List[Path]:
     files: List[Path] = []
     for root in _release_include_roots(repo):
         for f in sorted(root.rglob("*")):
-            if f.is_file():
+            if f.is_file() and not _is_release_excluded(f.relative_to(repo).as_posix()):
                 files.append(f.relative_to(repo))
     return files
 
@@ -359,8 +380,9 @@ def _build_artifact_zip(repo: Path, artifact: Path, out_dir: Path) -> None:
     with zipfile.ZipFile(artifact, "w", zipfile.ZIP_DEFLATED) as zf:
         for root in _release_include_roots(repo):
             for f in sorted(root.rglob("*")):
-                if f.is_file():
-                    zf.write(f, arcname=f.relative_to(repo).as_posix())
+                rel = f.relative_to(repo).as_posix()
+                if f.is_file() and not _is_release_excluded(rel):
+                    zf.write(f, arcname=rel)
         zf.write(manifest_placeholder, arcname="RELEASE_MANIFEST.json")
 
 
@@ -452,7 +474,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"错误：项目 {args.project} 不存在。", file=sys.stderr)
         return 1
 
-    sup = _import_module("aipd_supervisor").Supervisor(args.db)
+    sup = _import_module("aipd_supervisor").Supervisor(
+        args.db, tenant_id=DEFAULT_TENANT, project_id=args.project, state_db=db)
     max_steps = args.steps or (100 if args.until_decision else 1)
     results: List[Dict[str, Any]] = []
     steps_run = 0
@@ -538,7 +561,8 @@ def cmd_init(args):
     db = AIPDStateDB(args.db)
     db.ensure_default_tenant(DEFAULT_TENANT)
     db.init_project(DEFAULT_TENANT, args.project, args.name, args.goal)
-    sup = _import_module("aipd_supervisor").Supervisor(args.db)
+    sup = _import_module("aipd_supervisor").Supervisor(
+        args.db, tenant_id=DEFAULT_TENANT, project_id=args.project, state_db=db)
     sup.init_lifecycle()
     log_event(_logger, "init", project_id=args.project, db=args.db)
     result = {"command": "init", "ok": True, "project_id": args.project,
@@ -555,6 +579,7 @@ def cmd_init(args):
 
 # ---- intake：由一句自然语言提示初始化项目（确定性）----
 def cmd_intake(args):
+    from aipd_os.idea import CAPABILITY_UNAVAILABLE, Idea, IdeaService
     from aipd_os.state.db import AIPDStateDB
 
     prompt = (args.prompt or "").strip()
@@ -567,14 +592,29 @@ def cmd_intake(args):
     db = AIPDStateDB(args.db)
     db.ensure_default_tenant(DEFAULT_TENANT)
     db.init_project(DEFAULT_TENANT, project_id, name, goal)
-    sup = _import_module("aipd_supervisor").Supervisor(args.db)
+    sup = _import_module("aipd_supervisor").Supervisor(
+        args.db, tenant_id=DEFAULT_TENANT, project_id=project_id, state_db=db)
     sup.init_lifecycle()
+
+    # v5.8 Commit 15：intake 同时创建 Raw Idea（I0）。
+    # 无分解 provider 时诚实提示 CAPABILITY_UNAVAILABLE，仍创建 raw idea。
+    ideas = IdeaService(db)
+    idea = ideas.create(Idea(idea_id="", tenant_id=DEFAULT_TENANT,
+                             project_id=project_id, title=name,
+                             raw_input=prompt, goal=goal,
+                             lifecycle_status="raw"), actor="system")
     result = {"command": "intake", "ok": True, "project_id": project_id,
-              "name": name, "goal": goal, "db": args.db}
+              "name": name, "goal": goal, "db": args.db,
+              "idea_id": idea.idea_id,
+              "idea_maturity": "I0",
+              "decompose_status": CAPABILITY_UNAVAILABLE}
 
     def prose():
         print(f"已根据需求初始化项目：{name}（{project_id}）")
         print(f"目标：{goal}")
+        print(f"Raw Idea 已创建：{idea.idea_id}（maturity I0）")
+        print("Idea 分解能力未配置（CAPABILITY_UNAVAILABLE）：结构化分解需注册 "
+              "IdeaDecompositionProvider。")
         print("监督器生命周期已就绪。")
     _emit(args, result, prose)
     return 0
@@ -624,21 +664,59 @@ def cmd_resume(args):
 # ---- status：所有者视图项目摘要（映射 project-summary）----
 def cmd_status(args):
     from aipd_os.experience.views import OwnerView
+    from aipd_os.idea import (
+        CAPABILITY_UNAVAILABLE,
+        EvidenceGraph,
+        IdeaService,
+        IdeaTruthProjection,
+        RESEARCH_CAPABILITIES,
+    )
     from aipd_os.state.db import AIPDStateDB
 
     db = AIPDStateDB(args.db)
     view = OwnerView(db, tenant_id=DEFAULT_TENANT)
     pid = args.project or _resolve_project(db)
 
+    # v5.8 Commit 15：Idea/Claims/Evidence 摘要（无 idea 时保持旧输出）
+    idea_section = None
+    ideas = IdeaService(db).list(DEFAULT_TENANT, pid)
+    if ideas:
+        graph = EvidenceGraph(db)
+        proj = IdeaTruthProjection(db, graph, DEFAULT_TENANT, pid)
+        idea_entries = []
+        for idea in ideas:
+            p = proj.project(idea.idea_id)
+            idea_entries.append({
+                "idea_id": idea.idea_id,
+                "title": idea.title,
+                "maturity": p["maturity"],
+                "claims": p["counts"]["total_claims"],
+                "supporting": p["counts"]["known"],
+                "contradicting": p["counts"]["contradicted"],
+                "unknown": p["counts"]["unknown"],
+                "gaps": p["counts"]["gaps"],
+            })
+        idea_section = {
+            "ideas": idea_entries,
+            # 无 research provider 配置时，研究能力一律 external_dependency（诚实）。
+            "blocked_capabilities": list(RESEARCH_CAPABILITIES),
+            "note": CAPABILITY_UNAVAILABLE,
+        }
+
     if args.markdown:
         text = view.to_markdown(project_id=pid)
-        result = {"command": "status", "ok": True, "project_id": pid, "markdown": text}
+        result = {"command": "status", "ok": True, "project_id": pid,
+                  "markdown": text}
+        if idea_section is not None:
+            result["idea"] = idea_section
         _emit(args, result, lambda: print(text))
         return 0
 
     v = view.owner_update(pid)
     ps = v["project_summary"]
     result = {"command": "status", "ok": True, "project_id": pid, "summary": v}
+    if idea_section is not None:
+        result["idea"] = idea_section
 
     def prose():
         print("项目摘要")
@@ -651,6 +729,15 @@ def cmd_status(args):
         if card:
             print(f"· 待您决策：{card['topic']}（{card['decision_id']}）")
             print(f"  AI 建议：{card['ai_recommendation']}")
+        if idea_section is not None:
+            print("Idea 状态（v5.8）")
+            for e in idea_section["ideas"]:
+                print(f"· {e['title']}（{e['idea_id']}）maturity={e['maturity']} "
+                      f"claims={e['claims']} supporting={e['supporting']} "
+                      f"contradicting={e['contradicting']} unknown={e['unknown']} "
+                      f"gaps={e['gaps']}")
+            print("· 阻塞能力（external_dependency）："
+                  + ", ".join(idea_section["blocked_capabilities"]))
     _emit(args, result, prose)
     return 0
 

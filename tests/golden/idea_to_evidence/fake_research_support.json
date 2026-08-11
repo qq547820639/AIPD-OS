@@ -1,0 +1,11 @@
+{
+  "sources": [
+    {"title": "Golden Paper: adherence in home-based rehab",
+     "url": "https://example.invalid/golden-adherence",
+     "identifier": "golden-paper-1"}
+  ],
+  "evidence_relation": "supports",
+  "provider": "golden-fake-research",
+  "reasoning_summary": "golden fixture: supports claim (non-medical, test only)",
+  "EPISTEMIC_NOTE": "FIXTURE ONLY: 非真实研究结论；仅用于测试系统行为。"
+}

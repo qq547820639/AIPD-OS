@@ -40,6 +40,65 @@ MIGRATIONS: List[Dict[str, Any]] = [
             "DROP TABLE IF EXISTS tenants;",
         ],
     },
+    # v5.8 Commit 9：Idea Domain（canonical idea 表；对已存在 v1 库就地 CREATE）。
+    {
+        "version": 2,
+        "name": "idea_domain",
+        "up": [
+            "CREATE TABLE IF NOT EXISTS ideas ("
+            " idea_id TEXT NOT NULL, project_id TEXT NOT NULL,"
+            " tenant_id TEXT NOT NULL DEFAULT 'default',"
+            " title TEXT NOT NULL DEFAULT '', raw_input TEXT NOT NULL DEFAULT '',"
+            " goal TEXT NOT NULL DEFAULT '', problem TEXT NOT NULL DEFAULT '',"
+            " target_user TEXT NOT NULL DEFAULT '', desired_outcome TEXT NOT NULL DEFAULT '',"
+            " constraints_json TEXT NOT NULL DEFAULT '{}',"
+            " source TEXT NOT NULL DEFAULT '', lifecycle_status TEXT NOT NULL DEFAULT 'raw',"
+            " version_no INTEGER NOT NULL DEFAULT 1,"
+            " created_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " PRIMARY KEY (idea_id, project_id, tenant_id));",
+        ],
+        "down": ["DROP TABLE IF EXISTS ideas;"],
+    },
+    # v5.8 Commit 10：Claim Domain（命题表；idea_id 为软引用，不强外键）。
+    {
+        "version": 3,
+        "name": "claim_domain",
+        "up": [
+            "CREATE TABLE IF NOT EXISTS claims ("
+            " claim_id TEXT NOT NULL, project_id TEXT NOT NULL,"
+            " tenant_id TEXT NOT NULL DEFAULT 'default',"
+            " idea_id TEXT NOT NULL DEFAULT '', claim_type TEXT NOT NULL,"
+            " statement TEXT NOT NULL, epistemic_status TEXT NOT NULL DEFAULT 'A',"
+            " lifecycle_status TEXT NOT NULL DEFAULT 'active',"
+            " confidence REAL NOT NULL DEFAULT 0.5,"
+            " source TEXT NOT NULL DEFAULT '', version_no INTEGER NOT NULL DEFAULT 1,"
+            " created_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " PRIMARY KEY (claim_id, project_id, tenant_id));",
+        ],
+        "down": ["DROP TABLE IF EXISTS claims;"],
+    },
+    # v5.8 Commit 11：EvidenceRelation（claim ↔ evidence 关系表）。
+    {
+        "version": 4,
+        "name": "claim_evidence_relations",
+        "up": [
+            "CREATE TABLE IF NOT EXISTS claim_evidence_relations ("
+            " relation_id TEXT NOT NULL, project_id TEXT NOT NULL,"
+            " tenant_id TEXT NOT NULL DEFAULT 'default',"
+            " claim_id TEXT NOT NULL, evidence_id TEXT NOT NULL,"
+            " relation_type TEXT NOT NULL, strength REAL NOT NULL DEFAULT 0.5,"
+            " applicability TEXT NOT NULL DEFAULT '',"
+            " reasoning_summary TEXT NOT NULL DEFAULT '',"
+            " limitations TEXT NOT NULL DEFAULT '',"
+            " review_status TEXT NOT NULL DEFAULT 'pending',"
+            " created_by TEXT NOT NULL DEFAULT 'system',"
+            " version_no INTEGER NOT NULL DEFAULT 1,"
+            " created_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " PRIMARY KEY (relation_id, project_id, tenant_id),"
+            " UNIQUE (claim_id, evidence_id, relation_type, project_id, tenant_id));",
+        ],
+        "down": ["DROP TABLE IF EXISTS claim_evidence_relations;"],
+    },
 ]
 
 

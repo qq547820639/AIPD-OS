@@ -1,0 +1,11 @@
+{
+  "sources": [
+    {"title": "Golden Paper: visual feedback ineffective",
+     "url": "https://example.invalid/golden-contr",
+     "identifier": "golden-paper-2"}
+  ],
+  "evidence_relation": "contradicts",
+  "provider": "golden-fake-research",
+  "reasoning_summary": "golden fixture: contradicts claim (non-medical, test only)",
+  "EPISTEMIC_NOTE": "FIXTURE ONLY: 非真实研究结论；仅用于测试系统行为。"
+}

@@ -43,6 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("run-supervisor", help="运行监督器直到需要决策或步骤耗尽")
     p.add_argument("--db", required=True)
+    p.add_argument("--project", help="目标项目（多项目时必填；缺省时若单项目自动解析）")
     p.add_argument("--steps", type=int, default=1)
     p.set_defaults(func=COMMAND_FUNCS["run-supervisor"])
 

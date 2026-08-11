@@ -28,7 +28,8 @@ def _seed(db):
 def test_migrate_applies_all_versions_and_records(tmp_path):
     path = str(tmp_path / "state.db")
     applied = mig.migrate(path)
-    assert applied == [mig.MIGRATIONS[-1]["version"]]
+    # v5.8 起 MIGRATIONS = [1,2,3,4]（多租户 + idea + claim + evidence relation）
+    assert applied == [m["version"] for m in mig.MIGRATIONS]
     assert mig.current_version(path) == mig.MIGRATIONS[-1]["version"]
     assert mig.applied_versions(path) == applied
 
@@ -61,7 +62,8 @@ def test_rollback_to_zero_drops_schema(tmp_path):
     _seed(db)
     del db
     rolled = mig.rollback(path, target=0)
-    assert rolled == [mig.MIGRATIONS[-1]["version"]]
+    # 全部版本被回滚（v4→v1，按版本倒序）
+    assert rolled == [m["version"] for m in reversed(mig.MIGRATIONS)]
     assert mig.current_version(path) == 0
     conn = sqlite3.connect(path)
     rows = conn.execute(
