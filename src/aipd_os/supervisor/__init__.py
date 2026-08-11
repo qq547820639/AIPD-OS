@@ -12,6 +12,17 @@
 """
 from __future__ import annotations
 
+from .idea_capabilities import (
+    CAPABILITY_STAGE_MAP,
+    CLAIM_RESEARCH_CAPABILITY,
+    EVIDENCE_ASSESS_RELATION_CAPABILITY,
+    IDEA_CAPABILITIES,
+    IDEA_STRUCTURE_CAPABILITY,
+    IDEA_TRUTH_REFRESH_CAPABILITY,
+    schedule_claim_research,
+    schedule_idea_structure,
+    schedule_idea_truth_refresh,
+)
 from .supervisor import (
     PHASES,
     SCHEMA,
@@ -36,4 +47,14 @@ __all__ = [
     "jd",
     "parser",
     "main",
+    # v5.8.1 Commit 11：idea.* capability 声明 + 调度辅助
+    "IDEA_STRUCTURE_CAPABILITY",
+    "CLAIM_RESEARCH_CAPABILITY",
+    "EVIDENCE_ASSESS_RELATION_CAPABILITY",
+    "IDEA_TRUTH_REFRESH_CAPABILITY",
+    "CAPABILITY_STAGE_MAP",
+    "IDEA_CAPABILITIES",
+    "schedule_idea_structure",
+    "schedule_claim_research",
+    "schedule_idea_truth_refresh",
 ]

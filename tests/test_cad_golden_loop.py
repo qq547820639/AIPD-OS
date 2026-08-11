@@ -21,8 +21,8 @@ import pytest
 cq = pytest.importorskip("cadquery")
 
 from aipd_os.cad.backends import (  # noqa: E402
-    CadQueryBackend,
     GOLDEN_PARAM_SPEC,
+    CadQueryBackend,
     _default_golden_params,
 )
 from aipd_os.cad.evidence import verify_artifact  # noqa: E402
@@ -150,19 +150,30 @@ def test_export_native_executable_and_reload(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_edit_regenerate_differs_and_hashes_change(tmp_path):
+    """正式 hash 契约（v5.8.1 Commit 13）：
+
+    - artifact_byte_hash（sha256）：同参数两次导出 → 本环境稳定；改参数 →
+      变化（字节完整性）；
+    - semantic_geometry_hash：同参数两次导出 → 相同；改参数 → 变化
+      （几何身份，跨环境契约）。
+    """
     b = CadQueryBackend()
     m0 = _default_model()
     d0 = b.regenerate(m0)["derived"]
     step0 = tmp_path / "m0.step"
     native0 = tmp_path / "m0.py"
-    h_step0 = b.export_step(m0, step0)["sha256"]
+    r_step0 = b.export_step(m0, step0)
+    h_step0 = r_step0["sha256"]
     h_native0 = b.export_native(m0, native0)["sha256"]
 
-    # 未修改：STEP 与原生源哈希均稳定
+    # 未修改：STEP 与原生源哈希均稳定（本环境 byte reproducibility）
     step0b = tmp_path / "m0b.step"
     native0b = tmp_path / "m0b.py"
-    assert b.export_step(m0, step0b)["sha256"] == h_step0
+    r_step0b = b.export_step(m0, step0b)
+    assert r_step0b["sha256"] == h_step0
     assert b.export_native(m0, native0b)["sha256"] == h_native0
+    # 几何身份：同参同形 → semantic hash 相同
+    assert r_step0b["semantic_geometry_hash"] == r_step0["semantic_geometry_hash"]
 
     # 修改参数 -> 体积/包围盒变化
     m1 = b.edit_parameter(m0, "length", 120.0)
@@ -170,13 +181,15 @@ def test_edit_regenerate_differs_and_hashes_change(tmp_path):
     assert d1["volume_mm3"] != d0["volume_mm3"]
     assert d1["bbox"]["x"] == pytest.approx(120.0, abs=0.01)
 
-    # 修改后：STEP 与原生源哈希均变化
+    # 修改后：STEP 与原生源哈希均变化（字节）；语义 hash 也变化（几何身份）
     step1 = tmp_path / "m1.step"
     native1 = tmp_path / "m1.py"
-    h_step1 = b.export_step(m1, step1)["sha256"]
+    r_step1 = b.export_step(m1, step1)
+    h_step1 = r_step1["sha256"]
     h_native1 = b.export_native(m1, native1)["sha256"]
     assert h_step1 != h_step0
     assert h_native1 != h_native0
+    assert r_step1["semantic_geometry_hash"] != r_step0["semantic_geometry_hash"]
 
 
 # ---------------------------------------------------------------------------

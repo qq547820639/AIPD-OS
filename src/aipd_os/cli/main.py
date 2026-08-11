@@ -116,6 +116,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--db", required=True)
     p.add_argument("--prompt", required=True)
     p.add_argument("--project")
+    # v5.8.1 Commit 11：创建与执行分离 —— 无 --run 不自动 decompose
+    p.add_argument("--run", action="store_true",
+                   help="显式执行 idea.structure（经 Supervisor → ExecutionRouter）")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["intake"])
 

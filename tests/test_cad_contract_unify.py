@@ -129,25 +129,29 @@ def test_export_step_records_both_hashes(tmp_path):
 
 
 def test_semantic_hash_stable_for_same_params_and_changes(tmp_path):
-    """正式 hash 语义（Commit 8A）：
+    """正式 hash 契约（Commit 8A + v5.8.1 Commit 13）：
 
-    - 同参数两次导出 → ``semantic_geometry_hash`` 相同（几何身份标识）；
-    - 同参数两次导出 → ``sha256`` 在本环境稳定（STEP 头部时间戳已归一化），
-      但**跨环境不保证字节可复现**（byte_reproducibility 取决于同一 kernel/
-      version；语义 hash 才是几何身份标识，绝不与字节 hash 互换）；
-    - 改参数 → ``semantic_geometry_hash`` 变化（几何身份改变）。
+    - ``semantic_geometry_hash`` = 几何身份：同参数两次导出 → 相同；
+      改参数 → 变化（身份契约，跨环境保证）；
+    - ``sha256``（artifact_byte_hash）= 磁盘字节完整性：同参数两次导出 →
+      **本环境**稳定（STEP 头部时间戳已归一化）；跨环境不保证字节可复现
+      （除非 ``byte_reproducibility_profile`` 固定同一 Python/CadQuery/
+      OpenCASCADE/writer settings）；字节 hash 绝不与语义 hash 互换；
+    - 保存后的文件 → ``verify_artifact(sha256)`` 成立；篡改 → 失败
+      （tamper 检测见 test_artifact_byte_hash_tamper_detection）。
     """
     _require_cq()
+    from aipd_os.cad.evidence import verify_artifact
     b = CadQueryBackend()
     m0 = _default_model()
     step0 = tmp_path / "m0.step"
     step0b = tmp_path / "m0b.step"
     r0 = b.export_step(m0, step0)
     r0b = b.export_step(m0, step0b)
-    # 几何身份：同参同形 → 语义 hash 相同（这是身份契约）
+    # 几何身份：同参同形 → 语义 hash 相同（这是身份契约，跨环境成立）
     assert r0["semantic_geometry_hash"] == r0b["semantic_geometry_hash"]
     # 字节 hash：本环境（同 kernel/version + 时间戳归一化）稳定；
-    # 跨环境不保证 → 注释说明，不作为身份断言。
+    # 跨环境不保证 → 注释明确（byte_reproducibility_profile），不作为身份断言。
     assert r0["sha256"] == r0b["sha256"]
 
     # 改参：几何身份改变 → 语义 hash 变化（sha256 本环境也变化，但以语义为准）
@@ -156,12 +160,23 @@ def test_semantic_hash_stable_for_same_params_and_changes(tmp_path):
     r1 = b.export_step(m1, step1)
     assert r1["semantic_geometry_hash"] != r0["semantic_geometry_hash"]
 
-    # 单个写出的 artifact → 字节 sha256 校验成立（verify_file）
-    from aipd_os.execution.closure_core import verify_file
+    # 保存后的 artifact → 字节 sha256 校验成立（artifact integrity）
+    assert verify_artifact(r0) is True
 
-    v = verify_file(str(step0), expected_sha256=r0["sha256"])
-    assert v["ok"] is True
-    assert v["sha256_ok"] is True
+
+def test_artifact_byte_hash_tamper_detection(tmp_path):
+    """artifact_byte_hash 是完整性/篡改检测：保存后 verify 成立，篡改 → FAIL。"""
+    _require_cq()
+    from aipd_os.cad.evidence import verify_artifact
+    b = CadQueryBackend()
+    step = tmp_path / "m.step"
+    rec = b.export_step(_default_model(), step)
+    # 保存后的文件 → verify 成立
+    assert verify_artifact(rec) is True
+    # 篡改（修改文件内容）→ verify 失败（字节 hash 变化）
+    with open(step, "a", encoding="utf-8") as fh:
+        fh.write("\n; TAMPERED\n")
+    assert verify_artifact(rec) is False
 
 
 def test_contract_export_step_has_no_semantic_hash(tmp_path):

@@ -11,7 +11,6 @@ import hashlib
 import importlib.util
 import json
 import os
-import shutil
 import sqlite3
 import subprocess
 import sys
@@ -597,27 +596,116 @@ def cmd_intake(args):
     sup.init_lifecycle()
 
     # v5.8 Commit 15：intake 同时创建 Raw Idea（I0）。
-    # 无分解 provider 时诚实提示 CAPABILITY_UNAVAILABLE，仍创建 raw idea。
+    # v5.8.1 Commit 11：创建与执行分离 —— 无 --run 不自动 decompose；
+    # 有 --run 且 provider 可用 → 经 Supervisor → ExecutionRouter 执行 idea.structure。
     ideas = IdeaService(db)
     idea = ideas.create(Idea(idea_id="", tenant_id=DEFAULT_TENANT,
                              project_id=project_id, title=name,
                              raw_input=prompt, goal=goal,
                              lifecycle_status="raw"), actor="system")
+
+    decompose_status = CAPABILITY_UNAVAILABLE
+    structure_out = None
+    if getattr(args, "run", False):
+        from aipd_os.execution.execution_router import ExecutionRouter
+        from aipd_os.execution.runs import RunStore
+        from aipd_os.idea.decomposer import IdeaDecomposer
+        from aipd_os.supervisor import schedule_idea_structure
+        from aipd_os.tool_adapters.builtin import build_registry
+        from aipd_os.tool_adapters.idea_adapter import register_idea_adapters
+
+        # 找已注册的 idea.decompose provider（ProviderRegistry；无则诚实不可用）
+        provider = _find_idea_decompose_provider()
+        if provider is not None and provider.available():
+            decomposer = IdeaDecomposer(db, provider=provider,
+                                        tenant_id=DEFAULT_TENANT,
+                                        project_id=project_id)
+            registry = build_registry()
+            register_idea_adapters(registry, db=db, decomposer=decomposer,
+                                   tenant_id=DEFAULT_TENANT,
+                                   project_id=project_id)
+            store = RunStore(str(Path(args.db).parent / "execution_runs.db"))
+            router = ExecutionRouter(store, registry)
+            wid = schedule_idea_structure(sup, idea.idea_id,
+                                          tenant_id=DEFAULT_TENANT,
+                                          project_id=project_id)
+            results = sup.run_supervisor(steps=1, adapter_registry=registry,
+                                         router=router, project_id=project_id)
+            if results and results[0]["action"] == "complete":
+                decompose_status = "COMPLETED"
+                structure_out = {"work_id": wid,
+                                 "status": results[0].get("status")}
+            elif results and results[0]["action"] in ("blocked_external",
+                                                      "internal_rework"):
+                decompose_status = results[0]["action"]
+            else:
+                decompose_status = CAPABILITY_UNAVAILABLE
+        else:
+            decompose_status = CAPABILITY_UNAVAILABLE
+
     result = {"command": "intake", "ok": True, "project_id": project_id,
               "name": name, "goal": goal, "db": args.db,
               "idea_id": idea.idea_id,
-              "idea_maturity": "I0",
-              "decompose_status": CAPABILITY_UNAVAILABLE}
+              "idea_maturity": "I1" if decompose_status == "COMPLETED" else "I0",
+              "decompose_status": decompose_status}
+    if structure_out:
+        result["structure"] = {"work_id": structure_out["work_id"],
+                               "status": structure_out.get("status")}
 
     def prose():
         print(f"已根据需求初始化项目：{name}（{project_id}）")
         print(f"目标：{goal}")
         print(f"Raw Idea 已创建：{idea.idea_id}（maturity I0）")
-        print("Idea 分解能力未配置（CAPABILITY_UNAVAILABLE）：结构化分解需注册 "
-              "IdeaDecompositionProvider。")
+        if decompose_status == "COMPLETED":
+            print(f"Idea 结构化已完成（idea.structure，maturity I1）："
+                  f"work_id={structure_out['work_id']}")
+        elif getattr(args, "run", False):
+            print(f"Idea 分解能力不可用（{decompose_status}）：结构化未执行，"
+                  "Idea 保持 I0。")
+        else:
+            print("Idea 分解未执行（无 --run；创建与执行分离）。需要结构化请运行 "
+                  "`aipd intake --run` 或注册 IdeaDecompositionProvider 后调度 "
+                  "idea.structure。")
         print("监督器生命周期已就绪。")
     _emit(args, result, prose)
     return 0
+
+
+def _find_idea_decompose_provider():
+    """从 ProviderRegistry 找已注册的 idea.decompose provider（无则 None）。
+
+    第三方 provider 应注册进全局 ProviderRegistry（能力 id=idea.decompose）；
+    未注册 → None（CLI 诚实标注 CAPABILITY_UNAVAILABLE，不伪造分解）。
+    """
+    try:
+        from aipd_os.idea import IDEA_DECOMPOSE_CAPABILITY
+        from aipd_os.providers import ProviderRegistry
+        reg = ProviderRegistry()
+        return reg.get_by_capability(IDEA_DECOMPOSE_CAPABILITY)
+    except Exception:  # noqa: BLE001 - registry 未配置/未注册 → 诚实不可用
+        return None
+
+
+def probe_research_capabilities(registry=None):
+    """动态探测研究能力（v5.8.1 Commit 12）：AdapterRegistry 注册 + provider available。
+
+    不再硬编码「全部 blocked」：AdapterRegistry 有对应 adapter 且
+    discover().available → AVAILABLE；否则 UNAVAILABLE。
+    返回 ``{"available": [...], "unavailable": [...]}``。
+    """
+    from aipd_os.idea import RESEARCH_CAPABILITIES
+    if registry is None:
+        from aipd_os.tool_adapters.builtin import build_registry
+        registry = build_registry()
+    available: list = []
+    unavailable: list = []
+    for cid in sorted(RESEARCH_CAPABILITIES):
+        adapter = registry.get(cid)
+        if adapter is not None and adapter.discover().get("available", True):
+            available.append(cid)
+        else:
+            unavailable.append(cid)
+    return {"available": available, "unavailable": unavailable}
 
 
 # ---- resume：恢复/迁移 + 会话续接摘要 ----
@@ -669,7 +757,6 @@ def cmd_status(args):
         EvidenceGraph,
         IdeaService,
         IdeaTruthProjection,
-        RESEARCH_CAPABILITIES,
     )
     from aipd_os.state.db import AIPDStateDB
 
@@ -698,10 +785,16 @@ def cmd_status(args):
             })
         idea_section = {
             "ideas": idea_entries,
-            # 无 research provider 配置时，研究能力一律 external_dependency（诚实）。
-            "blocked_capabilities": list(RESEARCH_CAPABILITIES),
+            # v5.8.1 Commit 12：动态探测（不再硬编码 RESEARCH_CAPABILITIES 全 blocked）
+            "capabilities": probe_research_capabilities(
+                getattr(args, "capability_registry", None)),
+            "blocked_capabilities": [],
             "note": CAPABILITY_UNAVAILABLE,
         }
+        idea_section["blocked_capabilities"] = \
+            idea_section["capabilities"]["unavailable"]
+        if not idea_section["blocked_capabilities"]:
+            idea_section["note"] = "available"
 
     if args.markdown:
         text = view.to_markdown(project_id=pid)
@@ -1300,7 +1393,10 @@ def cmd_operate(args):
 def cmd_dashboard(args):
     """统一 Owner Dashboard：默认只展示 10 个所有者区块；--json 输出纯 JSON。"""
     from aipd_os.experience.owner_dashboard import (
-        build_dashboard, render_dashboard_json, render_dashboard_text)
+        build_dashboard,
+        render_dashboard_json,
+        render_dashboard_text,
+    )
     from aipd_os.state.db import AIPDStateDB
 
     db = AIPDStateDB(args.db)

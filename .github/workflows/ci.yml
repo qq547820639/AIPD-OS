@@ -223,6 +223,9 @@ jobs:
       - schema-validation
       - maturity-consistency
       - cad-golden-loop
+      # v5.8.1 Commit 13：Python 3.12 核心矩阵失败也必须阻止发布
+      # （§42：不能「宣称 >=3.9 却只验证 3.9」）
+      - python-core-matrix
       - secret-scan
       - dependency-audit
       - license-scan
