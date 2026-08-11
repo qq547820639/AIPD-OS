@@ -1,11 +1,14 @@
 """研究适配器（'research.search_papers'）。
 
-配置了 ``AIPD_RESEARCH_API_KEY`` 时才视为可用；未配置时诚实写出外部任务包，
-分类为 ``external_blocked``，绝不伪造论文检索结果。
+Semantic Scholar Graph API 公开搜索端点**无需 key**；``AIPD_RESEARCH_API_KEY``
+用于私有/更高配额调用。配置语义与网络调用语义必须一致（v5.7 Commit 7E）：
+  - 配置 key → 真实以 ``x-api-key`` header 发送（key 不是摆设）；
+  - 未配置 key → 保守 ``external_dependency``（``available()=False``），
+    不在 discover 阶段做网络探测；execute 时诚实写出外部任务包，
+    绝不伪造论文检索结果。
 
-配置 key 后，通过 Semantic Scholar Graph API 做真实检索
-（标准库 ``urllib``，无第三方依赖）。任何 HTTP 错误 / 超时 / 解析失败都会
-转化为 ``external_blocked``（诚实 NOT_VERIFIED），绝不返回 simulated 占位。
+任何 HTTP 错误 / 超时 / 解析失败都会转化为 ``external_blocked``
+（诚实 NOT_VERIFIED），绝不返回 simulated 占位。
 """
 
 from __future__ import annotations
@@ -41,6 +44,12 @@ class ResearchAdapter(ToolAdapter):
         )
 
     def _is_available(self) -> bool:
+        """availability = 是否具备真实调用凭据。
+
+        Semantic Scholar 公开端点无需 key，但生产路径保守按
+        external_dependency 处理（不在 discover 时做网络探测）。
+        配置 key 时 key 会真实用于 ``x-api-key`` header（配置语义==网络语义）。
+        """
         return bool(env(_API_KEY_ENV))
 
     def validate_input(self, input: Dict[str, Any]) -> list:
@@ -60,8 +69,15 @@ class ResearchAdapter(ToolAdapter):
             "limit": limit,
             "fields": "title,authors,year,url,abstract",
         })
-        req = urllib.request.Request(
-            url, headers={"User-Agent": _USER_AGENT, "Accept": "application/json"})
+        headers: Dict[str, str] = {
+            "User-Agent": _USER_AGENT,
+            "Accept": "application/json",
+        }
+        api_key = env(_API_KEY_ENV)
+        if api_key:
+            # 配置语义 == 网络调用语义：key 真实用于请求头（私有/高配额端点）。
+            headers["x-api-key"] = api_key
+        req = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=_REQUEST_TIMEOUT_S) as resp:
                 raw = resp.read().decode("utf-8")
@@ -85,8 +101,9 @@ class ResearchAdapter(ToolAdapter):
         if not self._is_available():
             raise external_blocked_error(
                 self.capability_id(),
-                "检索论文需要外部研究数据库（配置 AIPD_RESEARCH_API_KEY）。"
-                "请人工在目标库完成检索并把结果（标题/作者/年份/链接/摘要）回填。",
+                "检索论文需要外部研究数据库（Semantic Scholar Graph API 公开搜索"
+                "端点无需 key，但本适配器保守要求配置 AIPD_RESEARCH_API_KEY 或由"
+                "人工在目标库完成检索并把结果（标题/作者/年份/链接/摘要）回填）。",
                 work_id=input.get("work_id"),
             )
         query = input.get("query", "unknown")

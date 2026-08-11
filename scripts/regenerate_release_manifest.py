@@ -19,8 +19,9 @@ _REPO = Path(__file__).resolve().parent.parent
 
 # 排除：清单自身、发布产物、虚拟环境、构建与缓存目录
 # 注意：`.venv`（不带尾斜杠）同时覆盖 `.venv/` 与 `.venv-ci/`；
-# 嵌套层级的 `*.dist-info/` 与 `__pycache__/` 由 _excluded() 额外排除
-# （修复历史上 BUNDLE_MANIFEST.json 打包了 5.5.0 dist-info 残留的卫生问题）。
+# 嵌套层级的 `*.dist-info/`、`__pycache__/`、缓存目录与字节码由 _excluded()
+# 额外排除（修复历史上 BUNDLE_MANIFEST.json 打包了 5.5.0 dist-info 残留、
+# `.pytest_cache/.venv` 垃圾条目的卫生问题）。
 # 本脚本只负责生成清单本身，不重建现有 bundle —— 发布物重建是发布动作，
 # 不在此阶段执行。
 _EXCLUDE_PREFIXES = (
@@ -39,26 +40,30 @@ _EXCLUDE_PREFIXES = (
     ".ruff_cache/",
     ".mypy_cache/",
     "__pycache__/",
+    ".pytest/",
     "src/aipd_os.egg-info/",
     # 审计报告是生成式证据，内容随清单生成而变化，排除以打破循环哈希。
     "docs/audit/",
 )
 
+# 任意嵌套层级出现即排除的目录/文件片段
+_EXCLUDE_PARTS = (".venv", ".venv-ci", ".pytest_cache", ".ruff_cache",
+                  ".mypy_cache", "__pycache__", ".pytest")
+# 任意嵌套层级出现即排除的后缀（pip/缓存可能把它们放在任意子目录）
+_EXCLUDE_SUFFIXES = (".pyc", ".pyo", ".dist-info", ".egg-info")
+
 
 def _excluded(rel: str) -> bool:
     """判断相对路径是否应从清单中排除。
 
-    除根级前缀外，还会排除任意嵌套层级的 ``*.dist-info`` 与 ``__pycache__``
-    目录（pip/缓存可能把它们放在仓库内任意子目录）。
+    除根级前缀外，还会排除任意嵌套层级的缓存目录、``*.dist-info``、
+    ``*.egg-info`` 与字节码文件（``*.pyc``/``*.pyo``）。
     """
     if rel.startswith(_EXCLUDE_PREFIXES):
         return True
     parts = rel.split("/")
-    if any(p.endswith(".dist-info") for p in parts):
-        return True
-    if "__pycache__" in parts:
-        return True
-    return False
+    return (any(p in _EXCLUDE_PARTS for p in parts)
+            or any(p.endswith(_EXCLUDE_SUFFIXES) for p in parts))
 
 
 def _tracked_files(repo: Path) -> list[str]:

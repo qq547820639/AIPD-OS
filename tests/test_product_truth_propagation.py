@@ -71,9 +71,17 @@ def test_trust_assessment_with_missing_evidence(store):
     assert store.assess_trust(bare).trust_level == "low"
     assert store.assess_trust(bare).reasons  # 有缺证据原因
 
-    # evidence 类型本身 → verified
+    # evidence 类型本身 → high（来源可信度，NOT verified——有内容 ≠ 命题为真）
     ev = _mk(store, "evidence", "bench result", trust="verified")
-    assert store.assess_trust(ev).trust_level == "verified"
+    assert store.assess_trust(ev).trust_level == "high"
+    assert store.assess_trust(ev).trust_level != "verified"
+
+    # 显式 Owner/工程确认标记 → verified（唯一自动 verified 路径）
+    rec = TruthRecord(record_type="fact", content="confirmed claim",
+                      trust_level="unverified",
+                      metadata={"confirm_by_owner": True})
+    cid = store.add(rec)
+    assert store.assess_trust(cid).trust_level == "verified"
 
     # 有过期 → unverified
     store.update(bare, expires_at="2000-01-01T00:00:00+00:00")

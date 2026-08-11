@@ -15,6 +15,8 @@ from __future__ import annotations
 from .supervisor import (
     PHASES,
     SCHEMA,
+    SUPERVISOR_LEGACY_DECISIONS_SCHEMA,
+    SUPERVISOR_LEGACY_DECISIONS_TABLE,
     WORK_STATUSES,
     Supervisor,
     jd,
@@ -28,6 +30,8 @@ __all__ = [
     "PHASES",
     "WORK_STATUSES",
     "SCHEMA",
+    "SUPERVISOR_LEGACY_DECISIONS_TABLE",
+    "SUPERVISOR_LEGACY_DECISIONS_SCHEMA",
     "now",
     "jd",
     "parser",

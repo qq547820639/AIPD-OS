@@ -9,7 +9,7 @@
 |---|---|---|---|
 | **CapabilityCatalog** | `src/aipd_os/registry.py`（现状） | 能力矩阵的唯一事实来源：声明每项能力的 id/name/domain/declaration_file/implementation_file/entry_point/run_command/unit_test/integration_test/e2e_evidence/current_limitation；classification 由 `probe_classification` 运行时按证据推导，不静态写死 | 声明式能力条目 + 校验子（schema/存在性/入口可调用/证据时效） |
 | **AdapterRegistry** | `src/aipd_os/execution/registry.py`（现状） | 把能力标识绑定到可执行适配器：register/get/all/discover_all；一个 capability_id 只允许一个 adapter（重复注册抛错） | `ToolAdapter` 实例（capability_id → adapter） |
-| **ProviderRegistry** | `src/aipd_os/providers/`（未来成型） | 把 adapter 绑定到具体 provider/后端实例（模型端点、文生图、CAD 内核、邮件 SMTP 等），负责凭据/端点解析与真实调用；未配置时诚实标记 external_dependency | provider 实例（adapter → provider） |
+| **ProviderRegistry** | `src/aipd_os/providers/sdk.py`（现状实现，Commit 7E） | 把 adapter 绑定到具体 provider/后端实例（模型端点、文生图、CAD 内核、邮件 SMTP 等），负责凭据/端点解析与真实调用；未配置时诚实标记 external_dependency | provider 实例（adapter → provider） |
 
 职责边界：Catalog 回答「有哪些能力、证据是否齐备」；AdapterRegistry 回答
 「这个能力由哪个适配器执行」；ProviderRegistry 回答「这个适配器背后用哪个

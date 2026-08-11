@@ -39,6 +39,11 @@ _WEAK_SECRET_VALUES = ("", "change-me-secret")
 # 生产模式（server）要求的最小 secret 长度。
 MIN_STRONG_SECRET_LEN = 16
 
+# 视为「弱/缺失」的 encryption key 取值（空串 / 历史公开默认值）。
+_WEAK_ENCRYPTION_KEY_VALUES = ("", "change-me-encryption-key", "change-me")
+# 生产模式（server）要求的最小 encryption key 长度。
+MIN_STRONG_ENCRYPTION_KEY_LEN = 16
+
 
 class StateService:
     """多租户多项目状态服务（本地模式 = 纯 Python API）。"""
@@ -48,14 +53,28 @@ class StateService:
                  backup_dir: Optional[str] = None, retention_days: int = 90,
                  default_tenant: str = DEFAULT_TENANT,
                  insecure_dev_mode: bool = False,
-                 require_strong_secret: bool = False):
+                 require_strong_secret: bool = False,
+                 require_strong_encryption_key: bool = False,
+                 allow_plaintext_sensitive: Optional[bool] = None):
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         migrations.migrate(db_path)
         self.db_path = str(db_path)
         self.default_tenant = default_tenant
         self.retention_days = retention_days
         self.insecure_dev_mode = insecure_dev_mode
-        self.db = AIPDStateDB(db_path, encryption_key=encryption_key)
+        if allow_plaintext_sensitive is None:
+            # 显式 dev 模式：只有设置 AIPD_ALLOW_PLAINTEXT_SENSITIVE=1
+            # 才允许 encryption_key 为空时敏感字段明文存储。
+            allow_plaintext_sensitive = (
+                os.environ.get("AIPD_ALLOW_PLAINTEXT_SENSITIVE", "")
+                not in ("", "0", "false", "False"))
+        self._allow_plaintext_sensitive = bool(allow_plaintext_sensitive)
+        resolved_key = self._resolve_encryption_key(
+            encryption_key,
+            allow_plaintext_sensitive=self._allow_plaintext_sensitive,
+            require_strong_encryption_key=require_strong_encryption_key,
+            insecure_dev_mode=insecure_dev_mode)
+        self.db = AIPDStateDB(db_path, encryption_key=resolved_key)
         self.auth = AuthManager(self.db, self._resolve_secret(
             secret, insecure_dev_mode=insecure_dev_mode,
             require_strong_secret=require_strong_secret))
@@ -65,6 +84,47 @@ class StateService:
         self.objects = ObjectStore(object_dir or str(base / "objects"), retention_days=retention_days)
         self.backup = BackupManager(db_path, backup_dir=str(base / "backups"))
         self.db.ensure_default_tenant(default_tenant)
+
+    @staticmethod
+    def _resolve_encryption_key(key: str, allow_plaintext_sensitive: bool,
+                                require_strong_encryption_key: bool,
+                                insecure_dev_mode: bool) -> str:
+        """解析 at-rest 加密 key：弱/缺失时按模式 fail-closed 或降级。
+
+        - 强 key（>=16 字符且非公开默认值）直接使用；
+        - 弱/缺失 key：``AIPD_ALLOW_PLAINTEXT_SENSITIVE=1``（显式 dev 模式）
+          允许明文存储并 WARNING；``require_strong_encryption_key``（server
+          模式）fail-closed 抛错；``insecure_dev_mode`` 允许并 WARNING；
+          否则（本地模式）按原 key 继续（空 key 明文 + WARNING）。
+        """
+        weak = (key in _WEAK_ENCRYPTION_KEY_VALUES
+                or len(key) < MIN_STRONG_ENCRYPTION_KEY_LEN)
+        if not weak:
+            return key
+        if allow_plaintext_sensitive:
+            logging.warning(
+                "AIPD_ALLOW_PLAINTEXT_SENSITIVE=1: sensitive fields may be "
+                "stored in plaintext (explicit dev mode)")
+            return key
+        if require_strong_encryption_key:
+            raise RuntimeError(
+                "missing or weak AIPD_ENCRYPTION_KEY: server mode requires a strong "
+                f"encryption key (>= {MIN_STRONG_ENCRYPTION_KEY_LEN} chars and not "
+                "'change-me-encryption-key'); set AIPD_ENCRYPTION_KEY, or set "
+                "AIPD_ALLOW_PLAINTEXT_SENSITIVE=1 to allow plaintext in dev only")
+        if insecure_dev_mode:
+            logging.warning(
+                "insecure dev mode: weak encryption key allowed (AIPD_INSECURE_DEV_MODE=1)")
+            return key
+        if key:
+            logging.warning(
+                "weak AIPD_ENCRYPTION_KEY in local mode; encryption still active "
+                "with the provided key")
+        else:
+            logging.warning(
+                "no AIPD_ENCRYPTION_KEY provided; sensitive fields will be stored "
+                "in plaintext (local mode)")
+        return key
 
     @staticmethod
     def _resolve_secret(secret: str | None, insecure_dev_mode: bool,
@@ -113,10 +173,18 @@ class StateService:
     # ------------------------------------------------------------- auth
     def auth_register(self, user_id: str, tenant_id: str, username: str, password: str,
                       project_id: Optional[str] = None) -> str:
-        self.db.ensure_default_tenant(tenant_id)
+        # 外部注册路径：禁止匿名创建新租户后自授访问。租户必须已存在
+        # （由引导流程/系统创建）；`ensure_default_tenant` 的隐式建租户
+        # 行为仅保留给系统内部路径（如 StateService.__init__）。
+        if self.db.get_tenant(tenant_id) is None:
+            raise AuthError(
+                f"tenant {tenant_id!r} does not exist; registration is only "
+                "allowed into an existing tenant (bootstrap flow)")
         self.auth.register_user(user_id, tenant_id, username, password)
-        # 仅当显式传入 project_id 时授予该项目访问权；不再隐式授予租户通配。
+        # 仅当显式传入 project_id 且该项目在该租户内存在时才授予访问权；
+        # 不再隐式授予租户通配，也不允许注册时自授任意/跨租户项目。
         if project_id is not None:
+            self.db.get_project(tenant_id, project_id)  # 不存在则抛错（fail-closed）
             self.auth.grant_access(user_id, tenant_id, project_id)
         token = self.auth.issue_token(user_id)
         self._audit(user_id, "register", tenant_id, project_id or "")
@@ -133,7 +201,11 @@ class StateService:
 
     def grant_access(self, user_id: str, tenant_id: str, project_id: str | None = None,
                      actor: str | None = None) -> None:
-        """授权操作仅限租户管理员（actor=None 视为内部/系统调用，跳过校验）。"""
+        """授权操作仅限租户管理员（actor=None 视为内部/系统调用，跳过管理员校验）。
+
+        被授权用户必须属于该租户（``users.tenant_id == tenant_id``），
+        由 :meth:`AuthManager.grant_access` 强制校验，杜绝跨租户授权行。
+        """
         if actor is not None:
             self.auth.require_tenant_admin(actor, tenant_id)
         self.auth.grant_access(user_id, tenant_id, project_id)
@@ -142,6 +214,9 @@ class StateService:
     def init_project(self, tenant_id: str, project_id: str, name: str, goal: str,
                      owner_policy: str = "AI executes; owner reviews decisions only",
                      actor: Optional[str] = None) -> Dict[str, Any]:
+        # 外部 actor 只能在自己所属租户创建项目（actor=None 为内部/系统路径）。
+        if actor is not None:
+            self.auth.require_tenant_membership(actor, tenant_id)
         self.db.ensure_default_tenant(tenant_id)
         self.db.init_project(tenant_id, project_id, name, goal, owner_policy)
         # 项目创建者自动成为该项目成员。
@@ -157,6 +232,9 @@ class StateService:
         return self.db.summary(tenant_id, project_id)
 
     def list_projects(self, tenant_id: str, actor: Optional[str] = None) -> Dict[str, Any]:
+        if actor is not None:
+            # 普通用户只能读取自己所属租户范围的项目列表。
+            self.auth.require_tenant_membership(actor, tenant_id)
         projects = self.db.list_projects(tenant_id)
         if actor is not None and not self.db.has_tenant_admin(actor, tenant_id):
             # 非管理员仅能看到自己有访问权的项目。
@@ -296,6 +374,8 @@ class StateService:
     # --------------------------------------------------------------- backup
     def create_backup(self, out_dir: str | None = None, actor: str | None = None) -> str:
         if actor is not None:
+            # 备份是系统级（默认租户）操作：actor 必须属于默认租户且为其管理员。
+            self.auth.require_tenant_membership(actor, self.default_tenant)
             self.auth.require_tenant_admin(actor, self.default_tenant)
         path = self.backup.create_backup(self.db_path, out_dir)
         manifest = json.loads((Path(path) / "manifest.json").read_text(encoding="utf-8"))
@@ -304,18 +384,21 @@ class StateService:
 
     def list_backups(self, actor: str | None = None) -> dict[str, Any]:
         if actor is not None:
+            self.auth.require_tenant_membership(actor, self.default_tenant)
             self.auth.require_tenant_admin(actor, self.default_tenant)
         return {"backups": self.backup.list_backups()}
 
     def restore_backup(self, backup_dir: str, target: str | None = None,
                        actor: str | None = None) -> str:
         if actor is not None:
+            self.auth.require_tenant_membership(actor, self.default_tenant)
             self.auth.require_tenant_admin(actor, self.default_tenant)
         return self.backup.restore_backup(backup_dir, target or self.db_path)
 
     def retention_prune(self, retention_days: int | None = None,
                         actor: str | None = None) -> dict[str, Any]:
         if actor is not None:
+            self.auth.require_tenant_membership(actor, self.default_tenant)
             self.auth.require_tenant_admin(actor, self.default_tenant)
         days = retention_days if retention_days is not None else self.retention_days
         removed = self.backup.retention_prune(self.backup.list_backups(), days)
@@ -324,6 +407,7 @@ class StateService:
     # ---------------------------------------------------------------- audit
     def audit(self, limit: int = 100, actor: str | None = None) -> dict[str, Any]:
         if actor is not None:
+            self.auth.require_tenant_membership(actor, self.default_tenant)
             self.auth.require_tenant_admin(actor, self.default_tenant)
         return {"records": self._audit_logger.read(limit)}
 
@@ -461,7 +545,8 @@ def main(argv: Optional[list] = None) -> None:
     svc = StateService(args.db, encryption_key=args.encryption_key, secret=args.secret,
                        retention_days=args.retention_days,
                        insecure_dev_mode=args.insecure_dev_mode,
-                       require_strong_secret=(args.mode == "server"))
+                       require_strong_secret=(args.mode == "server"),
+                       require_strong_encryption_key=(args.mode == "server"))
     if args.mode == "server":
         run_http(svc, args.host, args.port)
     else:

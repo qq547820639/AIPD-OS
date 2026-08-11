@@ -55,6 +55,10 @@ SOURCE_EXCLUDE_PREFIXES = (
 )
 SOURCE_EXCLUDE_SUFFIXES = (".zip", ".step", ".tar.gz", ".whl", ".egg",
                            ".sig", ".sha256")
+# 任意嵌套层级出现即排除的缓存/虚拟环境目录与字节码文件
+SOURCE_EXCLUDE_PARTS = (".venv", ".venv-ci", ".pytest_cache", ".ruff_cache",
+                        ".mypy_cache", "__pycache__", ".pytest")
+SOURCE_EXCLUDE_FILE_SUFFIXES = (".pyc", ".pyo", ".dist-info", ".egg-info")
 # 依赖锁文件名（Provenance 用）
 LOCKFILES = ("requirements.txt", "requirements-quality.txt", "requirements-dev.txt",
              "requirements-lock.txt", "Pipfile.lock", "poetry.lock", "uv.lock")
@@ -98,7 +102,9 @@ def _is_excluded(rel: str) -> bool:
         return True
     if rel.endswith(SOURCE_EXCLUDE_SUFFIXES):
         return True
-    return False
+    parts = rel.split("/")
+    return (any(p in SOURCE_EXCLUDE_PARTS for p in parts)
+            or any(p.endswith(SOURCE_EXCLUDE_FILE_SUFFIXES) for p in parts))
 
 
 # --------------------------------------------------------------------------

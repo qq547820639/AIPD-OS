@@ -70,6 +70,7 @@ class ExecutionRecord:
     error_message: str = ""
     artifacts: List[str] = field(default_factory=list)
     project_id: str = ""
+    tenant_id: str = "default"
     capability: str = ""
     retry_parent: str = ""
     fallback_from: str = ""
@@ -132,6 +133,7 @@ class ExecutionRecord:
         return {
             "run_id": self.run_id,
             "project_id": self.project_id,
+            "tenant_id": self.tenant_id,
             "work_id": self.work_id,
             "adapter_id": self.adapter_id,
             "provider": self.provider,
@@ -192,6 +194,7 @@ class ExecutionRecord:
             error_message=row["error_message"] or "",
             artifacts=_loads(row["artifacts_json"], []),
             project_id=row.get("project_id", "") or "",
+            tenant_id=row.get("tenant_id", "") or "default",
             capability=row.get("capability", "") or "",
             retry_parent=row.get("retry_parent", "") or "",
             fallback_from=row.get("fallback_from", "") or "",

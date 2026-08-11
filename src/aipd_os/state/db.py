@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -27,9 +28,15 @@ SENSITIVE_KEYS = {
     "supplier_quote", "supplier_quotes", "contact", "contacts",
     "experiment_data", "api_key", "credential", "secret", "token",
 }
-FACT_STATUSES = {"V", "S", "C", "E", "A", "P", "T", "R"}
+# 认知/分类状态（epistemic_status）。U=Unknown / 未验证（无证据、未确认的认知状态）。
+# 注意：S=Simulation（模拟/仿真值）；expiry.py 用 "S" 标记 stale 是对既有状态位的
+# 复用（历史行为），与 Simulation 语义不同——见 expiry.py 警示注释。
+FACT_STATUSES = {"V", "S", "C", "E", "A", "P", "T", "R", "U"}
 PROJECT_STATUSES = {"active", "awaiting_owner_decision", "blocked_external",
                     "internal_rework", "released", "archived"}
+
+# 明文存储告警只打一次（避免每个敏感字段写入都刷日志）。
+_plaintext_warned = False
 
 SCHEMA = r"""
 PRAGMA foreign_keys = ON;
@@ -219,6 +226,62 @@ CREATE TABLE IF NOT EXISTS backups (
   size INTEGER,
   created_at TEXT NOT NULL
 );
+-- v5.8 Idea & Evidence Foundation（Commit 9/10/11）：
+-- ideas / claims / claim_evidence_relations 由 Idea/Claim/EvidenceRelation 域使用。
+-- 均为幂等 CREATE TABLE IF NOT EXISTS；迁移版本见 migrations.py v2/v3/v4。
+CREATE TABLE IF NOT EXISTS ideas (
+  idea_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL DEFAULT 'default',
+  title TEXT NOT NULL DEFAULT '',
+  raw_input TEXT NOT NULL DEFAULT '',
+  goal TEXT NOT NULL DEFAULT '',
+  problem TEXT NOT NULL DEFAULT '',
+  target_user TEXT NOT NULL DEFAULT '',
+  desired_outcome TEXT NOT NULL DEFAULT '',
+  constraints_json TEXT NOT NULL DEFAULT '{}',
+  source TEXT NOT NULL DEFAULT '',
+  lifecycle_status TEXT NOT NULL DEFAULT 'raw',
+  version_no INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (idea_id, project_id, tenant_id)
+);
+CREATE TABLE IF NOT EXISTS claims (
+  claim_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL DEFAULT 'default',
+  idea_id TEXT NOT NULL DEFAULT '',
+  claim_type TEXT NOT NULL,
+  statement TEXT NOT NULL,
+  epistemic_status TEXT NOT NULL DEFAULT 'A',
+  lifecycle_status TEXT NOT NULL DEFAULT 'active',
+  confidence REAL NOT NULL DEFAULT 0.5,
+  source TEXT NOT NULL DEFAULT '',
+  version_no INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (claim_id, project_id, tenant_id)
+);
+CREATE TABLE IF NOT EXISTS claim_evidence_relations (
+  relation_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL DEFAULT 'default',
+  claim_id TEXT NOT NULL,
+  evidence_id TEXT NOT NULL,
+  relation_type TEXT NOT NULL,
+  strength REAL NOT NULL DEFAULT 0.5,
+  applicability TEXT NOT NULL DEFAULT '',
+  reasoning_summary TEXT NOT NULL DEFAULT '',
+  limitations TEXT NOT NULL DEFAULT '',
+  review_status TEXT NOT NULL DEFAULT 'pending',
+  created_by TEXT NOT NULL DEFAULT 'system',
+  version_no INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (relation_id, project_id, tenant_id),
+  UNIQUE (claim_id, evidence_id, relation_type, project_id, tenant_id)
+);
 """
 
 
@@ -280,8 +343,16 @@ class AIPDStateDB:
         return cur.rowcount
 
     def _store_value(self, key: str, value: Any) -> str:
+        global _plaintext_warned
         if self._encryption_key and key in SENSITIVE_KEYS:
             return _json({"__encrypted__": True, "data": encrypt_secret(_json(value), self._encryption_key)})
+        if key in SENSITIVE_KEYS and not _plaintext_warned:
+            # 无 encryption_key 时敏感字段明文落库：fail-open 仅限本地/dev 模式，
+            # 生产 server 模式已在 StateService 层 fail-closed。
+            _plaintext_warned = True
+            logging.warning(
+                "sensitive field %r stored in plaintext: no AIPD_ENCRYPTION_KEY "
+                "configured (local/dev only; server mode fails closed)", key)
         return _json(value)
 
     def _read_value(self, key: str, value_json: str) -> Any:

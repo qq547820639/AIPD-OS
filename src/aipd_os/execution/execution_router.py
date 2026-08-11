@@ -87,6 +87,9 @@ class ExecutionRouter:
         context = context or {}
         project_id = project_id or context.get("project_id", "")
         context["project_id"] = project_id
+        # 幂等 scope 需要 tenant_id：从 context 传播（缺省 'default'）。
+        tenant_id = context.get("tenant_id") or "default"
+        context["tenant_id"] = tenant_id
         idempotency_key = idempotency_key or context.get("idempotency_key", "")
 
         # 1) 能力可用性
@@ -101,9 +104,14 @@ class ExecutionRouter:
         if errors:
             raise InputValidationError(capability_id, errors)
 
-        # 3) 幂等去重：已有结果直接返回，绝不重复调用 adapter。
+        # 3) 幂等去重：仅在相同 (tenant_id, project_id, capability, key) scope
+        #    内命中；跨项目/跨租户/跨能力绝不误去重。
         if idempotency_key:
-            existing = self.store.find_by_idempotency_key(idempotency_key)
+            existing = self.store.find_by_idempotency_key(
+                idempotency_key,
+                tenant_id=tenant_id,
+                project_id=project_id,
+                capability=capability_id)
             if existing is not None:
                 if existing.status in ("succeeded", "fallback"):
                     return {"record": existing,
@@ -118,6 +126,7 @@ class ExecutionRouter:
             work_id, adapter.capability_id(), meta.get("provider", ""),
             meta.get("version", "1.0"), input_hash,
             project_id=project_id,
+            tenant_id=tenant_id,
             adapter_id=adapter.capability_id(),
             capability=adapter.capability_id(),
             idempotency_key=idempotency_key,
@@ -295,6 +304,7 @@ class ExecutionRouter:
                 meta.get("version", "1.0"), self._hash(input),
                 retry_lineage=list(lineage) + [run_id],
                 project_id=context.get("project_id", ""),
+                tenant_id=context.get("tenant_id") or "default",
                 adapter_id=fb.capability_id(),
                 capability=fb.capability_id(),
                 retry_parent=run_id,
@@ -334,6 +344,7 @@ class ExecutionRouter:
             work_id, adapter.capability_id(), meta.get("provider", ""),
             meta.get("version", "1.0"), input_hash,
             project_id=context.get("project_id", ""),
+            tenant_id=context.get("tenant_id") or "default",
             adapter_id=adapter.capability_id(),
             capability=adapter.capability_id(),
             idempotency_key=idempotency_key,

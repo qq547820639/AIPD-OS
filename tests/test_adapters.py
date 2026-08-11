@@ -103,6 +103,65 @@ def test_research_http_error_external_blocked(monkeypatch, tmp_path):
     assert ei.value.task_package and Path(ei.value.task_package).is_file()
 
 
+def test_research_api_key_sent_as_header(monkeypatch):
+    """配置语义 == 网络调用语义：AIPD_RESEARCH_API_KEY 真实用于 x-api-key header。"""
+    import json
+    import urllib.request
+
+    monkeypatch.setenv("AIPD_RESEARCH_API_KEY", "secret-key-123")
+    reg = build_registry()
+    a = reg.get("research.search_papers")
+
+    seen_headers = {}
+
+    class FakeResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return json.dumps({"data": [
+                {"title": "P", "authors": [], "year": 2023, "url": "https://x/y"},
+            ]}).encode("utf-8")
+
+    def fake_urlopen(req, timeout=0):
+        seen_headers.update(req.headers)
+        return FakeResp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    out = a.execute({"query": "q"})
+    assert "sources" in out
+    # urllib 会把 header 名归一化为 Title-Case（X-api-key）
+    headers_lower = {k.lower(): v for k, v in seen_headers.items()}
+    assert headers_lower.get("x-api-key") == "secret-key-123", (
+        "配置的 key 必须真实出现在网络请求 header 中")
+
+
+def test_research_no_key_does_not_send_x_api_key_header(monkeypatch):
+    """未配置 key → 请求不带 x-api-key（且适配器保守 external_dependency）。"""
+    import urllib.request
+
+    monkeypatch.delenv("AIPD_RESEARCH_API_KEY", raising=False)
+    reg = build_registry()
+    a = reg.get("research.search_papers")
+    assert a.discover()["available"] is False
+
+    seen_headers = {}
+
+    def fake_urlopen(req, timeout=0):  # 不应被调用（execute 在 available 检查即停）
+        seen_headers.update(req.headers)
+        raise AssertionError("execute should fail before network call")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    from aipd_os.execution.adapter import AdapterError
+
+    with pytest.raises(AdapterError) as ei:
+        a.execute({"query": "q"})
+    assert ei.value.classification == "external_blocked"
+
+
 def test_faceted_writes_real_step_artifact(tmp_path, monkeypatch):
     monkeypatch.setenv("AIPD_OUTPUT_DIR", str(tmp_path))
     reg = build_registry()

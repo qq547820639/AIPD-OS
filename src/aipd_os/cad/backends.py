@@ -457,6 +457,15 @@ class CadQueryBackend(CadBackend):
         return out
 
     def export_step(self, model: Any, path: Path) -> Dict[str, Any]:
+        """导出 STEP 并记录 artifact 记录（sha256 + semantic_geometry_hash）。
+
+        **Byte reproducibility profile（Commit 8A）**：``sha256`` 标识磁盘字节，
+        ``semantic_geometry_hash`` 标识几何身份（volume/bbox/counts）。本实现
+        对 STEP 头部时间戳做归一化，因此**同一环境（同 kernel/version）**下
+        同参数多次导出的字节 hash 稳定；但跨环境（不同 CadQuery/OCCT 版本）
+        不保证字节可复现。发布/血缘证据必须声明使用哪个 hash，二者不可互换；
+        几何身份判断一律使用 ``semantic_geometry_hash``。
+        """
         if self._cq is None:
             raise RuntimeError('CadQuery is not available; cannot export native STEP')
         shape = self._build(model)

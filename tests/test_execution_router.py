@@ -160,7 +160,7 @@ def test_project_id_passes_through_context(tmp_path):
     assert rec2.capability == "doc.generate"
 
 UNIFIED_KEYS = {
-    "run_id", "project_id", "work_id", "adapter_id", "provider",
+    "run_id", "project_id", "tenant_id", "work_id", "adapter_id", "provider",
     "provider_version", "capability", "input_hash", "output_hash",
     "started_at", "completed_at", "status", "cost", "token_usage",
     "retry_parent", "fallback_from", "error_type", "evidence_ids",

@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS execution_runs(
  evidence_refs_json TEXT NOT NULL DEFAULT '[]',
  error_message TEXT,
  project_id TEXT NOT NULL DEFAULT '',
+ tenant_id TEXT NOT NULL DEFAULT 'default',
  adapter_id TEXT NOT NULL DEFAULT '',
  capability TEXT NOT NULL DEFAULT '',
  retry_parent TEXT NOT NULL DEFAULT '',
@@ -73,6 +74,11 @@ def _ensure_columns(c) -> None:
     if "side_effect_mode" not in cols:
         c.execute(
             "ALTER TABLE execution_runs ADD COLUMN side_effect_mode TEXT NOT NULL DEFAULT 'PURE'"
+        )
+    if "tenant_id" not in cols:
+        # 幂等 scope 需要 tenant_id；历史行默认归入 'default' 租户。
+        c.execute(
+            "ALTER TABLE execution_runs ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'"
         )
 
 
@@ -111,6 +117,7 @@ class RunStore:
         input_hash: str,
         retry_lineage: Optional[List[str]] = None,
         project_id: str = "",
+        tenant_id: str = "default",
         adapter_id: str = "",
         capability: str = "",
         retry_parent: str = "",
@@ -125,9 +132,9 @@ class RunStore:
             c.execute(
                 "INSERT INTO execution_runs(run_id,work_id,tool,provider,version,input_hash,"
                 "output_hash,start_time,status,retry_lineage_json,cost,tokens_in,tokens_out,"
-                "project_id,adapter_id,capability,retry_parent,fallback_from,idempotency_key,"
-                "side_effect_mode,remote_operation_id)"
-                " VALUES(?,?,?,?,?,?,?,?,?,?,0,0,0,?,?,?,?,?,?,?,?)",
+                "project_id,tenant_id,adapter_id,capability,retry_parent,fallback_from,"
+                "idempotency_key,side_effect_mode,remote_operation_id)"
+                " VALUES(?,?,?,?,?,?,?,?,?,?,0,0,0,?,?,?,?,?,?,?,?,?)",
                 (
                     run_id,
                     work_id,
@@ -140,6 +147,7 @@ class RunStore:
                     "running",
                     json.dumps(retry_lineage or [], ensure_ascii=False),
                     project_id,
+                    tenant_id,
                     adapter_id,
                     capability,
                     retry_parent,
@@ -169,6 +177,7 @@ class RunStore:
             "error_classification",
             "error_message",
             "project_id",
+            "tenant_id",
             "adapter_id",
             "capability",
             "retry_parent",
@@ -206,8 +215,9 @@ class RunStore:
     def record_retry(self, prev_run_id: str) -> str:
         """将上次尝试标记为 ``retried``，并创建新的尝试记录，返回新 run_id。
 
-        新记录继承相同的 work/tool 信息，并把上次尝试的 run_id 追加到
-        retry_lineage 中。
+        新记录继承相同的 work/tool/scope 信息（tenant_id / project_id /
+        idempotency_key / side_effect_mode / capability / remote_operation_id /
+        fallback_from），并把上次尝试的 run_id 追加到 retry_lineage 中。
         """
         prev = self.get_run(prev_run_id)
         ts = _now()
@@ -225,9 +235,14 @@ class RunStore:
             prev.input_hash,
             retry_lineage=lineage,
             project_id=prev.project_id,
+            tenant_id=prev.tenant_id,
             adapter_id=prev.adapter_id,
             capability=prev.capability,
             retry_parent=prev_run_id,
+            fallback_from=prev.fallback_from,
+            idempotency_key=prev.idempotency_key,
+            side_effect_mode=prev.side_effect_mode,
+            remote_operation_id=prev.remote_operation_id,
         )
 
     def get_run(self, run_id: str) -> ExecutionRecord:
@@ -253,15 +268,40 @@ class RunStore:
         return [ExecutionRecord.from_db_row(dict(r)) for r in rows]
 
     # ------------------------------------------------------------ 幂等查询
-    def find_by_idempotency_key(self, key: str) -> Optional[ExecutionRecord]:
-        """按幂等键取最新一条执行记录（无则 None）。"""
+    def find_by_idempotency_key(self, key: str, tenant_id: Optional[str] = None,
+                                project_id: Optional[str] = None,
+                                capability: Optional[str] = None) -> Optional[ExecutionRecord]:
+        """按幂等键取最新一条执行记录（无则 None）。
+
+        提供 ``tenant_id`` / ``project_id`` / ``capability`` 时按
+        (tenant_id, project_id, capability, idempotency_key) scope 查询——
+        幂等去重必须在同一租户+项目+能力内有效，避免跨项目/跨租户误命中。
+        全部 scope 参数缺省时保持旧行为（仅按 idempotency_key 全局查询）。
+        """
         with self.connect() as c:
-            row = c.execute(
-                "SELECT * FROM execution_runs WHERE idempotency_key=? "
-                "ORDER BY start_time DESC, rowid DESC LIMIT 1", (key,)).fetchone()
+            if tenant_id is not None or project_id is not None or capability is not None:
+                row = c.execute(
+                    "SELECT * FROM execution_runs WHERE idempotency_key=? "
+                    "AND tenant_id=? AND project_id=? AND capability=? "
+                    "ORDER BY start_time DESC, rowid DESC LIMIT 1",
+                    (key, tenant_id or "default", project_id or "",
+                     capability or "")).fetchone()
+            else:
+                row = c.execute(
+                    "SELECT * FROM execution_runs WHERE idempotency_key=? "
+                    "ORDER BY start_time DESC, rowid DESC LIMIT 1", (key,)).fetchone()
         if row is None:
             return None
         return ExecutionRecord.from_db_row(dict(row))
+
+    def find_by_idempotency_scope(self, key: str, tenant_id: str,
+                                  project_id: str, capability: str) -> Optional[ExecutionRecord]:
+        """按 (tenant_id, project_id, capability, idempotency_key) scope 查幂等记录。
+
+        Idempotency Scope = (tenant_id, project_id, capability, idempotency_key)。
+        """
+        return self.find_by_idempotency_key(
+            key, tenant_id=tenant_id, project_id=project_id, capability=capability)
 
     def list_by_idempotency_key(self, key: str) -> List[ExecutionRecord]:
         """按幂等键列出全部执行记录（按开始时间升序）。"""

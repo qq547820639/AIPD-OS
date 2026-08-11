@@ -1,9 +1,18 @@
-"""检索接口（契约 + 本地确定性测试服务 + 真实网络桩）。
+"""检索接口（契约 + 显式测试夹具 + 真实网络桩）。
 
 三类检索：标准（StandardsRetriever）、专利（PatentRetriever）、竞品（CompetitorRetriever）。
 
+v5.7 语义收敛（Commit 7D）：
+  - **生产默认不再返回测试数据**。`StandardsRetriever()` / `PatentRetriever()` /
+    `CompetitorRetriever()` 未注入真实 backend 时默认 ``external_dependency``
+    （``available()=False``，search 返回空），绝不把本地确定性数据当生产检索结果。
+  - 确定性测试数据/夹具移到 ``tests/fixtures/research/``，通过显式的
+    ``TestRetriever`` / ``FixtureRetriever`` 注入测试路径。
+  - 真实网络桩（``_NetworkRetriever``）在未配置凭据/网络不可达时显式返回
+    ``not_verified``，绝不伪造在线检索结果。
+
 诚实建模：
-  - 本地测试实现返回确定性引用，供离线验证与集成测试；
+  - 本地测试实现返回确定性引用，供离线验证与集成测试（仅测试路径）；
   - 真实网络桩在未配置凭据/网络不可达时显式返回 ``not_verified``，绝不伪造
     在线检索结果（``external_dependency``）。
 """
@@ -14,37 +23,6 @@ import abc
 from typing import List, Optional
 
 from .models import Abstract, Citation, Document, STATUS_NOT_VERIFIED
-
-# 本地确定性测试数据（键：检索词 -> 引用列表）
-_LOCAL_STANDARDS = {
-    "quality management": [
-        Citation(source="official_standard", title="ISO-9001:2015",
-                 published_at="2015-09-15", url="https://www.iso.org/standard/62085.html",
-                 confidence=0.95, kind="standard", identifier="ISO-9001:2015"),
-    ],
-    "pcb design": [
-        Citation(source="official_standard", title="IPC-H05K",
-                 published_at="2021-01-01", url="https://example.invalid/ipc-h05k",
-                 confidence=0.9, kind="standard", identifier="IPC-H05K"),
-    ],
-}
-
-_LOCAL_PATENTS = {
-    "additive manufacturing": [
-        Citation(source="patent", title="US-PAT-10404000",
-                 published_at="2020-06-16", url="https://patents.example/US10404000",
-                 confidence=0.85, kind="patent", identifier="US-PAT-10404000",
-                 authors=["Publisher US Patent Office"]),
-    ],
-}
-
-_LOCAL_COMPETITORS = {
-    "thermal management": [
-        Citation(source="industry_report", title="Competitor Thermal Report 2024",
-                 published_at="2024-03-01", url="https://example.invalid/comp-thermal",
-                 confidence=0.7, kind="competitor"),
-    ],
-}
 
 
 class Retriever(abc.ABC):
@@ -59,8 +37,12 @@ class Retriever(abc.ABC):
         """具备真实检索能力（False 表示 external_dependency）。"""
 
 
-class _LocalRetriever(Retriever):
-    """本地确定性测试服务：返回固定引用（仅摘要，无全文下载）。"""
+class TestRetriever(Retriever):
+    """显式测试/夹具检索器：返回确定性引用（仅摘要，无全文下载）。
+
+    **不是生产默认路径**：生产 ``StandardsRetriever`` 等默认 external_dependency，
+    只有测试显式注入本夹具才返回确定性数据。
+    """
 
     def __init__(self, data: dict) -> None:
         self._data = data
@@ -78,6 +60,19 @@ class _LocalRetriever(Retriever):
             abstract = Abstract(title=c.title, snippet=f"Abstract of {c.title}", citation=c)
             docs.append(Document(citation=c, abstract=abstract))
         return docs
+
+
+class _UnavailableRetriever(Retriever):
+    """生产默认：无真实 provider → external_dependency（available()=False）。"""
+
+    def __init__(self, scope: str) -> None:
+        self._scope = scope
+
+    def available(self) -> bool:
+        return False
+
+    def search(self, query: str, limit: int = 5) -> List[Document]:
+        return []
 
 
 class _NetworkRetriever(Retriever):
@@ -99,10 +94,10 @@ class _NetworkRetriever(Retriever):
 
 
 class StandardsRetriever(Retriever):
-    """标准检索：默认本地确定性服务；可注入真实网络桩。"""
+    """标准检索：生产默认 external_dependency；可注入真实网络桩或测试夹具。"""
 
     def __init__(self, backend: Optional[Retriever] = None) -> None:
-        self._backend = backend or _LocalRetriever(_LOCAL_STANDARDS)
+        self._backend = backend or _UnavailableRetriever("standards")
 
     def available(self) -> bool:
         return self._backend.available()
@@ -112,10 +107,10 @@ class StandardsRetriever(Retriever):
 
 
 class PatentRetriever(Retriever):
-    """专利检索。"""
+    """专利检索：生产默认 external_dependency。"""
 
     def __init__(self, backend: Optional[Retriever] = None) -> None:
-        self._backend = backend or _LocalRetriever(_LOCAL_PATENTS)
+        self._backend = backend or _UnavailableRetriever("patents")
 
     def available(self) -> bool:
         return self._backend.available()
@@ -125,10 +120,10 @@ class PatentRetriever(Retriever):
 
 
 class CompetitorRetriever(Retriever):
-    """竞品情报检索。"""
+    """竞品情报检索：生产默认 external_dependency。"""
 
     def __init__(self, backend: Optional[Retriever] = None) -> None:
-        self._backend = backend or _LocalRetriever(_LOCAL_COMPETITORS)
+        self._backend = backend or _UnavailableRetriever("competitors")
 
     def available(self) -> bool:
         return self._backend.available()
@@ -152,6 +147,7 @@ def network_competitors(api_key: Optional[str] = None) -> CompetitorRetriever:
 
 __all__ = [
     "Retriever",
+    "TestRetriever",
     "StandardsRetriever",
     "PatentRetriever",
     "CompetitorRetriever",

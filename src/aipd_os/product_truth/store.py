@@ -291,41 +291,41 @@ class ProductTruthStore:
     # ----------------------------------------------------------- 可信度评估
     def assess_trust(self, record_id: str, tenant_id: str | None = None,
                      project_id: str | None = None) -> TrustAssessment:
-        """确定性可信度分级。
+        """确定性可信度分级（保守：不自动 verified）。
 
-        规则：
-          - 已过期 → unverified；
-          - evidence 类自带 high（有内容即视为已核验来源）；其余类型若无
-            upstream 证据或无内容 → unverified；
-          - 有 upstream 证据链且未过期 → verified；
-          - 否则按有效证据数量给出 low/medium。
+        规则（v5.7 Commit 7C）：
+          - 已过期 / 空内容 → unverified；
+          - evidence 类记录 → ``high``（来源可信度，NOT verified——有内容不等于
+            命题为真）；
+          - 有 upstream 链 → ``medium``（有上游依赖，非自动 verified）；
+          - 无上游 → ``low``；
+          - ``verified`` 仅在显式 Owner/工程确认标记存在时返回
+            （metadata ``confirm_by_owner=True``）。
         """
         tenant, project = self._scope(tenant_id, project_id)
         rec = self.get(record_id, tenant_id=tenant, project_id=project)
         reasons: list[str] = []
         if rec.is_expired():
             return TrustAssessment("unverified", ["record is expired"])
+        if not rec.content.strip():
+            reasons.append("empty content")
+            return TrustAssessment("unverified", reasons)
+        metadata = rec.metadata if isinstance(rec.metadata, dict) else {}
+        if metadata.get("confirm_by_owner") is True:
+            return TrustAssessment("verified",
+                                   ["explicit owner/engineering confirmation marker"])
+        if rec.record_type == "evidence":
+            return TrustAssessment(
+                "high",
+                ["evidence record: source credibility, not verified truth"])
         with self.connect() as c:
             up_n = c.execute(
                 "SELECT COUNT(*) FROM truth_lineage "
                 "WHERE downstream_id=? AND tenant_id=? AND project_id=?",
                 (record_id, tenant, project)).fetchone()[0]
-            up_evidence = c.execute(
-                "SELECT COUNT(*) FROM truth_lineage tl JOIN product_truth t "
-                "ON t.id=tl.upstream_id AND t.tenant_id=tl.tenant_id "
-                "AND t.project_id=tl.project_id "
-                "WHERE tl.downstream_id=? AND tl.tenant_id=? AND tl.project_id=? "
-                "AND t.record_type='evidence'",
-                (record_id, tenant, project)).fetchone()[0]
-        if not rec.content.strip():
-            reasons.append("empty content")
-            return TrustAssessment("unverified", reasons)
-        if rec.record_type == "evidence":
-            return TrustAssessment("verified", ["evidence is a primary source"])
-        if up_evidence >= 1:
-            return TrustAssessment("verified", ["backed by upstream evidence"])
         if up_n >= 1:
-            return TrustAssessment("medium", ["has upstream dependencies, no direct evidence"])
+            return TrustAssessment(
+                "medium", ["has upstream dependencies; not automatically verified"])
         reasons.append("missing evidence / upstream verification")
         return TrustAssessment("low", reasons)
 

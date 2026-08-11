@@ -6,7 +6,9 @@ services:
       AIPD_MODE: server
       AIPD_PORT: "8000"
       AIPD_DB_DIR: /data/state.db
-      AIPD_ENCRYPTION_KEY: ${AIPD_ENCRYPTION_KEY:-change-me-encryption-key}
+      # AIPD_ENCRYPTION_KEY 必须显式提供（>=16 字符，且不能是公开默认值）；
+      # 缺失/弱密钥时服务以 fail-closed 拒绝启动（server 模式）。
+      AIPD_ENCRYPTION_KEY: ${AIPD_ENCRYPTION_KEY}
       # AIPD_SECRET 必须显式提供（>=16 字符）；缺失/弱密钥时服务以 fail-closed 拒绝启动。
       AIPD_SECRET: ${AIPD_SECRET}
       AIPD_RETENTION_DAYS: "90"

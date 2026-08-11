@@ -75,6 +75,13 @@ from .fetchers import (
     parse_txt,
 )
 from .models import (
+    EPISTEMIC_EXTERNAL_EVIDENCE,
+    EPISTEMIC_UNKNOWN,
+    EPISTEMIC_VERIFIED,
+    RETRIEVAL_ABSTRACT_ONLY,
+    RETRIEVAL_FULLTEXT_RETRIEVED,
+    RETRIEVAL_NOT_RETRIEVED,
+    RETRIEVAL_PARSE_FAILED,
     STATUS_EXTERNAL_PENDING,
     STATUS_NOT_VERIFIED,
     STATUS_VERIFIED,
@@ -83,6 +90,7 @@ from .models import (
     Document,
     FullText,
     ResearchFinding,
+    default_epistemic_status,
     utc_now_iso,
 )
 from .retrieval import (
@@ -90,6 +98,7 @@ from .retrieval import (
     PatentRetriever,
     Retriever,
     StandardsRetriever,
+    TestRetriever,
     network_competitors,
     network_patents,
     network_standards,
@@ -100,6 +109,11 @@ __all__ = [
     # 模型
     "Citation", "Abstract", "FullText", "Document", "ResearchFinding",
     "STATUS_VERIFIED", "STATUS_NOT_VERIFIED", "STATUS_EXTERNAL_PENDING", "utc_now_iso",
+    # 检索/认知状态（v5.7 Commit 7A）
+    "RETRIEVAL_NOT_RETRIEVED", "RETRIEVAL_ABSTRACT_ONLY",
+    "RETRIEVAL_FULLTEXT_RETRIEVED", "RETRIEVAL_PARSE_FAILED",
+    "EPISTEMIC_EXTERNAL_EVIDENCE", "EPISTEMIC_UNKNOWN", "EPISTEMIC_VERIFIED",
+    "default_epistemic_status",
     # 摄入净化
     "ingest_attachment", "sanitize_text", "sha256_of",
     "ALLOWED_EXTENSIONS", "DEFAULT_MAX_BYTES",
@@ -108,7 +122,7 @@ __all__ = [
     "DocumentFetcher", "ContractFetcher", "HttpDocumentFetcher", "DOCUMENT_PARSERS",
     "parse_txt", "parse_pdf",
     # 检索
-    "Retriever", "StandardsRetriever", "PatentRetriever", "CompetitorRetriever",
+    "Retriever", "TestRetriever", "StandardsRetriever", "PatentRetriever", "CompetitorRetriever",
     "network_standards", "network_patents", "network_competitors",
     # 可信度与冲突
     "SOURCE_CREDIBILITY", "SOURCE_METADATA", "source_credibility", "source_metadata",

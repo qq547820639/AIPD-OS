@@ -12,6 +12,10 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 # facts 表既有状态位：见 aipd_os.state.db 的 FACT_STATUSES
+# ⚠️ 警示：FACT_STATUSES 中的 "S" 本义是 Simulation（模拟/仿真值）；本模块沿用
+# "S" 标记 stale（历史行为，对既有状态位的复用）。二者语义不同：Simulation 是
+# 「这个值来自仿真」，stale 是「曾有效、现因上游变化而过时」。本轮不动该语义，
+# 仅在此明示，避免与 Simulation 混淆。未来若需区分应引入独立状态位（如 "X"）。
 STALE_STATUS = "S"
 
 # 过期元数据 key（写入 evidence.metadata_json）

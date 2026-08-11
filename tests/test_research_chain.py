@@ -40,6 +40,12 @@ from aipd_os.research import (
 )
 from aipd_os.state.db import AIPDStateDB
 
+from tests.fixtures.research.retriever_fixtures import (
+    competitors_test_retriever,
+    patents_test_retriever,
+    standards_test_retriever,
+)
+
 
 @pytest.fixture
 def db(tmp_path):
@@ -170,8 +176,8 @@ def test_citation_to_dict_has_accessed_at():
 
 
 # ---------------------------------------------------------------- 检索
-def test_standards_retriever_local_deterministic():
-    r = StandardsRetriever()
+def test_standards_retriever_fixture_deterministic():
+    r = standards_test_retriever()  # 显式测试夹具（Commit 7D：不再默认进生产路径）
     docs = r.search("quality management")
     assert len(docs) == 1
     assert docs[0].citation.source == "official_standard"
@@ -179,8 +185,20 @@ def test_standards_retriever_local_deterministic():
 
 
 def test_patent_and_competitor_retrievers():
-    assert PatentRetriever().search("additive manufacturing")[0].citation.kind == "patent"
-    assert CompetitorRetriever().search("thermal management")[0].citation.kind == "competitor"
+    assert patents_test_retriever().search("additive manufacturing")[0].citation.kind == "patent"
+    assert competitors_test_retriever().search("thermal management")[0].citation.kind == "competitor"
+
+
+def test_production_retrievers_default_external_dependency():
+    """生产默认不再返回测试数据：available()=False，search 返回空（诚实降级）。"""
+    from aipd_os.research import CompetitorRetriever, PatentRetriever, StandardsRetriever
+
+    for make in (StandardsRetriever, PatentRetriever, CompetitorRetriever):
+        r = make()
+        assert r.available() is False, make.__name__
+        assert r.search("anything") == []
+        assert r.search("quality management") == []
+        assert r.search("additive manufacturing") == []
 
 
 def test_network_stubs_return_not_verified_no_credentials():
@@ -233,12 +251,17 @@ def test_write_verified_finding_creates_fact_and_evidence(db):
     fact = db.get_fact("default", "p1", fact_id)
     assert fact["key"] == "copper_thickness"
     assert fact["value"] == "1.6 mm"
-    assert fact["status"] == "V"
-    # Evidence Register 有记录
+    # 保守认知状态：外部来源最多 E，绝不自动 V（retrieval verified ≠ 命题 verified）
+    assert fact["status"] == "E"
+    assert fact["status"] != "V"
+    # Evidence Register 有记录（含 epistemic metadata）
     evs = db.list_evidence("default", "p1")
     assert len(evs) == 1
     assert evs[0]["quality"] == "full_text"
     assert evs[0]["kind"] == "standard"
+    import json as _json
+    ev_meta = _json.loads(evs[0]["metadata_json"] or "{}")
+    assert ev_meta.get("epistemic_status") == "E"
     # 关联
     linked = db.list_evidence_for_fact("default", "p1", fact_id)
     assert len(linked) == 1
@@ -308,4 +331,7 @@ def test_run_research_chain_success_writes_fact(db):
     )
     out = run_research_chain(db, "default", "p1", finding, fetcher=ContractFetcher())
     assert out["fact_id"] is not None
-    assert db.list_facts("default", "p1")[0]["key"] == "quality"
+    fact = db.list_facts("default", "p1")[0]
+    assert fact["key"] == "quality"
+    # 拿到全文（retrieval verified）≠ verified truth：写入 E 而非 V
+    assert fact["status"] == "E"

@@ -3,6 +3,17 @@
 
 核心职责：领取工作项 → 检查能力地板 → 执行 → 校验 → 注册能力/血缘 →
 独立质量门 → 标记 stale → 返工/推进 → 仅在真实决策点暂停。
+
+v5.7 变更：
+- **Canonical Decision 集成（Commit 4）**：Supervisor 不再拥有 decisions 表；
+  当构造时传入 ``state_db=AIPDStateDB`` 时，决策写入 canonical decisions
+  （tenant+project 有界），返回 canonical decision_id，并把工作项置
+  ``blocked_decision``。未提供 state_db 时走 legacy compatibility adapter
+  （Supervisor-only 旧 DB 的 decisions 表），绝不破坏旧数据。
+- **Multi-project / Tenant Scope（Commit 5）**：构造签名
+  ``Supervisor(db, tenant_id='default', project_id=None, state_db=None)``；
+  显式 project_id 时只操作该项目，所有表带 tenant_id 作用域；未显式且单项目
+  保持兼容；未显式且多项目抛明确错误，不再猜唯一项目。
 """
 from __future__ import annotations
 
@@ -14,6 +25,7 @@ import sys
 from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("aipd.supervisor")
 PHASES = [
@@ -25,11 +37,15 @@ WORK_STATUSES = {
     "queued", "ready", "running", "blocked_external", "blocked_decision",
     "internal_rework", "complete", "cancelled",
 }
+
+# 注意：decisions 表不再由 Supervisor 声明（Commit 4）——canonical decisions
+# 由 AIPDStateDB（src/aipd_os/state/db.py）拥有。legacy Supervisor-only 旧 DB
+# 的 decisions 表由 SUPERVISOR_LEGACY_DECISIONS_SCHEMA 兼容创建。
 SCHEMA = r"""
 PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS supervisor_work_items(
- work_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, phase TEXT NOT NULL,
- module TEXT NOT NULL, title TEXT NOT NULL, objective TEXT NOT NULL,
+ work_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, tenant_id TEXT NOT NULL DEFAULT 'default',
+ phase TEXT NOT NULL, module TEXT NOT NULL, title TEXT NOT NULL, objective TEXT NOT NULL,
  priority INTEGER NOT NULL DEFAULT 50,
  status TEXT NOT NULL DEFAULT 'queued', owner_required INTEGER NOT NULL DEFAULT 0,
  decision_id TEXT, depends_on_json TEXT NOT NULL DEFAULT '[]',
@@ -38,29 +54,36 @@ CREATE TABLE IF NOT EXISTS supervisor_work_items(
  blocked_reason TEXT, attempts INTEGER NOT NULL DEFAULT 0,
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS supervisor_phase_runs(
- run_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, phase TEXT NOT NULL,
- status TEXT NOT NULL, entry_checks_json TEXT NOT NULL DEFAULT '{}',
- exit_checks_json TEXT NOT NULL DEFAULT '{}',
- started_at TEXT NOT NULL, completed_at TEXT);
+ run_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, tenant_id TEXT NOT NULL DEFAULT 'default',
+ phase TEXT NOT NULL, status TEXT NOT NULL, entry_checks_json TEXT NOT NULL DEFAULT '{}',
+ exit_checks_json TEXT NOT NULL DEFAULT '{}', started_at TEXT NOT NULL, completed_at TEXT);
 CREATE TABLE IF NOT EXISTS supervisor_capabilities(
- capability_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, name TEXT NOT NULL,
- provider TEXT, status TEXT NOT NULL, maturity_ceiling TEXT,
+ capability_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, tenant_id TEXT NOT NULL DEFAULT 'default',
+ name TEXT NOT NULL, provider TEXT, status TEXT NOT NULL, maturity_ceiling TEXT,
  metadata_json TEXT NOT NULL DEFAULT '{}', checked_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS supervisor_reviews(
- review_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, target_type TEXT NOT NULL,
- target_id TEXT NOT NULL, review_type TEXT NOT NULL, result TEXT NOT NULL,
- findings_json TEXT NOT NULL DEFAULT '[]', reviewer TEXT NOT NULL,
+ review_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, tenant_id TEXT NOT NULL DEFAULT 'default',
+ target_type TEXT NOT NULL, target_id TEXT NOT NULL, review_type TEXT NOT NULL,
+ result TEXT NOT NULL, findings_json TEXT NOT NULL DEFAULT '[]', reviewer TEXT NOT NULL,
  created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS supervisor_lineage(
- lineage_id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL,
+ lineage_id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, tenant_id TEXT NOT NULL DEFAULT 'default',
  upstream_type TEXT NOT NULL, upstream_id TEXT NOT NULL,
  downstream_type TEXT NOT NULL, downstream_id TEXT NOT NULL,
  relation TEXT NOT NULL, version TEXT, created_at TEXT NOT NULL,
  UNIQUE(project_id,upstream_type,upstream_id,downstream_type,downstream_id,relation));
-CREATE TABLE IF NOT EXISTS supervisor_claims(
- claim_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, claim TEXT NOT NULL,
- allowed INTEGER NOT NULL, evidence_json TEXT NOT NULL DEFAULT '[]',
+-- v5.7（Commit 5）：supervisor_claims 死表（全仓无读写）重命名为
+-- supervisor_assertions；旧 supervisor_claims 表保留不动以兼容历史 DB。
+-- 注意：v5.8 Claim 域将建独立 contract，不沿用本表。
+CREATE TABLE IF NOT EXISTS supervisor_assertions(
+ assertion_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, tenant_id TEXT NOT NULL DEFAULT 'default',
+ claim TEXT NOT NULL, allowed INTEGER NOT NULL, evidence_json TEXT NOT NULL DEFAULT '[]',
  reason TEXT, created_at TEXT NOT NULL);
+"""
+
+# Legacy Supervisor-only DB 的 decisions 表（无 tenant_id；仅当未传 state_db 时使用）。
+SUPERVISOR_LEGACY_DECISIONS_TABLE = "decisions"
+SUPERVISOR_LEGACY_DECISIONS_SCHEMA = r"""
 CREATE TABLE IF NOT EXISTS decisions(
  decision_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, topic TEXT NOT NULL,
  trigger TEXT, recommendation TEXT, options_json TEXT NOT NULL DEFAULT '[]',
@@ -77,12 +100,36 @@ def jd(v):
     return json.dumps(v, ensure_ascii=False, sort_keys=True)
 
 
+def _ensure_supervisor_columns(c) -> None:
+    """就地迁移：为已存在的 supervisor 表补齐 tenant_id 列（旧行默认 'default'）。"""
+    for table in ("supervisor_work_items", "supervisor_phase_runs",
+                  "supervisor_capabilities", "supervisor_reviews",
+                  "supervisor_lineage", "supervisor_assertions"):
+        exists = c.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (table,)).fetchone()
+        if not exists:
+            continue
+        cols = {r[1] for r in c.execute(f"PRAGMA table_info({table})").fetchall()}
+        if "tenant_id" not in cols:
+            c.execute(
+                f"ALTER TABLE {table} ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'")
+
+
 class Supervisor:
-    def __init__(self, db):
+    def __init__(self, db, tenant_id="default", project_id=None, state_db=None):
         self.path = Path(db)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._tenant_id = tenant_id or "default"
+        self._project_id = project_id
+        self._state_db = state_db
         with self.connect() as c:
             c.executescript(SCHEMA)
+            _ensure_supervisor_columns(c)
+            if self._state_db is None:
+                # Supervisor-only 旧 DB：确保 legacy decisions 表存在（幂等，
+                # 已存在的历史表不受影响；canonical 库中为 no-op）。
+                c.executescript(SUPERVISOR_LEGACY_DECISIONS_SCHEMA)
 
     @contextmanager
     def connect(self):
@@ -97,13 +144,62 @@ class Supervisor:
         finally:
             c.close()
 
+    # ------------------------------------------------------------- scope
+    def tenant_id(self):
+        """当前 Supervisor 的租户作用域。"""
+        return self._tenant_id
+
     def project_id(self):
+        """解析当前项目作用域。
+
+        - 显式 ``project_id`` → 只操作该项目；
+        - 未显式且 DB 恰好一个项目 → 兼容行为；
+        - 未显式且多项目 → 抛明确错误（不再猜唯一项目）。
+        """
+        if self._project_id is not None:
+            return self._project_id
         with self.connect() as c:
             rows = c.execute("SELECT project_id FROM projects").fetchall()
-        if len(rows) != 1:
-            raise ValueError("expected exactly one base project")
-        return rows[0][0]
+        pids = {r[0] for r in rows}
+        if len(pids) == 1:
+            return next(iter(pids))
+        if len(pids) == 0:
+            raise ValueError("no base project found; initialize a project first")
+        raise ValueError(
+            "project context required: multiple projects exist, specify project_id")
 
+    def _resolve_project_id(self, project_id: Optional[str]) -> str:
+        if project_id is not None:
+            return project_id
+        return self.project_id()
+
+    def _decisions_has_tenant(self, c) -> bool:
+        cols = {r[1] for r in c.execute("PRAGMA table_info(decisions)").fetchall()}
+        return "tenant_id" in cols
+
+    def _proposed_decision(self, c, pid: str):
+        """项目范围内未解决的决策（canonical 或 legacy decisions 表）。"""
+        if self._decisions_has_tenant(c):
+            return c.execute(
+                "SELECT decision_id FROM decisions WHERE project_id=? AND tenant_id=? "
+                "AND status='proposed' ORDER BY created_at LIMIT 1",
+                (pid, self._tenant_id)).fetchone()
+        return c.execute(
+            "SELECT decision_id FROM decisions WHERE project_id=? AND status='proposed' "
+            "ORDER BY created_at LIMIT 1", (pid,)).fetchone()
+
+    def _decision_status(self, c, did: str, pid: str) -> Optional[str]:
+        if self._decisions_has_tenant(c):
+            row = c.execute(
+                "SELECT status FROM decisions WHERE decision_id=? AND project_id=? "
+                "AND tenant_id=?", (did, pid, self._tenant_id)).fetchone()
+        else:
+            row = c.execute(
+                "SELECT status FROM decisions WHERE decision_id=? AND project_id=?",
+                (did, pid)).fetchone()
+        return row["status"] if row else None
+
+    # ------------------------------------------------------------- lifecycle
     def next_id(self, table, col, prefix):
         with self.connect() as c:
             vals = [r[0] for r in c.execute(
@@ -122,9 +218,12 @@ class Supervisor:
             for i, phase in enumerate(PHASES):
                 rid = f"RUN-{i:02d}"
                 c.execute(
-                    "INSERT OR IGNORE INTO supervisor_phase_runs "
-                    "VALUES(?,?,?,?,?,?,?,?)",
-                    (rid, pid, phase, "active" if i == 0 else "planned",
+                    "INSERT OR IGNORE INTO supervisor_phase_runs("
+                    "run_id,project_id,tenant_id,phase,status,entry_checks_json,"
+                    "exit_checks_json,started_at,completed_at) "
+                    "VALUES(?,?,?,?,?,?,?,?,?)",
+                    (rid, pid, self._tenant_id, phase,
+                     "active" if i == 0 else "planned",
                      "{}", "{}", ts, None))
 
     def add_work(self, phase, module, title, objective, priority=50,
@@ -137,10 +236,14 @@ class Supervisor:
         ts = now()
         with self.connect() as c:
             c.execute(
-                "INSERT INTO supervisor_work_items "
-                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (wid, pid, phase, module, title, objective, priority,
-                 "queued", 1 if owner_required else 0, None,
+                "INSERT INTO supervisor_work_items("
+                "work_id,project_id,tenant_id,phase,module,title,objective,"
+                "priority,status,owner_required,decision_id,depends_on_json,"
+                "inputs_json,outputs_json,acceptance_json,capability_floor,"
+                "blocked_reason,attempts,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (wid, pid, self._tenant_id, phase, module, title, objective,
+                 priority, "queued", 1 if owner_required else 0, None,
                  jd(depends or []), jd(inputs or {}), "{}",
                  jd(acceptance or {}), capability_floor, None, 0, ts, ts))
         return wid
@@ -154,23 +257,42 @@ class Supervisor:
                 return False
         return True
 
-    def next_work(self):
-        pid = self.project_id()
+    def next_work(self, project_id=None):
+        """领取下一个可执行工作项（项目+租户作用域）。
+
+        - 只考虑本项目（``project_id`` / 构造时的显式项目）的工作项；
+        - 本项目存在 proposed decision 时，owner_required 工作项被阻塞
+          （不会错误执行，也不会阻塞其他项目的项）；
+        - ``blocked_decision`` 工作项仅在关联决策已解决/取消后恢复。
+        """
+        pid = self._resolve_project_id(project_id)
         with self.connect() as c:
-            decision = c.execute(
-                "SELECT decision_id FROM decisions "
-                "WHERE status='proposed' LIMIT 1").fetchone()
+            decision = self._proposed_decision(c, pid)
             rows = c.execute(
                 "SELECT * FROM supervisor_work_items "
-                "WHERE project_id=? AND status IN "
-                "('queued','ready','internal_rework') "
+                "WHERE project_id=? AND tenant_id=? AND status IN "
+                "('queued','ready','internal_rework','blocked_decision') "
                 "ORDER BY priority DESC,created_at",
-                (pid,)).fetchall()
+                (pid, self._tenant_id)).fetchall()
             for r in rows:
                 d = dict(r)
                 deps = json.loads(d["depends_on_json"])
                 if not self._deps_complete(c, deps):
                     continue
+                if d["status"] == "blocked_decision":
+                    # 仅当关联决策已解决/取消（不再是 proposed）时恢复领取。
+                    st = (self._decision_status(c, d.get("decision_id"), pid)
+                          if d.get("decision_id") else None)
+                    if st == "proposed":
+                        continue
+                    c.execute(
+                        "UPDATE supervisor_work_items SET status='running',"
+                        "attempts=attempts+1,updated_at=? "
+                        "WHERE work_id=? AND project_id=? AND tenant_id=?",
+                        (now(), d["work_id"], pid, self._tenant_id))
+                    d["status"] = "running"
+                    d["depends_on"] = deps
+                    return d
                 if d["owner_required"] and decision:
                     c.execute(
                         "UPDATE supervisor_work_items SET "
@@ -214,46 +336,57 @@ class Supervisor:
         ts = now()
         with self.connect() as c:
             c.execute(
-                "INSERT INTO supervisor_capabilities "
-                "VALUES(?,?,?,?,?,?,?,?)",
-                (cid, pid, name, provider, status, maturity_ceiling,
-                 jd(metadata or {}), ts))
+                "INSERT INTO supervisor_capabilities("
+                "capability_id,project_id,tenant_id,name,provider,status,"
+                "maturity_ceiling,metadata_json,checked_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?)",
+                (cid, pid, self._tenant_id, name, provider, status,
+                 maturity_ceiling, jd(metadata or {}), ts))
         return cid
 
     def add_lineage(self, ut, uid, dt, did, relation="derives", version=None):
         with self.connect() as c:
             c.execute(
                 "INSERT OR IGNORE INTO supervisor_lineage("
-                "project_id,upstream_type,upstream_id,downstream_type,"
+                "project_id,tenant_id,upstream_type,upstream_id,downstream_type,"
                 "downstream_id,relation,version,created_at) "
-                "VALUES(?,?,?,?,?,?,?,?)",
-                (self.project_id(), ut, uid, dt, did, relation, version, now()))
+                "VALUES(?,?,?,?,?,?,?,?,?)",
+                (self.project_id(), self._tenant_id, ut, uid, dt, did,
+                 relation, version, now()))
 
     def review(self, target_type, target_id, review_type, result,
                findings=None, reviewer="AI-independent-auditor"):
         rid = self.next_id("supervisor_reviews", "review_id", "REV")
         with self.connect() as c:
             c.execute(
-                "INSERT INTO supervisor_reviews "
-                "VALUES(?,?,?,?,?,?,?,?,?)",
-                (rid, self.project_id(), target_type, target_id, review_type,
-                 result, jd(findings or []), reviewer, now()))
+                "INSERT INTO supervisor_reviews("
+                "review_id,project_id,tenant_id,target_type,target_id,"
+                "review_type,result,findings_json,reviewer,created_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (rid, self.project_id(), self._tenant_id, target_type, target_id,
+                 review_type, result, jd(findings or []), reviewer, now()))
         return rid
 
     def status(self):
+        pid = self.project_id()
         with self.connect() as c:
             counts = {r["status"]: r["n"] for r in c.execute(
                 "SELECT status,COUNT(*) n FROM supervisor_work_items "
-                "GROUP BY status")}
+                "WHERE project_id=? AND tenant_id=? GROUP BY status",
+                (pid, self._tenant_id))}
             phases = [dict(r) for r in c.execute(
-                "SELECT * FROM supervisor_phase_runs ORDER BY run_id")]
+                "SELECT * FROM supervisor_phase_runs "
+                "WHERE project_id=? AND tenant_id=? ORDER BY run_id",
+                (pid, self._tenant_id))]
             caps = [dict(r) for r in c.execute(
                 "SELECT * FROM supervisor_capabilities "
-                "ORDER BY checked_at DESC")]
+                "WHERE project_id=? AND tenant_id=? ORDER BY checked_at DESC",
+                (pid, self._tenant_id))]
             running = [dict(r) for r in c.execute(
                 "SELECT work_id,phase,module,title,status "
-                "FROM supervisor_work_items WHERE status IN "
-                "('running','blocked_decision','blocked_external')")]
+                "FROM supervisor_work_items WHERE project_id=? AND tenant_id=? "
+                "AND status IN ('running','blocked_decision','blocked_external')",
+                (pid, self._tenant_id))]
         return {"work_counts": counts, "phases": phases,
                 "capabilities": caps, "active_or_blocked": running}
 
@@ -270,17 +403,41 @@ class Supervisor:
                     "WHERE work_id=?",
                     (status, now(), wid))
 
-    def _persist_decision(self, wid, pkg):
-        pid = self.project_id()
-        ts = now()
+    def _persist_decision(self, wid, pkg, project_id=None):
+        """持久化决策并返回 decision_id（canonical 或 legacy）。
+
+        - 提供 ``state_db`` → 写入 canonical decisions（tenant+project 有界），
+          返回 canonical decision_id；项目状态自动置 awaiting_owner_decision。
+        - 未提供 state_db → legacy compatibility adapter：写入 Supervisor-only
+          旧 DB 的 decisions 表（数据不迁移、不破坏）。
+        """
+        pid = self._resolve_project_id(project_id)
+        topic = pkg["decision"]["topic"]
+        recommendation = pkg["recommendation"]
+        options = pkg["options"]
+        trigger = pkg["decision"].get("category")
+        if self._state_db is not None:
+            did = self._state_db.propose_decision(
+                self._tenant_id, pid, topic, recommendation, options, trigger)
+            return did
         with self.connect() as c:
+            cols = {r[1] for r in c.execute("PRAGMA table_info(decisions)").fetchall()}
+            if "tenant_id" in cols:
+                # 库已是 canonical decisions（tenant_id NOT NULL）却未传
+                # state_db：fail-closed，给可操作错误而非裸 NOT NULL 崩溃。
+                raise RuntimeError(
+                    "canonical decisions table detected (tenant_id column); pass "
+                    "state_db=<AIPDStateDB> to Supervisor to use canonical "
+                    "decision integration (legacy insert would violate NOT NULL)")
+            did = pkg["decision_id"]
+            ts = now()
             c.execute(
                 "INSERT INTO decisions(decision_id,project_id,topic,trigger,"
                 "recommendation,options_json,status,created_at) "
                 "VALUES(?,?,?,?,?,?,?,?)",
-                (pkg["decision_id"], pid, pkg["decision"]["topic"],
-                 pkg["decision"]["category"], pkg["recommendation"],
-                 jd(pkg["options"]), "proposed", ts))
+                (did, pid, topic, trigger, recommendation, jd(options),
+                 "proposed", ts))
+        return did
 
     def _register_outputs(self, wid, capability_floor, out):
         try:
@@ -315,10 +472,16 @@ class Supervisor:
         """标记依赖本工作项的既有工件为 stale（记录到 lineage）。"""
         stale = []
         with self.connect() as c:
+            row = c.execute(
+                "SELECT project_id,tenant_id FROM supervisor_work_items "
+                "WHERE work_id=?", (wid,)).fetchone()
+            pid = row["project_id"] if row else self.project_id()
+            tenant = row["tenant_id"] if row else self._tenant_id
             deps = c.execute(
                 "SELECT work_id FROM supervisor_work_items "
-                "WHERE status='complete' AND depends_on_json LIKE ?",
-                (f"%{wid}%",)).fetchall()
+                "WHERE project_id=? AND tenant_id=? AND status='complete' "
+                "AND depends_on_json LIKE ?",
+                (pid, tenant, f"%{wid}%")).fetchall()
             for d in deps:
                 stale.append(d["work_id"])
         for s in stale:
@@ -352,12 +515,12 @@ class Supervisor:
                 _store, adapter_registry, get_logger("aipd.router"))
         if decision_policy is None:
             decision_policy = should_ask_decision
-        pid = project_id or self.project_id()
+        pid = self._resolve_project_id(project_id)
         results = []
         # 工作项处理循环的固定顺序（决策点暂停必须发生在执行之前，
         # 以便 owner_required / decision_policy 命中的工作项不被错误执行）：
         for _ in range(steps):
-            item = self.next_work()
+            item = self.next_work(project_id=pid)
             if item is None:
                 log_event(logger, "supervisor_no_work")
                 break
@@ -374,10 +537,12 @@ class Supervisor:
                 pkg = build_decision_package(
                     item, options=item.get("options")
                     or inputs.get("options"))
-                self._persist_decision(wid, pkg)
-                self._set_status(wid, "blocked_decision", pkg["decision_id"])
+                did = self._persist_decision(wid, pkg, project_id=pid)
+                self._set_status(wid, "blocked_decision", did)
+                pkg = dict(pkg)
+                pkg["decision_id"] = did
                 log_event(logger, "supervisor_decision_required",
-                          work_id=wid, decision_id=pkg["decision_id"])
+                          work_id=wid, decision_id=did)
                 results.append({
                     "work_id": wid, "action": "decision",
                     "decision": pkg, "steps": steps_log,
@@ -402,7 +567,8 @@ class Supervisor:
                 steps_log += ["select_primary_tool", "execute",
                               "validate_result"]
                 out = router.run(wid, capability_floor, inputs,
-                                 context={"work_id": wid, "project_id": pid})
+                                 context={"work_id": wid, "project_id": pid,
+                                          "tenant_id": self._tenant_id})
                 record = out["record"]
                 if record.status in ("succeeded", "fallback"):
                     self.complete(wid, outputs=out["result"])
@@ -460,6 +626,8 @@ class Supervisor:
 def parser():
     p = argparse.ArgumentParser()
     p.add_argument("--db", required=True)
+    p.add_argument("--tenant", default="default")
+    p.add_argument("--project")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init")
     s = sub.add_parser("add-work")
@@ -497,13 +665,14 @@ def parser():
     s.add_argument("--version")
     s = sub.add_parser("run")
     s.add_argument("--steps", type=int, default=1)
+    s.add_argument("--project")
     sub.add_parser("status")
     return p
 
 
 def main():
     a = parser().parse_args()
-    s = Supervisor(a.db)
+    s = Supervisor(a.db, tenant_id=a.tenant, project_id=a.project)
     if a.cmd == "init":
         s.init_lifecycle()
         out = {"ok": True}
@@ -514,7 +683,7 @@ def main():
             json.loads(a.acceptance_json), a.capability_floor,
             a.owner_required)}
     elif a.cmd == "next":
-        out = {"work": s.next_work()}
+        out = {"work": s.next_work(project_id=a.project)}
     elif a.cmd == "complete":
         s.complete(a.work_id, json.loads(a.outputs_json))
         out = {"ok": True}
@@ -530,7 +699,7 @@ def main():
                       a.downstream_id, a.relation, a.version)
         out = {"ok": True}
     elif a.cmd == "run":
-        out = {"results": s.run_supervisor(a.steps)}
+        out = {"results": s.run_supervisor(a.steps, project_id=a.project)}
     elif a.cmd == "status":
         out = s.status()
     print(json.dumps(out, ensure_ascii=False, indent=2))
