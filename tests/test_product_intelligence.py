@@ -25,6 +25,7 @@ from aipd_os.product_intelligence import (
     Opportunity,
     ProductDefinitionGate,
     ProductDefinitionProjection,
+    ProductDefinitionSnapshotService,
     ProductIntelligenceService,
     ProductLineageMissingError,
     ProductPrinciple,
@@ -104,8 +105,20 @@ def _build_chain(env, n_insights=1, n_opps=1, n_prins=1, n_reqs=1, n_feats=1):
             feature_id="", tenant_id="default", project_id="p1",
             title=f"feature-{i}", description=f"feature-{i}",
             source_requirement_ids=[reqs[i % len(reqs)].requirement_id])))
+    # v5.9.1：显式选择第一个 opportunity（selection_status=selected；P0-07）
+    if opps:
+        pi.select_opportunity("default", "p1", opps[0].opportunity_id)
     return {"insights": insights, "opportunities": opps,
             "principles": prins, "requirements": reqs, "features": feats}
+
+
+def _freeze(env):
+    """v5.9.1：冻结最新 snapshot 并评估（Gate 输入 = snapshot，P0-48）。"""
+    snaps = ProductDefinitionSnapshotService(env["db"])
+    snap = snaps.create_snapshot("default", "p1")
+    gate = ProductDefinitionGate(env["db"], "default", "p1")
+    evaluation = gate.evaluate_snapshot(snap)
+    return snap, gate, evaluation
 
 
 # ---------------------------------------------------------------------------
@@ -186,12 +199,15 @@ def test_product_projection_contains_unknowns(env):
     from aipd_os.product_intelligence import LIFECYCLE_ACTIVE
     for r in reqs:
         if r.lifecycle_status != LIFECYCLE_ACTIVE:
-            env["pi"]._update("requirement", "default", "p1", r.requirement_id,
-                              r.version_no, "t", lifecycle_status=LIFECYCLE_ACTIVE)
+            env["pi"].update_requirement("default", "p1", r.requirement_id,
+                                         r.version_no, "t",
+                                         lifecycle_status=LIFECYCLE_ACTIVE)
+    _freeze(env)
     proj = ProductDefinitionProjection(env["db"], "default", "p1").project()
     assert "unknowns" in proj
     assert "validation_gaps" in proj
-    assert "gate" in proj and proj["gate"]["result"] in (GATE_BLOCKED, "CONDITIONAL", GATE_READY)
+    assert proj["gate"]["technical"]["result"] in (GATE_BLOCKED,
+                                                   "CONDITIONAL", GATE_READY)
     assert proj["counts"]["requirements"] >= 1
     assert proj["counts"]["features"] >= 1
 
@@ -200,53 +216,68 @@ def test_product_projection_contains_unknowns(env):
 # 3) Gate 确定性
 # ---------------------------------------------------------------------------
 def test_critical_requirement_missing_source_blocks_gate(env):
-    _build_chain(env)
-    gate = ProductDefinitionGate(env["db"], "default", "p1")
-    result = gate.evaluate()
-    # owner approval missing → BLOCKED（确定性）
-    assert result["result"] == GATE_BLOCKED
-    assert any("Owner approval missing" in b for b in result["blockers"])
+    """critical requirement 缺 source principle → gate hard blocker。
+
+    service 层强制 ≥1 principle（先校验）；Gate 是最后防线 —— 直接 SQL
+    模拟底层数据损坏（绕过 service），Gate 必须捕获。
+    """
+    chain = _build_chain(env)
+    req = chain["requirements"][0]
+    with env["db"].connect() as c:
+        c.execute("UPDATE requirements SET source_principle_ids_json='[]' "
+                  "WHERE requirement_id=? AND project_id=? AND tenant_id=?",
+                  (req.requirement_id, "p1", "default"))
+    _, _, evaluation = _freeze(env)
+    assert evaluation.result == GATE_BLOCKED
+    assert any("missing source principle" in b
+               for b in evaluation.hard_blockers)
 
 
 def test_critical_requirement_missing_verification_blocks_gate(env):
-    """critical requirement 缺 verification path → gate blocker。"""
+    """critical requirement 缺 verification path → gate hard blocker。"""
     chain = _build_chain(env)
     req = chain["requirements"][0]
     v = env["pi"].get_requirement("default", "p1", req.requirement_id).version_no
-    env["pi"]._update("requirement", "default", "p1", req.requirement_id, v,
-                      "t", verification_method="")
-    gate = ProductDefinitionGate(env["db"], "default", "p1")
-    result = gate.evaluate()
-    assert any("missing verification path" in b for b in result["blockers"])
+    env["pi"].update_requirement("default", "p1", req.requirement_id, v,
+                                 "t", verification_method="")
+    _, _, evaluation = _freeze(env)
+    assert any("missing verification path" in b
+               for b in evaluation.hard_blockers)
 
 
 def test_unresolved_conflict_blocks_gate(env):
-    """critical requirement definition_status=CONFLICT → gate blocker。"""
+    """critical requirement definition_status=CONFLICT → gate hard blocker。"""
     chain = _build_chain(env)
     req = chain["requirements"][0]
     v = env["pi"].get_requirement("default", "p1", req.requirement_id).version_no
-    env["pi"]._update("requirement", "default", "p1", req.requirement_id, v,
-                      "t", definition_status="CONFLICT")
-    gate = ProductDefinitionGate(env["db"], "default", "p1")
-    result = gate.evaluate()
-    assert any("unresolved conflict" in b for b in result["blockers"])
+    env["pi"].update_requirement("default", "p1", req.requirement_id, v,
+                                 "t", definition_status="CONFLICT")
+    _, _, evaluation = _freeze(env)
+    assert any("CONFLICT" in b for b in evaluation.hard_blockers)
 
 
 def test_owner_approval_required(env):
-    """Gate 通过前置下仍因 Owner approval missing 而 BLOCKED（§51/52）。"""
+    """技术 Gate 通过 ≠ 可提交：authorization PENDING → commit 拒绝（§47/52）。"""
     _build_chain(env)
     gate = ProductDefinitionGate(env["db"], "default", "p1")
-    result = gate.evaluate()
-    assert result["result"] == GATE_BLOCKED
-    assert any("Owner approval missing" in b for b in result["blockers"])
-    # 无 approve 决策 → commit 拒绝
-    with pytest.raises(RuntimeError, match="Owner approval required"):
-        gate.commit_approved()
+    snap = ProductDefinitionSnapshotService(env["db"]).create_snapshot(
+        "default", "p1")
+    evaluation = gate.evaluate_snapshot(snap)
+    # technical READY（无 hard/conditional）
+    assert evaluation.result == GATE_READY
+    # authorization PENDING → 不可 commit
+    auth = gate.authorization_status(snap.snapshot_id)
+    assert auth["state"] == "PENDING"
+    elig = gate.commit_eligibility(evaluation, auth)
+    assert not elig["eligible"]
+    with pytest.raises(RuntimeError, match="owner decision PENDING"):
+        gate.commit_snapshot(snap, actor="owner")
 
 
 def test_gate_rejected_does_not_commit(env):
     """Owner reject → 不 commit Product Truth。"""
     _build_chain(env)
+    _freeze(env)  # 建 snapshot（decision 绑定对象）
     gate = ProductDefinitionGate(env["db"], "default", "p1")
     did = gate.propose_owner_decision(actor="owner")
     gate.resolve_owner_decision(did, "reject", "not now", actor="owner")
@@ -260,23 +291,30 @@ def test_gate_rejected_does_not_commit(env):
 
 
 def test_gate_approved_commits_product_truth(env):
-    """Owner approve → approved Requirements/Features 进入 Product Truth。"""
+    """Owner approve（绑定 snapshot）→ approved Requirements/Features 进入
+    Product Truth（exact snapshot refs，P0-29）。"""
     _build_chain(env)
     gate = ProductDefinitionGate(env["db"], "default", "p1")
-    did = gate.propose_owner_decision(actor="owner")
-    gate.resolve_owner_decision(did, "approve", "approved", actor="owner")
     # 使 requirements/features active
     from aipd_os.product_intelligence import LIFECYCLE_ACTIVE
     pi = env["pi"]
     for r in pi.list_requirements("default", "p1"):
-        pi._update("requirement", "default", "p1", r.requirement_id,
-                   r.version_no, "t", lifecycle_status=LIFECYCLE_ACTIVE)
+        pi.update_requirement("default", "p1", r.requirement_id,
+                              r.version_no, "t",
+                              lifecycle_status=LIFECYCLE_ACTIVE)
     for f in pi.list_features("default", "p1"):
-        pi._update("feature", "default", "p1", f.feature_id,
-                   f.version_no, "t", lifecycle_status=LIFECYCLE_ACTIVE)
-    result = gate.commit_approved(actor="owner")
+        pi.update_feature("default", "p1", f.feature_id,
+                          f.version_no, "t",
+                          lifecycle_status=LIFECYCLE_ACTIVE)
+    # 冻结 snapshot；approve 必须绑定该 snapshot（P0-02/03）
+    snap = ProductDefinitionSnapshotService(env["db"]).create_snapshot(
+        "default", "p1")
+    did2 = gate.propose_owner_decision(actor="owner", snapshot_id=snap.snapshot_id)
+    gate.resolve_owner_decision(did2, "approve", "approved", actor="owner")
+    result = gate.commit_snapshot(snap, actor="owner")
     assert result["requirements"] >= 1
     assert result["features"] >= 1
+    assert result["snapshot_id"] == snap.snapshot_id
     from aipd_os.product_truth.store import ProductTruthStore
     store = ProductTruthStore(str(env["db"].path))
     reqs = store.query(record_type="requirement", tenant_id="default",
@@ -285,23 +323,32 @@ def test_gate_approved_commits_product_truth(env):
                         project_id="p1")
     assert len(reqs) >= 1 and len(feats) >= 1
     assert reqs[0].metadata.get("gate_approved") is True
+    assert reqs[0].metadata.get("source_snapshot_id") == snap.snapshot_id
+    # approval ≠ verified：fixture 无 verification_test_refs → unverified
+    assert reqs[0].trust_level in ("unverified", "medium")
 
 
 def test_change_after_gate_creates_rework(env):
     """Gate 后修改 frozen 定义 → rework 传播（ProductTruth propagation）。"""
     _build_chain(env)
-    gate = ProductDefinitionGate(env["db"], "default", "p1")
-    did = gate.propose_owner_decision(actor="owner")
-    gate.resolve_owner_decision(did, "approve", "ok", actor="owner")
     from aipd_os.product_intelligence import LIFECYCLE_ACTIVE
     pi = env["pi"]
     for r in pi.list_requirements("default", "p1"):
-        pi._update("requirement", "default", "p1", r.requirement_id,
-                   r.version_no, "t", lifecycle_status=LIFECYCLE_ACTIVE)
+        pi.update_requirement("default", "p1", r.requirement_id,
+                              r.version_no, "t",
+                              lifecycle_status=LIFECYCLE_ACTIVE)
     for f in pi.list_features("default", "p1"):
-        pi._update("feature", "default", "p1", f.feature_id,
-                   f.version_no, "t", lifecycle_status=LIFECYCLE_ACTIVE)
-    committed = gate.commit_approved(actor="owner")
+        pi.update_feature("default", "p1", f.feature_id,
+                          f.version_no, "t",
+                          lifecycle_status=LIFECYCLE_ACTIVE)
+    # freeze → approve（绑定该 snapshot）→ commit exact snapshot
+    gate = ProductDefinitionGate(env["db"], "default", "p1")
+    snap = ProductDefinitionSnapshotService(env["db"]).create_snapshot(
+        "default", "p1")
+    did = gate.propose_owner_decision(actor="owner", snapshot_id=snap.snapshot_id)
+    gate.resolve_owner_decision(did, "approve", "ok", actor="owner")
+    committed = gate.commit_snapshot(snap, actor="owner")
+    assert committed["requirements"] >= 1
     # 上游 = PI requirement（truth 派生自 requirement）；变化 → truth 受影响
     upstream = env["pi"].list_requirements("default", "p1")[0].requirement_id
 
@@ -364,7 +411,7 @@ def test_unknown_does_not_become_verified(env):
 
 def test_candidate_insight_not_product_truth(env):
     """candidate Insight 不能进入 Product Truth（§33）。"""
-    chain = _build_chain(env)
+    _build_chain(env)
     from aipd_os.product_truth.store import ProductTruthStore
     store = ProductTruthStore(str(env["db"].path))
     assert store.query(record_type="insight") == []  # PI 对象 ≠ Product Truth

@@ -28,6 +28,7 @@ from aipd_os.product_intelligence import (
     Opportunity,
     ProductDefinitionGate,
     ProductDefinitionProjection,
+    ProductDefinitionSnapshotService,
     ProductIntelligenceService,
     ProductPrinciple,
     Requirement,
@@ -181,6 +182,8 @@ def _derive_full_definition(golden) -> dict:
             feature_id="", tenant_id="default", project_id="p1",
             title=title, description=f"{title}（{EPISTEMIC_NOTE}）",
             feature_type=ftype, source_requirement_ids=req_ids)))
+    # v5.9.1：显式选择第一个 opportunity（selection_status=selected，P0-07）
+    pi.select_opportunity("default", "p1", opportunities[0].opportunity_id)
     return {"insights": insights, "opportunities": opportunities,
             "principles": principles, "requirements": requirements,
             "features": features}
@@ -191,12 +194,12 @@ def _activate_all(golden, chain) -> None:
     pi = golden["pi"]
     for req in chain["requirements"]:
         v = pi.get_requirement("default", "p1", req.requirement_id).version_no
-        pi._update("requirement", "default", "p1", req.requirement_id, v,
-                   "t", lifecycle_status=LIFECYCLE_ACTIVE)
+        pi.update_requirement("default", "p1", req.requirement_id, v,
+                              "t", lifecycle_status=LIFECYCLE_ACTIVE)
     for feat in chain["features"]:
         v = pi.get_feature("default", "p1", feat.feature_id).version_no
-        pi._update("feature", "default", "p1", feat.feature_id, v,
-                   "t", lifecycle_status=LIFECYCLE_ACTIVE)
+        pi.update_feature("default", "p1", feat.feature_id, v,
+                          "t", lifecycle_status=LIFECYCLE_ACTIVE)
 
 
 def test_golden_definition_scale(golden):
@@ -210,36 +213,48 @@ def test_golden_definition_scale(golden):
 
 
 def test_golden_projection_blocked_before_owner(golden):
-    """§57：Owner approve 前 → ProductDefinitionProjection BLOCKED。"""
+    """§57：Owner approve 前 → technical 可 READY 但 authorization PENDING
+    → Commit Eligibility NO（§47 分层）。"""
     chain = _derive_full_definition(golden)
     _activate_all(golden, chain)
+    # 冻结 snapshot（Projection 报告 snapshot + gate 状态）
+    ProductDefinitionSnapshotService(golden["db"]).create_snapshot("default", "p1")
     proj = ProductDefinitionProjection(golden["db"], "default", "p1").project()
-    assert proj["gate"]["result"] == GATE_BLOCKED
-    assert any("Owner approval missing" in b
-               for b in proj["gate"]["blockers"])
-    # owner 状态可见
-    assert proj["gate"]["owner"]["latest_approved"] is False
+    assert proj["gate"]["technical"]["result"] in (GATE_BLOCKED, "CONDITIONAL", "READY")
+    assert proj["gate"]["authorization"]["state"] == "PENDING"
+    assert proj["gate"]["eligibility"]["eligible"] is False
+    # owner 状态可见（无任何 approve）
+    assert proj["gate"]["authorization"]["decision_id"] is None
 
 
 def test_golden_owner_approve_commits_product_truth(golden):
-    """§57：Owner approve → 选中 Product Definition 进入 ProductTruth。"""
+    """§57：Owner approve（绑定 snapshot）→ 选中 Product Definition 进入
+    ProductTruth（exact snapshot refs，P0-29）。"""
     chain = _derive_full_definition(golden)
     _activate_all(golden, chain)
     gate = ProductDefinitionGate(golden["db"], "default", "p1")
-    did = gate.propose_owner_decision(actor="owner")
+    snap = ProductDefinitionSnapshotService(golden["db"]).create_snapshot(
+        "default", "p1")
+    did = gate.propose_owner_decision(actor="owner",
+                                      snapshot_id=snap.snapshot_id)
     gate.resolve_owner_decision(did, "approve", "approved", actor="owner")
-    committed = gate.commit_approved(actor="owner")
+    committed = gate.commit_snapshot(snap, actor="owner")
     assert committed["requirements"] >= 5
     assert committed["features"] >= 3
+    assert committed["snapshot_id"] == snap.snapshot_id
     from aipd_os.product_truth.store import ProductTruthStore
     store = ProductTruthStore(str(golden["db"].path), tenant_id="default",
                               project_id="p1")
     reqs = store.query(record_type="requirement")
     feats = store.query(record_type="feature")
     assert len(reqs) >= 5 and len(feats) >= 3
-    # gate_approved 标记 + source_commit 锚点
+    # gate_approved 标记 + source_commit 锚点 + snapshot 绑定
     assert all(r.metadata.get("gate_approved") for r in reqs)
     assert all(r.metadata.get("source_commit") for r in reqs)
+    assert all(r.metadata.get("source_snapshot_id") == snap.snapshot_id
+               for r in reqs)
+    # approval ≠ verified（fixture 无 verification_test_refs）
+    assert all(r.trust_level in ("unverified", "medium") for r in reqs)
 
 
 def test_golden_feature_traceability(golden):
@@ -277,12 +292,15 @@ def test_golden_unknown_preserved_and_contradiction_visible(golden):
     req = chain["requirements"][0]
     v = golden["pi"].get_requirement("default", "p1",
                                      req.requirement_id).version_no
-    golden["pi"]._update("requirement", "default", "p1", req.requirement_id,
-                         v, "t", epistemic_status="U")
+    golden["pi"].update_requirement("default", "p1", req.requirement_id,
+                                    v, "t", epistemic_status="U")
+    ProductDefinitionSnapshotService(golden["db"]).create_snapshot("default", "p1")
     proj = ProductDefinitionProjection(golden["db"], "default", "p1").project()
     assert req.requirement_id in proj["unknowns"]
-    # 未提交（U 不自动 verified）
+    # 未提交（U 不自动 verified）→ technical CONDITIONAL（需 waiver）
     gate = ProductDefinitionGate(golden["db"], "default", "p1")
-    result = gate.evaluate()
-    assert any("unknown without explicit waiver" in b
-               for b in result["blockers"])
+    evaluation = gate.evaluate_snapshot(
+        ProductDefinitionSnapshotService(golden["db"]).latest_snapshot(
+            "default", "p1"))
+    assert any("without explicit waiver" in b
+               for b in evaluation.conditional_blockers)
