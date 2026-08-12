@@ -121,12 +121,30 @@ class RuntimeContext:
                 research[cid] = PROBE_EXTERNAL
                 continue
             research[cid] = PROBE_AVAILABLE if available else PROBE_EXTERNAL
+        # v5.9.1：product.* 动态四态（P0-38/64）—— adapter 已装但 provider
+        # 未配置 → EXTERNAL_DEPENDENCY（声明存在 ≠ 可用）
+        product: dict[str, Any] = {}
+        for cid in ("product.derive_insights", "product.identify_opportunity",
+                    "product.derive_principles", "product.derive_requirements",
+                    "product.derive_features", "product.create_snapshot",
+                    "product.definition_gate"):
+            adapter = self.adapters.get(cid)
+            if adapter is None:
+                product[cid] = PROBE_UNAVAILABLE
+                continue
+            try:
+                available = adapter.discover().get("available", True)
+            except Exception:  # noqa: BLE001
+                product[cid] = PROBE_EXTERNAL
+                continue
+            product[cid] = PROBE_AVAILABLE if available else PROBE_EXTERNAL
         return {
             "providers": providers,
             "provider_count": len(providers),
             "adapter_capabilities": adapter_caps,
             "adapter_count": len(adapter_caps),
             "research": research,
+            "product": product,
             "external_providers": sorted(self.external_providers),
         }
 
@@ -237,6 +255,11 @@ def _register_external_providers(ctx: RuntimeContext) -> None:
     from aipd_os.research.providers.researchstudio import register_researchstudio
     provider = register_researchstudio(ctx.adapters)
     ctx.external_providers["researchstudio"] = provider
+    # v5.9.1（P0-10/38）：product.* adapters 注册进 production bootstrap。
+    # 生产 Provider 未配置 → discover.available=False → probe 诚实
+    # EXTERNAL_DEPENDENCY；execute 写外部任务包（不伪造成功）。
+    from aipd_os.tool_adapters.product_adapters import register_product_adapters
+    register_product_adapters(ctx.adapters, ctx.db, provider=None)
 
 
 # ---------------------------------------------------------------------------
