@@ -2,9 +2,9 @@
   "name": "AIPD-OS bundle manifest",
   "bundle": "aipd-os-5.6.0.zip",
   "bundle_path": "releases/aipd-os-5.6.0.zip",
-  "bundle_sha256": "8e4c2d6cb0fa1fdffd7e14fa4d681ded8b86238292e9b26a23e9d4d4378e2ea6",
-  "bundle_size": 2195410,
-  "entry_count": 308,
+  "bundle_sha256": "9e6552eada978e08343f3b6e6b718cb9c700a05158317ea5b1e92db64cfe2150",
+  "bundle_size": 2201830,
+  "entry_count": 309,
   "entries": [
     {
       "path": "RELEASE_MANIFEST.json",
@@ -157,29 +157,34 @@
       "sha256": "1e316b900dfc0930a397dd9195ac265f47808f1e494dbff6e4f1be9554df2d97"
     },
     {
+      "path": "docs/audit/V5_9_PRODUCT_INTELLIGENCE_REPORT.md",
+      "size": 5018,
+      "sha256": "3ad8c0ddb7dffa407b84beaf34ad16a3253672dec451641f6c77abb6ce389a30"
+    },
+    {
       "path": "docs/audit/audit.json",
-      "size": 3711,
-      "sha256": "2a9a44f3cf1733ee5d612158d522d6dc3316bb0da0c6a59e7c707e35b30c24e2"
+      "size": 3792,
+      "sha256": "e0cdffa425410db15408b6f82158e1f827955d954d7dd484e97797e226e45f3f"
     },
     {
       "path": "docs/audit/audit.md",
-      "size": 2325,
-      "sha256": "cc4639fad17cfeaea40fde0bc5d8eb16d1c1aa4b16c996e26d2bf1299f0f2f71"
+      "size": 2405,
+      "sha256": "b17879fec6422af01d4b41e05bea9266a530cbcc24d0d1dccfabdff619555799"
     },
     {
       "path": "docs/audit/capability_matrix.json",
       "size": 68108,
-      "sha256": "bf44e160bf2823b4f25ff546da811595cc0f087a3772b6ca0c5f4b9757b90f9d"
+      "sha256": "ba235c142d21d621ed0eda1235e9a10e2aa10f5d4461cc9244983c03d0cd3b23"
     },
     {
       "path": "docs/audit/capability_matrix.md",
       "size": 19833,
-      "sha256": "5c9195c1af8806081f5f2b1cab1be2d09995b6255a685e687272088cc55de88f"
+      "sha256": "7e6b26928a1135b217e18cf00a330dd10c56e3274bad52c1865552d56d00bdef"
     },
     {
       "path": "docs/audit/pytest-report.json",
-      "size": 899893,
-      "sha256": "720d86377a9c89e82a234ecd95e69c2f3572c8604cf31bc6467ff15eb9db75bf"
+      "size": 930733,
+      "sha256": "2b9fb089af3fa29f50a3c1500b5014b178b8b6665b7e043762a87fb67d13732b"
     },
     {
       "path": "docs/audit/release_evidence_notes.md",
@@ -188,8 +193,8 @@
     },
     {
       "path": "docs/audit/repository_snapshot.json",
-      "size": 3348,
-      "sha256": "45a9871317550a18f41c9f974f7ee73262b7cc0ff166884e660df4a0061a5294"
+      "size": 3429,
+      "sha256": "5ef5acf1f322b1b24c32359544e3e15e52bd8ffacb0b8bf8551bd21a0b135104"
     },
     {
       "path": "docs/audit/repository_snapshot.md",
