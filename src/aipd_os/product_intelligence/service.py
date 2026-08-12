@@ -71,21 +71,26 @@ _TABLE_FOR = {
 _JSON_FIELDS = {
     NODE_INSIGHT: {"source_claim_ids": "source_claim_ids_json",
                    "source_assessment_versions":
-                       "source_assessment_versions_json"},
+                       "source_assessment_versions_json",
+                   "generation_metadata": "generation_metadata_json"},
     NODE_OPPORTUNITY: {"source_insight_ids": "source_insight_ids_json",
                        "known_alternatives": "known_alternatives_json",
-                       "evidence_gaps": "evidence_gaps_json"},
+                       "evidence_gaps": "evidence_gaps_json",
+                       "generation_metadata": "generation_metadata_json"},
     NODE_PRINCIPLE: {"source_insight_ids": "source_insight_ids_json",
-                     "source_claim_ids": "source_claim_ids_json"},
+                     "source_claim_ids": "source_claim_ids_json",
+                     "generation_metadata": "generation_metadata_json"},
     NODE_REQUIREMENT: {"source_principle_ids": "source_principle_ids_json",
                        "source_evidence_refs": "source_evidence_refs_json",
                        "derivation_input_refs": "derivation_input_refs_json",
                        "verification_test_refs": "verification_test_refs_json",
-                       "affected_item_refs": "affected_item_refs_json"},
+                       "affected_item_refs": "affected_item_refs_json",
+                       "generation_metadata": "generation_metadata_json"},
     NODE_FEATURE: {"source_requirement_ids": "source_requirement_ids_json",
                    "source_principle_ids": "source_principle_ids_json",
                    "assumptions": "assumptions_json",
-                   "constraints": "constraints_json"},
+                   "constraints": "constraints_json",
+                   "generation_metadata": "generation_metadata_json"},
 }
 
 # 对象 id 字段名（模型层；product_principle 特殊，其余 = {node_type}_id）
@@ -105,14 +110,28 @@ _SEQ_FOR = {
     NODE_REQUIREMENT: ("requirement", "REQ"),
     NODE_FEATURE: ("feature", "FTR"),
 }
-# 上游引用字段（用于 lineage 与 scope 校验）
-_REF_FOR = {
-    NODE_INSIGHT: ("source_claim_ids", "claim"),
-    NODE_OPPORTUNITY: ("source_insight_ids", NODE_INSIGHT),
-    NODE_PRINCIPLE: ("source_insight_ids", NODE_INSIGHT),
-    NODE_REQUIREMENT: ("source_principle_ids", NODE_PRINCIPLE),
-    NODE_FEATURE: ("source_requirement_ids", NODE_REQUIREMENT),
+# v5.9.2 多源 lineage spec（§14）：每个 node 可有多条上游关系
+# (field, ref_type, relation, required)；统一 reconciliation（不手写额外
+# edge）。required=True 的 field 在 create/update 时必须至少一个引用
+# （deterministic lineage contract）。
+_LINEAGE_SPECS = {
+    NODE_INSIGHT: [("source_claim_ids", "claim", "derived_from", True)],
+    NODE_OPPORTUNITY: [("source_insight_ids", NODE_INSIGHT, "derived_from",
+                        True)],
+    NODE_PRINCIPLE: [
+        ("source_insight_ids", NODE_INSIGHT, "derived_from", True),
+        ("opportunity_id", NODE_OPPORTUNITY, "derived_from", False),
+    ],
+    NODE_REQUIREMENT: [("source_principle_ids", NODE_PRINCIPLE,
+                        "derived_from", True)],
+    NODE_FEATURE: [("source_requirement_ids", NODE_REQUIREMENT, "implements",
+                    True)],
 }
+
+# 兼容别名（旧调用方）
+_REF_FOR = {
+    node: [(f, t, r) for f, t, r, _req in specs]
+    for node, specs in _LINEAGE_SPECS.items()}
 # lineage relation：对象 -relation-> 上游
 _RELATION_FOR = {
     NODE_INSIGHT: "derived_from",
@@ -121,6 +140,16 @@ _RELATION_FOR = {
     NODE_REQUIREMENT: "derived_from",
     NODE_FEATURE: "implements",
 }
+
+
+def _field_values(obj: Any, field: str) -> list[str]:
+    """字段值归一为 list（list 字段或单值字段如 opportunity_id）。"""
+    v = getattr(obj, field, None)
+    if v is None:
+        return []
+    if isinstance(v, (list, tuple)):
+        return [str(x) for x in v if x]
+    return [str(v)] if str(v) else []
 
 
 class ProductScopeError(ValueError):
@@ -159,65 +188,73 @@ class ProductIntelligenceService:
     def _scope_of(obj: Any) -> tuple[str, str]:
         return obj.tenant_id, obj.project_id
 
+    def _specs(self, node_type: str) -> list[tuple[str, str, str, bool]]:
+        return _LINEAGE_SPECS[node_type]
+
     def _ensure_refs_in_scope(self, obj: Any, node_type: str) -> None:
-        """上游引用必须存在且同 tenant+project（跨 scope 拒绝；**先校验**，
-        P0-05 —— 调用发生在任何 UPDATE 之前）。"""
-        ref_field, ref_type = _REF_FOR[node_type]
-        refs = list(getattr(obj, ref_field) or [])
-        if not refs:
-            raise ProductLineageMissingError(
-                f"{node_type} {getattr(obj, node_type + '_id', '')!r} requires "
-                f"at least one {ref_field} (deterministic lineage contract)")
-        table = "claims" if ref_type == "claim" else _TABLE_FOR[ref_type]
-        id_col = "claim_id" if ref_type == "claim" else _ID_FIELD_FOR[ref_type]
-        for rid in refs:
-            with self._db.connect() as c:
-                row = c.execute(
-                    f"SELECT 1 FROM {table} WHERE {id_col}=? "
-                    "AND project_id=? AND tenant_id=?",
-                    (rid, obj.project_id, obj.tenant_id)).fetchone()
-            if row is None:
-                raise ProductScopeError(
-                    f"{ref_type} {rid!r} does not exist in "
-                    f"tenant {obj.tenant_id!r}/project {obj.project_id!r} "
-                    f"(cross-scope {ref_field} rejected)")
+        """多源上游引用必须存在且同 tenant+project（跨 scope 拒绝；**先
+        校验**，P0-05 —— 调用发生在任何 UPDATE 之前）。
+
+        §14 _LINEAGE_SPECS：每条 (field, ref_type, relation) 都校验。
+        """
+        for ref_field, ref_type, _rel, required in self._specs(node_type):
+            refs = _field_values(obj, ref_field)
+            if required and not refs:
+                raise ProductLineageMissingError(
+                    f"{node_type} {getattr(obj, node_type + '_id', '')!r} "
+                    f"requires at least one {ref_field} "
+                    "(deterministic lineage contract)")
+            table = "claims" if ref_type == "claim" else _TABLE_FOR[ref_type]
+            id_col = "claim_id" if ref_type == "claim" \
+                else _ID_FIELD_FOR[ref_type]
+            for rid in refs:
+                with self._db.connect() as c:
+                    row = c.execute(
+                        f"SELECT 1 FROM {table} WHERE {id_col}=? "
+                        "AND project_id=? AND tenant_id=?",
+                        (rid, obj.project_id, obj.tenant_id)).fetchone()
+                if row is None:
+                    raise ProductScopeError(
+                        f"{ref_type} {rid!r} does not exist in "
+                        f"tenant {obj.tenant_id!r}/project {obj.project_id!r} "
+                        f"(cross-scope {ref_field} rejected)")
 
     def _reconcile_lineage(self, obj: Any, node_type: str, actor: str) -> None:
-        """P0-06/22-23：desired refs vs current active edges diff。
+        """P0-06/22-23/§14：多源 desired refs vs current active edges diff。
 
-        to_retire = current - desired（soft-retire，历史保留在 audit/行）；
-        to_add = desired - current（add_edge 幂等）。事务内调用时
+        每条 (field, ref_type, relation) spec 独立 diff：to_retire
+        （soft-retire，历史保留）+ to_add（add_edge 幂等）。事务内调用时
         LineageService 复用活动连接（同一事务）。
         """
         lineage = LineageService(self._db)
-        ref_field, ref_type = _REF_FOR[node_type]
         obj_id = getattr(obj, _ID_FIELD_FOR[node_type])
-        desired = set(getattr(obj, ref_field) or [])
         node = LineageNodeRef(node_type=node_type, node_id=obj_id,
                               tenant_id=obj.tenant_id,
                               project_id=obj.project_id)
-        current = {e.target.node_id for e in lineage.outgoing(node)
-                   if e.target.node_type == ref_type}
-        to_retire = sorted(current - desired)
-        to_add = sorted(desired - current)
-        for rid in to_retire:
-            for edge in lineage.outgoing(node):
-                if edge.target.node_type == ref_type \
-                        and edge.target.node_id == rid:
-                    lineage.retire_edge(
-                        edge.edge_id, actor=actor,
-                        reason=f"{node_type} {obj_id} source changed: "
-                               f"{ref_field} removed {rid}")
-        for rid in to_add:
-            lineage.add_edge(
-                node,
-                LineageNodeRef(node_type=ref_type, node_id=rid,
-                               tenant_id=obj.tenant_id,
-                               project_id=obj.project_id),
-                _RELATION_FOR[node_type],
-                provenance={"source": "product_intelligence",
-                            "object_type": node_type},
-                actor=actor)
+        for ref_field, ref_type, relation, _required in self._specs(node_type):
+            desired = set(_field_values(obj, ref_field))
+            current = {e.target.node_id for e in lineage.outgoing(node)
+                       if e.target.node_type == ref_type}
+            to_retire = sorted(current - desired)
+            to_add = sorted(desired - current)
+            for rid in to_retire:
+                for edge in lineage.outgoing(node):
+                    if edge.target.node_type == ref_type \
+                            and edge.target.node_id == rid:
+                        lineage.retire_edge(
+                            edge.edge_id, actor=actor,
+                            reason=f"{node_type} {obj_id} source changed: "
+                                   f"{ref_field} removed {rid}")
+            for rid in to_add:
+                lineage.add_edge(
+                    node,
+                    LineageNodeRef(node_type=ref_type, node_id=rid,
+                                   tenant_id=obj.tenant_id,
+                                   project_id=obj.project_id),
+                    relation,
+                    provenance={"source": "product_intelligence",
+                                "object_type": node_type},
+                    actor=actor)
 
     def _audit(self, actor: str, action: str, obj: Any, before: Any = None) -> None:
         self._db.add_audit(actor, action, obj.project_id, obj.tenant_id,
@@ -306,13 +343,14 @@ class ProductIntelligenceService:
         before = self._get(node_type, tenant_id, project_id, obj_id)
         if not fields:
             raise ValueError("no editable fields provided")
-        ref_field, _ = _REF_FOR[node_type]
+        spec_fields = {f for f, _t, _r, _q in self._specs(node_type)}
+        ref_changed = bool(set(fields) & spec_fields)
         # 1) candidate state（模型 __post_init__ 校验枚举/lifecycle）
         merged_dict = before.to_dict()
         merged_dict.update(fields)
         merged = self._row_to_object(node_type, merged_dict)
         # 2) 先校验（UPDATE 前）：跨 scope ref → 抛错，无任何写入
-        if ref_field in fields:
+        if ref_changed:
             self._ensure_refs_in_scope(merged, node_type)
         table = _TABLE_FOR[node_type]
         id_col = _ID_FIELD_FOR[node_type]
@@ -347,7 +385,7 @@ class ProductIntelligenceService:
             # 5) audit + lineage reconcile（同事务）
             self._audit(actor, f"{node_type}.update", after,
                         before=before.to_dict())
-            if ref_field in fields:
+            if ref_changed:
                 self._reconcile_lineage(after, node_type, actor)
         return after
 

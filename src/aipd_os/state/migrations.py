@@ -359,6 +359,79 @@ def _drop_snapshot_tables(conn: sqlite3.Connection) -> None:
                  " ('product_snapshot','gate_evaluation');")
 
 
+# ---------------------------------------------------------------------------
+# v12（v5.9.2 Snapshot-Closed Runtime & Commit Integrity）
+# ---------------------------------------------------------------------------
+def _add_snapshot_basis(conn: sqlite3.Connection) -> None:
+    """v12 up：product_definition_snapshots.upstream_basis_hash（P0-08/O-3）。
+
+    hash 覆盖冻结 Product Definition 的 upstream lineage basis（claims/
+    relations/assessments/insights/selected opportunity/PI versions），
+    is_stale 的第二道防线。存量行 ''（不猜测）。"""
+    cols = _table_columns(conn, "product_definition_snapshots")
+    if "upstream_basis_hash" not in cols:
+        conn.execute(
+            "ALTER TABLE product_definition_snapshots ADD COLUMN "
+            "upstream_basis_hash TEXT NOT NULL DEFAULT ''")
+
+
+def _drop_snapshot_basis(conn: sqlite3.Connection) -> None:
+    cols = _table_columns(conn, "product_definition_snapshots")
+    if "upstream_basis_hash" in cols:
+        conn.execute(
+            "ALTER TABLE product_definition_snapshots DROP COLUMN "
+            "upstream_basis_hash")
+
+
+def _add_generation_metadata(conn: sqlite3.Connection) -> None:
+    """v12 up：五张 PI 表加 generation_metadata_json（§37 反查生成来源）。"""
+    for table in ("insights", "opportunities", "product_principles",
+                  "requirements", "features"):
+        cols = _table_columns(conn, table)
+        if "generation_metadata_json" not in cols:
+            conn.execute(
+                f"ALTER TABLE {table} ADD COLUMN "
+                "generation_metadata_json TEXT NOT NULL DEFAULT '{}'")
+
+
+def _drop_generation_metadata(conn: sqlite3.Connection) -> None:
+    for table in ("insights", "opportunities", "product_principles",
+                  "requirements", "features"):
+        cols = _table_columns(conn, table)
+        if "generation_metadata_json" in cols:
+            conn.execute(
+                f"ALTER TABLE {table} DROP COLUMN generation_metadata_json")
+
+
+def _create_commit_ledger(conn: sqlite3.Connection) -> None:
+    """v12 up：product_definition_commits（P0-06 exactly-once commit ledger）。
+
+    UNIQUE(tenant_id, project_id, snapshot_id) —— 同一 snapshot 只能提交
+    一次；重复 commit 返回已有 receipt（幂等）或拒绝。"""
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS product_definition_commits ("
+        " commit_id TEXT NOT NULL,"
+        " project_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL DEFAULT 'default',"
+        " snapshot_id TEXT NOT NULL,"
+        " snapshot_hash TEXT NOT NULL,"
+        " gate_evaluation_id TEXT NOT NULL DEFAULT '',"
+        " owner_decision_id TEXT NOT NULL DEFAULT '',"
+        " committed_truth_refs_json TEXT NOT NULL DEFAULT '[]',"
+        " committed_at TEXT NOT NULL,"
+        " actor TEXT NOT NULL DEFAULT 'system',"
+        " PRIMARY KEY (commit_id, project_id, tenant_id),"
+        " UNIQUE (tenant_id, project_id, snapshot_id))")
+    conn.execute(
+        "INSERT OR IGNORE INTO id_sequences(name, next_val) VALUES"
+        " ('product_commit', 0);")
+
+
+def _drop_commit_ledger(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP TABLE IF EXISTS product_definition_commits;")
+    conn.execute("DELETE FROM id_sequences WHERE name='product_commit';")
+
+
 def _make_claim_confidence_nullable(conn: sqlite3.Connection) -> None:
     """v9 up：claims.confidence NOT NULL DEFAULT 0.5 → NULLABLE。
 
@@ -768,6 +841,26 @@ MIGRATIONS: List[Dict[str, Any]] = [
             _drop_snapshot_tables,
             _drop_decision_metadata,
             _drop_selection_status,
+        ],
+    },
+    # v5.9.2（Snapshot-Closed Runtime & Commit Integrity）：
+    # - product_definition_snapshots.upstream_basis_hash（P0-08：上游
+    #   Claim/Relation/Assessment 变化 → snapshot stale 的第二道防线）
+    # - 五张 PI 表 generation_metadata_json（§37：对象可反查生成来源）
+    # - product_definition_commits（P0-06：exactly-once commit ledger，
+    #   UNIQUE(tenant,project,snapshot)；P0-07 原子 commit 的账本）
+    {
+        "version": 12,
+        "name": "snapshot_closed_world_and_commit_ledger",
+        "up": [
+            _add_snapshot_basis,
+            _add_generation_metadata,
+            _create_commit_ledger,
+        ],
+        "down": [
+            _drop_commit_ledger,
+            _drop_generation_metadata,
+            _drop_snapshot_basis,
         ],
     },
 ]

@@ -533,8 +533,11 @@ def test_principle_insight_change_reconciles_edges(env):
     pi.update_principle("default", "p1", prin.principle_id,
                         before.version_no, "t",
                         source_insight_ids=[ins2.insight_id])
+    # v5.9.2 多源 lineage（§14）：principle → insight + opportunity 双边
     targets = _lineage_targets(db, "product_principle", prin.principle_id)
-    assert targets == [ins2.insight_id]
+    assert ins2.insight_id in targets
+    assert env["chain"]["opportunity"].opportunity_id in targets
+    assert env["chain"]["insight"].insight_id not in targets  # 旧边 retired
 
 
 def test_repeated_same_update_is_idempotent(env):
@@ -701,10 +704,12 @@ def test_snapshot_immutable_no_update_api(env):
                   "AND project_id=? AND tenant_id=?",
                   (snap.snapshot_id, "p1", "default"))
     got = svc.get_snapshot("default", "p1", snap.snapshot_id)
+    # immutable + deterministic hash：篡改 content → hash 校验失败
     assert not got.verify_hash()
+    # commit 路径：closed-world stale 与 hash 完整性双防线均拒绝
     gate = ProductDefinitionGate(env["db"], "default", "p1")
     d = gate.propose_owner_decision(actor="owner",
                                     snapshot_id=snap.snapshot_id)
     gate.resolve_owner_decision(d, "approve", "ok", actor="owner")
-    with pytest.raises(RuntimeError, match="content_hash"):
+    with pytest.raises(RuntimeError):
         gate.commit_snapshot(got, actor="owner")

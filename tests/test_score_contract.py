@@ -47,7 +47,7 @@ def test_v9_columns_nullable(db):
     # 无 DEFAULT 0.5
     assert claims_cols["confidence"][4] is None
     assert rel_cols["strength"][4] is None
-    assert mig.current_version(str(db.path)) == 11
+    assert mig.current_version(str(db.path)) == 12
 
 
 def test_v9_migration_roundtrip(tmp_path):
@@ -65,7 +65,7 @@ def test_v9_migration_roundtrip(tmp_path):
                         (claim.claim_id,)).fetchone()
         assert row[0] == 0.7  # 数据保留（down 时 COALESCE 不影响真实值）
     mig.migrate(path)
-    assert mig.current_version(path) == 11
+    assert mig.current_version(path) == 12
     db2 = AIPDStateDB(path)
     got = ClaimService(db2).get("default", "default", claim.claim_id)
     assert got.confidence == 0.7
@@ -174,7 +174,7 @@ def test_sequence_seed_from_legacy_data(tmp_path):
                   "VALUES('F-005','default','default','k','1','V',0.5,"
                   "'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z',1)")
         c.commit()
-    assert mig.migrate(path) == [9, 10, 11]
+    assert mig.migrate(path) == [9, 10, 11, 12]
     db = AIPDStateDB(path)
     fid = db.add_fact("default", "default", "k2", 2, "V")
     assert fid == "F-006"  # 不与 F-005 冲突（seed 从存量推导）

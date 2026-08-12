@@ -99,6 +99,19 @@ def _json(value: Any) -> str:
                       else value, ensure_ascii=False, sort_keys=True)
 
 
+def _parse_meta(raw: Any) -> dict[str, Any]:
+    """解析 generation metadata（DB json 字符串或原生 dict）。"""
+    if raw is None or raw == "":
+        return {}
+    if isinstance(raw, dict):
+        return dict(raw)
+    try:
+        parsed = json.loads(raw)
+    except (ValueError, TypeError):
+        return {}
+    return dict(parsed) if isinstance(parsed, dict) else {}
+
+
 def _parse_json_list(raw: Any) -> list[str]:
     """兼容 DB 行（*_json 字符串）与模型 dict（原生 list）两种输入。"""
     if raw is None or raw == "":
@@ -142,6 +155,7 @@ class Insight:
     version_no: int = 1
     created_at: str | None = None
     updated_at: str | None = None
+    generation_metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.insight_type not in INSIGHT_TYPES:
@@ -162,6 +176,7 @@ class Insight:
             "rationale": self.rationale, "limitations": self.limitations,
             "version_no": self.version_no, "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "generation_metadata": self.generation_metadata,
         }
 
     @classmethod
@@ -185,6 +200,9 @@ class Insight:
             version_no=data.get("version_no", 1),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at"),
+            generation_metadata=_parse_meta(
+                data.get("generation_metadata_json")
+                or data.get("generation_metadata")),
         )
 
 
@@ -212,6 +230,7 @@ class Opportunity:
     version_no: int = 1
     created_at: str | None = None
     updated_at: str | None = None
+    generation_metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.opportunity_type not in OPPORTUNITY_TYPES:
@@ -241,6 +260,7 @@ class Opportunity:
             "epistemic_status": self.epistemic_status,
             "version_no": self.version_no, "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "generation_metadata": self.generation_metadata,
         }
 
     @classmethod
@@ -272,6 +292,9 @@ class Opportunity:
             version_no=data.get("version_no", 1),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at"),
+            generation_metadata=_parse_meta(
+                data.get("generation_metadata_json")
+                or data.get("generation_metadata")),
         )
 
 
@@ -294,6 +317,7 @@ class ProductPrinciple:
     version_no: int = 1
     created_at: str | None = None
     updated_at: str | None = None
+    generation_metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.definition_status not in DEFINITION_STATUSES:
@@ -317,6 +341,7 @@ class ProductPrinciple:
             "lifecycle_status": self.lifecycle_status,
             "criticality": self.criticality, "version_no": self.version_no,
             "created_at": self.created_at, "updated_at": self.updated_at,
+            "generation_metadata": self.generation_metadata,
         }
 
     @classmethod
@@ -381,6 +406,7 @@ class Requirement:
     version_no: int = 1
     created_at: str | None = None
     updated_at: str | None = None
+    generation_metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.requirement_type not in REQUIREMENT_TYPES:
@@ -419,6 +445,7 @@ class Requirement:
             "required_by_gate": self.required_by_gate, "owner": self.owner,
             "version_no": self.version_no, "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "generation_metadata": self.generation_metadata,
         }
 
     @classmethod
@@ -464,6 +491,9 @@ class Requirement:
             version_no=data.get("version_no", 1),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at"),
+            generation_metadata=_parse_meta(
+                data.get("generation_metadata_json")
+                or data.get("generation_metadata")),
         )
 
 
@@ -491,6 +521,7 @@ class Feature:
     version_no: int = 1
     created_at: str | None = None
     updated_at: str | None = None
+    generation_metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.feature_type not in FEATURE_TYPES:
@@ -516,6 +547,7 @@ class Feature:
             "validation_required": self.validation_required,
             "version_no": self.version_no, "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "generation_metadata": self.generation_metadata,
         }
 
     @classmethod

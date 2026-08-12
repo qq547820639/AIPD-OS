@@ -77,7 +77,7 @@ def test_old_database_migrates_to_latest(tmp_path):
     assert "ideas" not in _tables(sqlite3.connect(path))
 
     applied = mig.migrate(path)
-    assert applied == [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert applied == [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     tables = _tables(conn)
@@ -91,7 +91,7 @@ def test_old_database_migrates_to_latest(tmp_path):
     db = AIPDStateDB(path)
     db.ensure_default_tenant("default")
     assert db.get_project("default", "p1")["name"] == "P1"
-    assert mig.current_version(path) == 11
+    assert mig.current_version(path) == 12
 
 
 def test_v2_v3_era_db_data_preserved(tmp_path):
@@ -113,7 +113,7 @@ def test_v2_v3_era_db_data_preserved(tmp_path):
     conn.close()
 
     applied = mig.migrate(path)
-    assert applied == [3, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert applied == [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     idea = conn.execute("SELECT * FROM ideas WHERE idea_id='IDEA-001'").fetchone()
@@ -134,7 +134,7 @@ def test_migration_runner_is_schema_authority(tmp_path):
     tables = _tables(conn)
     conn.close()
     # 全链 v1..v8 都通过 migration runner 应用
-    assert versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert versions == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     assert "schema_migrations" in tables
     # SCHEMA 常量只是参考，__init__ 不再 executescript(SCHEMA)：
     # 新建库的表集合应等于迁移全链产物（含 id_sequences）

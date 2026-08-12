@@ -137,13 +137,25 @@ def test_runtime_full_product_chain(tmp_path):
     assert pi.list_insights("default", "p1") == []
     assert pi.list_opportunities("default", "p1") == []
 
-    work_ids = schedule_product_intelligence_chain(env["sup"], env["idea"].idea_id)
-    assert len(work_ids) == 7  # derive_insights..definition_gate
-
-    # 逐阶段执行（每阶段 1 step；依赖由调度顺序保证）
-    for _ in range(8):
+    wids_a = schedule_product_intelligence_chain(
+        env["sup"], env["idea"].idea_id, steps=(
+            "derive_insights", "identify_opportunity"))
+    for _ in range(3):
         _run_all(env, steps=1)
-
+    for wid in wids_a:
+        assert _work_status(env, wid) == "complete", f"{wid} not complete"
+    # STOP for selection（§15：Opportunity 候选后必须显式选择）
+    opps = env["pi"].list_opportunities("default", "p1")
+    assert len(opps) >= 1
+    env["pi"].select_opportunity("default", "p1", opps[0].opportunity_id)
+    wids_b = schedule_product_intelligence_chain(
+        env["sup"], env["idea"].idea_id, steps=(
+            "derive_principles", "derive_requirements", "derive_features",
+            "create_snapshot", "definition_gate"))
+    for _ in range(6):
+        _run_all(env, steps=1)
+    work_ids = wids_a + wids_b
+    assert len(work_ids) == 7
     for wid in work_ids:
         assert _work_status(env, wid) == "complete", f"{wid} not complete"
 
@@ -162,7 +174,10 @@ def test_runtime_full_product_chain(tmp_path):
     assert all(o.lifecycle_status == "candidate"
                for o in insights + opportunities + principles
                + requirements + features)
-    assert all(o.selection_status == "candidate"
+    # §15 分段语义：Segment A 产出候选，显式选择后恰好 1 个 selected
+    assert sum(1 for o in opportunities
+               if o.selection_status == "selected") == 1
+    assert all(o.selection_status in ("candidate", "selected")
                for o in opportunities)
 
     # Snapshot + Gate（Runtime create_snapshot + definition_gate work items）
@@ -179,21 +194,21 @@ def test_runtime_full_product_chain(tmp_path):
 
 
 def test_runtime_owner_approve_commits_exact_snapshot(tmp_path):
-    """Runtime 链 → owner approve（绑定 snapshot）→ ProductTruth commit。"""
+    """Runtime 链（分段）→ owner approve（绑定 snapshot）→ ProductTruth
+    commit。"""
     env = _env(tmp_path)
-    work_ids = schedule_product_intelligence_chain(env["sup"], env["idea"].idea_id)
-    for _ in range(8):
-        _run_all(env, steps=1)
+    _derive_runtime(env)  # §15 分段：A → select → B（snapshot+gate 已生成）
     gate = ProductDefinitionGate(env["db"], "default", "p1")
     snap = ProductDefinitionSnapshotService(env["db"]).latest_snapshot(
         "default", "p1")
+    assert snap is not None
     evaluation = gate.evaluate_snapshot(snap)
-    # opportunity 未显式 select（Runtime 不自动 select，P0-07）→ BLOCKED
-    assert evaluation.result == GATE_BLOCKED
-    assert any("no selected Opportunity" in b for b in evaluation.hard_blockers)
-    # Owner 显式选择 + 重新冻结 + approve + commit
+    # §15：Segment B 在显式 selection 后执行 → technical 可 READY 但
+    # authorization PENDING（commit eligibility NO）
+    assert evaluation.result == GATE_READY
+    assert gate.authorization_status(snap.snapshot_id)["state"] == "PENDING"
+    # Owner approve（绑定 snapshot）+ commit
     opp = env["pi"].list_opportunities("default", "p1")[0]
-    env["pi"].select_opportunity("default", "p1", opp.opportunity_id)
     for r in env["pi"].list_requirements("default", "p1"):
         env["pi"].update_requirement("default", "p1", r.requirement_id,
                                      r.version_no, "t",
@@ -377,14 +392,25 @@ def test_h_blocked_any_decision_no_commit(tmp_path):
 
 
 def _derive_runtime(env):
-    """只跑 Runtime 链的 5 域生成阶段（不含 snapshot/gate work items）。"""
-    work_ids = schedule_product_intelligence_chain(
+    """§15 分段 Runtime 链：Segment A（insights+opportunities）→ 显式
+    selection（Owner 动作）→ Segment B（principles..gate）。"""
+    wids_a = schedule_product_intelligence_chain(
         env["sup"], env["idea"].idea_id, steps=(
-            "derive_insights", "identify_opportunity", "derive_principles",
-            "derive_requirements", "derive_features"))
+            "derive_insights", "identify_opportunity"))
+    for _ in range(3):
+        _run_all(env, steps=1)
+    # STOP for selection：显式选择第一个 opportunity（Owner/Policy 动作，
+    # 非 provider；§15/§40）
+    opps = env["pi"].list_opportunities("default", "p1")
+    assert opps, "Segment A must produce opportunities"
+    env["pi"].select_opportunity("default", "p1", opps[0].opportunity_id)
+    wids_b = schedule_product_intelligence_chain(
+        env["sup"], env["idea"].idea_id, steps=(
+            "derive_principles", "derive_requirements", "derive_features",
+            "create_snapshot", "definition_gate"))
     for _ in range(6):
         _run_all(env, steps=1)
-    return work_ids
+    return wids_a + wids_b
 
 
 # ---------------------------------------------------------------------------
@@ -413,6 +439,11 @@ def test_provider_missing_is_external_dependency(tmp_path):
     assert results and results[0]["action"] in ("blocked_external",
                                                 "internal_rework")
     assert env["pi"].list_insights("default", "p1") == []
+    # fail-closed（§17/49）：downstream 保持 queued/dependency-blocked
+    with sqlite3.connect(str(env["db"].path)) as conn:
+        statuses = [r[0] for r in conn.execute(
+            "SELECT status FROM supervisor_work_items").fetchall()]
+    assert "queued" in statuses or "blocked" in "".join(statuses)
 
 
 def test_provider_exception_normalized_failure(tmp_path, monkeypatch):

@@ -132,7 +132,9 @@ def _derive_full_definition(golden) -> dict:
         ),
         pi.create_principle(ProductPrinciple(
             principle_id="", tenant_id="default", project_id="p1",
-            opportunity_id=opportunities[1].opportunity_id,
+            # v5.9.2 closed-world：全部 principle 归属 selected Opportunity
+            # （opportunities[0]），保证 Golden 定义集完整可冻结
+            opportunity_id=opportunities[0].opportunity_id,
             statement="自动化反馈优先于人工指令",
             source_insight_ids=[insights[3].insight_id]),
         ),

@@ -152,7 +152,8 @@ class ProductDeriveInsightsAdapter(_ProductGenerationAdapter):
                 idea_id=input_.get("idea_id", ""),
                 statement=c.statement, insight_type=c.insight_type,
                 source_claim_ids=c.source_claim_ids,
-                rationale=c.rationale, limitations=c.limitations))
+                rationale=c.rationale, limitations=c.limitations,
+                generation_metadata=self._provenance_meta()))
             created.append(obj.insight_id)
         return {"created": created, "count": len(created),
                 "provider": self._provenance_meta(),
@@ -186,7 +187,8 @@ class ProductIdentifyOpportunityAdapter(_ProductGenerationAdapter):
                 desired_outcome=c.desired_outcome,
                 differentiation=c.differentiation,
                 known_alternatives=c.known_alternatives,
-                evidence_gaps=c.evidence_gaps))
+                evidence_gaps=c.evidence_gaps,
+                generation_metadata=self._provenance_meta()))
             created.append(obj.opportunity_id)
         return {"created": created, "count": len(created),
                 "provider": self._provenance_meta(),
@@ -200,11 +202,28 @@ class ProductDerivePrinciplesAdapter(_ProductGenerationAdapter):
     def execute(self, input_: dict[str, Any]) -> dict[str, Any]:
         provider = self._provider_or_blocked(input_)
         tenant, project = _scope_of(input_)
+        # P0-03/§12：derive_principles 必须 exactly one selected Opportunity；
+        # provider context 只传 selected（不传所有 opportunities）
+        selected = [
+            o for o in self._pi.list_opportunities(tenant, project)
+            if o.lifecycle_status != "archived"
+            and o.selection_status == "selected"]
+        if len(selected) != 1:
+            raise ValueError(
+                f"derive_principles requires exactly one selected "
+                f"Opportunity (found {len(selected)}); selection is a "
+                "Policy/Owner action, not provider's (P0-03/§15)")
+        sel = selected[0]
         context = {
             "idea_id": input_.get("idea_id"), "tenant_id": tenant,
             "project_id": project,
             "insights": self._objs_ctx("insight", tenant, project),
-            "opportunity": self._objs_ctx("opportunity", tenant, project),
+            "opportunity": {
+                "id": sel.opportunity_id,
+                "opportunity_id": sel.opportunity_id,
+                "title": sel.title, "statement": sel.statement,
+                "version": sel.version_no,
+            },
         }
         candidates = provider.derive_principles(context)
         errors = provider.validate_candidates(candidates, "principle")
@@ -214,12 +233,15 @@ class ProductDerivePrinciplesAdapter(_ProductGenerationAdapter):
         for c in candidates:
             obj = self._pi.create_principle(ProductPrinciple(
                 principle_id="", tenant_id=tenant, project_id=project,
-                opportunity_id=input_.get("opportunity_id", ""),
+                # P0-03：adapter persist 自动绑定 selected opportunity
+                opportunity_id=sel.opportunity_id,
                 statement=c.statement, rationale=c.rationale,
                 source_insight_ids=c.source_insight_ids,
-                criticality=c.criticality))
+                criticality=c.criticality,
+                generation_metadata=self._provenance_meta()))
             created.append(obj.principle_id)
         return {"created": created, "count": len(created),
+                "selected_opportunity_id": sel.opportunity_id,
                 "provider": self._provenance_meta(),
                 "status": "candidate_persisted"}
 
@@ -251,7 +273,8 @@ class ProductDeriveRequirementsAdapter(_ProductGenerationAdapter):
                 source_principle_ids=c.source_principle_ids,
                 nominal_value=c.nominal_value, unit=c.unit,
                 lower_limit=c.lower_limit, upper_limit=c.upper_limit,
-                tolerance=c.tolerance, test_condition=c.test_condition))
+                tolerance=c.tolerance, test_condition=c.test_condition,
+                generation_metadata=self._provenance_meta()))
             created.append(obj.requirement_id)
         return {"created": created, "count": len(created),
                 "provider": self._provenance_meta(),
@@ -281,7 +304,8 @@ class ProductDeriveFeaturesAdapter(_ProductGenerationAdapter):
                 title=c.title, description=c.description,
                 feature_type=c.feature_type,
                 source_requirement_ids=c.source_requirement_ids,
-                assumptions=c.assumptions, constraints=c.constraints))
+                assumptions=c.assumptions, constraints=c.constraints,
+                generation_metadata=self._provenance_meta()))
             created.append(obj.feature_id)
         return {"created": created, "count": len(created),
                 "provider": self._provenance_meta(),
