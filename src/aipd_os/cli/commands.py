@@ -1502,6 +1502,70 @@ def cmd_ui(args):
 # --------------------------------------------------------------------------
 # 命令分发表
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# v5.9：product —— Product Definition 查看与 Gate（§55/56；CLI 只调用 Service）
+# --------------------------------------------------------------------------
+def cmd_product_show(args):
+    """aipd product show：ProductDefinitionProjection 摘要（--json 输出纯 JSON）。"""
+    from aipd_os.product_intelligence import ProductDefinitionProjection
+    from aipd_os.state.db import AIPDStateDB
+    db = AIPDStateDB(args.db)
+    tenant = getattr(args, "tenant", DEFAULT_TENANT)
+    pid = args.project or _resolve_project(db, tenant)
+    proj = ProductDefinitionProjection(db, tenant, pid)
+    if getattr(args, "json", False):
+        print(json.dumps(proj.project(), ensure_ascii=False, indent=2))
+    else:
+        print(proj.to_markdown())
+    return 0
+
+
+def cmd_product_gate(args):
+    """aipd product gate：deterministic Gate 评估 + Owner 决策操作。
+
+    --propose 创建 Owner Decision；--decision-id + --choice 裁定；
+    无参数时输出 Gate 评估结果。
+    """
+    from aipd_os.product_intelligence import ProductDefinitionGate
+    from aipd_os.state.db import AIPDStateDB
+    db = AIPDStateDB(args.db)
+    tenant = getattr(args, "tenant", DEFAULT_TENANT)
+    pid = args.project or _resolve_project(db, tenant)
+    gate = ProductDefinitionGate(db, tenant, pid)
+    if getattr(args, "propose", False):
+        did = gate.propose_owner_decision(actor="owner-cli")
+        result = {"command": "product gate", "ok": True,
+                  "decision_id": did, "action": "proposed"}
+        if getattr(args, "json", False):
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print(f"Owner Decision 已创建：{did}（approve/reject/request_revision）")
+        return 0
+    if args.decision_id:
+        if not args.choice:
+            raise ValueError("--choice 必填（approve/reject/request_revision）")
+        outcome = gate.resolve_owner_decision(args.decision_id, args.choice,
+                                              args.comment or "",
+                                              actor="owner-cli")
+        result = {"command": "product gate", "ok": True, **outcome}
+        if getattr(args, "json", False):
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print(f"决策 {args.decision_id} 已裁定：{args.choice}")
+        return 0
+    evaluation = gate.record_gate(actor="owner-cli")
+    if getattr(args, "json", False):
+        print(json.dumps(evaluation, ensure_ascii=False, indent=2))
+    else:
+        print(f"Product Definition Gate: {evaluation['result']}")
+        for b in evaluation["blockers"]:
+            print(f"  - {b}")
+        owner = gate.owner_decision_status()
+        print(f"Owner decision: approved={owner['latest_approved']} "
+              f"pending={len(owner['pending'])}")
+    return 0
+
+
 COMMAND_FUNCS: Dict[str, Any] = {
     # 既有 10 个一键命令（向后兼容）
     "init-project": cmd_init_project,
@@ -1543,6 +1607,9 @@ COMMAND_FUNCS: Dict[str, Any] = {
     "recover": cmd_recover,
     # v5.6 Owner Web Console
     "ui": cmd_ui,
+    # v5.9 Product Intelligence（产品定义查看 / Gate 操作）
+    "product show": cmd_product_show,
+    "product gate": cmd_product_gate,
 }
 
 PLANNED_COMMANDS = list(COMMAND_FUNCS.keys())

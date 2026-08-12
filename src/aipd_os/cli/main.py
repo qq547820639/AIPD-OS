@@ -317,6 +317,35 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--port", type=int, help="监听端口（默认取配置，8080）")
     p.set_defaults(func=COMMAND_FUNCS["ui"])
 
+    # ---- v5.9 Product Intelligence（产品定义查看 / Gate 操作）----
+    p = sub.add_parser(
+        "product",
+        help="Product Definition（show 查看 / gate Gate 操作）。"
+             " Example: aipd product show --db state.db --project p1")
+    prod_sub = p.add_subparsers(dest="product_cmd", required=True)
+    pp = prod_sub.add_parser(
+        "show",
+        help="产品定义投影摘要（Opportunity/Principles/Requirements/"
+             "Features/Gate）。")
+    pp.add_argument("--db", required=True)
+    pp.add_argument("--project")
+    pp.add_argument("--json", action="store_true")
+    pp.set_defaults(func=COMMAND_FUNCS["product show"])
+    pg = prod_sub.add_parser(
+        "gate",
+        help="Product Definition Gate 评估 + Owner 决策（--propose 创建；"
+             "--decision-id/--choice 裁定）。")
+    pg.add_argument("--db", required=True)
+    pg.add_argument("--project")
+    pg.add_argument("--json", action="store_true")
+    pg.add_argument("--propose", action="store_true",
+                    help="创建 Owner Decision（approve/reject/request_revision）")
+    pg.add_argument("--decision-id")
+    pg.add_argument("--choice",
+                    choices=["approve", "reject", "request_revision"])
+    pg.add_argument("--comment")
+    pg.set_defaults(func=COMMAND_FUNCS["product gate"])
+
     return parser
 
 
