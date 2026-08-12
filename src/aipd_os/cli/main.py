@@ -344,6 +344,9 @@ def build_parser() -> argparse.ArgumentParser:
     pg.add_argument("--choice",
                     choices=["approve", "reject", "request_revision"])
     pg.add_argument("--comment")
+    pg.add_argument("--waiver-conditions",
+                    help="approve_with_waiver 必填：接受的条件（P0-04）")
+    pg.add_argument("--waiver-risks", help="approve_with_waiver：接受的已知风险")
     pg.set_defaults(func=COMMAND_FUNCS["product gate"])
 
     return parser
