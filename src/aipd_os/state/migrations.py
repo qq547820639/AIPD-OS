@@ -266,6 +266,99 @@ def _drop_retire_columns(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE dependencies DROP COLUMN {col}")
 
 
+# ---------------------------------------------------------------------------
+# v11（v5.9.1 Product Definition Integrity）
+# ---------------------------------------------------------------------------
+def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
+    return {r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
+
+def _add_selection_status(conn: sqlite3.Connection) -> None:
+    """v11 up：opportunities.selection_status（candidate/selected/rejected/
+    superseded；显式 Opportunity Selection，P0-07）。存量行默认 candidate
+    （不猜测历史选择；显式 select 由新 API 完成）。"""
+    cols = _table_columns(conn, "opportunities")
+    if "selection_status" not in cols:
+        conn.execute(
+            "ALTER TABLE opportunities ADD COLUMN selection_status TEXT "
+            "NOT NULL DEFAULT 'candidate'")
+
+
+def _drop_selection_status(conn: sqlite3.Connection) -> None:
+    cols = _table_columns(conn, "opportunities")
+    if "selection_status" in cols:
+        conn.execute("ALTER TABLE opportunities DROP COLUMN selection_status")
+
+
+def _add_decision_metadata(conn: sqlite3.Connection) -> None:
+    """v11 up：decisions.metadata_json（snapshot 绑定 / waiver / 决策版本）。
+    存量行 {}（历史决策不猜测绑定对象 —— 新语义下历史 approve 不再自动
+    授权任何 snapshot，见 get_effective_decision）。"""
+    cols = _table_columns(conn, "decisions")
+    if "metadata_json" not in cols:
+        conn.execute("ALTER TABLE decisions ADD COLUMN metadata_json TEXT "
+                     "NOT NULL DEFAULT '{}'")
+
+
+def _drop_decision_metadata(conn: sqlite3.Connection) -> None:
+    cols = _table_columns(conn, "decisions")
+    if "metadata_json" in cols:
+        conn.execute("ALTER TABLE decisions DROP COLUMN metadata_json")
+
+
+def _create_snapshot_tables(conn: sqlite3.Connection) -> None:
+    """v11 up：product_definition_snapshots（immutable，无 UPDATE 路径）。
+
+    refs 列存 [{id, version}]（canonical JSON）：content_hash 必须覆盖
+    id + version（同 id 更新后 hash 变化 → stale 检测真实）。"""
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS product_definition_snapshots ("
+        " snapshot_id TEXT NOT NULL,"
+        " project_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL DEFAULT 'default',"
+        " idea_id TEXT NOT NULL DEFAULT '',"
+        " opportunity_id TEXT NOT NULL DEFAULT '',"
+        " opportunity_version INTEGER,"
+        " principle_refs_json TEXT NOT NULL DEFAULT '[]',"
+        " requirement_refs_json TEXT NOT NULL DEFAULT '[]',"
+        " feature_refs_json TEXT NOT NULL DEFAULT '[]',"
+        " critical_unknown_refs_json TEXT NOT NULL DEFAULT '[]',"
+        " conflict_refs_json TEXT NOT NULL DEFAULT '[]',"
+        " source_projection_version TEXT NOT NULL DEFAULT '',"
+        " content_hash TEXT NOT NULL,"
+        " lifecycle_status TEXT NOT NULL DEFAULT 'frozen',"
+        " created_at TEXT NOT NULL,"
+        " created_by TEXT NOT NULL DEFAULT 'system',"
+        " PRIMARY KEY (snapshot_id, project_id, tenant_id))")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS gate_evaluations ("
+        " evaluation_id TEXT NOT NULL,"
+        " project_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL DEFAULT 'default',"
+        " snapshot_id TEXT NOT NULL DEFAULT '',"
+        " snapshot_hash TEXT NOT NULL DEFAULT '',"
+        " result TEXT NOT NULL,"
+        " hard_blockers_json TEXT NOT NULL DEFAULT '[]',"
+        " conditional_blockers_json TEXT NOT NULL DEFAULT '[]',"
+        " warnings_json TEXT NOT NULL DEFAULT '[]',"
+        " information_json TEXT NOT NULL DEFAULT '[]',"
+        " criteria_results_json TEXT NOT NULL DEFAULT '[]',"
+        " evaluated_at TEXT NOT NULL,"
+        " evaluator_version TEXT NOT NULL DEFAULT '',"
+        " policy_version TEXT NOT NULL DEFAULT '',"
+        " PRIMARY KEY (evaluation_id, project_id, tenant_id))")
+    conn.execute(
+        "INSERT OR IGNORE INTO id_sequences(name, next_val) VALUES"
+        " ('product_snapshot', 0), ('gate_evaluation', 0);")
+
+
+def _drop_snapshot_tables(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP TABLE IF EXISTS gate_evaluations;")
+    conn.execute("DROP TABLE IF EXISTS product_definition_snapshots;")
+    conn.execute("DELETE FROM id_sequences WHERE name IN"
+                 " ('product_snapshot','gate_evaluation');")
+
+
 def _make_claim_confidence_nullable(conn: sqlite3.Connection) -> None:
     """v9 up：claims.confidence NOT NULL DEFAULT 0.5 → NULLABLE。
 
@@ -653,6 +746,28 @@ MIGRATIONS: List[Dict[str, Any]] = [
             "DROP TABLE IF EXISTS insights;",
             "DELETE FROM id_sequences WHERE name IN"
             " ('insight','opportunity','product_principle','requirement','feature');",
+        ],
+    },
+    # v5.9.1（Product Definition Integrity）：immutable snapshot + 结构化
+    # GateEvaluation + decision 绑定 + 显式 Opportunity selection。
+    # - opportunities.selection_status（显式选择，P0-07）
+    # - decisions.metadata_json（snapshot_id/snapshot_hash/gate_evaluation_id/
+    #   waiver/decision_version，P0-02/03/04）
+    # - product_definition_snapshots（immutable；refs 存 [{id,version}]，
+    #   content_hash 覆盖 id+version → 同 id 更新后 hash 变化 → stale 真实）
+    # - gate_evaluations（结构化 criteria 结果，P0-01）
+    {
+        "version": 11,
+        "name": "product_definition_integrity",
+        "up": [
+            _add_selection_status,
+            _add_decision_metadata,
+            _create_snapshot_tables,
+        ],
+        "down": [
+            _drop_snapshot_tables,
+            _drop_decision_metadata,
+            _drop_selection_status,
         ],
     },
 ]

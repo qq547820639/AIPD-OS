@@ -17,6 +17,7 @@ import hashlib
 import json
 import logging
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -331,6 +332,10 @@ class TenantNotFoundError(Exception):
     """找不到租户。"""
 
 
+# 事务上下文（thread-local；connect 在事务内复用活动连接）
+_db_tls = threading.local()
+
+
 class AIPDStateDB:
     """多租户多项目 SQLite 状态存储。
 
@@ -350,6 +355,13 @@ class AIPDStateDB:
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
+        # v5.9.1：事务内复用活动连接（不 commit/close）—— 同一事务的所有
+        # 语句（含 helper 内部 connect）落在同一连接上，保证原子性且无
+        # SQLite 写锁自死锁（历史 add_edge→add_audit 锁问题的根因修复）。
+        active = getattr(_db_tls, "tx_conn", None)
+        if active is not None:
+            yield active
+            return
         conn = sqlite3.connect(str(self.path))
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
@@ -361,6 +373,56 @@ class AIPDStateDB:
             raise
         finally:
             conn.close()
+
+    @contextmanager
+    def transaction(self) -> Iterator[sqlite3.Connection]:
+        """显式事务上下文（v5.9.1，P0-05/19）。
+
+        - 顶层事务：BEGIN → 所有经 :meth:`connect` 的语句复用同一连接 →
+          COMMIT；异常 → ROLLBACK（任何失败 = 无部分写入）；
+        - 嵌套事务：SAVEPOINT（不重复 BEGIN）；
+        - 禁止在内部 helper 偷偷 commit 破坏原子性（connect 在事务内
+          不 commit）。
+
+        用法::
+
+            with db.transaction() as c:
+                c.execute(...)           # 直接 SQL
+                db.add_audit(...)        # helper（复用活动连接）
+        """
+        active = getattr(_db_tls, "tx_conn", None)
+        if active is not None:
+            # 嵌套：SAVEPOINT
+            depth = _db_tls.tx_depth
+            _db_tls.tx_depth = depth + 1
+            conn = active
+            conn.execute(f"SAVEPOINT sp_{depth}")
+            try:
+                yield conn
+                conn.execute(f"RELEASE SAVEPOINT sp_{depth}")
+            except Exception:
+                conn.execute(f"ROLLBACK TO SAVEPOINT sp_{depth}")
+                raise
+            finally:
+                _db_tls.tx_depth = depth
+            return
+        conn = sqlite3.connect(str(self.path))
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.isolation_level = None  # autocommit；显式 BEGIN/COMMIT/ROLLBACK
+        conn.execute("BEGIN")
+        _db_tls.tx_conn = conn
+        _db_tls.tx_depth = 0
+        try:
+            yield conn
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        finally:
+            conn.close()
+            _db_tls.tx_conn = None
+            _db_tls.tx_depth = 0
 
     # ------------------------------------------------------------------ helper
     def next_sequence(self, name: str, prefix: str,
@@ -816,14 +878,18 @@ class AIPDStateDB:
 
     # ------------------------------------------------------------ decisions
     def propose_decision(self, tenant_id: str, project_id: str, topic: str,
-                         recommendation: str, options: Any, trigger: Optional[str] = None) -> str:
+                         recommendation: str, options: Any,
+                         trigger: str | None = None,
+                         metadata: dict[str, Any] | None = None) -> str:
         ts = now_iso()
         with self.connect() as c:
             did = self.next_sequence("decision", "D")
-            c.execute("INSERT INTO decisions(decision_id,project_id,tenant_id,topic,trigger,recommendation,"
-                      "options_json,status,created_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?)",
-                      (did, project_id, tenant_id, topic, trigger, recommendation, _json(options),
-                       "proposed", ts, 1))
+            c.execute(
+                "INSERT INTO decisions(decision_id,project_id,tenant_id,topic,"
+                "trigger,recommendation,options_json,status,created_at,"
+                "version_no,metadata_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                (did, project_id, tenant_id, topic, trigger, recommendation,
+                 _json(options), "proposed", ts, 1, _json(metadata or {})))
             c.execute("UPDATE projects SET status='awaiting_owner_decision',updated_at=? "
                       "WHERE tenant_id=? AND project_id=?", (ts, tenant_id, project_id))
         return did
@@ -849,7 +915,16 @@ class AIPDStateDB:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? ORDER BY created_at",
                              (tenant_id, project_id)).fetchall()
-        return [dict(r) for r in rows]
+        out = []
+        for r in rows:
+            d = dict(r)
+            # v5.9.1：暴露解析后的 metadata（原 metadata_json 键保留兼容）
+            try:
+                d["metadata"] = json.loads(d.get("metadata_json") or "{}")
+            except (ValueError, TypeError):
+                d["metadata"] = {}
+            out.append(d)
+        return out
 
     def list_open_decisions(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
         with self.connect() as c:
