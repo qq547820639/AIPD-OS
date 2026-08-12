@@ -11,9 +11,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 # 记录类型（truth 分类）
+# v5.9：feature —— Product Definition Gate 批准后的 Feature 写入 Product Truth
+# （record_type="feature"，metadata.gate_approved=True）。
 TRUTH_TYPES = frozenset({
     "fact", "assumption", "requirement", "ctq", "evidence", "decision",
-    "risk", "artifact_version",
+    "risk", "artifact_version", "feature",
 })
 
 # 确定性分级（trust_level）：越高越可信
@@ -63,7 +65,7 @@ class SourceRef:
         return d
 
     @classmethod
-    def from_dict(cls, data: Any) -> "SourceRef":
+    def from_dict(cls, data: Any) -> SourceRef:
         if data is None:
             return cls()
         if isinstance(data, str):

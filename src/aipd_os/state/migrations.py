@@ -550,6 +550,111 @@ MIGRATIONS: List[Dict[str, Any]] = [
             _unseed_legacy_sequences,
         ],
     },
+    # v5.9（Product Intelligence）：Insight/Opportunity/ProductPrinciple/
+    # Requirement/Feature 五张 canonical 表（tenant+project scoped + 乐观锁）。
+    # lineage 复用 dependencies 表（node_type=insight/opportunity/...），
+    # **不建第二套 lineage**。五张表均为幂等 CREATE（新库就地建表）。
+    {
+        "version": 10,
+        "name": "product_intelligence_domains",
+        "up": [
+            "CREATE TABLE IF NOT EXISTS insights ("
+            " insight_id TEXT NOT NULL, project_id TEXT NOT NULL,"
+            " tenant_id TEXT NOT NULL DEFAULT 'default',"
+            " idea_id TEXT NOT NULL DEFAULT '', statement TEXT NOT NULL DEFAULT '',"
+            " insight_type TEXT NOT NULL DEFAULT 'user_problem',"
+            " source_claim_ids_json TEXT NOT NULL DEFAULT '[]',"
+            " source_assessment_versions_json TEXT NOT NULL DEFAULT '[]',"
+            " epistemic_status TEXT NOT NULL DEFAULT 'A',"
+            " lifecycle_status TEXT NOT NULL DEFAULT 'candidate',"
+            " rationale TEXT NOT NULL DEFAULT '', limitations TEXT NOT NULL DEFAULT '',"
+            " version_no INTEGER NOT NULL DEFAULT 1,"
+            " created_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " PRIMARY KEY (insight_id, project_id, tenant_id));",
+            "CREATE TABLE IF NOT EXISTS opportunities ("
+            " opportunity_id TEXT NOT NULL, project_id TEXT NOT NULL,"
+            " tenant_id TEXT NOT NULL DEFAULT 'default',"
+            " idea_id TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '',"
+            " statement TEXT NOT NULL DEFAULT '', target_user TEXT NOT NULL DEFAULT '',"
+            " problem TEXT NOT NULL DEFAULT '', desired_outcome TEXT NOT NULL DEFAULT '',"
+            " opportunity_type TEXT NOT NULL DEFAULT 'new_product',"
+            " source_insight_ids_json TEXT NOT NULL DEFAULT '[]',"
+            " differentiation TEXT NOT NULL DEFAULT '',"
+            " known_alternatives_json TEXT NOT NULL DEFAULT '[]',"
+            " evidence_gaps_json TEXT NOT NULL DEFAULT '[]',"
+            " lifecycle_status TEXT NOT NULL DEFAULT 'candidate',"
+            " epistemic_status TEXT NOT NULL DEFAULT 'A',"
+            " version_no INTEGER NOT NULL DEFAULT 1,"
+            " created_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " PRIMARY KEY (opportunity_id, project_id, tenant_id));",
+            "CREATE TABLE IF NOT EXISTS product_principles ("
+            " principle_id TEXT NOT NULL, project_id TEXT NOT NULL,"
+            " tenant_id TEXT NOT NULL DEFAULT 'default',"
+            " opportunity_id TEXT NOT NULL DEFAULT '',"
+            " statement TEXT NOT NULL DEFAULT '', rationale TEXT NOT NULL DEFAULT '',"
+            " source_insight_ids_json TEXT NOT NULL DEFAULT '[]',"
+            " source_claim_ids_json TEXT NOT NULL DEFAULT '[]',"
+            " definition_status TEXT NOT NULL DEFAULT 'RECOMMENDED',"
+            " epistemic_status TEXT NOT NULL DEFAULT 'A',"
+            " lifecycle_status TEXT NOT NULL DEFAULT 'candidate',"
+            " criticality TEXT NOT NULL DEFAULT 'normal',"
+            " version_no INTEGER NOT NULL DEFAULT 1,"
+            " created_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " PRIMARY KEY (principle_id, project_id, tenant_id));",
+            "CREATE TABLE IF NOT EXISTS requirements ("
+            " requirement_id TEXT NOT NULL, project_id TEXT NOT NULL,"
+            " tenant_id TEXT NOT NULL DEFAULT 'default',"
+            " title TEXT NOT NULL DEFAULT '', statement TEXT NOT NULL DEFAULT '',"
+            " requirement_type TEXT NOT NULL DEFAULT 'functional',"
+            " definition_status TEXT NOT NULL DEFAULT 'RECOMMENDED',"
+            " epistemic_status TEXT NOT NULL DEFAULT 'A',"
+            " lifecycle_status TEXT NOT NULL DEFAULT 'candidate',"
+            " criticality TEXT NOT NULL DEFAULT 'normal',"
+            " nominal_value TEXT, unit TEXT, lower_limit TEXT, upper_limit TEXT,"
+            " tolerance TEXT, test_condition TEXT,"
+            " rationale TEXT NOT NULL DEFAULT '',"
+            " source_principle_ids_json TEXT NOT NULL DEFAULT '[]',"
+            " source_evidence_refs_json TEXT NOT NULL DEFAULT '[]',"
+            " derivation_method TEXT NOT NULL DEFAULT '',"
+            " derivation_input_refs_json TEXT NOT NULL DEFAULT '[]',"
+            " verification_method TEXT NOT NULL DEFAULT '',"
+            " verification_test_refs_json TEXT NOT NULL DEFAULT '[]',"
+            " affected_item_refs_json TEXT NOT NULL DEFAULT '[]',"
+            " required_by_gate TEXT NOT NULL DEFAULT '', owner TEXT NOT NULL DEFAULT '',"
+            " version_no INTEGER NOT NULL DEFAULT 1,"
+            " created_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " PRIMARY KEY (requirement_id, project_id, tenant_id));",
+            "CREATE TABLE IF NOT EXISTS features ("
+            " feature_id TEXT NOT NULL, project_id TEXT NOT NULL,"
+            " tenant_id TEXT NOT NULL DEFAULT 'default',"
+            " title TEXT NOT NULL DEFAULT '', description TEXT NOT NULL DEFAULT '',"
+            " feature_type TEXT NOT NULL DEFAULT 'capability',"
+            " source_requirement_ids_json TEXT NOT NULL DEFAULT '[]',"
+            " source_principle_ids_json TEXT NOT NULL DEFAULT '[]',"
+            " assumptions_json TEXT NOT NULL DEFAULT '[]',"
+            " constraints_json TEXT NOT NULL DEFAULT '[]',"
+            " definition_status TEXT NOT NULL DEFAULT 'RECOMMENDED',"
+            " epistemic_status TEXT NOT NULL DEFAULT 'A',"
+            " lifecycle_status TEXT NOT NULL DEFAULT 'candidate',"
+            " validation_required INTEGER NOT NULL DEFAULT 0,"
+            " version_no INTEGER NOT NULL DEFAULT 1,"
+            " created_at TEXT NOT NULL, updated_at TEXT NOT NULL,"
+            " PRIMARY KEY (feature_id, project_id, tenant_id));",
+            # ID sequence（并发安全 ID；v5.9 新对象同机制）
+            "INSERT OR IGNORE INTO id_sequences(name, next_val) VALUES"
+            " ('insight', 0), ('opportunity', 0), ('product_principle', 0),"
+            " ('requirement', 0), ('feature', 0);",
+        ],
+        "down": [
+            "DROP TABLE IF EXISTS features;",
+            "DROP TABLE IF EXISTS requirements;",
+            "DROP TABLE IF EXISTS product_principles;",
+            "DROP TABLE IF EXISTS opportunities;",
+            "DROP TABLE IF EXISTS insights;",
+            "DELETE FROM id_sequences WHERE name IN"
+            " ('insight','opportunity','product_principle','requirement','feature');",
+        ],
+    },
 ]
 
 

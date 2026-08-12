@@ -231,16 +231,25 @@ class PropagationEngine:
     # ----------------------------------------------------------- 变更说明
     def explain_change(self, upstream_id: str, affected: List[str],
                        stale: List[str], reason: Optional[str] = None) -> Dict[str, str]:
-        """owner 可读的变更说明：改了什么 / 为何影响 / 计划怎么修 / 需批准什么。"""
-        up = self._store.get(upstream_id)
+        """owner 可读的变更说明：改了什么 / 为何影响 / 计划怎么修 / 需批准什么。
+
+        v5.9：upstream 可能是 Product Intelligence 对象（requirement 等，
+        非 truth 记录）——此时诚实降级描述（不伪造 truth 详情）。
+        """
+        try:
+            up = self._store.get(upstream_id)
+            what = (f"truth {upstream_id} ({up.record_type}) changed: "
+                    f"{up.content[:80]}{'…' if len(up.content) > 80 else ''}")
+        except KeyError:
+            what = (f"upstream {upstream_id} changed "
+                    "(product intelligence object / external upstream)")
         return {
-            "what_changed": f"truth {upstream_id} ({up.record_type}) changed: "
-                            f"{up.content[:80]}{'…' if len(up.content) > 80 else ''}",
+            "what_changed": what,
             "why_affected": (f"{len(affected)} downstream items depend on {upstream_id}: "
                              + ", ".join(affected or ["none"])),
             "fix_plan": f"bounded rework (max {self.default_max_attempts} attempts) will "
                         f"bump versions and re-validate {len(stale)} stale item(s)",
-            "approval_needed": (f"owner approval required to accept new versions for: "
+            "approval_needed": ("owner approval required to accept new versions for: "
                                 + ", ".join(stale or ["none"])),
             "reason": reason or "upstream truth changed",
         }
