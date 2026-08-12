@@ -1,4 +1,4 @@
-"""ProductIntelligenceService（v5.9）。
+"""ProductIntelligenceService（v5.9 + v5.9.1）。
 
 Insight → Opportunity → ProductPrinciple → Requirement → Feature 的
 tenant/project scoped CRUD + canonical lineage 接线 + deterministic 校验。
@@ -14,13 +14,22 @@ tenant/project scoped CRUD + canonical lineage 接线 + deterministic 校验。
   ``requirement -derived_from-> product_principle``；
 - Feature 必须有 ≥1 个 source requirement；写
   ``feature -implements-> requirement``；
-- 跨 tenant/project 引用一律拒绝（:class:`ProductScopeError`）；
-- **缺 lineage 引用 → 不能 persist 为 active approved record**（默认
-  lifecycle=candidate，create 时校验失败直接抛错）。
+- 跨 tenant/project 引用一律拒绝（:class:`ProductScopeError`）。
+
+**v5.9.1 事务语义（P0-05/06/20/22）**：
+- create/update/retire/supersede 的对象变更 + lineage reconcile + audit
+  在同一 ``db.transaction()`` 内；任何失败 → ROLLBACK（无部分写入）；
+- update 顺序：construct candidate → validate refs/lifecycle（**先校验后
+  mutate**，失败无副作用）→ optimistic UPDATE → lineage reconcile → audit；
+- lineage reconcile：desired refs vs current active edges diff →
+  to_retire（soft-retire，历史保留）+ to_add（§22-23）。
+
+**v5.9.1 Opportunity 显式选择（P0-07）**：
+:meth:`select_opportunity` —— 恰好 1 个 ``selection_status=selected``；
+候选/拒绝/被取代由显式状态表达，不再用「非 archived」暗示选择。
 
 回溯（§37/§58）：
-- :meth:`trace_upstream`：任意对象 → Claim → EvidenceRelation → Evidence
-  （反向 chain）；
+- :meth:`trace_upstream`：任意对象 → Claim → EvidenceRelation → Evidence；
 - :meth:`feature_evidence_trace`：Feature → Requirement → Principle →
   Insight → Claim → Evidence（v5.9 核心验收查询）。
 """
@@ -33,6 +42,9 @@ from aipd_os.state.db import AIPDStateDB, now_iso
 from aipd_os.state.lineage import LineageNodeRef, LineageService
 
 from .models import (
+    LIFECYCLE_ARCHIVED,
+    SELECTION_CANDIDATE,
+    SELECTION_SELECTED,
     Feature,
     Insight,
     Opportunity,
@@ -128,7 +140,7 @@ class ProductOptimisticLockError(Exception):
 
 
 class ProductIntelligenceService:
-    """Product Intelligence 五域 canonical service。"""
+    """Product Intelligence 五域 canonical service（事务安全）。"""
 
     def __init__(self, db: AIPDStateDB) -> None:
         self._db = db
@@ -148,7 +160,8 @@ class ProductIntelligenceService:
         return obj.tenant_id, obj.project_id
 
     def _ensure_refs_in_scope(self, obj: Any, node_type: str) -> None:
-        """上游引用必须存在且同 tenant+project（跨 scope 拒绝）。"""
+        """上游引用必须存在且同 tenant+project（跨 scope 拒绝；**先校验**，
+        P0-05 —— 调用发生在任何 UPDATE 之前）。"""
         ref_field, ref_type = _REF_FOR[node_type]
         refs = list(getattr(obj, ref_field) or [])
         if not refs:
@@ -169,17 +182,38 @@ class ProductIntelligenceService:
                     f"tenant {obj.tenant_id!r}/project {obj.project_id!r} "
                     f"(cross-scope {ref_field} rejected)")
 
-    def _link_lineage(self, obj: Any, node_type: str, actor: str) -> None:
-        """对象 → 上游 lineage 边（canonical LineageService）。"""
+    def _reconcile_lineage(self, obj: Any, node_type: str, actor: str) -> None:
+        """P0-06/22-23：desired refs vs current active edges diff。
+
+        to_retire = current - desired（soft-retire，历史保留在 audit/行）；
+        to_add = desired - current（add_edge 幂等）。事务内调用时
+        LineageService 复用活动连接（同一事务）。
+        """
         lineage = LineageService(self._db)
         ref_field, ref_type = _REF_FOR[node_type]
         obj_id = getattr(obj, _ID_FIELD_FOR[node_type])
-        for rid in getattr(obj, ref_field) or []:
+        desired = set(getattr(obj, ref_field) or [])
+        node = LineageNodeRef(node_type=node_type, node_id=obj_id,
+                              tenant_id=obj.tenant_id,
+                              project_id=obj.project_id)
+        current = {e.target.node_id for e in lineage.outgoing(node)
+                   if e.target.node_type == ref_type}
+        to_retire = sorted(current - desired)
+        to_add = sorted(desired - current)
+        for rid in to_retire:
+            for edge in lineage.outgoing(node):
+                if edge.target.node_type == ref_type \
+                        and edge.target.node_id == rid:
+                    lineage.retire_edge(
+                        edge.edge_id, actor=actor,
+                        reason=f"{node_type} {obj_id} source changed: "
+                               f"{ref_field} removed {rid}")
+        for rid in to_add:
             lineage.add_edge(
-                LineageNodeRef(node_type=node_type, node_id=obj_id,
-                               tenant_id=obj.tenant_id, project_id=obj.project_id),
+                node,
                 LineageNodeRef(node_type=ref_type, node_id=rid,
-                               tenant_id=obj.tenant_id, project_id=obj.project_id),
+                               tenant_id=obj.tenant_id,
+                               project_id=obj.project_id),
                 _RELATION_FOR[node_type],
                 provenance={"source": "product_intelligence",
                             "object_type": node_type},
@@ -191,7 +225,7 @@ class ProductIntelligenceService:
 
     # ------------------------------------------------------ generic CRUD
     def _create(self, obj: Any, node_type: str, actor: str) -> Any:
-        """通用创建：scope 校验 → lineage 校验 → insert → lineage 边 → audit。"""
+        """创建：scope 校验（先）→ 事务内 insert + audit + lineage reconcile。"""
         id_field = _ID_FIELD_FOR[node_type]
         if not getattr(obj, id_field):
             obj = type(obj)(
@@ -201,7 +235,6 @@ class ProductIntelligenceService:
         d = obj.to_dict()
         id_col = id_field  # DB 列名与模型字段名一致（principle_id 等）
         json_map = _JSON_FIELDS[node_type]
-        # 模型字段 → DB 列（list 字段 → *_json 列并序列化）
         db_entries = {}
         for k, v in d.items():
             if k in (id_col, "created_at", "updated_at"):
@@ -214,15 +247,18 @@ class ProductIntelligenceService:
                 db_entries[k] = v
         cols = sorted(db_entries)
         table = _TABLE_FOR[node_type]
-        with self._db.connect() as c:
+        with self._db.transaction() as c:
             c.execute(
                 f"INSERT INTO {table}({id_col},{','.join(cols)},created_at,"
                 f"updated_at) VALUES(?{',?' * len(cols)},?,?)",
                 [d[id_field]] + [db_entries[k] for k in cols] + [ts, ts])
-        created = self._get(node_type, obj.tenant_id, obj.project_id,
-                            d[id_col])
-        self._audit(actor, f"{node_type}.create", created)
-        self._link_lineage(created, node_type, actor)
+            row = c.execute(
+                f"SELECT * FROM {table} WHERE {id_col}=? AND project_id=? "
+                "AND tenant_id=?",
+                (d[id_field], obj.project_id, obj.tenant_id)).fetchone()
+            created = self._row_to_object(node_type, dict(row))
+            self._audit(actor, f"{node_type}.create", created)
+            self._reconcile_lineage(created, node_type, actor)
         return created
 
     def _get(self, node_type: str, tenant_id: str, project_id: str,
@@ -261,14 +297,26 @@ class ProductIntelligenceService:
     def _update(self, node_type: str, tenant_id: str, project_id: str,
                 obj_id: str, expected_version: int, actor: str,
                 **fields: Any) -> Any:
-        """通用更新（乐观锁；引用字段变更时重校验 lineage）。"""
+        """事务化更新（P0-05/06/18/20）。
+
+        顺序：construct candidate → validate refs/lifecycle（先校验，
+        失败无副作用）→ optimistic UPDATE → lineage reconcile → audit →
+        COMMIT。任何失败 → ROLLBACK。
+        """
         before = self._get(node_type, tenant_id, project_id, obj_id)
         if not fields:
             raise ValueError("no editable fields provided")
+        ref_field, _ = _REF_FOR[node_type]
+        # 1) candidate state（模型 __post_init__ 校验枚举/lifecycle）
+        merged_dict = before.to_dict()
+        merged_dict.update(fields)
+        merged = self._row_to_object(node_type, merged_dict)
+        # 2) 先校验（UPDATE 前）：跨 scope ref → 抛错，无任何写入
+        if ref_field in fields:
+            self._ensure_refs_in_scope(merged, node_type)
         table = _TABLE_FOR[node_type]
-        id_col = node_type + "_id"
+        id_col = _ID_FIELD_FOR[node_type]
         json_map = _JSON_FIELDS[node_type]
-        # 模型字段 → DB 列（list 字段序列化为 *_json）
         db_fields: dict[str, Any] = {}
         for k, v in fields.items():
             if k in json_map:
@@ -281,7 +329,8 @@ class ProductIntelligenceService:
         set_sql = ", ".join([f"{col}=?" for col in set_cols]
                             + ["updated_at=?", "version_no=version_no+1"])
         params: list[Any] = [db_fields[k] for k in set_cols] + [now_iso()]
-        with self._db.connect() as c:
+        with self._db.transaction() as c:
+            # 3) optimistic lock UPDATE（rowcount!=1 → 抛错 → ROLLBACK）
             cur = c.execute(
                 f"UPDATE {table} SET {set_sql} WHERE {id_col}=? AND "
                 "project_id=? AND tenant_id=? AND version_no=?",
@@ -289,22 +338,30 @@ class ProductIntelligenceService:
             if cur.rowcount != 1:
                 raise ProductOptimisticLockError(
                     f"{node_type} {obj_id} optimistic-lock conflict")
-        after = self._get(node_type, tenant_id, project_id, obj_id)
-        self._audit(actor, f"{node_type}.update", after, before=before.to_dict())
-        # 引用字段变化 → 重校验 + 重接线 lineage（add_edge 幂等）
-        ref_field, _ = _REF_FOR[node_type]
-        if ref_field in fields:
-            merged_dict = after.to_dict()
-            merged_dict[ref_field] = fields[ref_field]
-            merged = self._row_to_object(node_type, merged_dict)
-            self._ensure_refs_in_scope(merged, node_type)
-            self._link_lineage(merged, node_type, actor)
+            # 4) after（同事务读取）
+            row = c.execute(
+                f"SELECT * FROM {table} WHERE {id_col}=? AND project_id=? "
+                "AND tenant_id=?",
+                (obj_id, project_id, tenant_id)).fetchone()
+            after = self._row_to_object(node_type, dict(row))
+            # 5) audit + lineage reconcile（同事务）
+            self._audit(actor, f"{node_type}.update", after,
+                        before=before.to_dict())
+            if ref_field in fields:
+                self._reconcile_lineage(after, node_type, actor)
         return after
 
     # ------------------------------------------------------ 五域便捷 API
     # Insight
     def create_insight(self, obj: Insight, actor: str = "system") -> Insight:
         return cast(Insight, self._create(obj, NODE_INSIGHT, actor))
+
+    def update_insight(self, tenant_id: str, project_id: str, insight_id: str,
+                       expected_version: int, actor: str = "system",
+                       **fields: Any) -> Insight:
+        return cast(Insight, self._update(NODE_INSIGHT, tenant_id, project_id,
+                                          insight_id, expected_version,
+                                          actor, **fields))
 
     def get_insight(self, tenant_id: str, project_id: str,
                     insight_id: str) -> Insight:
@@ -320,6 +377,14 @@ class ProductIntelligenceService:
                            actor: str = "system") -> Opportunity:
         return cast(Opportunity, self._create(obj, NODE_OPPORTUNITY, actor))
 
+    def update_opportunity(self, tenant_id: str, project_id: str,
+                           opportunity_id: str, expected_version: int,
+                           actor: str = "system",
+                           **fields: Any) -> Opportunity:
+        return cast(Opportunity, self._update(
+            NODE_OPPORTUNITY, tenant_id, project_id, opportunity_id,
+            expected_version, actor, **fields))
+
     def get_opportunity(self, tenant_id: str, project_id: str,
                         opportunity_id: str) -> Opportunity:
         return cast(Opportunity, self._get(NODE_OPPORTUNITY, tenant_id,
@@ -330,11 +395,51 @@ class ProductIntelligenceService:
         return cast(list[Opportunity], self._list(NODE_OPPORTUNITY, tenant_id,
                                                   project_id))
 
+    def select_opportunity(self, tenant_id: str, project_id: str,
+                           opportunity_id: str,
+                           actor: str = "system") -> Opportunity:
+        """P0-07：显式选择 —— 恰好 1 个 selected（事务：先取消其他 selected，
+        再选中目标；audit 同事务）。archived 不可选。"""
+        before = self._get(NODE_OPPORTUNITY, tenant_id, project_id,
+                           opportunity_id)
+        if before.lifecycle_status == LIFECYCLE_ARCHIVED:
+            raise ValueError(
+                f"cannot select archived opportunity {opportunity_id}")
+        with self._db.transaction() as c:
+            c.execute(
+                "UPDATE opportunities SET selection_status=?, updated_at=?, "
+                "version_no=version_no+1 WHERE project_id=? AND tenant_id=? "
+                "AND selection_status=? AND opportunity_id<>?",
+                (SELECTION_CANDIDATE, now_iso(), project_id, tenant_id,
+                 SELECTION_SELECTED, opportunity_id))
+            cur = c.execute(
+                "UPDATE opportunities SET selection_status=?, updated_at=?, "
+                "version_no=version_no+1 WHERE project_id=? AND tenant_id=? "
+                "AND opportunity_id=? AND lifecycle_status<>?",
+                (SELECTION_SELECTED, now_iso(), project_id, tenant_id,
+                 opportunity_id, LIFECYCLE_ARCHIVED))
+            if cur.rowcount != 1:
+                raise ProductObjectNotFoundError(opportunity_id)
+            self._db.add_audit(actor, "opportunity.select", project_id,
+                               tenant_id,
+                               after={"opportunity_id": opportunity_id,
+                                      "selection_status": SELECTION_SELECTED})
+        return cast(Opportunity, self._get(NODE_OPPORTUNITY, tenant_id,
+                                           project_id, opportunity_id))
+
     # ProductPrinciple
     def create_principle(self, obj: ProductPrinciple,
                          actor: str = "system") -> ProductPrinciple:
         return cast(ProductPrinciple, self._create(obj, NODE_PRINCIPLE,
                                                    actor))
+
+    def update_principle(self, tenant_id: str, project_id: str,
+                         principle_id: str, expected_version: int,
+                         actor: str = "system",
+                         **fields: Any) -> ProductPrinciple:
+        return cast(ProductPrinciple, self._update(
+            NODE_PRINCIPLE, tenant_id, project_id, principle_id,
+            expected_version, actor, **fields))
 
     def get_principle(self, tenant_id: str, project_id: str,
                       principle_id: str) -> ProductPrinciple:
@@ -351,6 +456,14 @@ class ProductIntelligenceService:
                            actor: str = "system") -> Requirement:
         return cast(Requirement, self._create(obj, NODE_REQUIREMENT, actor))
 
+    def update_requirement(self, tenant_id: str, project_id: str,
+                           requirement_id: str, expected_version: int,
+                           actor: str = "system",
+                           **fields: Any) -> Requirement:
+        return cast(Requirement, self._update(
+            NODE_REQUIREMENT, tenant_id, project_id, requirement_id,
+            expected_version, actor, **fields))
+
     def get_requirement(self, tenant_id: str, project_id: str,
                         requirement_id: str) -> Requirement:
         return cast(Requirement, self._get(NODE_REQUIREMENT, tenant_id,
@@ -365,6 +478,14 @@ class ProductIntelligenceService:
     def create_feature(self, obj: Feature, actor: str = "system") -> Feature:
         return cast(Feature, self._create(obj, NODE_FEATURE, actor))
 
+    def update_feature(self, tenant_id: str, project_id: str,
+                       feature_id: str, expected_version: int,
+                       actor: str = "system",
+                       **fields: Any) -> Feature:
+        return cast(Feature, self._update(NODE_FEATURE, tenant_id, project_id,
+                                          feature_id, expected_version,
+                                          actor, **fields))
+
     def get_feature(self, tenant_id: str, project_id: str,
                     feature_id: str) -> Feature:
         return cast(Feature, self._get(NODE_FEATURE, tenant_id, project_id,
@@ -378,11 +499,7 @@ class ProductIntelligenceService:
     def trace_upstream(self, node_type: str, node_id: str,
                        tenant_id: str, project_id: str,
                        max_depth: int = 10) -> list[dict[str, Any]]:
-        """沿 lineage 上游回溯（BFS）：返回边序列。
-
-        方向：target 依赖 source（derived_from/implements 边指向上游），
-        所以上游 = outgoing（source=node 的边）。
-        """
+        """沿 lineage 上游回溯（BFS）：返回边序列。"""
         lineage = LineageService(self._db)
         node = LineageNodeRef(node_type=node_type, node_id=node_id,
                               tenant_id=tenant_id, project_id=project_id)
@@ -408,15 +525,10 @@ class ProductIntelligenceService:
                                project_id: str = "default",
                                max_depth: int = 12) -> dict[str, Any]:
         """v5.9 核心验收：Feature → Requirement → Principle → Insight →
-        Claim → EvidenceRelation → Evidence 全链回溯。
-
-        返回 ``{"feature_id", "path": [{node_type, node_id, relation}...],
-        "evidence_reached": bool, "claims": [...], "evidence": [...]}``。
-        """
+        Claim → EvidenceRelation → Evidence 全链回溯。"""
         lineage = LineageService(self._db)
         start = LineageNodeRef(node_type=NODE_FEATURE, node_id=feature_id,
                                tenant_id=tenant_id, project_id=project_id)
-        # BFS 收集全上游（含 relation 标注）
         path: list[dict[str, Any]] = []
         visited: set[tuple] = {(NODE_FEATURE, feature_id, project_id)}
         queue: list[tuple[Any, int]] = [(start, 0)]
@@ -452,11 +564,9 @@ class ProductIntelligenceService:
 
     def principle_why(self, principle_id: str, tenant_id: str = "default",
                       project_id: str = "default") -> dict[str, Any]:
-        """ProductPrinciple 的 WHY 链（§37）：Principle → Insight → Claim →
-        EvidenceRelation → Evidence → Source。"""
+        """ProductPrinciple 的 WHY 链（§37）。"""
         chain = self.trace_upstream(NODE_PRINCIPLE, principle_id,
                                     tenant_id, project_id)
-        # 沿链提取可解释要素
         return {
             "principle_id": principle_id,
             "tenant_id": tenant_id,

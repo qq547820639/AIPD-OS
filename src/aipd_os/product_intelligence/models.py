@@ -67,6 +67,16 @@ OPPORTUNITY_TYPES = frozenset({
     "risk_mitigation", "platform",
 })
 
+# Opportunity 显式选择状态（v5.9.1 P0-07：候选 ≠ 已选）
+SELECTION_CANDIDATE = "candidate"
+SELECTION_SELECTED = "selected"
+SELECTION_REJECTED = "rejected"
+SELECTION_SUPERSEDED = "superseded"
+SELECTION_STATUSES = frozenset({
+    SELECTION_CANDIDATE, SELECTION_SELECTED,
+    SELECTION_REJECTED, SELECTION_SUPERSEDED,
+})
+
 # Requirement 类型（§39：为 NPI/MMD 预留，不过度约束）
 REQUIREMENT_TYPES = frozenset({
     "user", "functional", "performance", "interaction", "interface",
@@ -89,9 +99,12 @@ def _json(value: Any) -> str:
                       else value, ensure_ascii=False, sort_keys=True)
 
 
-def _parse_json_list(raw: str | None) -> list[str]:
-    if not raw:
+def _parse_json_list(raw: Any) -> list[str]:
+    """兼容 DB 行（*_json 字符串）与模型 dict（原生 list）两种输入。"""
+    if raw is None or raw == "":
         return []
+    if isinstance(raw, (list, tuple)):
+        return [str(x) for x in raw]
     try:
         parsed = json.loads(raw)
     except (ValueError, TypeError):
@@ -194,6 +207,7 @@ class Opportunity:
     known_alternatives: list[str] = field(default_factory=list)
     evidence_gaps: list[str] = field(default_factory=list)
     lifecycle_status: str = LIFECYCLE_CANDIDATE
+    selection_status: str = SELECTION_CANDIDATE
     epistemic_status: str = "A"
     version_no: int = 1
     created_at: str | None = None
@@ -206,6 +220,9 @@ class Opportunity:
         if self.lifecycle_status not in LIFECYCLE_STATUSES:
             raise ValueError(
                 f"invalid lifecycle_status {self.lifecycle_status!r}")
+        if self.selection_status not in SELECTION_STATUSES:
+            raise ValueError(
+                f"invalid selection_status {self.selection_status!r}")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -220,6 +237,7 @@ class Opportunity:
             "known_alternatives": self.known_alternatives,
             "evidence_gaps": self.evidence_gaps,
             "lifecycle_status": self.lifecycle_status,
+            "selection_status": self.selection_status,
             "epistemic_status": self.epistemic_status,
             "version_no": self.version_no, "created_at": self.created_at,
             "updated_at": self.updated_at,
@@ -248,6 +266,8 @@ class Opportunity:
             evidence_gaps=_parse_json_list(data.get("evidence_gaps_json")
                                            or data.get("evidence_gaps")),
             lifecycle_status=data.get("lifecycle_status", LIFECYCLE_CANDIDATE),
+            selection_status=data.get("selection_status",
+                                      SELECTION_CANDIDATE),
             epistemic_status=data.get("epistemic_status", "A"),
             version_no=data.get("version_no", 1),
             created_at=data.get("created_at"),
@@ -535,5 +555,7 @@ __all__ = [
     "CRITICALITY_CRITICAL", "CRITICALITY_IMPORTANT", "CRITICALITY_NORMAL",
     "CRITICALITIES",
     "INSIGHT_TYPES", "OPPORTUNITY_TYPES", "REQUIREMENT_TYPES", "FEATURE_TYPES",
+    "SELECTION_CANDIDATE", "SELECTION_SELECTED", "SELECTION_REJECTED",
+    "SELECTION_SUPERSEDED", "SELECTION_STATUSES",
     "Insight", "Opportunity", "ProductPrinciple", "Requirement", "Feature",
 ]
