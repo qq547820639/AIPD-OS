@@ -32,8 +32,14 @@
    epistemic_status/lifecycle_status。
 4. **重复项**：`evidence`/`risks`/`decisions`/`changes`/`gates` 已有一致 canonical
    实现 → MMD 导入走现有 service（写入即映射）。
-5. **需要 schema extension 的项**（requirements/bom_items/suppliers/
-   validation_tests/open_issues）→ v5.9 计划（见 V5_9_IMPLEMENTATION_PLAN.md）。
+5. **requirements（v5.9 已落地）**：`product_intelligence.Requirement`（migration v10）
+   —— NPI-ready 字段（nominal_value/unit/lower_limit/upper_limit/tolerance/
+   test_condition/verification_method/derivation_method/affected_item_refs/
+   required_by_gate/owner）可直接承接 MMD requirement 投影；definition_status
+   与 epistemic_status 正交（§40）。未来 MMD=Canonical State 的 Manufacturing
+   Projection，不做第二套制造 Requirement（§62）。
+6. **仍待 schema extension**：bom_items/suppliers/validation_tests/open_issues
+   → 后续版本（见 V5_9_IMPLEMENTATION_PLAN.md）。
 
 ---
 
