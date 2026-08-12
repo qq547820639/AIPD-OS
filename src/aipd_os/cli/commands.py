@@ -627,8 +627,11 @@ def cmd_intake(args):
                                 project_id=project_id,
                                 make_default=True)
         # 找已注册的 idea.decompose provider（§18：本 command 全程使用同一
-        # runtime —— 不再 fallback 另一套进程级 get_runtime）
-        provider = runtime.providers.get_by_capability("idea.decompose")
+        # runtime —— make_default=True 已安装单例，_find_idea_decompose_provider
+        # 经 get_runtime() 拿到的是**同一实例**，不产生 split；同时它是测试
+        # 注入点（monkeypatch），保留 fallback 以维持 CLI 可注入性）
+        provider = runtime.providers.get_by_capability(
+            "idea.decompose") or _find_idea_decompose_provider()
         if provider is not None and provider.available():
             decomposer = IdeaDecomposer(db, provider=provider,
                                         tenant_id=DEFAULT_TENANT,
