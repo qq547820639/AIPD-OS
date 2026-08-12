@@ -48,6 +48,7 @@ from .service import (
 )
 from .snapshot import (
     SNAPSHOT_COMMITTED,
+    SNAPSHOT_FROZEN,
     ProductDefinitionSnapshot,
     ProductDefinitionSnapshotService,
     ProductDefinitionSnapshotView,
@@ -738,6 +739,13 @@ class ProductDefinitionGate:
         from aipd_os.product_truth.lineage import LineageGraph
         from aipd_os.product_truth.models import SourceRef, TruthRecord
         from aipd_os.product_truth.store import ProductTruthStore
+
+        # §30/33：非 frozen（含 STALE）快照不可 commit —— 显式前置校验，
+        # 语义清晰（不依赖事务内 rowcount 兜底）
+        if snap.lifecycle_status != SNAPSHOT_FROZEN:
+            raise RuntimeError(
+                f"snapshot {snap.snapshot_id} is {snap.lifecycle_status}; "
+                f"only frozen snapshots can be committed")
 
         stale, reasons = self._snapshots.is_stale(snap, self._tenant,
                                                   self._project)
