@@ -63,6 +63,23 @@ def env(tmp_path):
                                     claim_type="safety",
                                     statement="提示不应鼓励超范围动作",
                                     epistemic_status="A"))
+    # v5.8.2 Commit 6：I2 需要 required key claim types 全覆盖
+    # （problem/user/mechanism/technology）—— 补全缺失类别并全部评审。
+    claim_prob = claims.create(Claim(claim_id="", tenant_id="default",
+                                     project_id="P1", idea_id=idea.idea_id,
+                                     claim_type="problem",
+                                     statement="独居老人康复训练难以坚持",
+                                     epistemic_status="A"))
+    claim_user = claims.create(Claim(claim_id="", tenant_id="default",
+                                     project_id="P1", idea_id=idea.idea_id,
+                                     claim_type="user",
+                                     statement="高龄用户认知负荷敏感",
+                                     epistemic_status="A"))
+    claim_tech = claims.create(Claim(claim_id="", tenant_id="default",
+                                     project_id="P1", idea_id=idea.idea_id,
+                                     claim_type="technology",
+                                     statement="单目摄像头姿态估计可行",
+                                     epistemic_status="A"))
     relations = EvidenceRelationService(db)
     graph = EvidenceGraph(db)
 
@@ -77,11 +94,21 @@ def env(tmp_path):
     rel_con = relations.add(EvidenceRelation(relation_id="", tenant_id="default",
                                              project_id="P1", claim_id=claim_contra.claim_id,
                                              evidence_id=ev_con, relation_type="contradicts"))
+    # required key claims（problem/user/technology）各挂 reviewed supports
+    for cl in (claim_prob, claim_user, claim_tech):
+        ev = db.add_evidence("default", "P1", kind="paper",
+                             title=f"ev-{cl.claim_type}",
+                             url=f"https://example.invalid/{cl.claim_type}")
+        rel = relations.add(EvidenceRelation(relation_id="", tenant_id="default",
+                                             project_id="P1", claim_id=cl.claim_id,
+                                             evidence_id=ev, relation_type="supports"))
+        relations.review("default", "P1", rel.relation_id, "reviewed")
     # v5.8.1 Commit 4：显式评审后 relations 才进入统计
     relations.review("default", "P1", rel_sup.relation_id, "reviewed")
     relations.review("default", "P1", rel_con.relation_id, "reviewed")
     return {"db": db, "idea": idea,
-            "claims": (claim_known, claim_contra, claim_unknown, claim_gap),
+            "claims": (claim_known, claim_contra, claim_unknown, claim_gap,
+                       claim_prob, claim_user, claim_tech),
             "relations": relations, "graph": graph}
 
 
@@ -96,13 +123,15 @@ def test_projection_classifies_claims(env):
     idea = env["idea"]
     p = _projection(env).project(idea.idea_id)
 
-    assert p["maturity"] == "I2"  # key claim (mechanism) 已评审 → I2
-    assert p["counts"]["total_claims"] == 4
-    assert p["counts"]["supported_claims"] == 1  # reviewed supports
+    # v5.8.2 Commit 6：required key claim types（problem/user/mechanism/
+    # technology）全部存在且评审 → I2
+    assert p["maturity"] == "I2"
+    assert p["counts"]["total_claims"] == 7
+    assert p["counts"]["supported_claims"] == 4  # behavior+problem+user+technology
     assert p["counts"]["contradicted"] == 1      # reviewed contradicts
-    assert p["counts"]["evidence"] == 2          # 有 reviewed relation 的 claim 数
+    assert p["counts"]["evidence"] == 5          # 有 reviewed relation 的 claim 数
     assert p["counts"]["unknown"] == 1           # epistemic U
-    assert p["counts"]["gaps"] == 2              # claim_unknown + claim_gap 无 reviewed relation
+    assert p["counts"]["gaps"] == 2              # product + safety 无 reviewed relation
     assert p["counts"]["evidence_gaps"] == 2
     assert p["counts"]["pending_relations"] == 0
     assert p["counts"]["rejected_relations"] == 0
@@ -117,13 +146,17 @@ def test_projection_classifies_claims(env):
     assert p["assessments"][env["claims"][1].claim_id]["status"] == "CONTRADICTED"
     assert p["assessments"][env["claims"][2].claim_id]["status"] == "NOT_SEARCHED"
     assert p["assessments"][env["claims"][3].claim_id]["status"] == "NOT_SEARCHED"
+    assert p["assessments"][env["claims"][4].claim_id]["status"] == "SUPPORTED"
+    assert p["assessments"][env["claims"][5].claim_id]["status"] == "SUPPORTED"
+    assert p["assessments"][env["claims"][6].claim_id]["status"] == "SUPPORTED"
 
 
 def test_projection_assumption_lists_a_claims(env):
     idea = env["idea"]
     p = _projection(env).project(idea.idea_id)
-    # assumption = epistemic A 的 claims（claim_known/contra/gap 都是 A）
-    assert p["counts"]["assumption"] == 3
+    # assumption = epistemic A 的 claims（behavior/mechanism/safety +
+    # problem/user/technology 都是 A）
+    assert p["counts"]["assumption"] == 6
     # unknown = epistemic U 的 claim
     assert [c["statement"] for c in p["unknown"]] == ["离线推理可行"]
 
@@ -327,34 +360,57 @@ def test_rejected_relation_does_not_affect_truth(env):
 
 
 def test_maturity_requires_key_claim_coverage(env):
-    """I2 需要所有 key claims 完成检索+评审（缺少任一 → I1；补全后 → I2）。"""
+    """v5.8.2 Commit 6：I2 需要 **required key claim types 全覆盖**。
+
+    只有部分 key claims 被调查（缺 technology）→ I1 + Evidence Gap；
+    补全 required types 并全部评审 → I2。
+    """
     db = env["db"]
     graph = env["graph"]
     relations = env["relations"]
     idea, claims = _idea_with_claims(db, ["problem", "user", "mechanism"])
-    # 只检索+评审 problem（其余 key claims 未检索）→ I1
-    _add_reviewed_relation(db, relations, claims[0], "supports")
+    # 检索+评审已有 key claims（problem/user/mechanism）→ 仍 I1（缺 technology）
+    for cl in claims:
+        _add_reviewed_relation(db, relations, cl, "supports")
     assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I1_STRUCTURED_IDEA
-    # 补全 user / mechanism → I2
-    _add_reviewed_relation(db, relations, claims[1], "supports")
+    reasons = IdeaMaturity.gap_reasons(idea, graph)
+    assert any("missing required key claim types: technology" in r
+               for r in reasons), reasons
+    # 补全 technology claim → 类型齐全 → I2
+    tech = ClaimService(db).create(Claim(claim_id="", tenant_id="default",
+                                         project_id="P1", idea_id=idea.idea_id,
+                                         claim_type="technology",
+                                         statement="claim-technology",
+                                         epistemic_status="A"))
     assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I1_STRUCTURED_IDEA
-    _add_reviewed_relation(db, relations, claims[2], "supports")
+    _add_reviewed_relation(db, relations, tech, "supports")
     assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I2_EVIDENCE_BACKED_IDEA
+    assert IdeaMaturity.gap_reasons(idea, graph) == []
     # key_claims 辅助
     assert {c.claim_type for c in IdeaMaturity.key_claims(graph, idea)} == \
-        {"problem", "user", "mechanism"}
+        {"problem", "user", "mechanism", "technology"}
 
 
 def test_key_claims_exclude_non_key_types(env):
-    """business/regulatory/safety 等非 key claim 不阻塞 I2（确定性规则）。"""
+    """business/regulatory/safety 等非 key claim 不阻塞 I2（确定性规则），
+    但**不能替代** required key claim types（v5.8.2 Commit 6）。"""
     db = env["db"]
     graph = env["graph"]
     relations = env["relations"]
     idea, claims = _idea_with_claims(db, ["safety", "business"])
-    # 非 key claims：无任何 reviewed evidence → I1（保守基线）
+    # 全部评审 safety/business → 仍 I1（无任何 required type）
+    for cl in claims:
+        _add_reviewed_relation(db, relations, cl, "supports")
     assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I1_STRUCTURED_IDEA
-    # 至少一条 reviewed evidence（挂在任一 claim 上）→ I2
-    _add_reviewed_relation(db, relations, claims[0], "supports")
+    assert any("missing required key claim types" in r
+               for r in IdeaMaturity.gap_reasons(idea, graph))
+    # 补全 4 个 required types 并评审 → I2
+    for t in ("problem", "user", "mechanism", "technology"):
+        cl = ClaimService(db).create(Claim(
+            claim_id="", tenant_id="default", project_id="P1",
+            idea_id=idea.idea_id, claim_type=t,
+            statement=f"claim-{t}", epistemic_status="A"))
+        _add_reviewed_relation(db, relations, cl, "supports")
     assert IdeaMaturity.evaluate(idea, graph) == IdeaMaturity.I2_EVIDENCE_BACKED_IDEA
 
 
@@ -372,4 +428,5 @@ def test_conflict_visible_in_projection(env):
     assert p["counts"]["contradicted"] == 1      # problem 有 reviewed contradicts
     assert p["assessments"][claims[0].claim_id]["status"] == "MIXED"
     assert p["assessments"][claims[1].claim_id]["status"] == "SUPPORTED"
-    assert p["maturity"] == "I2"
+    # v5.8.2 Commit 6：缺 mechanism/technology → I1（contradiction 仍显式可见）
+    assert p["maturity"] == "I1"

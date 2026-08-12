@@ -175,32 +175,39 @@ def test_supervisor_idea_truth_refresh(tmp_path):
     db, sup = _env(tmp_path)
     idea = IdeaService(db).create(
         Idea(idea_id="", tenant_id="default", project_id="P1", title="I", raw_input="r"))
-    claim = ClaimService(db).create(
-        Claim(claim_id="", tenant_id="default", project_id="P1",
-              idea_id=idea.idea_id, claim_type="problem",
-              statement="s", epistemic_status="A"))
-    ev = db.add_evidence("default", "P1", kind="paper", title="t",
-                         url="https://example.invalid/t")
-    rel = EvidenceRelationService(db).add(
-        EvidenceRelation(relation_id="", tenant_id="default", project_id="P1",
-                         claim_id=claim.claim_id, evidence_id=ev,
-                         relation_type="supports"), actor="alice")
+    # v5.8.2 Commit 6：I2 需要 required key claim types 全覆盖
+    # （problem/user/mechanism/technology）—— 4 类齐备再评审。
+    claims = []
+    for t in ("problem", "user", "mechanism", "technology"):
+        claims.append(ClaimService(db).create(
+            Claim(claim_id="", tenant_id="default", project_id="P1",
+                  idea_id=idea.idea_id, claim_type=t,
+                  statement=f"claim-{t}", epistemic_status="A")))
+    rels = []
+    for cl in claims:
+        ev = db.add_evidence("default", "P1", kind="paper", title="t",
+                             url="https://example.invalid/t")
+        rels.append(EvidenceRelationService(db).add(
+            EvidenceRelation(relation_id="", tenant_id="default", project_id="P1",
+                             claim_id=cl.claim_id, evidence_id=ev,
+                             relation_type="supports"), actor="alice"))
     # reviewed 前：I1（pending 不算完成）
     reg = _registry(db)
     router = _router(tmp_path, reg)
     p1 = IdeaTruthProjection(db, EvidenceGraph(db), "default", "P1").project(idea.idea_id)
     assert p1["maturity"] == "I1"
-    assert p1["counts"]["pending_relations"] == 1
+    assert p1["counts"]["pending_relations"] == 4
     # 评审（evidence.assess_relation 能力）→ reviewed
     from aipd_os.supervisor import EVIDENCE_ASSESS_RELATION_CAPABILITY
-    sup.add_work("S1_theory", "assess", "assess relation", "I1→I2",
-                 capability_floor=EVIDENCE_ASSESS_RELATION_CAPABILITY,
-                 inputs={"relation_id": rel.relation_id,
-                         "review_status": "reviewed",
-                         "tenant_id": "default", "project_id": "P1"})
-    results = sup.run_supervisor(steps=1, adapter_registry=reg,
+    for rel in rels:
+        sup.add_work("S1_theory", "assess", "assess relation", "I1→I2",
+                     capability_floor=EVIDENCE_ASSESS_RELATION_CAPABILITY,
+                     inputs={"relation_id": rel.relation_id,
+                             "review_status": "reviewed",
+                             "tenant_id": "default", "project_id": "P1"})
+    results = sup.run_supervisor(steps=len(rels), adapter_registry=reg,
                                  router=router, project_id="P1")
-    assert results and results[0]["action"] == "complete"
+    assert results and results[-1]["action"] == "complete"
     # refresh → projection 更新（I2 + reviewed_supporting）
     schedule_idea_truth_refresh(sup, idea.idea_id)
     results3 = sup.run_supervisor(steps=1, adapter_registry=reg,
@@ -209,7 +216,7 @@ def test_supervisor_idea_truth_refresh(tmp_path):
     # 通过 projection 验证（IdeaTruthRefreshAdapter 返回动态 projection）
     fresh = IdeaTruthProjection(db, EvidenceGraph(db), "default", "P1").project(idea.idea_id)
     assert fresh["maturity"] == "I2"
-    assert fresh["counts"]["reviewed_supporting"] == 1
+    assert fresh["counts"]["reviewed_supporting"] == 4
     assert fresh["counts"]["pending_relations"] == 0
 
 
