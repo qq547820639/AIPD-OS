@@ -30,8 +30,19 @@ SENSITIVE_KEYS = {
     "experiment_data", "api_key", "credential", "secret", "token",
 }
 # 认知/分类状态（epistemic_status）。U=Unknown / 未验证（无证据、未确认的认知状态）。
-# 注意：S=Simulation（模拟/仿真值）；expiry.py 用 "S" 标记 stale 是对既有状态位的
-# 复用（历史行为），与 Simulation 语义不同——见 expiry.py 警示注释。
+# 正式语义（v5.8.2 锁定，三正交维度之一；禁止与 ClaimAssessment/definition_status 混用）：
+#   V=Verified（正式确认：实测/正式文件/Owner 明确确认）
+#   S=Simulation（模拟/仿真支持；非实测）
+#   C=Calculation（可复核计算）
+#   E=External evidence（可靠外部证据）
+#   A=Assumption（假设，未验证）
+#   P=Pending（待第三方确认）
+#   T=Testable（待测试）
+#   U=Unknown（未知）
+#   R=Retired（已退役；不是 Rejected）
+# 注意：expiry.py 用 "S" 标记 stale、supply_chain 用 "S" 标记 superseded、
+# experience 用 "C" 表示 owner-instruction 确认 —— 均为对既有状态位的历史复用
+# （见 docs/architecture/STATUS_SEMANTICS.md §1.2），新代码不得新增此类复用。
 FACT_STATUSES = {"V", "S", "C", "E", "A", "P", "T", "R", "U"}
 PROJECT_STATUSES = {"active", "awaiting_owner_decision", "blocked_external",
                     "internal_rework", "released", "archived"}

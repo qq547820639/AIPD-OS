@@ -20,19 +20,48 @@
 | CONFLICT | 来源冲突 |
 | OBSOLETE | 已废弃/被取代 |
 
-### 1.2 AIPD epistemic_status（认知/证据状态，claim 级别）
+### 1.2 AIPD epistemic_status（认知/证据状态，claim / fact 级别）
+
+> **正式语义（v5.8.2 锁定，见 `tests/test_status_semantics_contract.py`）**：
+> 本维度表达「对命题的认知真值/证据状态」，与 ClaimAssessment（证据对命题的
+> 评估）完全独立。**禁止**把 `S` 解释为 Supported、`C` 解释为 Contradicted、
+> `E` 解释为 Evaluated —— 那些属于 ClaimAssessment 语义（见 §2.1）。
+
+| 值 | 正式语义（英文名） | 含义 |
+|---|---|---|
+| V | Verified | 正式确认：实测 / 正式文件 / Owner 明确确认 |
+| S | Simulation | 模拟/仿真支持（非实测） |
+| C | Calculation | 可复核计算（Reproducible calculation） |
+| E | External evidence | 可靠外部证据（Reliable external evidence） |
+| A | Assumption | 假设（未验证） |
+| P | Pending | 待第三方确认（Pending third-party confirmation） |
+| T | Testable | 待测试（Pending test） |
+| U | Unknown | 未知（评估过但不知道） |
+| R | Retired | 已退役（Retired；**不是** Rejected —— Rejected 属于 ClaimAssessment） |
+
+**历史状态位复用（保留既有行为，不视为正式语义冲突）**：
+- `research/expiry.py`：`S` 被复用标记 stale（有警示注释，见该文件头）；
+- `supply_chain/`：`S` 复用标记 superseded、`C`/`V` 用于阶段判定
+  （`persistence.py _QUOTE_FACT_STATUS`、`writeback.py`）；
+- `experience/`：`C` 用于 Owner 指令确认的 fact（`source="owner-instruction"`）。
+  这些是旧代码对状态位的既有复用；**新代码不得新增此类复用**，新 domain
+  一律按上表正式语义取值。
+
+### 1.2b ClaimAssessment（证据 → 命题的评估，v5.8.1 起独立语义）
 
 | 值 | 含义 |
 |---|---|
-| V | Verified（已核实） |
-| S | Supported（有支持证据） |
-| C | Contradicted（有反驳证据） |
-| E | Evaluated（已评估但结论未定） |
-| A | Assumption（假设，未验证） |
-| P | Pending（待验证） |
-| T | Testable（可验证） |
-| U | Unknown（未知） |
-| R | Rejected（已拒绝） |
+| SUPPORTED | reviewed 证据支持 |
+| PARTIALLY_SUPPORTED | reviewed 证据部分支持 |
+| MIXED | 既有支持又有反驳 |
+| CONTRADICTED | reviewed 证据反驳 |
+| INSUFFICIENT | reviewed 证据不足（inconclusive/not_applicable） |
+| NOT_SEARCHED | 未完成检索/评审 |
+| NOT_APPLICABLE | 显式不适用 |
+
+ClaimAssessment **不属于** epistemic_status：一个 Claim 可以有
+`epistemic_status=A`（假设）+ `assessment=SUPPORTED`（有 reviewed 支持）。
+两者可共存但语义独立，禁止互相推导。
 
 ### 1.3 AIPD lifecycle_status（对象生命周期，idea/claim/relation 级别）
 
