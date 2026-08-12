@@ -99,7 +99,7 @@ def _ref_id(obj: Any) -> str:
                  "relation_id"):
         val = getattr(obj, attr, None)
         if val:
-            return val
+            return str(val)
     return ""
 
 
@@ -138,7 +138,7 @@ def compute_upstream_basis(db: AIPDStateDB, idea_id: str,
         "claims": sorted(
             [{"id": c.claim_id, "version": c.version_no,
               "statement": c.statement} for c in claims],
-            key=lambda x: x["id"]),
+            key=lambda x: str(x["id"])),
         "relations": sorted(
             [{"id": r["relation_id"], "version": r["version_no"],
               "review_status": r["review_status"],
@@ -442,8 +442,8 @@ class ProductDefinitionSnapshotService:
         }
         for kind in ("principle", "requirement", "feature"):
             if snap_sets[kind] != live_sets[kind]:
-                added = sorted(live_sets[kind] - snap_sets[kind])
-                removed = sorted(snap_sets[kind] - live_sets[kind])
+                added = sorted(str(x) for x in live_sets[kind] - snap_sets[kind])
+                removed = sorted(str(x) for x in snap_sets[kind] - live_sets[kind])
                 reasons.append(
                     f"active {kind} set changed: +{added} -{removed}")
 

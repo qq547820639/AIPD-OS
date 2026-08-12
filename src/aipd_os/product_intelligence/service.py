@@ -181,8 +181,8 @@ class ProductIntelligenceService:
 
     @staticmethod
     def _refs(obj: Any, node_type: str) -> list[str]:
-        field, _ = _REF_FOR[node_type]
-        return list(getattr(obj, field) or [])
+        field = _LINEAGE_SPECS[node_type][0][0]
+        return _field_values(obj, field)
 
     @staticmethod
     def _scope_of(obj: Any) -> tuple[str, str]:
