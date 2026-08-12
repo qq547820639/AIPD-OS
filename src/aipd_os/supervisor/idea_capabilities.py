@@ -27,6 +27,7 @@ PRODUCT_IDENTIFY_OPPORTUNITY_CAPABILITY = "product.identify_opportunity"
 PRODUCT_DERIVE_PRINCIPLES_CAPABILITY = "product.derive_principles"
 PRODUCT_DERIVE_REQUIREMENTS_CAPABILITY = "product.derive_requirements"
 PRODUCT_DERIVE_FEATURES_CAPABILITY = "product.derive_features"
+PRODUCT_CREATE_SNAPSHOT_CAPABILITY = "product.create_snapshot"
 PRODUCT_DEFINITION_GATE_CAPABILITY = "product.definition_gate"
 
 # capability → Supervisor 阶段（S0-S8 编号不变）
@@ -41,6 +42,7 @@ CAPABILITY_STAGE_MAP = {
     PRODUCT_DERIVE_PRINCIPLES_CAPABILITY: "S2_product_definition",
     PRODUCT_DERIVE_REQUIREMENTS_CAPABILITY: "S2_product_definition",
     PRODUCT_DERIVE_FEATURES_CAPABILITY: "S2_product_definition",
+    PRODUCT_CREATE_SNAPSHOT_CAPABILITY: "S2_product_definition",
     PRODUCT_DEFINITION_GATE_CAPABILITY: "S2_product_definition",
 }
 
@@ -155,6 +157,132 @@ def schedule_product_definition_gate(sup: Any, *,
     ))
 
 
+def schedule_product_identify_opportunity(sup: Any, idea_id: str, *,
+                                          tenant_id: str | None = None,
+                                          project_id: str | None = None) -> str:
+    """调度 product.identify_opportunity（S2）：Insights → Opportunity 候选。"""
+    tenant_id, project_id = _scope_of(sup) if (tenant_id is None
+                                               or project_id is None) \
+        else (tenant_id, project_id)
+    return str(sup.add_work(
+        CAPABILITY_STAGE_MAP[PRODUCT_IDENTIFY_OPPORTUNITY_CAPABILITY],
+        "product_intelligence", "Opportunity 识别（candidate）", "I2→PD",
+        capability_floor=PRODUCT_IDENTIFY_OPPORTUNITY_CAPABILITY,
+        inputs={"idea_id": idea_id, "tenant_id": tenant_id,
+                "project_id": project_id},
+    ))
+
+
+def schedule_product_derive_principles(sup: Any, idea_id: str, *,
+                                       tenant_id: str | None = None,
+                                       project_id: str | None = None) -> str:
+    """调度 product.derive_principles（S2）：Insights+Opportunity → 原则候选。"""
+    tenant_id, project_id = _scope_of(sup) if (tenant_id is None
+                                               or project_id is None) \
+        else (tenant_id, project_id)
+    return str(sup.add_work(
+        CAPABILITY_STAGE_MAP[PRODUCT_DERIVE_PRINCIPLES_CAPABILITY],
+        "product_intelligence", "ProductPrinciple 推导（candidate）", "I2→PD",
+        capability_floor=PRODUCT_DERIVE_PRINCIPLES_CAPABILITY,
+        inputs={"idea_id": idea_id, "tenant_id": tenant_id,
+                "project_id": project_id},
+    ))
+
+
+def schedule_product_derive_requirements(sup: Any, idea_id: str, *,
+                                         tenant_id: str | None = None,
+                                         project_id: str | None = None) -> str:
+    """调度 product.derive_requirements（S2）：Principles → Requirement 候选。"""
+    tenant_id, project_id = _scope_of(sup) if (tenant_id is None
+                                               or project_id is None) \
+        else (tenant_id, project_id)
+    return str(sup.add_work(
+        CAPABILITY_STAGE_MAP[PRODUCT_DERIVE_REQUIREMENTS_CAPABILITY],
+        "product_intelligence", "Requirement 推导（candidate）", "I2→PD",
+        capability_floor=PRODUCT_DERIVE_REQUIREMENTS_CAPABILITY,
+        inputs={"idea_id": idea_id, "tenant_id": tenant_id,
+                "project_id": project_id},
+    ))
+
+
+def schedule_product_derive_features(sup: Any, idea_id: str, *,
+                                     tenant_id: str | None = None,
+                                     project_id: str | None = None) -> str:
+    """调度 product.derive_features（S2）：Requirements → Feature 候选。"""
+    tenant_id, project_id = _scope_of(sup) if (tenant_id is None
+                                               or project_id is None) \
+        else (tenant_id, project_id)
+    return str(sup.add_work(
+        CAPABILITY_STAGE_MAP[PRODUCT_DERIVE_FEATURES_CAPABILITY],
+        "product_intelligence", "Feature 推导（candidate）", "I2→PD",
+        capability_floor=PRODUCT_DERIVE_FEATURES_CAPABILITY,
+        inputs={"idea_id": idea_id, "tenant_id": tenant_id,
+                "project_id": project_id},
+    ))
+
+
+def schedule_product_create_snapshot(sup: Any, *,
+                                     tenant_id: str | None = None,
+                                     project_id: str | None = None) -> str:
+    """调度 product.create_snapshot（S2）：冻结 immutable snapshot。"""
+    tenant_id, project_id = _scope_of(sup) if (tenant_id is None
+                                               or project_id is None) \
+        else (tenant_id, project_id)
+    return str(sup.add_work(
+        CAPABILITY_STAGE_MAP[PRODUCT_CREATE_SNAPSHOT_CAPABILITY],
+        "product_intelligence", "冻结 Product Definition Snapshot", "PD",
+        capability_floor=PRODUCT_CREATE_SNAPSHOT_CAPABILITY,
+        inputs={"tenant_id": tenant_id, "project_id": project_id},
+    ))
+
+
+# §42/44：正式 S2 执行链（Supervisor 只调度；Provider/Domain 生成内容）
+PRODUCT_CHAIN_STEPS = (
+    ("derive_insights", "product.derive_insights",
+     schedule_product_derive_insights),
+    ("identify_opportunity", "product.identify_opportunity",
+     schedule_product_identify_opportunity),
+    ("derive_principles", "product.derive_principles",
+     schedule_product_derive_principles),
+    ("derive_requirements", "product.derive_requirements",
+     schedule_product_derive_requirements),
+    ("derive_features", "product.derive_features",
+     schedule_product_derive_features),
+    ("create_snapshot", "product.create_snapshot",
+     schedule_product_create_snapshot),
+    ("definition_gate", "product.definition_gate",
+     schedule_product_definition_gate),
+)
+
+
+def schedule_product_intelligence_chain(sup: Any, idea_id: str, *,
+                                        tenant_id: str | None = None,
+                                        project_id: str | None = None,
+                                        steps: tuple[str, ...] | None = None
+                                        ) -> list[str]:
+    """调度完整 S2 链（§42）：derive_insights → identify_opportunity →
+    derive_principles → derive_requirements → derive_features →
+    create_snapshot → definition_gate。steps 可裁剪（按阶段名）。
+
+    Supervisor 不生成任何产品内容 —— 全部经 Adapter → Provider → Service。
+    """
+    tenant_id, project_id = _scope_of(sup) if (tenant_id is None
+                                               or project_id is None) \
+        else (tenant_id, project_id)
+    want = set(steps or [s[0] for s in PRODUCT_CHAIN_STEPS])
+    work_ids: list[str] = []
+    for name, _cap, fn in PRODUCT_CHAIN_STEPS:
+        if name not in want:
+            continue
+        if name == "definition_gate" or name == "create_snapshot":
+            wid = fn(sup, tenant_id=tenant_id, project_id=project_id)
+        else:
+            wid = fn(sup, idea_id, tenant_id=tenant_id,
+                     project_id=project_id)
+        work_ids.append(wid)
+    return work_ids
+
+
 __all__ = [
     "IDEA_STRUCTURE_CAPABILITY",
     "CLAIM_RESEARCH_CAPABILITY",
@@ -165,6 +293,7 @@ __all__ = [
     "PRODUCT_DERIVE_PRINCIPLES_CAPABILITY",
     "PRODUCT_DERIVE_REQUIREMENTS_CAPABILITY",
     "PRODUCT_DERIVE_FEATURES_CAPABILITY",
+    "PRODUCT_CREATE_SNAPSHOT_CAPABILITY",
     "PRODUCT_DEFINITION_GATE_CAPABILITY",
     "CAPABILITY_STAGE_MAP",
     "IDEA_CAPABILITIES",
@@ -172,5 +301,12 @@ __all__ = [
     "schedule_claim_research",
     "schedule_idea_truth_refresh",
     "schedule_product_derive_insights",
+    "schedule_product_identify_opportunity",
+    "schedule_product_derive_principles",
+    "schedule_product_derive_requirements",
+    "schedule_product_derive_features",
+    "schedule_product_create_snapshot",
     "schedule_product_definition_gate",
+    "schedule_product_intelligence_chain",
+    "PRODUCT_CHAIN_STEPS",
 ]

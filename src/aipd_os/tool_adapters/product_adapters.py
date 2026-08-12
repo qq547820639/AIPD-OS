@@ -89,6 +89,33 @@ class _ProductGenerationAdapter(ToolAdapter):
             return {"provider": "unconfigured"}
         return self._provider.provenance().to_dict()
 
+    # ---- context 自给自足（adapter 从 canonical db 读上游，不依赖 work
+    # item inputs 传全量 —— 运行时数据流（§34）：Adapter → Provider）----
+    def _claims_ctx(self, tenant: str, project: str) -> list[dict[str, Any]]:
+        from aipd_os.idea.claim_service import ClaimService
+        rows = ClaimService(self._db).list(tenant, project)
+        return [{"claim_id": r.claim_id, "claim_type": r.claim_type,
+                 "statement": r.statement,
+                 "epistemic_status": r.epistemic_status}
+                for r in rows]
+
+    def _objs_ctx(self, node_type: str, tenant: str,
+                  project: str) -> list[dict[str, Any]]:
+        objs = {
+            "insight": self._pi.list_insights,
+            "opportunity": self._pi.list_opportunities,
+            "principle": self._pi.list_principles,
+            "requirement": self._pi.list_requirements,
+            "feature": self._pi.list_features,
+        }[node_type](tenant, project)
+        id_attr = {"insight": "insight_id", "opportunity": "opportunity_id",
+                   "principle": "principle_id",
+                   "requirement": "requirement_id",
+                   "feature": "feature_id"}[node_type]
+        return [{"id": getattr(o, id_attr), f"{node_type}_id":
+                 getattr(o, id_attr), "title": getattr(o, "title", ""),
+                 "statement": getattr(o, "statement", "")} for o in objs]
+
 
 class ProductDeriveInsightsAdapter(_ProductGenerationAdapter):
     def capability_id(self) -> str:
@@ -106,7 +133,7 @@ class ProductDeriveInsightsAdapter(_ProductGenerationAdapter):
         context = {
             "idea_id": input_.get("idea_id"), "tenant_id": tenant,
             "project_id": project,
-            "claims": input_.get("claims", []),
+            "claims": self._claims_ctx(tenant, project),
             "assessments": input_.get("assessments", []),
         }
         candidates = provider.derive_insights(context)
@@ -137,7 +164,7 @@ class ProductIdentifyOpportunityAdapter(_ProductGenerationAdapter):
         context = {
             "idea_id": input_.get("idea_id"), "tenant_id": tenant,
             "project_id": project,
-            "insights": input_.get("insights", []),
+            "insights": self._objs_ctx("insight", tenant, project),
         }
         candidates = provider.identify_opportunities(context)
         errors = provider.validate_candidates(candidates, "opportunity")
@@ -171,8 +198,8 @@ class ProductDerivePrinciplesAdapter(_ProductGenerationAdapter):
         context = {
             "idea_id": input_.get("idea_id"), "tenant_id": tenant,
             "project_id": project,
-            "insights": input_.get("insights", []),
-            "opportunity": input_.get("opportunity"),
+            "insights": self._objs_ctx("insight", tenant, project),
+            "opportunity": self._objs_ctx("opportunity", tenant, project),
         }
         candidates = provider.derive_principles(context)
         errors = provider.validate_candidates(candidates, "principle")
@@ -202,7 +229,7 @@ class ProductDeriveRequirementsAdapter(_ProductGenerationAdapter):
         context = {
             "idea_id": input_.get("idea_id"), "tenant_id": tenant,
             "project_id": project,
-            "principles": input_.get("principles", []),
+            "principles": self._objs_ctx("principle", tenant, project),
         }
         candidates = provider.derive_requirements(context)
         errors = provider.validate_candidates(candidates, "requirement")
@@ -236,7 +263,7 @@ class ProductDeriveFeaturesAdapter(_ProductGenerationAdapter):
         context = {
             "idea_id": input_.get("idea_id"), "tenant_id": tenant,
             "project_id": project,
-            "requirements": input_.get("requirements", []),
+            "requirements": self._objs_ctx("requirement", tenant, project),
         }
         candidates = provider.derive_features(context)
         errors = provider.validate_candidates(candidates, "feature")
