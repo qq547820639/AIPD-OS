@@ -45,3 +45,5 @@ logs/
 
 # Runtime / eval output
 evals_out/
+# Runtime local state (default settings.db_dir)
+data/
