@@ -1,21 +1,21 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-08-12T09:36:47`
+- 生成时间：`2026-08-12T11:00:28`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`114feb2a9ac40af0a887265f2534a404f6bad534`
+- 默认分支：`main`；HEAD：`ef190cd137e993f22070efc9329f17f7431082eb`
 - 版本：`5.6.0`
-- 能力总数：`70`
+- 能力总数：`77`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
 
 ## 分类统计
 
 | 分类 | 数量 | 说明 |
 | --- | --- | --- |
-| `fully_implemented` | 35 | 完整实现（有真实运行工件与测试证据） |
-| `partially_implemented` | 26 | 部分实现（核心路径可用，边界/证据不全） |
+| `fully_implemented` | 36 | 完整实现（有真实运行工件与测试证据） |
+| `partially_implemented` | 27 | 部分实现（核心路径可用，边界/证据不全） |
 | `protocol_only` | 0 | 仅协议/接口（无真实执行） |
 | `template_only` | 0 | 仅模板/示例（无真实执行） |
-| `external_dependency` | 9 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
+| `external_dependency` | 14 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
 | `not_implemented` | 0 | 未实现 |
 | `not_verifiable` | 0 | 无法验证（缺证据/缺环境） |
 
@@ -118,4 +118,16 @@
 | CAD差异 | `fully_implemented` | references/interaction-contract-v4.md | src/aipd_os/experience/views.py | aipd_os.experience.views.OwnerView | `aipd status` | tests/test_experience.py |  |
 | BOM差异 | `fully_implemented` | references/manual-to-cad-digital-thread.md | src/aipd_os/experience/views.py | aipd_os.experience.views.OwnerView | `aipd status` | tests/test_experience.py |  |
 | 风险和外部等待视图 | `fully_implemented` | references/interaction-contract-v4.md | src/aipd_os/experience/project_summary.py | aipd_os.experience.project_summary.build_project_summary | `aipd status` | tests/test_experience.py |  |
+
+## 产品智能
+
+| 能力 | 分类 | 声明文件 | 实现文件 | 入口 | 运行命令 | 单元测试 | 当前限制 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 推导洞察候选 | `external_dependency` | docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py | aipd_os.tool_adapters.product_adapters.ProductDeriveInsightsAdapter | `aipd run（Supervisor S2 product.derive_insights）` | tests/test_product_definition_integrity.py; tests/test_product_intelligence.py | 生产 Provider 未接入；未配置时 discover.available=False -> probe EXTERNAL_DEPENDENCY，execute 写外部任务包（诚实不伪造） |
+| 识别机会候选 | `external_dependency` | docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py | aipd_os.tool_adapters.product_adapters.ProductIdentifyOpportunityAdapter | `aipd run（Supervisor S2 product.identify_opportunity）` | tests/test_product_definition_integrity.py | 生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY |
+| 推导产品原则候选 | `external_dependency` | docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py | aipd_os.tool_adapters.product_adapters.ProductDerivePrinciplesAdapter | `aipd run（Supervisor S2 product.derive_principles）` | tests/test_product_definition_integrity.py | 生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY |
+| 推导需求候选 | `external_dependency` | docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py | aipd_os.tool_adapters.product_adapters.ProductDeriveRequirementsAdapter | `aipd run（Supervisor S2 product.derive_requirements）` | tests/test_product_definition_integrity.py | 生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY |
+| 推导功能候选 | `external_dependency` | docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py | aipd_os.tool_adapters.product_adapters.ProductDeriveFeaturesAdapter | `aipd run（Supervisor S2 product.derive_features）` | tests/test_product_definition_integrity.py | 生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY |
+| 冻结产品定义快照 | `fully_implemented` | docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/product_intelligence/snapshot.py; src/aipd_os/tool_adapters/product_adapters.py | aipd_os.tool_adapters.product_adapters.ProductCreateSnapshotAdapter | `aipd run（Supervisor S2 product.create_snapshot）` | tests/test_product_definition_integrity.py |  |
+| 产品定义门禁 | `partially_implemented` | docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/product_intelligence/gate.py; src/aipd_os/tool_adapters/product_adapters.py | aipd_os.tool_adapters.product_adapters.ProductDefinitionGateAdapter | `aipd product gate --db state.db --project p1` | tests/test_product_definition_integrity.py | 确定性本地评估（LLM 只可解释不可决定 READY）；生产 Provider 不影响 Gate 可用性 |
 

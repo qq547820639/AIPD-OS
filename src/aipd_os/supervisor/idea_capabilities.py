@@ -271,15 +271,28 @@ def schedule_product_intelligence_chain(sup: Any, idea_id: str, *,
         else (tenant_id, project_id)
     want = set(steps or [s[0] for s in PRODUCT_CHAIN_STEPS])
     work_ids: list[str] = []
-    for name, _cap, fn in PRODUCT_CHAIN_STEPS:
-        if name not in want:
-            continue
-        if name == "definition_gate" or name == "create_snapshot":
-            wid = fn(sup, tenant_id=tenant_id, project_id=project_id)
-        else:
-            wid = fn(sup, idea_id, tenant_id=tenant_id,
-                     project_id=project_id)
-        work_ids.append(wid)
+    # 显式分支（mypy：不同 fn 签名不合并循环）
+    if "derive_insights" in want:
+        work_ids.append(schedule_product_derive_insights(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+    if "identify_opportunity" in want:
+        work_ids.append(schedule_product_identify_opportunity(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+    if "derive_principles" in want:
+        work_ids.append(schedule_product_derive_principles(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+    if "derive_requirements" in want:
+        work_ids.append(schedule_product_derive_requirements(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+    if "derive_features" in want:
+        work_ids.append(schedule_product_derive_features(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+    if "create_snapshot" in want:
+        work_ids.append(schedule_product_create_snapshot(
+            sup, tenant_id=tenant_id, project_id=project_id))
+    if "definition_gate" in want:
+        work_ids.append(schedule_product_definition_gate(
+            sup, tenant_id=tenant_id, project_id=project_id))
     return work_ids
 
 

@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-08-12T09:36:54",
-  "source_commit": "114feb2a9ac40af0a887265f2534a404f6bad534",
+  "generated_at": "2026-08-12T11:00:34",
+  "source_commit": "ef190cd137e993f22070efc9329f17f7431082eb",
   "package_version": "5.6.0",
   "generator_version": "audit_repo_v1",
   "command": "python scripts/audit_repo.py",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "114feb2a9ac40af0a887265f2534a404f6bad534",
-  "latest_commit_time": "2026-08-12 09:28:58 +0800",
+  "latest_commit_sha": "ef190cd137e993f22070efc9329f17f7431082eb",
+  "latest_commit_time": "2026-08-12 10:52:59 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -29,6 +29,7 @@
       "CHANGELOG.md",
       "CODE_OF_CONDUCT.md",
       "CONTRIBUTING.md",
+      "data/",
       "dist/",
       "docker-compose.yml",
       "Dockerfile",
@@ -72,6 +73,7 @@
       "agents": 1,
       "assets": 0,
       "build": 2,
+      "data": 1,
       "dist": 3,
       "docs": 2,
       "evals": 13,
@@ -83,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 110
+      "tests": 113
     }
   },
   "tags": [
@@ -113,18 +115,18 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 473,
-    "hash_matches": 473,
+    "total_files": 482,
+    "hash_matches": 482,
     "hash_mismatch_count": 0,
     "mismatches": []
   },
   "source_manifest_verification": {
     "present": true,
     "version": "5.6.0",
-    "source_commit": "114feb2a9ac40af0a887265f2534a404f6bad534",
+    "source_commit": "ef190cd137e993f22070efc9329f17f7431082eb",
     "parsed": true,
-    "total_files": 473,
-    "hash_matches": 473,
+    "total_files": 482,
+    "hash_matches": 482,
     "hash_mismatch_count": 0,
     "mismatches": []
   },
@@ -133,13 +135,16 @@
     " M PROVENANCE.json",
     " M RELEASE_MANIFEST.json",
     " M SOURCE_MANIFEST.json",
-    " M docs/architecture/MMD_AIPD_CROSSWALK.md",
+    " M docs/audit/V5_9_1_RE_AUDIT_MATRIX.md",
     " M docs/audit/capability_matrix.json",
     " M docs/audit/capability_matrix.md",
     " M docs/audit/pytest-report.json",
     " M docs/audit/repository_snapshot.json",
     " M releases/aipd-os-5.6.0.zip",
-    "?? docs/audit/V5_9_PRODUCT_INTELLIGENCE_REPORT.md",
+    " M src/aipd_os/cli/product_commands.py",
+    " M src/aipd_os/supervisor/idea_capabilities.py",
+    " M src/aipd_os/tool_adapters/product_adapters.py",
+    "?? docs/audit/V5_9_1_PRODUCT_DEFINITION_RUNTIME_CLOSURE.md",
     "generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"

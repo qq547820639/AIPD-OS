@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-12T09:36:47",
+  "generated_at": "2026-08-12T11:00:28",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "114feb2a9ac40af0a887265f2534a404f6bad534",
-  "source_commit": "114feb2a9ac40af0a887265f2534a404f6bad534",
+  "latest_commit_sha": "ef190cd137e993f22070efc9329f17f7431082eb",
+  "source_commit": "ef190cd137e993f22070efc9329f17f7431082eb",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
@@ -27,13 +27,13 @@
     "not_verifiable": "无法验证（缺证据/缺环境）"
   },
   "summary": {
-    "total_capabilities": 70,
+    "total_capabilities": 77,
     "by_classification": {
-      "fully_implemented": 35,
-      "partially_implemented": 26,
+      "fully_implemented": 36,
+      "partially_implemented": 27,
       "protocol_only": 0,
       "template_only": 0,
-      "external_dependency": 9,
+      "external_dependency": 14,
       "not_implemented": 0,
       "not_verifiable": 0
     }
@@ -1531,6 +1531,158 @@
           "integration_test": null,
           "e2e_evidence": "风险/外部等待视图",
           "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": false
+          }
+        }
+      ]
+    },
+    {
+      "domain": "产品智能",
+      "capabilities": [
+        {
+          "id": "product.derive_insights",
+          "name": "推导洞察候选",
+          "domain": "产品智能",
+          "classification": "external_dependency",
+          "external_dependency": true,
+          "declaration_file": "docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md",
+          "implementation_file": "src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py",
+          "entry_point": "aipd_os.tool_adapters.product_adapters.ProductDeriveInsightsAdapter",
+          "run_command": "aipd run（Supervisor S2 product.derive_insights）",
+          "input_output": "ClaimAssessment 上下文 -> Insight 候选（lifecycle=candidate）",
+          "unit_test": "tests/test_product_definition_integrity.py; tests/test_product_intelligence.py",
+          "integration_test": "tests/test_product_intelligence_golden_e2e.py",
+          "e2e_evidence": "Runtime Golden E2E：Supervisor->Router->Adapter->Provider->Service 全链（FakeProvider，tests-only）",
+          "current_limitation": "生产 Provider 未接入；未配置时 discover.available=False -> probe EXTERNAL_DEPENDENCY，execute 写外部任务包（诚实不伪造）",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": true
+          }
+        },
+        {
+          "id": "product.identify_opportunity",
+          "name": "识别机会候选",
+          "domain": "产品智能",
+          "classification": "external_dependency",
+          "external_dependency": true,
+          "declaration_file": "docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md",
+          "implementation_file": "src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py",
+          "entry_point": "aipd_os.tool_adapters.product_adapters.ProductIdentifyOpportunityAdapter",
+          "run_command": "aipd run（Supervisor S2 product.identify_opportunity）",
+          "input_output": "Insights -> Opportunity 候选（不自动 select；selection 是 Owner/Gate 决策，P0-07）",
+          "unit_test": "tests/test_product_definition_integrity.py",
+          "integration_test": "tests/test_product_intelligence_golden_e2e.py",
+          "e2e_evidence": "Runtime Golden E2E",
+          "current_limitation": "生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": true
+          }
+        },
+        {
+          "id": "product.derive_principles",
+          "name": "推导产品原则候选",
+          "domain": "产品智能",
+          "classification": "external_dependency",
+          "external_dependency": true,
+          "declaration_file": "docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md",
+          "implementation_file": "src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py",
+          "entry_point": "aipd_os.tool_adapters.product_adapters.ProductDerivePrinciplesAdapter",
+          "run_command": "aipd run（Supervisor S2 product.derive_principles）",
+          "input_output": "Insights + Opportunity -> ProductPrinciple 候选",
+          "unit_test": "tests/test_product_definition_integrity.py",
+          "integration_test": "tests/test_product_intelligence_golden_e2e.py",
+          "e2e_evidence": "Runtime Golden E2E",
+          "current_limitation": "生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": true
+          }
+        },
+        {
+          "id": "product.derive_requirements",
+          "name": "推导需求候选",
+          "domain": "产品智能",
+          "classification": "external_dependency",
+          "external_dependency": true,
+          "declaration_file": "docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md",
+          "implementation_file": "src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py",
+          "entry_point": "aipd_os.tool_adapters.product_adapters.ProductDeriveRequirementsAdapter",
+          "run_command": "aipd run（Supervisor S2 product.derive_requirements）",
+          "input_output": "Principles -> Requirement 候选（NPI-ready 字段；candidate 非 approved）",
+          "unit_test": "tests/test_product_definition_integrity.py",
+          "integration_test": "tests/test_product_intelligence_golden_e2e.py",
+          "e2e_evidence": "Runtime Golden E2E",
+          "current_limitation": "生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": true
+          }
+        },
+        {
+          "id": "product.derive_features",
+          "name": "推导功能候选",
+          "domain": "产品智能",
+          "classification": "external_dependency",
+          "external_dependency": true,
+          "declaration_file": "docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md",
+          "implementation_file": "src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py",
+          "entry_point": "aipd_os.tool_adapters.product_adapters.ProductDeriveFeaturesAdapter",
+          "run_command": "aipd run（Supervisor S2 product.derive_features）",
+          "input_output": "Requirements -> Feature 候选",
+          "unit_test": "tests/test_product_definition_integrity.py",
+          "integration_test": "tests/test_product_intelligence_golden_e2e.py",
+          "e2e_evidence": "Runtime Golden E2E",
+          "current_limitation": "生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": true
+          }
+        },
+        {
+          "id": "product.create_snapshot",
+          "name": "冻结产品定义快照",
+          "domain": "产品智能",
+          "classification": "fully_implemented",
+          "external_dependency": false,
+          "declaration_file": "docs/audit/V5_9_1_RE_AUDIT_MATRIX.md",
+          "implementation_file": "src/aipd_os/product_intelligence/snapshot.py; src/aipd_os/tool_adapters/product_adapters.py",
+          "entry_point": "aipd_os.tool_adapters.product_adapters.ProductCreateSnapshotAdapter",
+          "run_command": "aipd run（Supervisor S2 product.create_snapshot）",
+          "input_output": "live Product Definition -> immutable Snapshot（id+version refs，content_hash）",
+          "unit_test": "tests/test_product_definition_integrity.py",
+          "integration_test": null,
+          "e2e_evidence": "Runtime Golden E2E；Projection 报告 snapshot fresh/stale",
+          "current_limitation": null,
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": false
+          }
+        },
+        {
+          "id": "product.definition_gate",
+          "name": "产品定义门禁",
+          "domain": "产品智能",
+          "classification": "partially_implemented",
+          "external_dependency": false,
+          "declaration_file": "docs/audit/V5_9_1_RE_AUDIT_MATRIX.md",
+          "implementation_file": "src/aipd_os/product_intelligence/gate.py; src/aipd_os/tool_adapters/product_adapters.py",
+          "entry_point": "aipd_os.tool_adapters.product_adapters.ProductDefinitionGateAdapter",
+          "run_command": "aipd product gate --db state.db --project p1",
+          "input_output": "Snapshot -> GateEvaluation（READY/CONDITIONAL/BLOCKED + authorization + eligibility）",
+          "unit_test": "tests/test_product_definition_integrity.py",
+          "integration_test": "tests/test_product_intelligence_golden_e2e.py",
+          "e2e_evidence": "CLI product gate --json；Runtime Golden E2E",
+          "current_limitation": "确定性本地评估（LLM 只可解释不可决定 READY）；生产 Provider 不影响 Gate 可用性",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,

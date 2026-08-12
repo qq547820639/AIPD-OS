@@ -1,8 +1,8 @@
 {
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
-  "source_commit": "71c4430d31381622a5d269753dfbe20d67181e2a",
-  "generated_at": "2026-08-12T01:42:12+00:00",
+  "source_commit": "ef190cd137e993f22070efc9329f17f7431082eb",
+  "generated_at": "2026-08-12T03:00:19+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -977,13 +977,18 @@
     },
     {
       "path": "src/aipd_os/cli/commands.py",
-      "size": 67738,
-      "sha256": "87821fff11d07d48dd6378fd41fe64e7756748d32ff982523254a350741573dd"
+      "size": 64868,
+      "sha256": "8edb5d539265127d01a0d5c91ff55f3d0539e420c15ee887792e9d0d240ea2a0"
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 19666,
-      "sha256": "2491265e4fd30220413ef28435b70cc2fc8fb1ec9f8ac5d322555ab5ec6eb6a1"
+      "size": 19883,
+      "sha256": "97c732222b8cf706cf05958a2fba70b35253e8c167604c03950d36f2ee84d19c"
+    },
+    {
+      "path": "src/aipd_os/cli/product_commands.py",
+      "size": 7397,
+      "sha256": "06f1e49540989c1cfb415c974d59cc70bff349e7daaa6ada31e2b0c43ec3bb2f"
     },
     {
       "path": "src/aipd_os/config.py",
@@ -1297,28 +1302,38 @@
     },
     {
       "path": "src/aipd_os/product_intelligence/__init__.py",
-      "size": 2688,
-      "sha256": "ce9e417f34e2d5e209805c778b53861ef4bcd0b4164ccaaa66eb13ce8a83cbe2"
+      "size": 3982,
+      "sha256": "04bd9ae0bbc326f2d66beaffea928be41a330be86fc2d195da7cd23ea358f421"
     },
     {
       "path": "src/aipd_os/product_intelligence/gate.py",
-      "size": 17945,
-      "sha256": "9a6348370edd22bfb0f58b8a51ed38a34ed7fe8c8440878cddd018e6752e12b2"
+      "size": 41349,
+      "sha256": "a8489ca4ff4ef50c7cd9d37a4a6cf17abea64733d9014de24cd232c4228d87a0"
     },
     {
       "path": "src/aipd_os/product_intelligence/models.py",
-      "size": 23458,
-      "sha256": "6729853b475b4db56e5c616be7df6e4ce922adf3ec6f2e3a66cbdb73aecbbcbb"
+      "size": 24472,
+      "sha256": "92ff33a2c22790954ec990548217ed40ce2d63ec7e9505c479413a152d44eeda"
     },
     {
       "path": "src/aipd_os/product_intelligence/projections.py",
-      "size": 5609,
-      "sha256": "95f2970fc23f6cbf2f0c05bb3270c32a25465af855dab7781db454ada2107b5e"
+      "size": 9105,
+      "sha256": "297e2b981c6cdbccacdab1edc4cbb66a937e18a6d0ec8c473a4b380ec2f5104f"
+    },
+    {
+      "path": "src/aipd_os/product_intelligence/provider.py",
+      "size": 8730,
+      "sha256": "25e18f18829679ab87b072ff60aa879ce678b134b53597fcec10b051e928a191"
     },
     {
       "path": "src/aipd_os/product_intelligence/service.py",
-      "size": 21251,
-      "sha256": "9437597cfe0a30702e1a9d3c5964fef84dd81171c88e81d1eaa415ab2a758f2e"
+      "size": 27200,
+      "sha256": "4ba95041a9d152b1a86cbf8cbee81a5447860f068b835de524d4a0e362fcd5f8"
+    },
+    {
+      "path": "src/aipd_os/product_intelligence/snapshot.py",
+      "size": 17101,
+      "sha256": "d9cc5b4b877e00d153b1e59a093769e34e91a3a556554ded9c319fb27ca4ff79"
     },
     {
       "path": "src/aipd_os/product_truth/__init__.py",
@@ -1372,8 +1387,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 41320,
-      "sha256": "945ee025dd0856463438cc37a7756ee881a3e2cdd46be4dd9a71ec0342de48b8"
+      "size": 47459,
+      "sha256": "b4549e9b20deac0e9541d5c6056db205e76c952a115921b4caabfe7c69a6ec0d"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -1432,8 +1447,8 @@
     },
     {
       "path": "src/aipd_os/runtime.py",
-      "size": 11791,
-      "sha256": "ead02755b519c7cd73806e3dcdf15b98d6ad8107892ae6fff41d5c27037fafdd"
+      "size": 13121,
+      "sha256": "8723777eafaaaaa9cf630786f473304bf12188550b070f40214fdf8cc2f7d8c4"
     },
     {
       "path": "src/aipd_os/scripts/__init__.py",
@@ -1502,8 +1517,8 @@
     },
     {
       "path": "src/aipd_os/state/db.py",
-      "size": 51827,
-      "sha256": "7c74a2026b27cb0580185bc9c0cd93d29aea08d6515630412a4ede9d9c0d850f"
+      "size": 54660,
+      "sha256": "db7a57e0c6770c271030a5404875131694e7c225296ea568210ec2f840d97fac"
     },
     {
       "path": "src/aipd_os/state/health.py",
@@ -1517,8 +1532,8 @@
     },
     {
       "path": "src/aipd_os/state/migrations.py",
-      "size": 31752,
-      "sha256": "bbe65f1ccc2616785724c721d7b9ff297bfd80ecc15f51762b24ee3d48fd6512"
+      "size": 37109,
+      "sha256": "29153b74583ef44cde14d8c381524b116fb4173e17f29652dbd3dd4a370c8732"
     },
     {
       "path": "src/aipd_os/state/objects.py",
@@ -1547,8 +1562,8 @@
     },
     {
       "path": "src/aipd_os/supervisor/idea_capabilities.py",
-      "size": 8231,
-      "sha256": "60f3cdecdbed68126cb801db52249a18ec29f4859b3f7852b78e3bfd3676b8c8"
+      "size": 15732,
+      "sha256": "adf26749c15dbfad19ec60e32b0a858bda77e3bf4bac7951751f7567a49207e7"
     },
     {
       "path": "src/aipd_os/supervisor/supervisor.py",
@@ -1681,6 +1696,11 @@
       "sha256": "3cf3367cadde440a51bbbb57bdc6816837e15cbe6aee8a51823fae9d8f9b639b"
     },
     {
+      "path": "src/aipd_os/tool_adapters/product_adapters.py",
+      "size": 17050,
+      "sha256": "622bcf59e6629509fb9ef6352eb2e541067580b8e1b168a4b222120474d370b6"
+    },
+    {
       "path": "src/aipd_os/tool_adapters/research_adapter.py",
       "size": 6162,
       "sha256": "6e0334cb3ab5be5ab69986290aa3e31e99c9a949060145a65f58459259c8c342"
@@ -1789,6 +1809,16 @@
       "path": "tests/fixtures/idea/research_fixtures.py",
       "size": 6014,
       "sha256": "a698e23b83cf24637caf418c55161ccab5e8d0ca06a04c0f8d2ee7882ee68083"
+    },
+    {
+      "path": "tests/fixtures/product/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tests/fixtures/product/fake_product_provider.py",
+      "size": 4130,
+      "sha256": "32a1c382b3aa92ef6a4185f03cecf65c541cd93c3eac74f18640b3d13686fecb"
     },
     {
       "path": "tests/fixtures/research/__init__.py",
@@ -2057,8 +2087,8 @@
     },
     {
       "path": "tests/test_idea_domain.py",
-      "size": 7918,
-      "sha256": "6a44e95233bd0a47f7cc858131c092f60808fafa69a778381862723e18d27736"
+      "size": 7933,
+      "sha256": "fc0f987f272fe325908664c53b744dbf9c19ee49ee59354e6d0f95b255339cd3"
     },
     {
       "path": "tests/test_idea_maturity_policy.py",
@@ -2147,8 +2177,8 @@
     },
     {
       "path": "tests/test_migration_freeze.py",
-      "size": 7016,
-      "sha256": "58e686558a95084d59cd24051762cd8a7b57860d0a0f0cff8e446acae8b18100"
+      "size": 7028,
+      "sha256": "5491dd14b805af74bf4ed523b7799a2284a00aaae291125074871a39707b04e8"
     },
     {
       "path": "tests/test_model_evals_honesty.py",
@@ -2176,14 +2206,29 @@
       "sha256": "bd0f7311377f47a40540df9f7cec3b49c341a5d7bf006dfb11976fb0c60e27a5"
     },
     {
+      "path": "tests/test_product_definition_integrity.py",
+      "size": 33042,
+      "sha256": "87aaef61d6748e72f97506aef9f74ef2f982a40e3299c488446fbe8927b11aed"
+    },
+    {
       "path": "tests/test_product_intelligence.py",
-      "size": 17615,
-      "sha256": "a282096270771862510f783a2ee770659010cf5dd63bf37620047849e7344bfc"
+      "size": 19935,
+      "sha256": "49f4a99784deed77a518df0d52f66507b8790c21da42476dffbb5db6c8109b25"
     },
     {
       "path": "tests/test_product_intelligence_golden_e2e.py",
-      "size": 13455,
-      "sha256": "00cf0cfc16afbe5ceee2da96060061f6f26eb877dc082d4a97da5f48c45ef2fa"
+      "size": 14767,
+      "sha256": "037c37ca192fb16635dc10b2813106923880bfd353c118d06e3794ea5793a55a"
+    },
+    {
+      "path": "tests/test_product_intelligence_runtime_e2e.py",
+      "size": 19966,
+      "sha256": "9f7ae392f1228bdd7d125d9b40fe5e7181f5362dbc29cc3f43e7d2acca316169"
+    },
+    {
+      "path": "tests/test_product_intelligence_security.py",
+      "size": 8040,
+      "sha256": "1f70531b9203b75e17e92bcc645f078f2bb41db3bdcb6c6aec763b8bbde98200"
     },
     {
       "path": "tests/test_product_truth_generic_lineage_compat.py",
@@ -2277,8 +2322,8 @@
     },
     {
       "path": "tests/test_score_contract.py",
-      "size": 7898,
-      "sha256": "f37fa3c1c8f250f46f15b0cf09ed54dc4af5c4049a8ae12a5307e7f9e56ca1c8"
+      "size": 7902,
+      "sha256": "de93c18724103b9a02dd9e9ccc4051c1b86592dea89a89d6bd798b6de7e5924e"
     },
     {
       "path": "tests/test_secret_policy.py",

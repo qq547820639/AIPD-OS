@@ -101,17 +101,22 @@ class _ProductGenerationAdapter(ToolAdapter):
 
     def _objs_ctx(self, node_type: str, tenant: str,
                   project: str) -> list[dict[str, Any]]:
-        objs = {
-            "insight": self._pi.list_insights,
-            "opportunity": self._pi.list_opportunities,
-            "principle": self._pi.list_principles,
-            "requirement": self._pi.list_requirements,
-            "feature": self._pi.list_features,
-        }[node_type](tenant, project)
-        id_attr = {"insight": "insight_id", "opportunity": "opportunity_id",
-                   "principle": "principle_id",
-                   "requirement": "requirement_id",
-                   "feature": "feature_id"}[node_type]
+        objs: list[Any]
+        if node_type == "insight":
+            objs = self._pi.list_insights(tenant, project)
+            id_attr = "insight_id"
+        elif node_type == "opportunity":
+            objs = self._pi.list_opportunities(tenant, project)
+            id_attr = "opportunity_id"
+        elif node_type == "principle":
+            objs = self._pi.list_principles(tenant, project)
+            id_attr = "principle_id"
+        elif node_type == "requirement":
+            objs = self._pi.list_requirements(tenant, project)
+            id_attr = "requirement_id"
+        else:
+            objs = self._pi.list_features(tenant, project)
+            id_attr = "feature_id"
         return [{"id": getattr(o, id_attr), f"{node_type}_id":
                  getattr(o, id_attr), "title": getattr(o, "title", ""),
                  "statement": getattr(o, "statement", "")} for o in objs]

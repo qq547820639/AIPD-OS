@@ -12,6 +12,7 @@ APPROVED_WITH_WAIVER）、Commit Eligibility（YES/NO + reason）。所有命令
 from __future__ import annotations
 
 import json
+from typing import Any, cast
 
 from aipd_os.product_intelligence import (
     GATE_CHOICE_APPROVE_WITH_WAIVER,
@@ -37,10 +38,10 @@ def _resolve_project(db: AIPDStateDB, tenant: str) -> str:
         projects = []
     if not projects:
         return "default"
-    return projects[0]["project_id"]
+    return cast(str, projects[0]["project_id"])
 
 
-def _emit(payload: dict, args, human: str) -> int:
+def _emit(payload: dict[str, Any] | None, args, human: str) -> int:
     if getattr(args, "json", False):
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
@@ -54,7 +55,8 @@ def cmd_product_show(args) -> int:
     proj = ProductDefinitionProjection(db, tenant, pid)
     if getattr(args, "json", False):
         return _emit(proj.project(), args, "")
-    return _emit(None, args, proj.to_markdown())
+    print(proj.to_markdown())
+    return 0
 
 
 def _snapshot_summary(db: AIPDStateDB, tenant: str, project: str) -> dict:
