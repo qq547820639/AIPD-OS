@@ -115,6 +115,8 @@ def test_with_adapters_duplicate_rejected(runtime):
 def test_get_runtime_is_process_singleton(tmp_path, monkeypatch):
     """get_runtime 返回进程级单例；reset_runtime 后可重建。"""
     monkeypatch.setenv("AIPD_DB_DIR", str(tmp_path))
+    from aipd_os.config import reload_settings
+    reload_settings()  # 清 settings 缓存（lru_cache），确保 env 生效
     reset_runtime()
     try:
         a = get_runtime()
@@ -125,6 +127,7 @@ def test_get_runtime_is_process_singleton(tmp_path, monkeypatch):
             a.adapters.get("research.academic_search") is not None
     finally:
         reset_runtime()
+        reload_settings()
 
 
 def test_live_probe_honest_without_network():
