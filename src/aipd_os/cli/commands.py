@@ -610,17 +610,25 @@ def cmd_intake(args):
         from aipd_os.execution.execution_router import ExecutionRouter
         from aipd_os.execution.runs import RunStore
         from aipd_os.idea.decomposer import IdeaDecomposer
+        from aipd_os.runtime import build_runtime
         from aipd_os.supervisor import schedule_idea_structure
-        from aipd_os.tool_adapters.builtin import build_registry
         from aipd_os.tool_adapters.idea_adapter import register_idea_adapters
 
-        # 找已注册的 idea.decompose provider（ProviderRegistry；无则诚实不可用）
-        provider = _find_idea_decompose_provider()
+        # v5.8.2 Commit 3：共享 runtime 装配（providers/adapters/router 同源）。
+        # 命令级动态适配器（idea.structure 依赖 decomposer 实例）经
+        # runtime.with_adapters 叠加，不污染共享 registry。
+        runtime = build_runtime(encryption_key="",
+                                db_path=args.db,
+                                tenant_id=DEFAULT_TENANT,
+                                project_id=project_id)
+        # 找已注册的 idea.decompose provider（进程级 runtime；无则诚实不可用）
+        provider = runtime.providers.get_by_capability(
+            "idea.decompose") or _find_idea_decompose_provider()
         if provider is not None and provider.available():
             decomposer = IdeaDecomposer(db, provider=provider,
                                         tenant_id=DEFAULT_TENANT,
                                         project_id=project_id)
-            registry = build_registry()
+            registry = runtime.with_adapters({})
             register_idea_adapters(registry, db=db, decomposer=decomposer,
                                    tenant_id=DEFAULT_TENANT,
                                    project_id=project_id)
@@ -672,31 +680,30 @@ def cmd_intake(args):
 
 
 def _find_idea_decompose_provider():
-    """从 ProviderRegistry 找已注册的 idea.decompose provider（无则 None）。
+    """从进程级 runtime 的 ProviderRegistry 找已注册的 idea.decompose provider。
 
-    第三方 provider 应注册进全局 ProviderRegistry（能力 id=idea.decompose）；
-    未注册 → None（CLI 诚实标注 CAPABILITY_UNAVAILABLE，不伪造分解）。
+    v5.8.2 Commit 3（RuntimeContext）：不再每次 new 一个空 ProviderRegistry
+    （旧实现导致「第三方已注册、CLI 永远发现不了」）。
     """
     try:
         from aipd_os.idea import IDEA_DECOMPOSE_CAPABILITY
-        from aipd_os.providers import ProviderRegistry
-        reg = ProviderRegistry()
-        return reg.get_by_capability(IDEA_DECOMPOSE_CAPABILITY)
+        from aipd_os.runtime import get_runtime
+        return get_runtime().providers.get_by_capability(IDEA_DECOMPOSE_CAPABILITY)
     except Exception:  # noqa: BLE001 - registry 未配置/未注册 → 诚实不可用
         return None
 
 
 def probe_research_capabilities(registry=None):
-    """动态探测研究能力（v5.8.1 Commit 12）：AdapterRegistry 注册 + provider available。
+    """动态探测研究能力（v5.8.1 Commit 12 / v5.8.2 Commit 3）。
 
-    不再硬编码「全部 blocked」：AdapterRegistry 有对应 adapter 且
-    discover().available → AVAILABLE；否则 UNAVAILABLE。
+    AdapterRegistry 注册 + provider available；registry 缺省时使用进程级
+    runtime 的共享 AdapterRegistry（不再每次 new 一套）。
     返回 ``{"available": [...], "unavailable": [...]}``。
     """
     from aipd_os.idea import RESEARCH_CAPABILITIES
     if registry is None:
-        from aipd_os.tool_adapters.builtin import build_registry
-        registry = build_registry()
+        from aipd_os.runtime import get_runtime
+        registry = get_runtime().adapters
     available: list = []
     unavailable: list = []
     for cid in sorted(RESEARCH_CAPABILITIES):
