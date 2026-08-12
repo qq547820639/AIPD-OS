@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-12T07:47:41",
+  "generated_at": "2026-08-12T08:34:12",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "df74c08984e8daa8b9a891beb4c132e135487b49",
-  "latest_commit_time": "2026-08-12 07:44:15 +0800",
+  "latest_commit_sha": "e15d5f451cae72a46cfaffa43df2e7040fa7bfc8",
+  "latest_commit_time": "2026-08-12 07:48:14 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -115,15 +115,6 @@
     "mismatches": []
   },
   "untracked_or_generated": [
-    " M BUNDLE_MANIFEST.json",
-    " M PROVENANCE.json",
-    " M RELEASE_MANIFEST.json",
-    " M SOURCE_MANIFEST.json",
-    " M docs/audit/audit.json",
-    " M docs/audit/capability_matrix.json",
-    " M docs/audit/capability_matrix.md",
-    " M docs/audit/pytest-report.json",
-    " M docs/audit/repository_snapshot.json",
     "generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
