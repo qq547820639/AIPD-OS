@@ -128,7 +128,8 @@ def schedule_idea_truth_refresh(sup: Any, idea_id: str, *,
 # ---------------------------------------------------------------------------
 def schedule_product_derive_insights(sup: Any, idea_id: str, *,
                                      tenant_id: str | None = None,
-                                     project_id: str | None = None) -> str:
+                                     project_id: str | None = None,
+                                     depends: list[str] | None = None) -> str:
     """调度 product.derive_insights（S2）：ClaimAssessment → Insight 候选。"""
     tenant_id, project_id = _scope_of(sup) if (tenant_id is None
                                                or project_id is None) \
@@ -137,6 +138,7 @@ def schedule_product_derive_insights(sup: Any, idea_id: str, *,
         CAPABILITY_STAGE_MAP[PRODUCT_DERIVE_INSIGHTS_CAPABILITY],
         "product_intelligence", "Insight 推导（candidate）", "I2→PD",
         capability_floor=PRODUCT_DERIVE_INSIGHTS_CAPABILITY,
+        depends=depends,
         inputs={"idea_id": idea_id, "tenant_id": tenant_id,
                 "project_id": project_id},
     ))
@@ -144,7 +146,8 @@ def schedule_product_derive_insights(sup: Any, idea_id: str, *,
 
 def schedule_product_definition_gate(sup: Any, *,
                                      tenant_id: str | None = None,
-                                     project_id: str | None = None) -> str:
+                                     project_id: str | None = None,
+                                     depends: list[str] | None = None) -> str:
     """调度 product.definition_gate（S2）：deterministic Gate 评估。"""
     tenant_id, project_id = _scope_of(sup) if (tenant_id is None
                                                or project_id is None) \
@@ -153,13 +156,15 @@ def schedule_product_definition_gate(sup: Any, *,
         CAPABILITY_STAGE_MAP[PRODUCT_DEFINITION_GATE_CAPABILITY],
         "product_intelligence", "Product Definition Gate", "gate",
         capability_floor=PRODUCT_DEFINITION_GATE_CAPABILITY,
+        depends=depends,
         inputs={"tenant_id": tenant_id, "project_id": project_id},
     ))
 
 
 def schedule_product_identify_opportunity(sup: Any, idea_id: str, *,
                                           tenant_id: str | None = None,
-                                          project_id: str | None = None) -> str:
+                                          project_id: str | None = None,
+                                          depends: list[str] | None = None) -> str:
     """调度 product.identify_opportunity（S2）：Insights → Opportunity 候选。"""
     tenant_id, project_id = _scope_of(sup) if (tenant_id is None
                                                or project_id is None) \
@@ -168,6 +173,7 @@ def schedule_product_identify_opportunity(sup: Any, idea_id: str, *,
         CAPABILITY_STAGE_MAP[PRODUCT_IDENTIFY_OPPORTUNITY_CAPABILITY],
         "product_intelligence", "Opportunity 识别（candidate）", "I2→PD",
         capability_floor=PRODUCT_IDENTIFY_OPPORTUNITY_CAPABILITY,
+        depends=depends,
         inputs={"idea_id": idea_id, "tenant_id": tenant_id,
                 "project_id": project_id},
     ))
@@ -175,7 +181,8 @@ def schedule_product_identify_opportunity(sup: Any, idea_id: str, *,
 
 def schedule_product_derive_principles(sup: Any, idea_id: str, *,
                                        tenant_id: str | None = None,
-                                       project_id: str | None = None) -> str:
+                                       project_id: str | None = None,
+                                       depends: list[str] | None = None) -> str:
     """调度 product.derive_principles（S2）：Insights+Opportunity → 原则候选。"""
     tenant_id, project_id = _scope_of(sup) if (tenant_id is None
                                                or project_id is None) \
@@ -184,6 +191,7 @@ def schedule_product_derive_principles(sup: Any, idea_id: str, *,
         CAPABILITY_STAGE_MAP[PRODUCT_DERIVE_PRINCIPLES_CAPABILITY],
         "product_intelligence", "ProductPrinciple 推导（candidate）", "I2→PD",
         capability_floor=PRODUCT_DERIVE_PRINCIPLES_CAPABILITY,
+        depends=depends,
         inputs={"idea_id": idea_id, "tenant_id": tenant_id,
                 "project_id": project_id},
     ))
@@ -191,7 +199,8 @@ def schedule_product_derive_principles(sup: Any, idea_id: str, *,
 
 def schedule_product_derive_requirements(sup: Any, idea_id: str, *,
                                          tenant_id: str | None = None,
-                                         project_id: str | None = None) -> str:
+                                         project_id: str | None = None,
+                                         depends: list[str] | None = None) -> str:
     """调度 product.derive_requirements（S2）：Principles → Requirement 候选。"""
     tenant_id, project_id = _scope_of(sup) if (tenant_id is None
                                                or project_id is None) \
@@ -200,6 +209,7 @@ def schedule_product_derive_requirements(sup: Any, idea_id: str, *,
         CAPABILITY_STAGE_MAP[PRODUCT_DERIVE_REQUIREMENTS_CAPABILITY],
         "product_intelligence", "Requirement 推导（candidate）", "I2→PD",
         capability_floor=PRODUCT_DERIVE_REQUIREMENTS_CAPABILITY,
+        depends=depends,
         inputs={"idea_id": idea_id, "tenant_id": tenant_id,
                 "project_id": project_id},
     ))
@@ -207,7 +217,8 @@ def schedule_product_derive_requirements(sup: Any, idea_id: str, *,
 
 def schedule_product_derive_features(sup: Any, idea_id: str, *,
                                      tenant_id: str | None = None,
-                                     project_id: str | None = None) -> str:
+                                     project_id: str | None = None,
+                                     depends: list[str] | None = None) -> str:
     """调度 product.derive_features（S2）：Requirements → Feature 候选。"""
     tenant_id, project_id = _scope_of(sup) if (tenant_id is None
                                                or project_id is None) \
@@ -216,6 +227,7 @@ def schedule_product_derive_features(sup: Any, idea_id: str, *,
         CAPABILITY_STAGE_MAP[PRODUCT_DERIVE_FEATURES_CAPABILITY],
         "product_intelligence", "Feature 推导（candidate）", "I2→PD",
         capability_floor=PRODUCT_DERIVE_FEATURES_CAPABILITY,
+        depends=depends,
         inputs={"idea_id": idea_id, "tenant_id": tenant_id,
                 "project_id": project_id},
     ))
@@ -223,7 +235,8 @@ def schedule_product_derive_features(sup: Any, idea_id: str, *,
 
 def schedule_product_create_snapshot(sup: Any, *,
                                      tenant_id: str | None = None,
-                                     project_id: str | None = None) -> str:
+                                     project_id: str | None = None,
+                                     depends: list[str] | None = None) -> str:
     """调度 product.create_snapshot（S2）：冻结 immutable snapshot。"""
     tenant_id, project_id = _scope_of(sup) if (tenant_id is None
                                                or project_id is None) \
@@ -232,6 +245,7 @@ def schedule_product_create_snapshot(sup: Any, *,
         CAPABILITY_STAGE_MAP[PRODUCT_CREATE_SNAPSHOT_CAPABILITY],
         "product_intelligence", "冻结 Product Definition Snapshot", "PD",
         capability_floor=PRODUCT_CREATE_SNAPSHOT_CAPABILITY,
+        depends=depends,
         inputs={"tenant_id": tenant_id, "project_id": project_id},
     ))
 
@@ -271,28 +285,51 @@ def schedule_product_intelligence_chain(sup: Any, idea_id: str, *,
         else (tenant_id, project_id)
     want = set(steps or [s[0] for s in PRODUCT_CHAIN_STEPS])
     work_ids: list[str] = []
-    # 显式分支（mypy：不同 fn 签名不合并循环）
+    prev: list[str] = []
+    # §16 显式依赖 DAG：每个 work item depends=[前一个]（上游 blocked →
+    # 下游永不 ready，fail-closed §17/49）
     if "derive_insights" in want:
-        work_ids.append(schedule_product_derive_insights(
-            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+        wid = schedule_product_derive_insights(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id,
+            depends=list(prev))
+        work_ids.append(wid)
+        prev = [wid]
     if "identify_opportunity" in want:
-        work_ids.append(schedule_product_identify_opportunity(
-            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+        wid = schedule_product_identify_opportunity(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id,
+            depends=list(prev))
+        work_ids.append(wid)
+        prev = [wid]
     if "derive_principles" in want:
-        work_ids.append(schedule_product_derive_principles(
-            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+        wid = schedule_product_derive_principles(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id,
+            depends=list(prev))
+        work_ids.append(wid)
+        prev = [wid]
     if "derive_requirements" in want:
-        work_ids.append(schedule_product_derive_requirements(
-            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+        wid = schedule_product_derive_requirements(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id,
+            depends=list(prev))
+        work_ids.append(wid)
+        prev = [wid]
     if "derive_features" in want:
-        work_ids.append(schedule_product_derive_features(
-            sup, idea_id, tenant_id=tenant_id, project_id=project_id))
+        wid = schedule_product_derive_features(
+            sup, idea_id, tenant_id=tenant_id, project_id=project_id,
+            depends=list(prev))
+        work_ids.append(wid)
+        prev = [wid]
     if "create_snapshot" in want:
-        work_ids.append(schedule_product_create_snapshot(
-            sup, tenant_id=tenant_id, project_id=project_id))
+        wid = schedule_product_create_snapshot(
+            sup, tenant_id=tenant_id, project_id=project_id,
+            depends=list(prev))
+        work_ids.append(wid)
+        prev = [wid]
     if "definition_gate" in want:
-        work_ids.append(schedule_product_definition_gate(
-            sup, tenant_id=tenant_id, project_id=project_id))
+        wid = schedule_product_definition_gate(
+            sup, tenant_id=tenant_id, project_id=project_id,
+            depends=list(prev))
+        work_ids.append(wid)
+        prev = [wid]
     return work_ids
 
 
