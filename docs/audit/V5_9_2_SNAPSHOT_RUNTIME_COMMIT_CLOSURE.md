@@ -130,9 +130,9 @@ commit/verification）。复现与修复均基于真实 DB 行为，禁止伪造
 
 | 集合 | 结果 |
 |---|---|
-| 全量核心（venv，`-m "not model_eval"`，v5.9.1 同口径） | **956 passed / 2 failed / 3 skipped / 2 deselected** |
-| 2 failed 性质 | `test_release_manifest_hashes_match_disk` + `test_source_manifest_hashes_match_disk` = release evidence 未刷新（tag 锚点模式，最终 refresh 后消除，见 §9） |
-| v5.9.1 对照 | 944 passed / 3 failed（capability_matrix + packaging×2）→ 本轮 capability_matrix 已消除；净增 11 测试全绿 |
+| 全量核心（venv，`-m "not model_eval"`，v5.9.1 同口径） | **958 passed / 0 failed / 3 skipped / 2 deselected**（最终 release evidence 刷新后全绿） |
+| evidence 刷新前 | 956 passed / 2 failed（packaging manifest 未刷新，tag 锚点模式预期）→ 最终 refresh 后 0 failed |
+| v5.9.1 对照 | 944 passed / 3 failed（capability_matrix + packaging×2）→ 本轮 3 个失败全部消除；净增 14 测试全绿 |
 | 新增测试 | `test_product_intelligence_impact`(5) + `test_product_intelligence_runtime_dag`(6) = 11 |
 | 更新测试 | PI / golden_e2e / runtime_e2e / supervisor / CLI / migration 断言迁移到新语义 |
 | 迁移/备份/安全 | 21 passed |

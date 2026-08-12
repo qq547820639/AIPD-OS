@@ -1,13 +1,13 @@
 # AIPD-OS 版本真实性审计报告（v5.1）
 
-- 生成时间：`2026-08-12T11:00:34`
+- 生成时间：`2026-08-12T12:34:47`
 - 仓库根目录：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
 
 ## 1. 仓库基本信息
 
 - 默认分支：`main`
-- 最新提交 SHA：`ef190cd137e993f22070efc9329f17f7431082eb`
-- 最新提交时间：`2026-08-12 10:52:59 +0800`
+- 最新提交 SHA：`88dcba64d4d1bbbd76f9bbb9e134bb7ff57c7cb0`
+- 最新提交时间：`2026-08-12 12:23:03 +0800`
 - pyproject 版本：`5.6.0`
 - Git 标签：`v5.5.0`, `v5.6.0`
 - `releases/` 目录存在：是
@@ -40,11 +40,11 @@
 | `migrations/` | 2 |
 | `references/` | 36 |
 | `releases/` | 4 |
-| `scripts/` | 34 |
+| `scripts/` | 36 |
 | `src/` | 0 |
 | `state_service/` | 3 |
 | `templates/` | 3 |
-| `tests/` | 113 |
+| `tests/` | 115 |
 
 ## 3. CI 状态
 
@@ -54,27 +54,25 @@
 ## 4. Release Manifest 校验
 
 - Manifest 版本：`5.6.0`
-- 文件条目总数：`482`
-- 哈希匹配：`482` / `482`
+- 文件条目总数：`486`
+- 哈希匹配：`486` / `486`
 - 哈希不匹配：`0`
 
 ## 5. 未跟踪 / 生成文件
 
-- 共 `17` 项：
+- 共 `15` 项：
   - ` M BUNDLE_MANIFEST.json`
   - ` M PROVENANCE.json`
   - ` M RELEASE_MANIFEST.json`
   - ` M SOURCE_MANIFEST.json`
-  - ` M docs/audit/V5_9_1_RE_AUDIT_MATRIX.md`
+  - ` M docs/audit/V5_9_2_SNAPSHOT_RUNTIME_COMMIT_CLOSURE.md`
+  - ` M docs/audit/audit.json`
+  - ` M docs/audit/audit.md`
   - ` M docs/audit/capability_matrix.json`
   - ` M docs/audit/capability_matrix.md`
   - ` M docs/audit/pytest-report.json`
   - ` M docs/audit/repository_snapshot.json`
   - ` M releases/aipd-os-5.6.0.zip`
-  - ` M src/aipd_os/cli/product_commands.py`
-  - ` M src/aipd_os/supervisor/idea_capabilities.py`
-  - ` M src/aipd_os/tool_adapters/product_adapters.py`
-  - `?? docs/audit/V5_9_1_PRODUCT_DEFINITION_RUNTIME_CLOSURE.md`
   - `generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__`
   - `generated build/bundle_stage/src/aipd_os.egg-info`
   - `generated src/aipd_os.egg-info`
