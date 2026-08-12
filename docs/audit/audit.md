@@ -1,27 +1,28 @@
 # AIPD-OS 版本真实性审计报告（v5.1）
 
-- 生成时间：`2026-08-06T18:03:29`
+- 生成时间：`2026-08-12T09:11:11`
 - 仓库根目录：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
 
 ## 1. 仓库基本信息
 
 - 默认分支：`main`
-- 最新提交 SHA：`0934f84d9d8cae26adfc8a088ba3af2dc58c999b`
-- 最新提交时间：`2026-08-06 16:06:12 +0800`
+- 最新提交 SHA：`8a340556e4ac8b413736c82ba0ab05f9f12ae612`
+- 最新提交时间：`2026-08-12 09:02:58 +0800`
 - pyproject 版本：`5.6.0`
 - Git 标签：`v5.5.0`, `v5.6.0`
 - `releases/` 目录存在：是
 
 ## 2. 文件树概览
 
-- 顶层条目数：`45`
+- 顶层条目数：`46`
 - 顶层目录文件数（一层）：
 
 | 目录 | 文件数 |
 | --- | --- |
 | `.git/` | 8 |
 | `.github/` | 0 |
-| `.pytest/` | 0 |
+| `.mypy_cache/` | 2 |
+| `.pytest/` | 1 |
 | `.pytest_cache/` | 3 |
 | `.release_keys/` | 2 |
 | `.ruff_cache/` | 2 |
@@ -42,43 +43,33 @@
 | `src/` | 0 |
 | `state_service/` | 3 |
 | `templates/` | 3 |
-| `tests/` | 67 |
+| `tests/` | 108 |
 
 ## 3. CI 状态
 
-- 检测到 Workflow：12 个 job
-- Job 列表：`unit`, `integration`, `schema-validation`, `maturity-consistency`, `cad-golden-loop`, `secret-scan`, `dependency-audit`, `license-scan`, `package-build`, `audit`, `skill-quality-and-coverage`, `release-ready`
+- 检测到 Workflow：13 个 job
+- Job 列表：`unit`, `integration`, `schema-validation`, `maturity-consistency`, `cad-golden-loop`, `python-core-matrix`, `secret-scan`, `dependency-audit`, `license-scan`, `package-build`, `audit`, `skill-quality-and-coverage`, `release-ready`
 
 ## 4. Release Manifest 校验
 
 - Manifest 版本：`5.6.0`
-- 文件条目总数：`384`
-- 哈希匹配：`384` / `384`
+- 文件条目总数：`466`
+- 哈希匹配：`466` / `466`
 - 哈希不匹配：`0`
 
 ## 5. 未跟踪 / 生成文件
 
-- 共 `23` 项：
+- 共 `13` 项：
   - ` M BUNDLE_MANIFEST.json`
   - ` M PROVENANCE.json`
   - ` M RELEASE_MANIFEST.json`
   - ` M SOURCE_MANIFEST.json`
-  - ` M docs/audit/audit.json`
-  - ` M docs/audit/audit.md`
   - ` M docs/audit/capability_matrix.json`
   - ` M docs/audit/capability_matrix.md`
   - ` M docs/audit/pytest-report.json`
   - ` M docs/audit/repository_snapshot.json`
   - ` M releases/aipd-os-5.6.0.zip`
-  - ` M releases/aipd-os-5.6.0.zip.ed25519.sig`
-  - ` M releases/aipd-os-5.6.0.zip.sha256`
-  - ` M releases/aipd-os-5.6.0.zip.sig`
-  - ` M releases/golden-projects/A-manual-chain/manual.pdf`
-  - ` M releases/golden-projects/A-manual-chain/manual.zip`
-  - ` M releases/golden-projects/A-manual-chain/report.json`
-  - ` M releases/golden-projects/B-cad-engineering-change/report.json`
-  - ` M releases/golden-projects/C-supply-chain/report.json`
-  - ` M scripts/capability_matrix.py`
+  - `?? releases/5.6.0/`
   - `generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__`
   - `generated build/bundle_stage/src/aipd_os.egg-info`
   - `generated src/aipd_os.egg-info`

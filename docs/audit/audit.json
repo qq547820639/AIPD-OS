@@ -1,11 +1,13 @@
 {
-  "generated_at": "2026-08-12T07:47:34",
-  "source_commit": "df74c08984e8daa8b9a891beb4c132e135487b49",
+  "generated_at": "2026-08-12T09:11:11",
+  "source_commit": "8a340556e4ac8b413736c82ba0ab05f9f12ae612",
   "package_version": "5.6.0",
+  "generator_version": "audit_repo_v1",
+  "command": "python scripts/audit_repo.py",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "df74c08984e8daa8b9a891beb4c132e135487b49",
-  "latest_commit_time": "2026-08-12 07:44:15 +0800",
+  "latest_commit_sha": "8a340556e4ac8b413736c82ba0ab05f9f12ae612",
+  "latest_commit_time": "2026-08-12 09:02:58 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -81,7 +83,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 101
+      "tests": 108
     }
   },
   "tags": [
@@ -111,18 +113,18 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 439,
-    "hash_matches": 439,
+    "total_files": 466,
+    "hash_matches": 466,
     "hash_mismatch_count": 0,
     "mismatches": []
   },
   "source_manifest_verification": {
     "present": true,
     "version": "5.6.0",
-    "source_commit": "df74c08984e8daa8b9a891beb4c132e135487b49",
+    "source_commit": "8a340556e4ac8b413736c82ba0ab05f9f12ae612",
     "parsed": true,
-    "total_files": 457,
-    "hash_matches": 457,
+    "total_files": 466,
+    "hash_matches": 466,
     "hash_mismatch_count": 0,
     "mismatches": []
   },
@@ -131,11 +133,12 @@
     " M PROVENANCE.json",
     " M RELEASE_MANIFEST.json",
     " M SOURCE_MANIFEST.json",
-    " M docs/audit/audit.json",
     " M docs/audit/capability_matrix.json",
     " M docs/audit/capability_matrix.md",
     " M docs/audit/pytest-report.json",
     " M docs/audit/repository_snapshot.json",
+    " M releases/aipd-os-5.6.0.zip",
+    "?? releases/5.6.0/",
     "generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"

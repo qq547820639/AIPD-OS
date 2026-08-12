@@ -12,8 +12,8 @@
     },
     {
       "path": ".gitignore",
-      "size": 583,
-      "sha256": "2bbacb07cb6641979797d8e46ce97a36f856320855412b354cda19ccfff82c81"
+      "size": 638,
+      "sha256": "e819ae5a7259fbf052b187cfe56948e87f2eb1d556d40c31f432648f28323cbf"
     },
     {
       "path": ".release_keys/ed25519_public.pem",
@@ -172,8 +172,8 @@
     },
     {
       "path": "SECURITY.md",
-      "size": 4526,
-      "sha256": "e45833932618de126b3f680df3ea18f7e7c8a4f3ae510ad7e68257c178742eeb"
+      "size": 4896,
+      "sha256": "9e5196ecd2d5203483fd81ef296d7b40c8501cbefdf4bab9e59034c67cdfa83c"
     },
     {
       "path": "SKILL.md",
@@ -1821,6 +1821,11 @@
       "sha256": "677979ea2dc9e1b613d280cfaef7e0967773d0ae3afd5c8d37dc5c59b9e24e70"
     },
     {
+      "path": "tests/test_architecture_contracts.py",
+      "size": 8027,
+      "sha256": "27c4ee4becb9b8f04ead18954fd050d2fbcdb3862668cabc52f547e276fef86e"
+    },
+    {
       "path": "tests/test_audit_repo.py",
       "size": 2994,
       "sha256": "d8f2f149a1f2fa6dd52d611b929efcc26583e497c38474a516b4fa07a0870278"
@@ -2227,8 +2232,8 @@
     },
     {
       "path": "tests/test_runtime.py",
-      "size": 5479,
-      "sha256": "c648e08e08a587edffa0aed2c5534f62ffa16024ebc544b3cff0805a8f1a0889"
+      "size": 5632,
+      "sha256": "f8d258946fa60c2b23b9190d7e7f7ee68a1175fdfe259e50d0f0a8536f2f42e1"
     },
     {
       "path": "tests/test_sbom.py",

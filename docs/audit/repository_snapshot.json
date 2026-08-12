@@ -1,9 +1,13 @@
 {
-  "generated_at": "2026-08-12T08:34:12",
+  "generated_at": "2026-08-12T09:10:39",
+  "source_commit": "8a340556e4ac8b413736c82ba0ab05f9f12ae612",
+  "package_version": "5.6.0",
+  "generator_version": "capability_matrix_v1",
+  "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "e15d5f451cae72a46cfaffa43df2e7040fa7bfc8",
-  "latest_commit_time": "2026-08-12 07:48:14 +0800",
+  "latest_commit_sha": "8a340556e4ac8b413736c82ba0ab05f9f12ae612",
+  "latest_commit_time": "2026-08-12 09:02:58 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -79,7 +83,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 101
+      "tests": 108
     }
   },
   "tags": [
@@ -109,12 +113,19 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 439,
-    "hash_matches": 439,
+    "total_files": 466,
+    "hash_matches": 466,
     "hash_mismatch_count": 0,
     "mismatches": []
   },
   "untracked_or_generated": [
+    " M BUNDLE_MANIFEST.json",
+    " M PROVENANCE.json",
+    " M RELEASE_MANIFEST.json",
+    " M SOURCE_MANIFEST.json",
+    " M docs/audit/pytest-report.json",
+    " M releases/aipd-os-5.6.0.zip",
+    "?? releases/5.6.0/",
     "generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
