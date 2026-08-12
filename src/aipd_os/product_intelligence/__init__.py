@@ -34,6 +34,7 @@ from .gate import (
     GATE_READY,
     CriterionResult,
     GateEvaluation,
+    OWNER_CHOICES,
     ProductDefinitionGate,
     SnapshotAlreadyCommittedError,
 )
@@ -104,7 +105,7 @@ __all__ = [
     "NODE_REQUIREMENT", "NODE_FEATURE",
     # gate
     "ProductDefinitionGate", "GateEvaluation", "CriterionResult",
-    "SnapshotAlreadyCommittedError",
+    "OWNER_CHOICES", "SnapshotAlreadyCommittedError",
     "GATE_READY", "GATE_CONDITIONAL", "GATE_BLOCKED",
     "GATE_DECISION_TOPIC",
     "GATE_CHOICE_APPROVE", "GATE_CHOICE_REJECT",

@@ -28,16 +28,40 @@ DEFAULT_TENANT = "default"
 def _db(args) -> tuple[AIPDStateDB, str, str]:
     db = AIPDStateDB(args.db)
     tenant = getattr(args, "tenant", DEFAULT_TENANT)
-    return db, tenant, _resolve_project(db, tenant)
+    return db, tenant, _resolve_project(
+        db, tenant, explicit=getattr(args, "project", None))
 
 
-def _resolve_project(db: AIPDStateDB, tenant: str) -> str:
+def _resolve_project(db: AIPDStateDB, tenant: str,
+                     explicit: str | None = None) -> str:
+    """§21：project scope 规则。
+
+    - 显式 --project：必须使用且**必须存在**（不存在 → ERROR，绝不 fallback）；
+    - 无显式：单项目自动选择；多项目 → 要求显式（不偷偷选第一个）。
+    """
+    if explicit:
+        try:
+            projects = db.list_projects(tenant)
+        except Exception:  # noqa: BLE001 - 兼容旧接口
+            projects = []
+        exists = any(p["project_id"] == explicit for p in projects)
+        if not exists:
+            raise ValueError(
+                f"project {explicit!r} not found in tenant {tenant!r}; "
+                "use an existing project id (explicit scope, §21)")
+        return explicit
     try:
         projects = db.list_projects(tenant)
-    except Exception:  # noqa: BLE001 - 兼容旧接口
+    except Exception:  # noqa: BLE001
         projects = []
     if not projects:
-        return "default"
+        raise ValueError(
+            f"no projects in tenant {tenant!r}; initialize one first")
+    if len(projects) > 1:
+        raise ValueError(
+            f"multiple projects in tenant {tenant!r}: "
+            f"{[p['project_id'] for p in projects]}; --project 必填 "
+            "（explicit scope，§21）")
     return cast(str, projects[0]["project_id"])
 
 

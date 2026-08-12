@@ -114,9 +114,11 @@ def cmd_init_project(args: argparse.Namespace) -> int:
     db = AIPDStateDB(args.db)
     db.ensure_default_tenant(DEFAULT_TENANT)
     db.init_project(DEFAULT_TENANT, args.project_id, args.name, args.goal)
-    # 同时在数据库上初始化监督器生命周期（共享同一 db 文件）
-    sup = _import_module("aipd_supervisor").Supervisor(
-        args.db, tenant_id=DEFAULT_TENANT, project_id=args.project_id, state_db=db)
+    # 同时在数据库上初始化监督器生命周期（共享同一 db 文件；§19：
+    # 不再走 scripts 兼容层，直接 aipd_os.supervisor.Supervisor）
+    from aipd_os.supervisor import Supervisor as _Sup
+    sup = _Sup(args.db, tenant_id=DEFAULT_TENANT,
+               project_id=args.project_id, state_db=db)
     sup.init_lifecycle()
     log_event(_logger, "init_project", project_id=args.project_id, db=args.db)
     print(f"项目已初始化：{args.name}（{args.project_id}）")
@@ -164,8 +166,9 @@ def cmd_run_supervisor(args: argparse.Namespace) -> int:
 
     db = AIPDStateDB(args.db)
     pid = getattr(args, "project", None) or _resolve_project(db)
-    sup = _import_module("aipd_supervisor").Supervisor(
-        args.db, tenant_id=DEFAULT_TENANT, project_id=pid, state_db=db)
+    from aipd_os.supervisor import Supervisor as _Sup
+    sup = _Sup(args.db, tenant_id=DEFAULT_TENANT, project_id=pid,
+               state_db=db)
     results = sup.run_supervisor(steps=args.steps or 1, project_id=pid)
     completed = [r for r in results if r.get("action") == "complete"]
     decisions = [r for r in results if r.get("action") == "decision"]
@@ -621,10 +624,11 @@ def cmd_intake(args):
         runtime = build_runtime(encryption_key="",
                                 db_path=args.db,
                                 tenant_id=DEFAULT_TENANT,
-                                project_id=project_id)
-        # 找已注册的 idea.decompose provider（进程级 runtime；无则诚实不可用）
-        provider = runtime.providers.get_by_capability(
-            "idea.decompose") or _find_idea_decompose_provider()
+                                project_id=project_id,
+                                make_default=True)
+        # 找已注册的 idea.decompose provider（§18：本 command 全程使用同一
+        # runtime —— 不再 fallback 另一套进程级 get_runtime）
+        provider = runtime.providers.get_by_capability("idea.decompose")
         if provider is not None and provider.available():
             decomposer = IdeaDecomposer(db, provider=provider,
                                         tenant_id=DEFAULT_TENANT,

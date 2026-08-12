@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 from aipd_os import __version__
@@ -331,6 +332,7 @@ def build_parser() -> argparse.ArgumentParser:
     pp.add_argument("--project")
     pp.add_argument("--json", action="store_true")
     pp.set_defaults(func=COMMAND_FUNCS["product show"])
+    from aipd_os.product_intelligence import OWNER_CHOICES  # §23 同源
     pg = prod_sub.add_parser(
         "gate",
         help="Product Definition Gate 评估 + Owner 决策（--propose 创建；"
@@ -342,7 +344,7 @@ def build_parser() -> argparse.ArgumentParser:
                     help="创建 Owner Decision（approve/reject/request_revision）")
     pg.add_argument("--decision-id")
     pg.add_argument("--choice",
-                    choices=["approve", "reject", "request_revision"])
+                    choices=sorted(OWNER_CHOICES))  # §23 与 Gate 同源
     pg.add_argument("--comment")
     pg.add_argument("--waiver-conditions",
                     help="approve_with_waiver 必填：接受的条件（P0-04）")

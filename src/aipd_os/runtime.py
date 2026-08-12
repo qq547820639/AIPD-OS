@@ -211,7 +211,8 @@ def build_runtime(settings: Settings | None = None,
                   encryption_key: str | None = None,
                   tenant_id: str = "default",
                   project_id: str | None = None,
-                  register_external: bool = True) -> RuntimeContext:
+                  register_external: bool = True,
+                  make_default: bool = False) -> RuntimeContext:
     """唯一 runtime 装配入口（bootstrap contract）。
 
     1. settings（env > 配置文件 > 默认）
@@ -221,6 +222,10 @@ def build_runtime(settings: Settings | None = None,
     5. AdapterRegistry（builtin + researchstudio adapter）
     6-7. ExecutionRouter / Supervisor（懒构造）
     8. probe 由调用方按需执行（:meth:`RuntimeContext.probe`）
+
+    v5.9.2（§18/52）：``make_default=True`` 时安装为进程级默认
+    （等价 :func:`install_runtime`）—— CLI/Web/MCP 各自显式注入自己的
+    runtime；只有需要进程级默认语义的 transport 才 make_default。
     """
     settings = settings or get_settings()
     key = encryption_key if encryption_key is not None \
@@ -243,7 +248,21 @@ def build_runtime(settings: Settings | None = None,
     if register_external:
         _register_external_providers(ctx)
 
+    if make_default:
+        install_runtime(ctx)
+
     return ctx
+
+
+def install_runtime(runtime: RuntimeContext) -> None:
+    """显式安装进程级默认 runtime（§18/52 语义清晰化）。
+
+    get_runtime() 返回已安装实例；未安装时懒构建（build_runtime 默认
+    make_default=False —— 同一次 request 不会因为两次 build 出现两套
+    registry 的意外）。
+    """
+    global _runtime
+    _runtime = runtime
 
 
 def _register_external_providers(ctx: RuntimeContext) -> None:
@@ -285,6 +304,7 @@ def reset_runtime() -> None:
 __all__ = [
     "RuntimeContext",
     "build_runtime",
+    "install_runtime",
     "get_runtime",
     "reset_runtime",
     "PROBE_AVAILABLE",
