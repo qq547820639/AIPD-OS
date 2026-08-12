@@ -65,7 +65,8 @@ class LineageGraph:
     # ------------------------------------------------------------- 边操作
     def add_edge(self, upstream_id: str, downstream_id: str,
                  relation: str = "affects", tenant_id: str | None = None,
-                 project_id: str | None = None) -> None:
+                 project_id: str | None = None,
+                 conn: Any | None = None) -> None:
         tenant, project = self._scope(tenant_id, project_id)
         # 自环直接拒绝
         if upstream_id == downstream_id:
@@ -89,19 +90,33 @@ class LineageGraph:
                 raise CycleDetectedError(
                     f"adding edge {upstream_id} -> {downstream_id} "
                     f"creates a cycle (canonical lineage): {exc}") from exc
-        with self._store.connect() as c:
-            c.execute(
+        if conn is not None:
+            # v5.9.2：外部事务连接（与 State/Truth/Audit 同一边界，P0-07）
+            conn.execute(
                 "INSERT OR IGNORE INTO truth_lineage"
-                "(tenant_id,project_id,upstream_id,downstream_id,relation,created_at) "
-                "VALUES(?,?,?,?,?,datetime('now'))",
+                "(tenant_id,project_id,upstream_id,downstream_id,relation,"
+                "created_at) VALUES(?,?,?,?,?,datetime('now'))",
                 (tenant, project, upstream_id, downstream_id, relation))
-        # 新增边后若立即形成环则回滚本次边；图本身仍保持无环。
-        if self._has_cycle_all(tenant, project):
+        else:
             with self._store.connect() as c:
                 c.execute(
-                    "DELETE FROM truth_lineage WHERE tenant_id=? AND project_id=? "
-                    "AND upstream_id=? AND downstream_id=?",
+                    "INSERT OR IGNORE INTO truth_lineage"
+                    "(tenant_id,project_id,upstream_id,downstream_id,relation,"
+                    "created_at) VALUES(?,?,?,?,?,datetime('now'))",
+                    (tenant, project, upstream_id, downstream_id, relation))
+        # 新增边后若立即形成环则回滚本次边；图本身仍保持无环。
+        if self._has_cycle_all(tenant, project, conn=conn):
+            if conn is not None:
+                conn.execute(
+                    "DELETE FROM truth_lineage WHERE tenant_id=? AND "
+                    "project_id=? AND upstream_id=? AND downstream_id=?",
                     (tenant, project, upstream_id, downstream_id))
+            else:
+                with self._store.connect() as c:
+                    c.execute(
+                        "DELETE FROM truth_lineage WHERE tenant_id=? AND "
+                        "project_id=? AND upstream_id=? AND downstream_id=?",
+                        (tenant, project, upstream_id, downstream_id))
             if self._canonical_db is not None:
                 self._canonical_lineage().retire_edge(
                     self._canonical_edge_id(upstream_id, downstream_id,
@@ -121,7 +136,7 @@ class LineageGraph:
             if e.target.node_id == downstream_id and \
                     e.target.node_type == "product_truth" and \
                     e.relation_type == relation:
-                return e.edge_id
+                return str(e.edge_id)
         return None
 
     def remove_edge(self, upstream_id: str, downstream_id: str,
@@ -233,14 +248,21 @@ class LineageGraph:
         return dfs(start, {start})
 
     def _has_cycle_all(self, tenant_id: str | None = None,
-                       project_id: str | None = None) -> bool:
+                       project_id: str | None = None,
+                       conn: Any | None = None) -> bool:
         """检测全图是否有环（用于 add_edge 的保护性回滚）。"""
         tenant, project = self._scope(tenant_id, project_id)
-        with self._store.connect() as c:
-            rows = c.execute(
+        if conn is not None:
+            rows = conn.execute(
                 "SELECT upstream_id,downstream_id FROM truth_lineage "
                 "WHERE tenant_id=? AND project_id=?",
                 (tenant, project)).fetchall()
+        else:
+            with self._store.connect() as c:
+                rows = c.execute(
+                    "SELECT upstream_id,downstream_id FROM truth_lineage "
+                    "WHERE tenant_id=? AND project_id=?",
+                    (tenant, project)).fetchall()
         children: dict[str, list[str]] = {}
         for r in rows:
             children.setdefault(r["upstream_id"], []).append(r["downstream_id"])

@@ -35,6 +35,7 @@ from .gate import (
     CriterionResult,
     GateEvaluation,
     ProductDefinitionGate,
+    SnapshotAlreadyCommittedError,
 )
 from .models import (
     CRITICALITIES,
@@ -103,6 +104,7 @@ __all__ = [
     "NODE_REQUIREMENT", "NODE_FEATURE",
     # gate
     "ProductDefinitionGate", "GateEvaluation", "CriterionResult",
+    "SnapshotAlreadyCommittedError",
     "GATE_READY", "GATE_CONDITIONAL", "GATE_BLOCKED",
     "GATE_DECISION_TOPIC",
     "GATE_CHOICE_APPROVE", "GATE_CHOICE_REJECT",

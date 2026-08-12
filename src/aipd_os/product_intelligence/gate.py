@@ -48,13 +48,17 @@ from .service import (
     ProductIntelligenceService,
 )
 from .snapshot import (
-    SNAPSHOT_STALE,
+    SNAPSHOT_COMMITTED,
     ProductDefinitionSnapshot,
     ProductDefinitionSnapshotService,
 )
 
 # definition_status=CONFLICT（critical requirement 冲突检测）
 DEFINITION_STATUS_CONFLICT = "CONFLICT"
+
+
+class SnapshotAlreadyCommittedError(RuntimeError):
+    """同一 snapshot 已提交过（exactly-once，§26/30）。"""
 
 # ---------------------------------------------------------------------------
 # Gate 结果 / criteria
@@ -665,15 +669,22 @@ class ProductDefinitionGate:
 
     # ------------------------------------------------------------- commit
     def commit_snapshot(self, snap: ProductDefinitionSnapshot,
-                        actor: str = "system") -> dict[str, Any]:
-        """P0-02/04/08/29：提交 **exact snapshot**（refs + versions）。
+                        actor: str = "system",
+                        idempotent: bool = True) -> dict[str, Any]:
+        """P0-02/04/05/06/07/08/29/30：**原子 exactly-once** commit。
 
-        1. snapshot 必须非 stale（变化 → 拒绝，要求新 snapshot 重评重批）；
-        2. effective decision 必须绑定本 snapshot 且授权 commit；
-        3. CONDITIONAL 必须显式 waiver；BLOCKED 永不 commit；
-        4. ProductTruth trust_level 按真实来源推导（approval ≠ verified）；
-        5. metadata 记录 approval_state/definition_status/source_snapshot_id/
-           source_snapshot_hash/source_*_version/owner_decision_id。
+        单 transaction boundary（§27）：ProductTruth records + canonical
+        lineage + truth_lineage 兼容边 + commit ledger + snapshot lifecycle
+        （frozen→committed）+ audit —— 任何失败 ROLLBACK（0 部分写入）。
+
+        1. 前置校验（事务外，无副作用）：stale / hash / authorization /
+           eligibility；
+        2. exactly-once：ledger 已有该 snapshot → 返回已有 receipt（幂等，
+           idempotent=False 时抛 SnapshotAlreadyCommittedError）；UNIQUE
+           约束兜底并发；
+        3. 原子占用：snapshot 必须 frozen（UPDATE rowcount=1 才算成功）→
+           frozen→committed（**绝不 frozen→stale**，P0-05）；
+        4. trust_level 按真实来源推导（approval ≠ verified，P0-08）。
         """
         from aipd_os.product_truth.lineage import LineageGraph
         from aipd_os.product_truth.models import SourceRef, TruthRecord
@@ -704,7 +715,6 @@ class ProductDefinitionGate:
         graph = LineageGraph(store, tenant_id=self._tenant,
                              project_id=self._project,
                              canonical_db=self._db)
-        committed: list[str] = []
         metadata_base = {
             "approval_state": "approved",
             "gate_approved": True,
@@ -718,67 +728,132 @@ class ProductDefinitionGate:
         if authorization["waiver"]:
             metadata_base["waiver"] = authorization["waiver"]
 
-        # exact refs：不重查 live tables —— 提交 snapshot 冻结的版本
-        for r in snap.requirement_refs:
-            req = self._pi.get_requirement(self._tenant, self._project,
-                                           r["id"])
-            rid = store.add(TruthRecord(
-                record_type="requirement",
-                content=f"{req.title}: {req.statement}",
-                source=SourceRef(
-                    note=f"product_intelligence:{req.requirement_id}"),
-                trust_level=_derive_trust(req.epistemic_status,
-                                          req.verification_method,
-                                          req.verification_test_refs),
-                metadata={
-                    **metadata_base,
-                    "requirement_id": req.requirement_id,
-                    "source_requirement_version": req.version_no,
-                    "criticality": req.criticality,
-                    "epistemic_status": req.epistemic_status,
-                }))
-            graph.add_edge(req.requirement_id, rid, relation="derived_from")
-            committed.append(rid)
-        for r in snap.feature_refs:
-            feat = self._pi.get_feature(self._tenant, self._project, r["id"])
-            fid = store.add(TruthRecord(
-                record_type="feature",
-                content=f"{feat.title}: {feat.description}",
-                source=SourceRef(
-                    note=f"product_intelligence:{feat.feature_id}"),
-                trust_level=_derive_trust(feat.epistemic_status, "", []),
-                metadata={
-                    **metadata_base,
-                    "feature_id": feat.feature_id,
-                    "source_feature_version": feat.version_no,
-                    "epistemic_status": feat.epistemic_status,
-                }))
-            graph.add_edge(feat.feature_id, fid, relation="derived_from")
-            committed.append(fid)
         with self._db.transaction() as c:
-            c.execute(
+            # 2) exactly-once：已有 commit → receipt（幂等）或抛错
+            existing = c.execute(
+                "SELECT * FROM product_definition_commits WHERE "
+                "tenant_id=? AND project_id=? AND snapshot_id=?",
+                (self._tenant, self._project, snap.snapshot_id)).fetchone()
+            if existing is not None:
+                if not idempotent:
+                    raise SnapshotAlreadyCommittedError(
+                        f"snapshot {snap.snapshot_id} already committed "
+                        f"(commit {existing['commit_id']})")
+                return self._receipt(existing, snap)
+            # 3) 原子占用：frozen → committed（race protection，§30）
+            cur = c.execute(
                 "UPDATE product_definition_snapshots SET lifecycle_status=? "
                 "WHERE snapshot_id=? AND project_id=? AND tenant_id=? "
                 "AND lifecycle_status='frozen'",
-                (SNAPSHOT_STALE, snap.snapshot_id, snap.project_id,
-                 snap.tenant_id))
+                (SNAPSHOT_COMMITTED, snap.snapshot_id,
+                 self._project, self._tenant))
+            if cur.rowcount != 1:
+                raise SnapshotAlreadyCommittedError(
+                    f"snapshot {snap.snapshot_id} not in frozen state; "
+                    "cannot commit (race or already committed)")
+            # 4) commit ledger（UNIQUE(tenant,project,snapshot) 兜底并发）
+            commit_id = self._db.next_sequence("product_commit", "C")
+            committed: list[str] = []
+            for r in snap.requirement_refs:
+                req = self._pi.get_requirement(self._tenant, self._project,
+                                               r["id"])
+                rid = store.add(TruthRecord(
+                    record_type="requirement",
+                    content=f"{req.title}: {req.statement}",
+                    source=SourceRef(
+                        note=f"product_intelligence:{req.requirement_id}"),
+                    trust_level=_derive_trust(req.epistemic_status,
+                                              req.verification_method,
+                                              req.verification_test_refs),
+                    metadata={
+                        **metadata_base,
+                        "requirement_id": req.requirement_id,
+                        "source_requirement_version": req.version_no,
+                        "criticality": req.criticality,
+                        "epistemic_status": req.epistemic_status,
+                    }), conn=c)
+                graph.add_edge(req.requirement_id, rid,
+                               relation="derived_from", conn=c)
+                committed.append(rid)
+            for r in snap.feature_refs:
+                feat = self._pi.get_feature(self._tenant, self._project,
+                                            r["id"])
+                fid = store.add(TruthRecord(
+                    record_type="feature",
+                    content=f"{feat.title}: {feat.description}",
+                    source=SourceRef(
+                        note=f"product_intelligence:{feat.feature_id}"),
+                    trust_level=_derive_trust(feat.epistemic_status, "", []),
+                    metadata={
+                        **metadata_base,
+                        "feature_id": feat.feature_id,
+                        "source_feature_version": feat.version_no,
+                        "epistemic_status": feat.epistemic_status,
+                    }), conn=c)
+                graph.add_edge(feat.feature_id, fid,
+                               relation="derived_from", conn=c)
+                committed.append(fid)
+            c.execute(
+                "INSERT INTO product_definition_commits(commit_id,project_id,"
+                "tenant_id,snapshot_id,snapshot_hash,gate_evaluation_id,"
+                "owner_decision_id,committed_truth_refs_json,committed_at,"
+                "actor) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (commit_id, self._project, self._tenant, snap.snapshot_id,
+                 snap.content_hash, evaluation.evaluation_id,
+                 authorization["decision_id"] or "",
+                 _json(committed), now_iso(), actor))
             self._db.add_audit(actor, "product_definition_gate.commit",
                                self._project, self._tenant,
                                after={"committed": committed,
+                                      "commit_id": commit_id,
                                       "snapshot_id": snap.snapshot_id,
                                       "snapshot_hash": snap.content_hash,
                                       "decision_id":
                                           authorization["decision_id"],
                                       "requirements": len(snap.requirement_refs),
                                       "features": len(snap.feature_refs)})
-        return {"committed": committed,
-                "requirements": len(snap.requirement_refs),
-                "features": len(snap.feature_refs),
-                "snapshot_id": snap.snapshot_id,
-                "snapshot_hash": snap.content_hash,
-                "decision_id": authorization["decision_id"],
-                "gate": evaluation.result,
-                "authorization": authorization["state"]}
+            receipt = self._receipt(
+                {"commit_id": commit_id, "snapshot_id": snap.snapshot_id,
+                 "snapshot_hash": snap.content_hash,
+                 "committed_truth_refs_json": _json(committed),
+                 "owner_decision_id": authorization["decision_id"] or ""},
+                snap, committed=committed)
+        return receipt
+
+    @staticmethod
+    def _receipt(row: Any, snap: ProductDefinitionSnapshot,
+                 committed: list[str] | None = None) -> dict[str, Any]:
+        """commit receipt（幂等返回值，§25/26）。"""
+        refs = committed
+        if refs is None:
+            import json as _j
+            try:
+                refs = _j.loads(row["committed_truth_refs_json"] or "[]")
+            except (ValueError, TypeError):
+                refs = []
+        return {
+            "commit_id": row["commit_id"],
+            "committed": refs,
+            "requirements": len(snap.requirement_refs),
+            "features": len(snap.feature_refs),
+            "snapshot_id": snap.snapshot_id,
+            "snapshot_hash": snap.content_hash,
+            "decision_id": str(row["owner_decision_id"] or ""),
+            "gate": "committed",
+            "authorization": "APPROVED",
+            "idempotent_replay": committed is None,
+        }
+
+    def get_commit(self, snapshot_id: str) -> dict[str, Any] | None:
+        """ledger 查询（§25）。"""
+        with self._db.connect() as c:
+            row = c.execute(
+                "SELECT * FROM product_definition_commits WHERE "
+                "tenant_id=? AND project_id=? AND snapshot_id=?",
+                (self._tenant, self._project, snapshot_id)).fetchone()
+        if row is None:
+            return None
+        return dict(row)
 
     def commit_approved(self, actor: str = "system") -> dict[str, Any]:
         """兼容入口：最新 snapshot + 绑定决策 → commit_snapshot。

@@ -147,26 +147,45 @@ class ProductTruthStore:
 
     # ----------------------------------------------------------- 新增 / 查询
     def add(self, record: TruthRecord, tenant_id: str | None = None,
-            project_id: str | None = None) -> str:
+            project_id: str | None = None,
+            conn: sqlite3.Connection | None = None) -> str:
+        """新增 truth 记录。
+
+        v5.9.2（P0-07/27）：``conn`` 传入外部事务连接时**不提交/不关闭**
+        —— 与 State/Lineage/Audit 同一 transaction boundary；
+        不传 conn 时维持原独立连接行为（兼容旧调用方）。
+        """
         ts = now_iso()
-        cid = record.record_id or self._next_id()
+        cid = record.record_id or self._next_id(conn=conn)
         tenant, project = self._scope(tenant_id, project_id)
-        with self.connect() as c:
-            c.execute(
-                "INSERT INTO product_truth(id,tenant_id,project_id,record_type,content,source,"
-                "trust_level,effective_at,expires_at,version,status,metadata_json,"
-                "created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (cid, tenant, project, record.record_type, record.content,
-                 _json(record.source.to_dict() if record.source else {}),
-                 record.trust_level, record.effective_at, record.expires_at,
-                 record.version, record.status,
-                 _json(record.metadata if isinstance(record.metadata, dict) else {}),
-                 record.created_at or ts, ts))
+        params = (
+            cid, tenant, project, record.record_type, record.content,
+            _json(record.source.to_dict() if record.source else {}),
+            record.trust_level, record.effective_at, record.expires_at,
+            record.version, record.status,
+            _json(record.metadata if isinstance(record.metadata, dict) else {}),
+            record.created_at or ts, ts)
+        if conn is not None:
+            conn.execute(
+                "INSERT INTO product_truth(id,tenant_id,project_id,record_type,"
+                "content,source,trust_level,effective_at,expires_at,version,"
+                "status,metadata_json,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", params)
+        else:
+            with self.connect() as c:
+                c.execute(
+                    "INSERT INTO product_truth(id,tenant_id,project_id,"
+                    "record_type,content,source,trust_level,effective_at,"
+                    "expires_at,version,status,metadata_json,created_at,"
+                    "updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", params)
         return cid
 
-    def _next_id(self) -> str:
-        with self.connect() as c:
-            rows = c.execute("SELECT id FROM product_truth").fetchall()
+    def _next_id(self, conn: sqlite3.Connection | None = None) -> str:
+        if conn is not None:
+            rows = conn.execute("SELECT id FROM product_truth").fetchall()
+        else:
+            with self.connect() as c:
+                rows = c.execute("SELECT id FROM product_truth").fetchall()
         nums = []
         for r in rows:
             if r["id"].startswith("T-"):
