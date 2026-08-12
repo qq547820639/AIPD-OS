@@ -246,6 +246,26 @@ def _drop_lineage_columns(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE dependencies DROP COLUMN {col}")
 
 
+def _add_retire_columns(conn: sqlite3.Connection) -> None:
+    """幂等添加边失效列（v8 up）：retired_at / retired_by。"""
+    cols = _dependencies_columns(conn)
+    additions = [
+        ("retired_at", "retired_at TEXT"),
+        ("retired_by", "retired_by TEXT"),
+    ]
+    for col, ddl in additions:
+        if col not in cols:
+            conn.execute(f"ALTER TABLE dependencies ADD COLUMN {ddl}")
+
+
+def _drop_retire_columns(conn: sqlite3.Connection) -> None:
+    """回滚边失效列（v8 down；列不存在时跳过）。"""
+    cols = _dependencies_columns(conn)
+    for col in ("retired_at", "retired_by"):
+        if col in cols:
+            conn.execute(f"ALTER TABLE dependencies DROP COLUMN {col}")
+
+
 # v1 初始 schema（多租户多项目）
 MIGRATIONS: List[Dict[str, Any]] = [
     {
@@ -378,6 +398,15 @@ MIGRATIONS: List[Dict[str, Any]] = [
         "down": [
             "DELETE FROM id_sequences WHERE name='evidence';",
         ],
+    },
+    # v5.8.2 Commit 5（EvidenceRelation ↔ Lineage review semantics）：
+    # dependencies 边失效列 —— retire（soft）而非物理删除；active 查询
+    # 默认过滤 retired 边；同键重建时旧 retired 行经 audit 留痕后移除。
+    {
+        "version": 8,
+        "name": "lineage_edge_retire",
+        "up": [_add_retire_columns],
+        "down": [_drop_retire_columns],
     },
 ]
 

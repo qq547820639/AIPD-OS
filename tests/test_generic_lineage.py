@@ -247,7 +247,11 @@ def test_decompose_wires_idea_to_claim_edges(env):
 
 
 def test_evidence_relation_wires_claim_to_evidence_edges(env):
-    """EvidenceRelation 创建 → Claim→Evidence supported_by/contradicted_by 边。"""
+    """EvidenceRelation review 后 → Claim→Evidence supported_by/contradicted_by 边。
+
+    v5.8.2 Commit 5：pending relation 不写语义边；reviewed 才建边
+    （supports→supported_by、contradicts→contradicted_by）。
+    """
     db = env
     idea = IdeaService(db).create(
         Idea(idea_id="", tenant_id="default", project_id="P1",
@@ -259,14 +263,21 @@ def test_evidence_relation_wires_claim_to_evidence_edges(env):
     ev_id = db.add_evidence("default", "P1", kind="paper", title="t",
                             url="https://example.invalid/t")
     rels = EvidenceRelationService(db)
-    rels.add(EvidenceRelation(relation_id="", tenant_id="default", project_id="P1",
-                              claim_id=claim.claim_id, evidence_id=ev_id,
-                              relation_type="supports"), actor="alice")
-    rels.add(EvidenceRelation(relation_id="", tenant_id="default", project_id="P1",
-                              claim_id=claim.claim_id, evidence_id=ev_id,
-                              relation_type="contradicts"), actor="alice")
+    sup = rels.add(EvidenceRelation(relation_id="", tenant_id="default",
+                                    project_id="P1",
+                                    claim_id=claim.claim_id, evidence_id=ev_id,
+                                    relation_type="supports"), actor="alice")
+    con = rels.add(EvidenceRelation(relation_id="", tenant_id="default",
+                                    project_id="P1",
+                                    claim_id=claim.claim_id, evidence_id=ev_id,
+                                    relation_type="contradicts"), actor="alice")
     ls = LineageService(db)
     claim_node = _node("claim", claim.claim_id)
+    # pending 阶段：不建语义边（不把未确认当已确认）
+    assert ls.outgoing(claim_node) == []
+    # reviewed 后：语义边出现
+    rels.review("default", "P1", sup.relation_id, "reviewed", actor="alice")
+    rels.review("default", "P1", con.relation_id, "reviewed", actor="alice")
     edges = ls.outgoing(claim_node)
     assert {e.relation_type for e in edges} == {"supported_by", "contradicted_by"}
     assert all(e.target.node_type == "evidence" for e in edges)

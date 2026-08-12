@@ -31,9 +31,15 @@ REVIEW_STATUSES = frozenset({"pending", "reviewed", "rejected"})
 # 模型默认 None；读取时 0.5 视为 legacy_unscored 而非真实测量）。
 LEGACY_UNSCORED_SENTINEL = 0.5
 
-# Claim↔Evidence lineage 关系映射（Commit 9）：
-# supports/partially_supports → supported_by；contradicts → contradicted_by；
-# inconclusive/not_applicable 不建边（无法表达支持/反驳语义）。
+# Claim↔Evidence lineage 关系映射（v5.8.2 Commit 5 修正）：
+# **只有 review_status=reviewed 才建立语义边**：
+#   supports/partially_supports → supported_by；contradicts → contradicted_by；
+#   inconclusive/not_applicable 不建边（无法表达支持/反驳语义）；
+#   pending/rejected 一律不建语义边（pending=未确认，rejected=已否决）。
+# 语义边集合（用于 retire 旧边时精确匹配）。
+_SEMANTIC_LINEAGE_TYPES = frozenset({"supported_by", "contradicted_by"})
+
+# relation_type → 对应语义 lineage 类型（仅 reviewed 生效）
 _RELATION_TO_LINEAGE = {
     "supports": "supported_by",
     "partially_supports": "supported_by",
@@ -242,19 +248,27 @@ class EvidenceRelationService:
             review_status=rel.review_status, created_by=actor,
             version_no=rel.version_no, created_at=ts, updated_at=ts)
         self._audit(actor, "evidence_relation.add", created)
-        # v5.8.1 Commit 9：Claim → Evidence lineage 边（supported_by/contradicted_by）
-        self._link_lineage(rel, actor)
+        # v5.8.2 Commit 5：只有 reviewed relation 才建语义 lineage 边；
+        # pending/rejected 不写 supported_by/contradicted_by（不把未确认当已确认）。
+        self._sync_lineage(rel, actor)
         return created
 
-    def _link_lineage(self, rel: EvidenceRelation, actor: str) -> None:
-        """为新建 relation 建 Claim→Evidence lineage 边（Commit 9）。
+    def _sync_lineage(self, rel: EvidenceRelation, actor: str) -> None:
+        """按 relation 的 (review_status, relation_type) 同步语义 lineage 边。
 
-        仅 supports/partially_supports → supported_by、contradicts →
-        contradicted_by；inconclusive/not_applicable 不建边。
+        规则（v5.8.2 Commit 5，R-08/R-09）：
+        - ``reviewed`` + supports/partially_supports → ``supported_by`` 边；
+        - ``reviewed`` + contradicts → ``contradicted_by`` 边；
+        - ``reviewed`` + inconclusive/not_applicable → 不建语义边
+          （现有语义边 retire）；
+        - ``pending`` / ``rejected`` → 不建语义边（现有语义边 retire）。
+
+        失效走 :meth:`LineageService.retire_edge`（soft-retire，不物理删除，
+        历史保留在 dependencies 行 + audit_log）；语义变化（如
+        supports→contradicts）先 retire 旧边再建新边。
         """
-        lineage_type = _RELATION_TO_LINEAGE.get(rel.relation_type)
-        if lineage_type is None:
-            return
+        expected_type = _RELATION_TO_LINEAGE.get(rel.relation_type) \
+            if rel.review_status == "reviewed" else None
         lineage = LineageService(self._db)
         claim_node = LineageNodeRef(
             node_type="claim", node_id=rel.claim_id,
@@ -262,10 +276,36 @@ class EvidenceRelationService:
         ev_node = LineageNodeRef(
             node_type="evidence", node_id=rel.evidence_id,
             tenant_id=rel.tenant_id, project_id=rel.project_id)
-        lineage.add_edge(claim_node, ev_node, lineage_type,
-                         provenance={"source": "evidence_relation",
-                                     "relation_type": rel.relation_type},
-                         actor=actor)
+        # 现有语义边：精确归属本 relation（provenance.relation_id 匹配）。
+        # 同一 (claim, evidence) 可并存 supports+contradicts（MIXED 合法），
+        # 因此不能按 (claim, evidence) 笼统匹配，否则会误 retire 另一条
+        # relation 的边。v5.8.1 老边无 relation_id（无法归属）→ 不 retire、
+        # 不重建（add_edge 幂等兜底）。
+        existing = [
+            e for e in lineage.outgoing(claim_node, include_retired=True)
+            if e.target.node_type == "evidence"
+            and e.target.node_id == rel.evidence_id
+            and e.relation_type in _SEMANTIC_LINEAGE_TYPES
+            and e.provenance.get("relation_id") == rel.relation_id
+        ]
+        for edge in existing:
+            if edge.retired:
+                continue  # 已失效，无需再处理
+            if edge.relation_type != expected_type:
+                lineage.retire_edge(
+                    edge.edge_id, actor=actor,
+                    reason=f"evidence_relation {rel.relation_id} review changed "
+                           f"({rel.review_status}/{rel.relation_type})")
+        if expected_type is None:
+            return
+        if not any((not e.retired) and e.relation_type == expected_type
+                   for e in existing):
+            lineage.add_edge(
+                claim_node, ev_node, expected_type,
+                provenance={"source": "evidence_relation",
+                            "relation_type": rel.relation_type,
+                            "relation_id": rel.relation_id},
+                actor=actor)
 
     def get_or_create(self, rel: EvidenceRelation,
                       actor: str = "system") -> tuple[EvidenceRelation, bool]:
@@ -346,6 +386,10 @@ class EvidenceRelationService:
                     f"relation {relation_id} optimistic-lock conflict (version mismatch)")
         after = self.get(tenant_id, project_id, relation_id)
         self._audit(actor, "evidence_relation.update", after, before=before.to_dict())
+        # v5.8.2 Commit 5：relation_type / review_status 变化时同步语义 lineage
+        # （reviewed→建边；pending/rejected→retire 旧边；类型变化→retire+重建）。
+        if "relation_type" in fields or "review_status" in fields:
+            self._sync_lineage(after, actor)
         return after
 
     def review(self, tenant_id: str, project_id: str, relation_id: str,

@@ -178,6 +178,9 @@ CREATE TABLE IF NOT EXISTS dependencies (
   created_at TEXT NOT NULL DEFAULT '',
   provenance TEXT NOT NULL DEFAULT '{}',
   version_no INTEGER NOT NULL DEFAULT 1,
+  -- v5.8.2 Commit 5：边失效列（migration v8；soft-retire，不物理删除）
+  retired_at TEXT,
+  retired_by TEXT,
   UNIQUE(project_id, tenant_id, source_type, source_id, target_type, target_id, relation)
 );
 CREATE TABLE IF NOT EXISTS risks (

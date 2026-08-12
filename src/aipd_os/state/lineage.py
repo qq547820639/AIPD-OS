@@ -65,7 +65,13 @@ class LineageNodeRef:
 
 @dataclass
 class LineageEdge:
-    """一条有向 lineage 边。"""
+    """一条有向 lineage 边。
+
+    retired_at/retired_by（v5.8.2 Commit 5，migration v8）：边被失效时
+    打 retire 标记，**不物理删除**（历史保留在 dependencies 行 + audit_log）；
+    查询默认只返回未 retired 的 active 边。重建同键边时，旧 retired 行在
+    audit_log 中留有完整 before 记录后才被移除（唯一键语义下无法并存）。
+    """
 
     edge_id: str
     source: LineageNodeRef
@@ -74,6 +80,12 @@ class LineageEdge:
     created_at: str | None = None
     provenance: dict[str, Any] = field(default_factory=dict)
     version_no: int = 1
+    retired_at: str | None = None
+    retired_by: str | None = None
+
+    @property
+    def retired(self) -> bool:
+        return bool(self.retired_at)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -84,6 +96,8 @@ class LineageEdge:
             "created_at": self.created_at,
             "provenance": self.provenance,
             "version_no": self.version_no,
+            "retired_at": self.retired_at,
+            "retired_by": self.retired_by,
         }
 
 
@@ -158,6 +172,8 @@ class LineageService:
             created_at=d.get("created_at") or None,
             provenance=provenance,
             version_no=int(d.get("version_no", 1)),
+            retired_at=d.get("retired_at") or None,
+            retired_by=d.get("retired_by") or None,
         )
 
     # ------------------------------------------------------------- write
@@ -167,7 +183,11 @@ class LineageService:
                  actor: str = "system") -> LineageEdge:
         """新增 lineage 边（幂等；scope 校验 + 环检测 + audit + version）。
 
-        - 同 (source, target, relation_type, scope) 已存在 → 返回现有边；
+        - 同 (source, target, relation_type, scope) 的 **active** 边已存在 →
+          返回现有边；
+        - 同键但已 **retired** 的旧行 → 先移除（其完整状态已留在 audit_log
+          的 ``lineage.retire_edge`` before 记录中），再插入新 active 行
+          （SQLite 唯一键语义下 active/retired 同键不能并存）；
         - 新增边若使图成环 → :class:`LineageCycleError` 拒绝；
         - audit（action=lineage.add_edge）。
         """
@@ -186,7 +206,18 @@ class LineageService:
                 f"would create a cycle")
         ts = now_iso()
         prov_json = json.dumps(provenance or {}, ensure_ascii=False, sort_keys=True)
+        removed_retired = False
+        inserted = False
         with self._db.connect() as c:
+            # 同键 retired 旧行：audit 已留痕，允许移除后重建 active 边
+            cur_del = c.execute(
+                "DELETE FROM dependencies WHERE project_id=? AND tenant_id=? "
+                "AND source_type=? AND source_id=? AND target_type=? AND target_id=? "
+                "AND relation=? AND (retired_at IS NOT NULL AND retired_at != '')",
+                (source.project_id, source.tenant_id, source.node_type,
+                 self._encode_id(source), target.node_type,
+                 self._encode_id(target), relation_type))
+            removed_retired = cur_del.rowcount > 0
             cur = c.execute(
                 "INSERT OR IGNORE INTO dependencies(project_id,tenant_id,source_type,"
                 "source_id,target_type,target_id,relation,created_at,provenance,"
@@ -195,47 +226,97 @@ class LineageService:
                  self._encode_id(source), target.node_type,
                  self._encode_id(target), relation_type,
                  ts, prov_json, 1))
+            inserted = cur.rowcount == 1
             row = c.execute(
                 "SELECT * FROM dependencies WHERE project_id=? AND tenant_id=? "
                 "AND source_type=? AND source_id=? AND target_type=? AND target_id=? "
-                "AND relation=?",
+                "AND relation=? AND (retired_at IS NULL OR retired_at = '')",
                 (source.project_id, source.tenant_id, source.node_type,
                  self._encode_id(source), target.node_type,
                  self._encode_id(target), relation_type)).fetchone()
+        # audit 必须在事务块外（SQLite 写锁：外层事务未提交时新连接写会 locked）
         edge = self._row_to_edge(row)
-        if cur.rowcount == 1:
+        if removed_retired:
+            self._db.add_audit(
+                actor, "lineage.rebuild_after_retire", source.project_id,
+                source.tenant_id, before={
+                    "removed_retired_edge": {
+                        "source": source.to_dict(),
+                        "target": target.to_dict(),
+                        "relation_type": relation_type,
+                    }})
+        if inserted:
             # 本次真正插入 → audit
             self._db.add_audit(actor, "lineage.add_edge", source.project_id,
                                source.tenant_id, before=None, after=edge.to_dict())
         return edge
 
+    def retire_edge(self, edge_id: str, actor: str = "system",
+                    reason: str = "") -> LineageEdge | None:
+        """失效一条 lineage 边（soft-retire；不物理删除，历史保留）。
+
+        - 边已 retired / 不存在 → 返回 None（幂等）；
+        - audit（action=lineage.retire_edge，before=完整边状态）。
+        """
+        ts = now_iso()
+        with self._db.connect() as c:
+            row = c.execute(
+                "SELECT * FROM dependencies WHERE dependency_id=? "
+                "AND (retired_at IS NULL OR retired_at = '')",
+                (edge_id,)).fetchone()
+            if row is None:
+                return None
+            edge = self._row_to_edge(row)
+            c.execute(
+                "UPDATE dependencies SET retired_at=?, retired_by=? "
+                "WHERE dependency_id=?",
+                (ts, actor, edge_id))
+        self._db.add_audit(actor, "lineage.retire_edge", edge.source.project_id,
+                           edge.source.tenant_id, before=edge.to_dict(),
+                           after={**edge.to_dict(), "retired_at": ts,
+                                  "retired_by": actor, "reason": reason})
+        edge.retired_at = ts
+        edge.retired_by = actor
+        return edge
+
     # ------------------------------------------------------------- query
-    def outgoing(self, node: LineageNodeRef) -> list[LineageEdge]:
-        """node 的出边（source=node）。"""
+    _ACTIVE_EDGE = " AND (retired_at IS NULL OR retired_at = '')"
+
+    def outgoing(self, node: LineageNodeRef,
+                 include_retired: bool = False) -> list[LineageEdge]:
+        """node 的出边（source=node；默认不含 retired 边）。"""
+        extra = "" if include_retired else self._ACTIVE_EDGE
         with self._db.connect() as c:
             rows = c.execute(
                 "SELECT * FROM dependencies WHERE project_id=? AND tenant_id=? "
-                "AND source_type=? AND source_id=? ORDER BY dependency_id",
+                "AND source_type=? AND source_id=?" + extra +
+                " ORDER BY dependency_id",
                 (node.project_id, node.tenant_id, node.node_type,
                  self._encode_id(node))).fetchall()
         return [self._row_to_edge(r) for r in rows]
 
-    def incoming(self, node: LineageNodeRef) -> list[LineageEdge]:
-        """node 的入边（target=node）。"""
+    def incoming(self, node: LineageNodeRef,
+                 include_retired: bool = False) -> list[LineageEdge]:
+        """node 的入边（target=node；默认不含 retired 边）。"""
+        extra = "" if include_retired else self._ACTIVE_EDGE
         with self._db.connect() as c:
             rows = c.execute(
                 "SELECT * FROM dependencies WHERE project_id=? AND tenant_id=? "
-                "AND target_type=? AND target_id=? ORDER BY dependency_id",
+                "AND target_type=? AND target_id=?" + extra +
+                " ORDER BY dependency_id",
                 (node.project_id, node.tenant_id, node.node_type,
                  self._encode_id(node))).fetchall()
         return [self._row_to_edge(r) for r in rows]
 
-    def edges(self, tenant_id: str, project_id: str) -> list[LineageEdge]:
-        """scope 内全部 lineage 边。"""
+    def edges(self, tenant_id: str, project_id: str,
+              include_retired: bool = False) -> list[LineageEdge]:
+        """scope 内全部 lineage 边（默认不含 retired 边）。"""
+        extra = "" if include_retired else self._ACTIVE_EDGE
         with self._db.connect() as c:
             rows = c.execute(
-                "SELECT * FROM dependencies WHERE project_id=? AND tenant_id=? "
-                "ORDER BY dependency_id", (project_id, tenant_id)).fetchall()
+                "SELECT * FROM dependencies WHERE project_id=? AND tenant_id=?"
+                + extra + " ORDER BY dependency_id",
+                (project_id, tenant_id)).fetchall()
         return [self._row_to_edge(r) for r in rows]
 
     def path(self, source: LineageNodeRef, target: LineageNodeRef,
