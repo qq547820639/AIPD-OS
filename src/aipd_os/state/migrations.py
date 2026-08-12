@@ -266,6 +266,130 @@ def _drop_retire_columns(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE dependencies DROP COLUMN {col}")
 
 
+def _make_claim_confidence_nullable(conn: sqlite3.Connection) -> None:
+    """v9 up：claims.confidence NOT NULL DEFAULT 0.5 → NULLABLE。
+
+    旧 0.5 值**保守保留**（不猜测是否真实评分；模型层读取时按
+    legacy_unscored 处理为 None，行为不变）。SQLite 无 ALTER COLUMN，
+    重建表保持 PK 与约束。
+    """
+    conn.executescript("""
+    CREATE TABLE claims_new (
+      claim_id TEXT NOT NULL, project_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      idea_id TEXT NOT NULL DEFAULT '', claim_type TEXT NOT NULL,
+      statement TEXT NOT NULL, epistemic_status TEXT NOT NULL DEFAULT 'A',
+      lifecycle_status TEXT NOT NULL DEFAULT 'active',
+      confidence REAL,
+      source TEXT NOT NULL DEFAULT '', version_no INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      PRIMARY KEY (claim_id, project_id, tenant_id));
+    INSERT INTO claims_new SELECT claim_id,project_id,tenant_id,idea_id,
+      claim_type,statement,epistemic_status,lifecycle_status,confidence,source,
+      version_no,created_at,updated_at FROM claims;
+    DROP TABLE claims;
+    ALTER TABLE claims_new RENAME TO claims;
+    """)
+
+
+def _make_relation_strength_nullable(conn: sqlite3.Connection) -> None:
+    """v9 up：claim_evidence_relations.strength NOT NULL DEFAULT 0.5 → NULLABLE。
+
+    旧 0.5 值保守保留（legacy_unscored 语义，模型层读取时映射 None）。
+    """
+    conn.executescript("""
+    CREATE TABLE claim_evidence_relations_new (
+      relation_id TEXT NOT NULL, project_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      claim_id TEXT NOT NULL, evidence_id TEXT NOT NULL,
+      relation_type TEXT NOT NULL, strength REAL,
+      applicability TEXT NOT NULL DEFAULT '',
+      reasoning_summary TEXT NOT NULL DEFAULT '',
+      limitations TEXT NOT NULL DEFAULT '',
+      review_status TEXT NOT NULL DEFAULT 'pending',
+      created_by TEXT NOT NULL DEFAULT 'system',
+      version_no INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      PRIMARY KEY (relation_id, project_id, tenant_id),
+      UNIQUE (claim_id, evidence_id, relation_type, project_id, tenant_id));
+    INSERT INTO claim_evidence_relations_new SELECT relation_id,project_id,
+      tenant_id,claim_id,evidence_id,relation_type,strength,applicability,
+      reasoning_summary,limitations,review_status,created_by,version_no,
+      created_at,updated_at FROM claim_evidence_relations;
+    DROP TABLE claim_evidence_relations;
+    ALTER TABLE claim_evidence_relations_new RENAME TO claim_evidence_relations;
+    """)
+
+
+def _restore_score_defaults(conn: sqlite3.Connection) -> None:
+    """v9 down：恢复 NOT NULL DEFAULT 0.5（NULL → 0.5 legacy 哨兵）。"""
+    conn.executescript("""
+    CREATE TABLE claims_old (
+      claim_id TEXT NOT NULL, project_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      idea_id TEXT NOT NULL DEFAULT '', claim_type TEXT NOT NULL,
+      statement TEXT NOT NULL, epistemic_status TEXT NOT NULL DEFAULT 'A',
+      lifecycle_status TEXT NOT NULL DEFAULT 'active',
+      confidence REAL NOT NULL DEFAULT 0.5,
+      source TEXT NOT NULL DEFAULT '', version_no INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      PRIMARY KEY (claim_id, project_id, tenant_id));
+    INSERT INTO claims_old SELECT claim_id,project_id,tenant_id,idea_id,
+      claim_type,statement,epistemic_status,lifecycle_status,
+      COALESCE(confidence, 0.5),source,version_no,created_at,updated_at
+      FROM claims;
+    DROP TABLE claims;
+    ALTER TABLE claims_old RENAME TO claims;
+    CREATE TABLE claim_evidence_relations_old (
+      relation_id TEXT NOT NULL, project_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      claim_id TEXT NOT NULL, evidence_id TEXT NOT NULL,
+      relation_type TEXT NOT NULL, strength REAL NOT NULL DEFAULT 0.5,
+      applicability TEXT NOT NULL DEFAULT '',
+      reasoning_summary TEXT NOT NULL DEFAULT '',
+      limitations TEXT NOT NULL DEFAULT '',
+      review_status TEXT NOT NULL DEFAULT 'pending',
+      created_by TEXT NOT NULL DEFAULT 'system',
+      version_no INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      PRIMARY KEY (relation_id, project_id, tenant_id),
+      UNIQUE (claim_id, evidence_id, relation_type, project_id, tenant_id));
+    INSERT INTO claim_evidence_relations_old SELECT relation_id,project_id,
+      tenant_id,claim_id,evidence_id,relation_type,COALESCE(strength, 0.5),
+      applicability,reasoning_summary,limitations,review_status,created_by,
+      version_no,created_at,updated_at FROM claim_evidence_relations;
+    DROP TABLE claim_evidence_relations;
+    ALTER TABLE claim_evidence_relations_old RENAME TO claim_evidence_relations;
+    """)
+
+
+def _seed_legacy_sequences(conn: sqlite3.Connection) -> None:
+    """v9 up：为 legacy scan-max 对象（fact/decision/deliverable/risk）seed
+    id_sequences（从存量 display id 推导 next_val，防新行与存量冲突）。"""
+    conn.executescript("""
+    INSERT OR IGNORE INTO id_sequences(name, next_val) SELECT 'fact',
+      COALESCE(MAX(CAST(substr(fact_id, 3) AS INTEGER)), 0)
+      FROM facts WHERE fact_id LIKE 'F-%';
+    INSERT OR IGNORE INTO id_sequences(name, next_val) SELECT 'decision',
+      COALESCE(MAX(CAST(substr(decision_id, 3) AS INTEGER)), 0)
+      FROM decisions WHERE decision_id LIKE 'D-%';
+    INSERT OR IGNORE INTO id_sequences(name, next_val) SELECT 'deliverable',
+      COALESCE(MAX(CAST(substr(deliverable_id, 5) AS INTEGER)), 0)
+      FROM deliverables WHERE deliverable_id LIKE 'DEL-%';
+    INSERT OR IGNORE INTO id_sequences(name, next_val) SELECT 'risk',
+      COALESCE(MAX(CAST(substr(risk_id, 5) AS INTEGER)), 0)
+      FROM risks WHERE risk_id LIKE 'RISK-%';
+    """)
+
+
+def _unseed_legacy_sequences(conn: sqlite3.Connection) -> None:
+    """v9 down：移除 v9 新增的 sequence seed。"""
+    conn.executescript(
+        "DELETE FROM id_sequences WHERE name IN "
+        "('fact','decision','deliverable','risk');"
+    )
+
+
 # v1 初始 schema（多租户多项目）
 MIGRATIONS: List[Dict[str, Any]] = [
     {
@@ -407,6 +531,24 @@ MIGRATIONS: List[Dict[str, Any]] = [
         "name": "lineage_edge_retire",
         "up": [_add_retire_columns],
         "down": [_drop_retire_columns],
+    },
+    # v5.8.2 Commit 8（结束 legacy 0.5 sentinel）：
+    # claims.confidence / claim_evidence_relations.strength → NULLABLE。
+    # 旧 0.5 值保守保留（不猜测真实评分；模型层读取按 legacy_unscored→None）；
+    # 新记录未评分写 NULL（不再落 0.5 哨兵）。
+    # 同时 seed fact/decision/deliverable/risk 的 id_sequences（scan-max 统一）。
+    {
+        "version": 9,
+        "name": "nullable_scores_and_legacy_sequences",
+        "up": [
+            _make_claim_confidence_nullable,
+            _make_relation_strength_nullable,
+            _seed_legacy_sequences,
+        ],
+        "down": [
+            _restore_score_defaults,
+            _unseed_legacy_sequences,
+        ],
     },
 ]
 

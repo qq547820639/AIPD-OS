@@ -227,10 +227,9 @@ class EvidenceRelationService:
                     "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (rel.relation_id, rel.project_id, rel.tenant_id, rel.claim_id,
                      rel.evidence_id, rel.relation_type,
-                     # strength=None（未评分）→ DB 存 legacy 哨兵 0.5（NOT NULL）；
-                     # 模型层读取时再映射回 None（legacy_unscored）。
-                     rel.strength if rel.strength is not None
-                     else LEGACY_UNSCORED_SENTINEL,
+                     # v5.8.2 Commit 8：未评分写 NULL（不再落 0.5 哨兵；
+                     # 旧库 0.5 读取时仍按 legacy_unscored→None）。
+                     rel.strength,
                      rel.applicability, rel.reasoning_summary, rel.limitations,
                      rel.review_status, actor, rel.version_no, ts, ts))
         except sqlite3.IntegrityError as exc:
@@ -366,12 +365,10 @@ class EvidenceRelationService:
             raise ValueError("strength must be in [0,1] or None (unscored)")
         before = self.get(tenant_id, project_id, relation_id)
         set_cols = sorted(fields)
-        # strength=None（未评分）→ DB 存 legacy 哨兵 0.5（NOT NULL）
+        # v5.8.2 Commit 8：未评分写 NULL（不再落 0.5 哨兵）
         params: list[Any] = []
         for k in set_cols:
             v = fields[k]
-            if k == "strength" and v is None:
-                v = LEGACY_UNSCORED_SENTINEL
             params.append(v)
         set_sql = ", ".join([f"{col}=?" for col in set_cols]
                               + ["updated_at=?", "version_no=version_no+1"])

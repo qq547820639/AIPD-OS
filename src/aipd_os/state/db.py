@@ -275,7 +275,7 @@ CREATE TABLE IF NOT EXISTS claims (
   statement TEXT NOT NULL,
   epistemic_status TEXT NOT NULL DEFAULT 'A',
   lifecycle_status TEXT NOT NULL DEFAULT 'active',
-  confidence REAL NOT NULL DEFAULT 0.5,
+  confidence REAL,
   source TEXT NOT NULL DEFAULT '',
   version_no INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
@@ -289,7 +289,7 @@ CREATE TABLE IF NOT EXISTS claim_evidence_relations (
   claim_id TEXT NOT NULL,
   evidence_id TEXT NOT NULL,
   relation_type TEXT NOT NULL,
-  strength REAL NOT NULL DEFAULT 0.5,
+  strength REAL,
   applicability TEXT NOT NULL DEFAULT '',
   reasoning_summary TEXT NOT NULL DEFAULT '',
   limitations TEXT NOT NULL DEFAULT '',
@@ -551,7 +551,7 @@ class AIPDStateDB:
             raise ValueError("confidence must be in [0,1]")
         ts = now_iso()
         with self.connect() as c:
-            fact_id = self._next_id(c, "facts", "fact_id", "F")
+            fact_id = self.next_sequence("fact", "F")
             c.execute("INSERT INTO facts(fact_id,project_id,tenant_id,key,value_json,unit,tolerance,"
                       "conditions,status,confidence,source,version,created_at,updated_at,version_no) "
                       "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -732,7 +732,7 @@ class AIPDStateDB:
 
         ts = now_iso()
         with self.connect() as c:
-            eid = self._next_id(c, "evidence", "evidence_id", "E")
+            eid = self.next_sequence("evidence", "E")
             c.execute(
                 "INSERT INTO evidence(evidence_id,project_id,tenant_id,kind,title,"
                 "url,identifier,accessed_at,quality,summary,metadata_json,"
@@ -819,7 +819,7 @@ class AIPDStateDB:
                          recommendation: str, options: Any, trigger: Optional[str] = None) -> str:
         ts = now_iso()
         with self.connect() as c:
-            did = self._next_id(c, "decisions", "decision_id", "D")
+            did = self.next_sequence("decision", "D")
             c.execute("INSERT INTO decisions(decision_id,project_id,tenant_id,topic,trigger,recommendation,"
                       "options_json,status,created_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?)",
                       (did, project_id, tenant_id, topic, trigger, recommendation, _json(options),
@@ -870,7 +870,7 @@ class AIPDStateDB:
                         metadata: Optional[Dict[str, Any]] = None) -> str:
         ts = now_iso()
         with self.connect() as c:
-            did = self._next_id(c, "deliverables", "deliverable_id", "DEL")
+            did = self.next_sequence("deliverable", "DEL")
             c.execute("INSERT INTO deliverables(deliverable_id,project_id,tenant_id,type,path,status,version,"
                       "gate,metadata_json,updated_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                       (did, project_id, tenant_id, dtype, path, status, version, gate,
@@ -912,7 +912,7 @@ class AIPDStateDB:
                  trigger: Optional[str] = None) -> str:
         ts = now_iso()
         with self.connect() as c:
-            rid = self._next_id(c, "risks", "risk_id", "RISK")
+            rid = self.next_sequence("risk", "RISK")
             c.execute("INSERT INTO risks(risk_id,project_id,tenant_id,title,probability,impact,mitigation,"
                       "status,owner,trigger,updated_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                       (rid, project_id, tenant_id, title, probability, impact, mitigation, status, "AI",
