@@ -39,7 +39,6 @@ from aipd_os.state.lineage import LineageNodeRef, LineageService
 
 from .models import (
     CRITICALITY_CRITICAL,
-    LIFECYCLE_ARCHIVED,
 )
 from .service import (
     NODE_FEATURE,
@@ -51,6 +50,7 @@ from .snapshot import (
     SNAPSHOT_COMMITTED,
     ProductDefinitionSnapshot,
     ProductDefinitionSnapshotService,
+    ProductDefinitionSnapshotView,
 )
 
 # definition_status=CONFLICT（critical requirement 冲突检测）
@@ -78,6 +78,9 @@ CRITERION_CRITICAL_REQUIREMENT_SOURCE = "CRITICAL_REQUIREMENT_SOURCE"
 CRITERION_CRITICAL_REQUIREMENT_VERIFICATION = "CRITICAL_REQUIREMENT_VERIFICATION"
 CRITERION_CRITICAL_UNKNOWN = "CRITICAL_UNKNOWN"
 CRITERION_CRITICAL_CONFLICT = "CRITICAL_CONFLICT"
+CRITERION_PRINCIPLES_BOUND = "PRINCIPLES_BOUND_TO_SELECTED_OPPORTUNITY"
+CRITERION_SNAPSHOT_SET_INTEGRITY = "SNAPSHOT_SET_INTEGRITY"
+CRITERION_SNAPSHOT_UPSTREAM_BASIS = "SNAPSHOT_UPSTREAM_BASIS"
 CRITERION_SNAPSHOT_FRESHNESS = "SNAPSHOT_FRESHNESS"
 CRITERION_OWNER_DECISION = "OWNER_DECISION"
 CRITERION_CONDITIONAL_WAIVER = "CONDITIONAL_WAIVER"
@@ -248,44 +251,47 @@ class ProductDefinitionGate:
             "review required (diagnostic, not unconditional blocker)",
             [idea.idea_id])
 
-    def _crit_opportunity(self) -> CriterionResult:
-        """P0-07：显式 selection_status=selected；恰好 1 个非 archived。"""
-        sel = [o for o in self._pi.list_opportunities(self._tenant,
-                                                      self._project)
-               if o.lifecycle_status != LIFECYCLE_ARCHIVED
-               and o.selection_status == "selected"]
-        if not sel:
+    def _crit_opportunity(self, view: ProductDefinitionSnapshotView) -> CriterionResult:
+        """§10/46：只读 snapshot view（不读 live）。"""
+        sel = view.opportunity()
+        if sel is None:
             return _criterion(CRITERION_SELECTED_OPPORTUNITY, CRIT_FAIL,
                               SEV_HARD,
-                              "no selected Opportunity (selection_status="
-                              "selected required)")
-        if len(sel) > 1:
-            return _criterion(
-                CRITERION_SELECTED_OPPORTUNITY, CRIT_FAIL, SEV_HARD,
-                f"multiple selected Opportunities "
-                f"({[o.opportunity_id for o in sel]}); exactly one required",
-                [o.opportunity_id for o in sel])
+                              "snapshot has no selected Opportunity "
+                              "(selection_status=selected required)")
         return _criterion(CRITERION_SELECTED_OPPORTUNITY, CRIT_PASS, SEV_HARD,
-                          f"selected Opportunity {sel[0].opportunity_id}",
-                          [sel[0].opportunity_id])
+                          f"selected Opportunity {sel.opportunity_id}",
+                          [sel.opportunity_id])
 
-    def _crit_principles(self) -> CriterionResult:
-        prins = [p for p in self._pi.list_principles(self._tenant,
-                                                     self._project)
-                 if p.lifecycle_status != LIFECYCLE_ARCHIVED]
+    def _crit_principles_bound(self,
+                               view: ProductDefinitionSnapshotView) -> CriterionResult:
+        """§11/46 PRINCIPLES_BOUND_TO_SELECTED_OPPORTUNITY：全部 snapshot
+        principle.opportunity_id == snapshot.selected_opportunity_id。"""
+        sel_id = view.snap.opportunity_id
+        unbound = [p.principle_id for p in view.principles()
+                   if not sel_id or p.opportunity_id != sel_id]
+        if unbound:
+            return _criterion(
+                CRITERION_PRINCIPLES_BOUND, CRIT_FAIL, SEV_HARD,
+                f"{len(unbound)} principle(s) not bound to selected "
+                f"Opportunity {sel_id}", unbound)
+        return _criterion(CRITERION_PRINCIPLES_BOUND, CRIT_PASS, SEV_HARD,
+                          "all principles bound to selected opportunity")
+
+    def _crit_principles(self, view: ProductDefinitionSnapshotView) -> CriterionResult:
+        prins = view.principles()
         if not prins:
             return _criterion(CRITERION_PRINCIPLES_PRESENT, CRIT_FAIL,
-                              SEV_HARD, "no Product Principles exist")
+                              SEV_HARD, "no Product Principles in snapshot")
         return _criterion(CRITERION_PRINCIPLES_PRESENT, CRIT_PASS, SEV_HARD,
-                          f"{len(prins)} principle(s) present")
+                          f"{len(prins)} principle(s) in snapshot")
 
-    def _crit_requirement_lineage(self) -> CriterionResult:
-        reqs = [r for r in self._pi.list_requirements(self._tenant,
-                                                      self._project)
-                if r.lifecycle_status != LIFECYCLE_ARCHIVED]
+    def _crit_requirement_lineage(self,
+                                  view: ProductDefinitionSnapshotView) -> CriterionResult:
+        lineage = view.lineage()
         missing = []
-        for req in reqs:
-            edges = self._lineage.outgoing(
+        for req in view.requirements():
+            edges = lineage.outgoing(
                 LineageNodeRef(NODE_REQUIREMENT, req.requirement_id,
                                self._tenant, self._project))
             if not any(e.target.node_type == NODE_PRINCIPLE for e in edges):
@@ -298,13 +304,12 @@ class ProductDefinitionGate:
         return _criterion(CRITERION_REQUIREMENT_TRACEABILITY, CRIT_PASS,
                           SEV_HARD, "all requirements trace to principles")
 
-    def _crit_feature_lineage(self) -> CriterionResult:
-        feats = [f for f in self._pi.list_features(self._tenant,
-                                                   self._project)
-                 if f.lifecycle_status != LIFECYCLE_ARCHIVED]
+    def _crit_feature_lineage(self,
+                              view: ProductDefinitionSnapshotView) -> CriterionResult:
+        lineage = view.lineage()
         missing = []
-        for feat in feats:
-            edges = self._lineage.outgoing(
+        for feat in view.features():
+            edges = lineage.outgoing(
                 LineageNodeRef(NODE_FEATURE, feat.feature_id,
                                self._tenant, self._project))
             if not any(e.target.node_type == NODE_REQUIREMENT for e in edges):
@@ -317,11 +322,10 @@ class ProductDefinitionGate:
         return _criterion(CRITERION_FEATURE_TRACEABILITY, CRIT_PASS, SEV_HARD,
                           "all features trace to requirements")
 
-    def _crit_critical_requirements(self) -> list[CriterionResult]:
-        reqs = [r for r in self._pi.list_requirements(self._tenant,
-                                                      self._project)
-                if r.lifecycle_status != LIFECYCLE_ARCHIVED
-                and r.criticality == CRITICALITY_CRITICAL]
+    def _crit_critical_requirements(
+            self, view: ProductDefinitionSnapshotView) -> list[CriterionResult]:
+        reqs = [r for r in view.requirements()
+                if r.criticality == CRITICALITY_CRITICAL]
         missing_source = [r.requirement_id for r in reqs
                           if not r.source_principle_ids]
         missing_verification = [r.requirement_id for r in reqs
@@ -351,13 +355,11 @@ class ProductDefinitionGate:
                 SEV_HARD, "all critical requirements have verification path"))
         return results
 
-    def _crit_unknowns(self) -> CriterionResult:
+    def _crit_unknowns(self, view: ProductDefinitionSnapshotView) -> CriterionResult:
         """critical unknown：无 waiver → CONDITIONAL（可 waiver）；带
         required_by_gate（waiver 标记）→ WARN。"""
-        reqs = [r for r in self._pi.list_requirements(self._tenant,
-                                                      self._project)
-                if r.lifecycle_status != LIFECYCLE_ARCHIVED
-                and r.criticality == CRITICALITY_CRITICAL
+        reqs = [r for r in view.requirements()
+                if r.criticality == CRITICALITY_CRITICAL
                 and r.epistemic_status == "U"]
         if not reqs:
             return _criterion(CRITERION_CRITICAL_UNKNOWN, CRIT_PASS, SEV_HARD,
@@ -374,11 +376,9 @@ class ProductDefinitionGate:
                           f"{len(waived)} critical unknown(s) waived "
                           "(required_by_gate set)", waived)
 
-    def _crit_conflicts(self) -> CriterionResult:
-        reqs = [r for r in self._pi.list_requirements(self._tenant,
-                                                      self._project)
-                if r.lifecycle_status != LIFECYCLE_ARCHIVED
-                and r.definition_status == DEFINITION_STATUS_CONFLICT]
+    def _crit_conflicts(self, view: ProductDefinitionSnapshotView) -> CriterionResult:
+        reqs = [r for r in view.requirements()
+                if r.definition_status == DEFINITION_STATUS_CONFLICT]
         critical = [r.requirement_id for r in reqs
                     if r.criticality == CRITICALITY_CRITICAL]
         if critical:
@@ -394,6 +394,47 @@ class ProductDefinitionGate:
                               [r.requirement_id for r in reqs])
         return _criterion(CRITERION_CRITICAL_CONFLICT, CRIT_PASS, SEV_HARD,
                           "no conflicts")
+
+    def _crit_set_integrity(
+            self, view: ProductDefinitionSnapshotView) -> CriterionResult:
+        """§46 SNAPSHOT_SET_INTEGRITY：refs 与解析对象一致。"""
+        problems = view.set_integrity()
+        if problems:
+            return _criterion(CRITERION_SNAPSHOT_SET_INTEGRITY, CRIT_FAIL,
+                              SEV_HARD, "; ".join(problems),
+                              [view.snap.snapshot_id])
+        return _criterion(CRITERION_SNAPSHOT_SET_INTEGRITY, CRIT_PASS,
+                          SEV_HARD, "snapshot refs fully resolved")
+
+    def _crit_upstream_basis(self, snap: ProductDefinitionSnapshot) -> CriterionResult:
+        """§35/46 SNAPSHOT_UPSTREAM_BASIS：upstream lineage basis 变化 →
+        需重冻结（第二道防线）。"""
+        if not snap.upstream_basis_hash:
+            return _criterion(CRITERION_SNAPSHOT_UPSTREAM_BASIS, CRIT_WARN,
+                              SEV_WARNING,
+                              "snapshot has no upstream_basis_hash (legacy); "
+                              "re-freeze to enable basis protection")
+        from .snapshot import active_definition_set, compute_upstream_basis
+        try:
+            active = active_definition_set(self._pi, self._tenant,
+                                           self._project)
+        except ValueError as exc:
+            return _criterion(CRITERION_SNAPSHOT_UPSTREAM_BASIS, CRIT_FAIL,
+                              SEV_HARD, f"active set invalid: {exc}",
+                              [snap.snapshot_id])
+        active["_pi"] = self._pi
+        ideas = self._ideas.list(self._tenant, self._project)
+        idea_id = ideas[-1].idea_id if ideas else ""
+        current = compute_upstream_basis(self._db, idea_id, self._tenant,
+                                         self._project, active)
+        if current != snap.upstream_basis_hash:
+            return _criterion(CRITERION_SNAPSHOT_UPSTREAM_BASIS, CRIT_FAIL,
+                              SEV_HARD,
+                              "upstream basis changed (claim/relation/"
+                              "insight lineage); re-freeze snapshot",
+                              [snap.snapshot_id])
+        return _criterion(CRITERION_SNAPSHOT_UPSTREAM_BASIS, CRIT_PASS,
+                          SEV_HARD, "upstream basis unchanged")
 
     def _crit_snapshot_freshness(self, snap: ProductDefinitionSnapshot) -> CriterionResult:
         stale, reasons = self._snapshots.is_stale(snap, self._tenant,
@@ -416,19 +457,27 @@ class ProductDefinitionGate:
 
     # ------------------------------------------------------------- evaluate
     def evaluate_snapshot(self, snap: ProductDefinitionSnapshot) -> GateEvaluation:
-        """对**具体 snapshot** 做技术评估（§48：Gate 输入明确，不推断）。"""
+        """对**具体 snapshot** 做技术评估（§48：Gate 输入明确，不推断）。
+
+        §10：Product 相关 criteria 全部只读 :class:`SnapshotView`
+        （frozen snapshot 解析结果）；live tables 仅用于 freshness/basis
+        校验。"""
+        view = ProductDefinitionSnapshotView(self._db, snap)
         results: list[CriterionResult] = [
             self._crit_idea(),
             self._crit_assessments(),
             self._crit_contradictions(),
-            self._crit_opportunity(),
-            self._crit_principles(),
-            self._crit_requirement_lineage(),
-            self._crit_feature_lineage(),
+            self._crit_opportunity(view),
+            self._crit_principles(view),
+            self._crit_principles_bound(view),
+            self._crit_requirement_lineage(view),
+            self._crit_feature_lineage(view),
         ]
-        results.extend(self._crit_critical_requirements())
-        results.append(self._crit_unknowns())
-        results.append(self._crit_conflicts())
+        results.extend(self._crit_critical_requirements(view))
+        results.append(self._crit_unknowns(view))
+        results.append(self._crit_conflicts(view))
+        results.append(self._crit_set_integrity(view))
+        results.append(self._crit_upstream_basis(snap))
         results.append(self._crit_snapshot_freshness(snap))
 
         hard = [c for c in results if c.severity == SEV_HARD

@@ -535,3 +535,76 @@ __all__ = [
     "active_definition_set",
     "compute_upstream_basis",
 ]
+
+
+# ---------------------------------------------------------------------------
+# ProductDefinitionSnapshotView（§10：Gate 只读 frozen snapshot 解析结果）
+# ---------------------------------------------------------------------------
+class ProductDefinitionSnapshotView:
+    """从 immutable Snapshot 解析 exact Product Definition 对象视图。
+
+    Gate criteria 只读本 view —— **不读 snapshot 外的 live Product objects**
+    （§10/48）；live tables 仅用于 snapshot freshness validation。
+    """
+
+    def __init__(self, db: AIPDStateDB, snap: ProductDefinitionSnapshot) -> None:
+        self._db = db
+        self.snap = snap
+        self._pi = ProductIntelligenceService(db)
+
+    # ---- exact objects（从 snapshot refs 解析，不重查 live 集合）----
+    def opportunity(self):
+        if not self.snap.opportunity_id:
+            return None
+        return self._pi.get_opportunity(self.snap.tenant_id,
+                                        self.snap.project_id,
+                                        self.snap.opportunity_id)
+
+    def principles(self) -> list[Any]:
+        return [self._pi.get_principle(self.snap.tenant_id,
+                                       self.snap.project_id, r["id"])
+                for r in self.snap.principle_refs if r.get("id")]
+
+    def requirements(self) -> list[Any]:
+        return [self._pi.get_requirement(self.snap.tenant_id,
+                                         self.snap.project_id, r["id"])
+                for r in self.snap.requirement_refs if r.get("id")]
+
+    def features(self) -> list[Any]:
+        return [self._pi.get_feature(self.snap.tenant_id,
+                                     self.snap.project_id, r["id"])
+                for r in self.snap.feature_refs if r.get("id")]
+
+    # ---- lineage 校验用（snapshot 内对象的 canonical edges）----
+    def lineage(self) -> Any:
+        from aipd_os.state.lineage import LineageService
+        return LineageService(self._db)
+
+    # ---- 集合完整性（§46 SNAPSHOT_SET_INTEGRITY）----
+    def set_integrity(self) -> list[str]:
+        """snapshot refs 与解析对象是否一致（缺对象 → integrity 破坏）。"""
+        problems: list[str] = []
+        for kind, objs, refs in (
+                ("principle", self.principles(), self.snap.principle_refs),
+                ("requirement", self.requirements(),
+                 self.snap.requirement_refs),
+                ("feature", self.features(), self.snap.feature_refs)):
+            if len(objs) != len(refs):
+                problems.append(
+                    f"{kind}: snapshot refs={len(refs)} resolved={len(objs)}")
+        return problems
+
+
+__all__ = [
+    "ProductDefinitionSnapshot",
+    "ProductDefinitionSnapshotService",
+    "ProductDefinitionSnapshotView",
+    "SnapshotNotFoundError",
+    "SnapshotImmutableError",
+    "SNAPSHOT_SCHEMA_VERSION",
+    "SNAPSHOT_FROZEN",
+    "SNAPSHOT_STALE",
+    "SNAPSHOT_COMMITTED",
+    "active_definition_set",
+    "compute_upstream_basis",
+]

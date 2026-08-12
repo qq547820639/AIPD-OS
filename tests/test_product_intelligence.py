@@ -218,16 +218,20 @@ def test_product_projection_contains_unknowns(env):
 def test_critical_requirement_missing_source_blocks_gate(env):
     """critical requirement 缺 source principle → gate hard blocker。
 
-    service 层强制 ≥1 principle（先校验）；Gate 是最后防线 —— 直接 SQL
-    模拟底层数据损坏（绕过 service），Gate 必须捕获。
+    §10/48：Gate 只评估 frozen snapshot。先冻结（req 在 snapshot 内），
+    再直接 SQL 模拟底层数据损坏（绕过 service）→ Gate 经 snapshot view
+    解析 live 对象必须捕获（最后防线）。
     """
     chain = _build_chain(env)
     req = chain["requirements"][0]
+    snap = ProductDefinitionSnapshotService(env["db"]).create_snapshot(
+        "default", "p1")
     with env["db"].connect() as c:
         c.execute("UPDATE requirements SET source_principle_ids_json='[]' "
                   "WHERE requirement_id=? AND project_id=? AND tenant_id=?",
                   (req.requirement_id, "p1", "default"))
-    _, _, evaluation = _freeze(env)
+    gate = ProductDefinitionGate(env["db"], "default", "p1")
+    evaluation = gate.evaluate_snapshot(snap)
     assert evaluation.result == GATE_BLOCKED
     assert any("missing source principle" in b
                for b in evaluation.hard_blockers)
