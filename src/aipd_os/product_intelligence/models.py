@@ -77,7 +77,7 @@ REQUIREMENT_TYPES = frozenset({
 # Feature 类型
 FEATURE_TYPES = frozenset({
     "capability", "mode", "workflow", "interface", "automation",
-    "integration", "optimization",
+    "integration", "optimization", "safety",
 })
 
 # 空 JSON 序列化

@@ -43,8 +43,9 @@ class ProductDefinitionProjection:
         requirements = self._pi.list_requirements(self._tenant, self._project)
         features = self._pi.list_features(self._tenant, self._project)
 
+        # 统计范围 = 非 archived（candidate 也是产品定义的一部分，与 Gate 一致）
         active_reqs = [r for r in requirements
-                       if r.lifecycle_status == LIFECYCLE_ACTIVE]
+                       if r.lifecycle_status != "archived"]
         critical_reqs = [r for r in active_reqs
                          if r.criticality == CRITICALITY_CRITICAL]
         unknowns = [r for r in active_reqs
@@ -66,7 +67,9 @@ class ProductDefinitionProjection:
                 "opportunities": len(opportunities),
                 "principles": len(principles),
                 "requirements": len(requirements),
-                "active_requirements": len(active_reqs),
+                "active_requirements": len([r for r in requirements
+                                            if r.lifecycle_status
+                                            == LIFECYCLE_ACTIVE]),
                 "critical_requirements": len(critical_reqs),
                 "features": len(features),
             },
