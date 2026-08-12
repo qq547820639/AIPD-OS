@@ -1323,7 +1323,9 @@ def cmd_doctor(args):
     store = SecretStore()
     for env in ("AIPD_EVAL_MODEL_ENDPOINT_API_KEY", "AIPD_MAIL_PASSWORD",
                 "AIPD_IMGGEN_API_KEY", "AIPD_VISION_API_KEY",
-                "AIPD_DATA_ENCRYPTION_KEY"):
+                # v5.8.2 Commit 9：canonical 是 AIPD_ENCRYPTION_KEY；
+                # deprecated alias 一并登记（迁移期兼容）。
+                "AIPD_ENCRYPTION_KEY", "AIPD_DATA_ENCRYPTION_KEY"):
         store.register(env, "...")
     sensitive_envs = [e for e in os.environ if is_sensitive_var(e)]
     registered = [e for e in sensitive_envs if store.is_registered(e)]

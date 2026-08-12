@@ -43,6 +43,11 @@ AIPD-OS 是 AI 产品工程决策操作系统，处理产品真相基线、供�
   api_key / credential / secret / token）在写入 SQLite 时自动加密。
   后端优先使用 `cryptography` 的 Fernet（AES-128-CBC + HMAC），不可用时回退到
   纯 Python XOR + HMAC-SHA256。见 `state/crypto.py`。
+- **加密密钥（v5.8.2 收口）**：canonical 环境变量是 `AIPD_ENCRYPTION_KEY`；
+  `AIPD_DATA_ENCRYPTION_KEY` 仅为 deprecated alias（读取优先级：
+  canonical → alias；两者同时配置且不同 → 启动报错，不静默选择）。
+  server / MCP 模式要求强密钥（≥16 字符且非公开默认值），缺失/弱密钥
+  fail-closed。
 - **传输**：HTTP/JSON 模式建议在反向代理（如 nginx/TLS）后运行；本地模式
   不暴露网络端口。
 

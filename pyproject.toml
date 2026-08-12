@@ -7,9 +7,10 @@ name = "aipd-os"
 version = "5.6.0"
 description = "AIPD-OS v5.6 - AI 产品工程决策操作系统（AI Product/Program Decision OS）"
 readme = "README.md"
-# Python 版本契约（Commit 8C）：宣称 >=3.9，验证矩阵 3.9-3.12（CI python-core-matrix）。
+# Python 版本契约（Commit 8C + v5.8.2 Commit 9）：宣称与验证矩阵一致。
+# CI python-core-matrix 只验证 3.9-3.12；3.13+ 未验证 → 不宣称未验证支持。
 # CAD 真实内核（cadquery）仅在 3.9 验证（cad-golden-loop 单环境）。
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.13"
 license = { text = "MIT" }
 authors = [{ name = "AIPD-OS Team" }]
 keywords = ["aipd", "engineering", "decision", "os", "orchestration"]

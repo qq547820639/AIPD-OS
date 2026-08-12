@@ -33,6 +33,8 @@ LINEAGE_RELATION_TYPES = frozenset({
     "satisfies",
     "validated_by",
     "supersedes",
+    # v5.8.2 Commit 9：implements（Requirement → Feature 等产品智能链路）
+    "implements",
     # legacy dependencies relations（v1 表既有用法）
     "affects",
     "needs_external",

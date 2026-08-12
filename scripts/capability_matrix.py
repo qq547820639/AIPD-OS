@@ -38,6 +38,11 @@ def _build_snapshot(repo: Path, pin_commit: str | None = None) -> dict:
     report = audit_repo(repo, pin_commit=pin_commit)
     return {
         "generated_at": report["generated_at"],
+        # v5.8.2 Commit 9：snapshot 同样 HEAD-bound + 可溯源
+        "source_commit": report["source_commit"],
+        "package_version": report["package_version"],
+        "generator_version": "capability_matrix_v1",
+        "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
         "repo_root": report["repo_root"],
         "default_branch": report["default_branch"],
         "latest_commit_sha": report["latest_commit_sha"],
@@ -94,6 +99,11 @@ def _build_capability_matrix(repo: Path, registry: CapabilityRegistry,
         "repo": snapshot["repo_root"],
         "default_branch": snapshot["default_branch"],
         "latest_commit_sha": snapshot["latest_commit_sha"],
+        # v5.8.2 Commit 9：机器报告 provenance 收口（source_commit 绑定 HEAD）
+        "source_commit": snapshot["latest_commit_sha"],
+        "package_version": snapshot["version"],
+        "generator_version": "capability_matrix_v1",
+        "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
         "version": snapshot["version"],
         "classification_enum": CLASSIFICATIONS,
         "classification_labels": CLASSIFICATION_LABELS,

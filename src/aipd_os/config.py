@@ -76,15 +76,30 @@ class Settings:
         return cls(**values)
 
     def apply_env(self) -> None:
-        """用环境变量覆盖配置（高优先级）。"""
+        """用环境变量覆盖配置（高优先级）。
+
+        v5.8.2 Commit 9：加密 key canonical 化 ——
+        ``AIPD_ENCRYPTION_KEY`` 是 canonical；``AIPD_DATA_ENCRYPTION_KEY``
+        是 deprecated alias（读取优先级：canonical → alias → 默认）。
+        两者同时配置且不同 → RuntimeError（不静默选择）。
+        """
         if _env("DB_DIR") is not None:
             self.db_dir = str(_env("DB_DIR"))
         if _env("LOG_LEVEL") is not None:
             self.log_level = str(_env("LOG_LEVEL")).upper()
         if _env("MODE") is not None:
             self.mode = str(_env("MODE")).lower()
-        if _env("DATA_ENCRYPTION_KEY") is not None:
-            self.data_encryption_key = str(_env("DATA_ENCRYPTION_KEY"))
+        canonical = _env("ENCRYPTION_KEY")
+        alias = _env("DATA_ENCRYPTION_KEY")
+        if canonical is not None and alias is not None and canonical != alias:
+            raise RuntimeError(
+                "conflicting encryption keys: AIPD_ENCRYPTION_KEY (canonical) "
+                "and AIPD_DATA_ENCRYPTION_KEY (deprecated alias) are both set "
+                "with different values; set only AIPD_ENCRYPTION_KEY")
+        if canonical is not None:
+            self.data_encryption_key = str(canonical)
+        elif alias is not None:
+            self.data_encryption_key = str(alias)
         if _env("RETENTION_DAYS") is not None:
             self.retention_days = int(_env("RETENTION_DAYS"))
         if _env("HOST") is not None:

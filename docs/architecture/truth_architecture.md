@@ -60,9 +60,30 @@ trust_level / effective_at / expires_at / version / status / metadata），
 - `IdeaTruthSnapshot`：可选不可变快照（JSON 可序列化，仅快照语义；生成后
   修改源数据不影响 snapshot）。
 
-Maturity 确定性判定（`idea/maturity.py`）：I0=raw 无 claims；I1=claims 已创建
-（schema valid）；I2=有关联真实 evidence（relation 的 evidence_id 必须真实
-存在于 canonical evidence 表，无 fake evidence）；I3 只定义 contract。
+Maturity 确定性判定（`idea/maturity.py`，v5.8.2 Commit 6）：I0=raw 无 claims；
+I1=claims 已创建但未满足 I2；I2=**required key claim types 全覆盖**
+（`IdeaMaturityPolicy`：problem/user/mechanism/technology 全部存在且
+已检索/评审，ClaimAssessment 非 NOT_SEARCHED，无 fake evidence）；
+I3 只定义 contract。只有部分 key claims 被调查 → I1 + Evidence Gap。
+
+## 2.2 CAD artifact identity contract（v5.8.2 Commit 9）
+
+两个 hash 语义严格区分，**禁止混用**：
+
+| hash | 用途 | 性质 |
+|---|---|---|
+| `artifact_byte_hash`（sha256） | 文件完整性 / tamper detection | 同一磁盘工件 → 字节稳定；任何字节改动 → 变化 |
+| `semantic_geometry_hash` | 几何身份 | 同参数 → 稳定；改参数 → 变化；**与序列化字节无关** |
+
+- 测试契约（`tests/test_cad_contract_unify.py`）：同参数两次导出 →
+  semantic hash 相同；改参数 → semantic hash 变化；保存后
+  `artifact_byte_hash` verify 通过；篡改 → FAIL；契约后端（无真实几何测量）
+  不伪造 semantic hash。
+- **byte_reproducibility_profile**：除非固定 CadQuery / OpenCASCADE / Python
+  writer 环境（版本 + 平台 + 依赖集），**不承诺**两次独立 STEP 序列化字节
+  一致（STEP 序/元数据可能因环境不同而变化）。需要字节级复现时，必须显式
+  声明环境 profile（cadquery 版本、OCP 构建、Python 版本、平台），
+  `artifact_byte_hash` 只保证「同一工件」的完整性，不保证「跨环境重生成」。
 
 ## 3. 作用域
 
