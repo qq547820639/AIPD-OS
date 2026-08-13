@@ -1,7 +1,7 @@
 {
   "name": "aipd-orchestrator",
   "version": "5.6.0",
-  "release_date": "2026-08-13",
+  "release_date": "2026-08-14",
   "release_type": "AI full-chain product development and delivery supervisor",
   "theory_reference": "references/AIPD-OS-v4.0.docx",
   "files": [
@@ -992,8 +992,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 20884,
-      "sha256": "db520f5befed1298582cc88cd3b0a345e9f3391496d4ba6bf9e023f84d6099fa"
+      "size": 20957,
+      "sha256": "1a7e13cae831255081d1712ee32f36121e647a78e32b18c02ee3749e14c27dd7"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1984,6 +1984,11 @@
       "path": "tests/test_cli.py",
       "size": 14308,
       "sha256": "1baf2108683a611368ec03b8b9ac7d3a8e494386841ae8c97094b1288cb19028"
+    },
+    {
+      "path": "tests/test_cli_deprecation.py",
+      "size": 5656,
+      "sha256": "ca037982f4a1d13ab7e34cebb850c160a79e2fde89cd0c45a63203ce0dd1cc11"
     },
     {
       "path": "tests/test_cli_status_capabilities.py",

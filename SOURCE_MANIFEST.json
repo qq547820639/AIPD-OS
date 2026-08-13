@@ -1,8 +1,8 @@
 {
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
-  "source_commit": "b17db5d7ff03f1c28722a839f83d8f46b9461404",
-  "generated_at": "2026-08-13T15:56:20+00:00",
+  "source_commit": "dd050e81cec5541cb0ec521e7bdc8ba1a7e0d750",
+  "generated_at": "2026-08-13T16:17:35+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -992,8 +992,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 20884,
-      "sha256": "db520f5befed1298582cc88cd3b0a345e9f3391496d4ba6bf9e023f84d6099fa"
+      "size": 20957,
+      "sha256": "1a7e13cae831255081d1712ee32f36121e647a78e32b18c02ee3749e14c27dd7"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1984,6 +1984,11 @@
       "path": "tests/test_cli.py",
       "size": 14308,
       "sha256": "1baf2108683a611368ec03b8b9ac7d3a8e494386841ae8c97094b1288cb19028"
+    },
+    {
+      "path": "tests/test_cli_deprecation.py",
+      "size": 5656,
+      "sha256": "ca037982f4a1d13ab7e34cebb850c160a79e2fde89cd0c45a63203ce0dd1cc11"
     },
     {
       "path": "tests/test_cli_status_capabilities.py",

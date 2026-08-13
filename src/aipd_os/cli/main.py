@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import warnings
 
 from aipd_os import __version__
 from aipd_os.cli.commands import COMMAND_FUNCS, PLANNED_COMMANDS
@@ -373,6 +374,7 @@ def _cmd_usage(args: argparse.Namespace) -> int:
 
 
 def main(argv: list | None = None) -> int:
+    warnings.simplefilter("default", DeprecationWarning)
     parser = build_parser()
     args = parser.parse_args(argv)
 

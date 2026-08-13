@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -127,3 +129,27 @@ def test_usage_lists_legacy_and_mainline(capsys):
     for mainline in ("init", "resume", "run", "status", "decide",
                      "manual generate", "cad build", "test", "eval", "package"):
         assert mainline in out
+
+
+def test_deprecation_warning_visible_via_real_entry(tmp_path):
+    """QA 观察点 1 回归：DeprecationWarning 必须经真实入口进程在 stderr 可见。
+
+    用 subprocess 以 ``.venv`` 的 Python 模拟 console-script 入口（非 ``__main__``
+    帧），验证 ``main()`` 里的 ``warnings.simplefilter("default", DeprecationWarning)``
+    生效——进程内 ``pytest.warns`` 测不出该 bug（默认 filter 会抑制非 __main__ 帧的
+    DeprecationWarning）。
+    """
+    db = tmp_path / "state.db"
+    code = (
+        "import sys; "
+        "from aipd_os.cli.main import main; "
+        "sys.exit(main(sys.argv[1:]))"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", code,
+         "init-project", "--db", str(db), "--project-id", "p1",
+         "--name", "N", "--goal", "G"],
+        capture_output=True, text=True, cwd=str(ROOT),
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "已废弃" in proc.stderr
