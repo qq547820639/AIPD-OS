@@ -76,17 +76,14 @@ class CertificationRegistry:
                     "cert_id": cert_id,
                 }
             cert.evidence_ref = evidence_ref
-            cert.verified_at = datetime.now().isoformat()
+            cert.verified_at = _now_aware().isoformat()
 
         cert.status = new_status
 
-        # 已验证后若已到期则自动过期
+        # 已验证后若已到期则自动过期（统一 aware 时间比较，避免 naive/aware TypeError）
         if cert.status == "verified" and cert.expires_at:
-            try:
-                expires = datetime.fromisoformat(cert.expires_at)
-            except (TypeError, ValueError):
-                expires = None
-            if expires is not None and expires < datetime.now():
+            expires = _parse_expiry(cert.expires_at)
+            if expires is not None and expires < _now_aware():
                 cert.status = "expired"
 
         return {"ok": True, "cert_id": cert_id, "status": cert.status}

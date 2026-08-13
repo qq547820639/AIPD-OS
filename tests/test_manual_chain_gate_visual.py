@@ -3,7 +3,7 @@
 断言视觉后端缺失时门禁不能通过：
 - 无视觉后端 → 顶层 HOLD/not_verified，绝不 passed（release_decision=HOLD，退出码 1）。
 - 非视觉维度失败（参数与事实不符）→ 硬失败 FAIL（退出码 2）。
-- 配置视觉后端且全部非视觉维度通过 → PASS（退出码 0）。
+- 仅传 --vision-backend 字符串（无真实 provider 凭据）→ HOLD（P1-1 修复：不再假通过）。
 - 提供黄金清单 → golden_gap 注入门禁报告；缺字段时仍 HOLD。
 """
 from __future__ import annotations
@@ -119,16 +119,17 @@ def test_gate_fails_on_nonvision_failure(tmp_path) -> None:
     assert "parameter_table" in report["visual_audit"]["failing_pages"]
 
 
-def test_gate_passes_with_vision_backend(tmp_path) -> None:
-    """配置视觉后端且全部非视觉维度通过 → PASS。"""
+def test_gate_holds_with_backend_string_no_provider(tmp_path) -> None:
+    """P1-1 修复：仅传 --vision-backend 字符串（无真实 provider 凭据）→ HOLD，不假通过。"""
     state, pages_dir, facts_json = _build_manual(tmp_path)
     r = _run(GATE, tmp_path, "--state", str(state), "--pages-dir", str(pages_dir),
              "--facts", str(facts_json), "--vision-backend", "mock")
-    assert r.returncode == 0, r.stdout  # PASS
+    assert r.returncode == 1, r.stdout  # HOLD（仅字符串，未配置真实视觉 provider 凭据）
     report = json.loads(r.stdout)
-    assert report["release_decision"] == "PASS"
-    assert report["passed"] is True
-    assert report["visual_audit"]["passed"] is True
+    assert report["release_decision"] == "HOLD"
+    assert report["passed"] is False
+    assert report["visual_audit"]["status"] == "hold"
+    assert report["visual_audit"]["passed"] is False
 
 
 def test_gate_includes_golden_gap(tmp_path) -> None:

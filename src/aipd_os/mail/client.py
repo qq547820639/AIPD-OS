@@ -642,6 +642,10 @@ class MailClient:
                 continue  # 幂等：已处理的不重复处理
             mail.thread_id = resolve_thread(mail)
             meta = mail.to_dict()
+            # P1-3 修复：会话内保留附件字节（MailAttachment.data），供
+            # download_attachment 取回；字节不落库（见 _persist 的 db_copy 过滤），
+            # 跨会话下载需重新 fetch_emails。
+            meta["_attachments"] = list(mail.attachments)
             meta["direction"] = "inbox"
             meta["status"] = "received"
             self._persist("inbox", mail.message_id, meta)
@@ -663,6 +667,12 @@ class MailClient:
         for att in meta.get("_attachments", []):
             if att.filename == filename:
                 return cast(bytes, att.data)
+        # 区分：附件名存在但字节未持久化（跨会话）→ 提示重新 fetch
+        if filename in meta.get("attachments", []):
+            raise MailError(
+                f"邮件 {message_id} 的附件 {filename!r} 字节未持久化（跨会话），"
+                f"请重新 fetch_emails 后再下载。"
+            )
         raise MailError(f"邮件 {message_id} 中不存在附件 {filename!r}")
 
     # ---------------------------------------------------------------- 查询

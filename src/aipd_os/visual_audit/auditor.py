@@ -22,6 +22,7 @@ from typing import Any, cast
 from PIL import Image
 
 from aipd_os.layout.renderer import A4_PX
+from aipd_os.visual_audit.providers import VisionAuditProvider, VisionAuditUnavailable
 
 # 各角色必需字段
 REQUIRED_BY_ROLE = {
@@ -65,12 +66,63 @@ def _text_of(defn: dict) -> str:
 class VisualAuditor:
     """语义级手册视觉审计器（无真实视觉模型时诚实降级）。"""
 
-    def __init__(self, vision_backend: str | None = None):
+    def __init__(self, vision_backend: str | None = None,
+                 vision_provider: VisionAuditProvider | None = None):
         self.vision_backend = vision_backend
+        self.vision_provider = vision_provider
         self.prior_hashes: list[str] = []
 
+    def _vision_available(self) -> bool:
+        """真实视觉审核是否可用（已注入 provider 且凭据就绪）。"""
+        return self.vision_provider is not None and self.vision_provider.available()
+
     def _vision(self) -> bool:
-        return bool(self.vision_backend)
+        """向后兼容别名：仅当真实视觉审核可用才为 True。
+
+        旧实现返回 ``bool(vision_backend)``，把「配置了视觉后端标识」错误地
+        等同于「视觉审核已完成」→ 配置即假通过（P1-1）。现改为：只有注入真实
+        :class:`VisionAuditProvider` 且 :meth:`available` 才为 True。
+        """
+        return self._vision_available()
+
+    def _audit_vision_dim(self, page_png: str, expected: Any, question: str) -> dict:
+        """对需要视觉模型的维度做真实审核；provider 未接线/不可用时诚实 HOLD。
+
+        绝不因「配置了 vision_backend 字符串」而假通过——只有注入真实
+        :class:`VisionAuditProvider` 且真实调用 :meth:`audit` 成功，才据结果判定。
+        """
+        if not self._vision_available():
+            return {
+                "passed": False,
+                "requiring_vision": True,
+                "expected": expected,
+                "note": "requires a real vision backend; not faked (VisionAuditProvider not wired)",
+            }
+        try:
+            provider = cast(VisionAuditProvider, self.vision_provider)
+            result = provider.audit(page_png, question=question)
+            passed = bool(result.get("passed"))
+            return {
+                "passed": passed,
+                "requiring_vision": False,
+                "expected": expected,
+                "note": "checked by vision backend",
+                "vision_result": result,
+            }
+        except VisionAuditUnavailable:
+            return {
+                "passed": False,
+                "requiring_vision": True,
+                "expected": expected,
+                "note": "requires a real vision backend; not faked (provider unavailable)",
+            }
+        except Exception as exc:  # noqa: BLE001 - 视觉审核失败降级 HOLD，绝不假通过
+            return {
+                "passed": False,
+                "requiring_vision": True,
+                "expected": expected,
+                "note": f"vision audit failed: {exc}; NOT_VERIFIED",
+            }
 
     def reconcile(self, page_defn: dict, page_png: str,
                   golden_path: str | None = None,
@@ -98,21 +150,17 @@ class VisualAuditor:
                 "passed": ok, "intrinsic": list(size), "expected": list(A4_PX),
                 "reason": None if ok else f"intrinsic size {size} != A4@{A4_PX}"}
 
-        # 2) 人物一致性（需视觉模型）
+        # 2) 人物一致性（需视觉模型）—— 真实调用 provider，未接线时诚实 HOLD
         expected_char = page_defn.get("expected_character")
-        dims["character_consistency"] = {
-            "passed": self._vision(), "requiring_vision": not self._vision(),
-            "expected": expected_char,
-            "note": "requires a real vision backend; not faked" if not self._vision() else "checked by vision backend",  # noqa: E501
-        }
+        dims["character_consistency"] = self._audit_vision_dim(
+            page_png, expected_char,
+            "请判断本页人物形象是否与预期角色一致。")
 
-        # 3) CMF 一致性（需视觉模型）
+        # 3) CMF 一致性（需视觉模型）—— 真实调用 provider，未接线时诚实 HOLD
         expected_cmf = page_defn.get("expected_cmf")
-        dims["cmf_consistency"] = {
-            "passed": self._vision(), "requiring_vision": not self._vision(),
-            "expected": expected_cmf,
-            "note": "requires a real vision backend; not faked" if not self._vision() else "checked by vision backend",  # noqa: E501
-        }
+        dims["cmf_consistency"] = self._audit_vision_dim(
+            page_png, expected_cmf,
+            "请判断本页 CMF（颜色/材质/工艺）是否与预期一致。")
 
         # 4) 角色完整性
         required = REQUIRED_BY_ROLE.get(page_defn.get("role", ""), ["title", "body"])

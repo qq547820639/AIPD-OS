@@ -21,6 +21,16 @@ from aipd_os.visual_audit.auditor import VisualAuditor  # noqa: E402
 VISION_DIMS = ("character_consistency", "cmf_consistency")
 
 
+class _FakeVisionProvider:
+    """测试替身：available()=True，audit() 返回固定「通过」结果。"""
+
+    def available(self) -> bool:
+        return True
+
+    def audit(self, image_path: str, question: str, context: dict | None = None) -> dict:
+        return {"passed": True, "score": 1.0, "conclusion": "ok", "dimensions": {}}
+
+
 def _make_defn() -> dict:
     return {
         "page_id": "p1",
@@ -61,12 +71,29 @@ def test_vision_dims_not_faked_without_backend(tmp_path):
         assert name in result["vision_pending"]
 
 
-def test_vision_dims_pass_with_backend(tmp_path):
-    """提供视觉后端时，同一维度应 passed=True 且 requiring_vision=False。"""
+def test_vision_dims_not_faked_with_backend_string(tmp_path):
+    """P1-1 修复：仅传 vision_backend 字符串（无真实 provider）不得假通过。"""
     png = tmp_path / "p1.png"
     _write_png(png)
 
-    auditor = VisualAuditor(vision_backend="mock")
+    auditor = VisualAuditor(vision_backend="mock")  # 字符串标识，非真实 provider
+    result = auditor.audit_page(_make_defn(), str(png))
+
+    dims = result["dimensions"]
+    for name in VISION_DIMS:
+        assert name in dims, f"审计器应输出 {name} 维度"
+        assert dims[name]["passed"] is False, name
+        assert dims[name]["requiring_vision"] is True, name
+
+    assert result["vision_pending"] == list(VISION_DIMS)
+
+
+def test_vision_dims_pass_with_real_provider(tmp_path):
+    """注入真实可用 provider 时，按真实审核结果判定 passed/requiring_vision。"""
+    png = tmp_path / "p1.png"
+    _write_png(png)
+
+    auditor = VisualAuditor(vision_provider=_FakeVisionProvider())
     result = auditor.audit_page(_make_defn(), str(png))
 
     dims = result["dimensions"]

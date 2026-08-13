@@ -73,9 +73,13 @@ def main():
     hold_reasons = []
 
     if a.pages_dir:
-        from aipd_os.visual_audit import VisualAuditor
-        audit = VisualAuditor(vision_backend=vision_backend).audit_batch(
-            d, a.pages_dir, facts=facts, prior_hashes=prior_hashes)
+        from aipd_os.visual_audit import VisualAuditor, VisionAuditProvider
+        # 真实视觉审核依赖 VisionAuditProvider 凭据（AIPD_VISION_PROVIDER_URL+KEY）；
+        # 仅传 --vision-backend 字符串不再导致假通过（P1-1 修复）。
+        vision_provider = VisionAuditProvider() if os.environ.get("AIPD_VISION_PROVIDER_URL") else None
+        audit = VisualAuditor(
+            vision_backend=vision_backend, vision_provider=vision_provider,
+        ).audit_batch(d, a.pages_dir, facts=facts, prior_hashes=prior_hashes)
         visual_audit = audit
         if not audit["passed"]:
             if audit.get("rebuild_plan"):

@@ -67,3 +67,32 @@ def test_register_list_get_and_unknown_transition():
     assert reg.get("nope") is None
     out = reg.transition("nope", "verified")
     assert out["ok"] is False
+
+
+def test_aware_expiry_does_not_crash():
+    """P1-2 修复：expires_at 带时区（aware）不得抛 TypeError，正确判定过期。"""
+    from datetime import timezone
+
+    past_aware = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    reg = CertificationRegistry()
+    reg.register(
+        Certification(cert_id="C1", subject="Acme", standard="ISO9001", expires_at=past_aware)
+    )
+    out = reg.transition("C1", "verified", evidence_ref="CERT-2024-001")
+    assert out["ok"] is True
+    assert out["status"] == "expired"
+    assert reg.get("C1").status == "expired"
+
+
+def test_future_aware_expiry_stays_verified():
+    """未来 aware 到期日 → 保持 verified，不误判过期。"""
+    from datetime import timezone
+
+    future_aware = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    reg = CertificationRegistry()
+    reg.register(
+        Certification(cert_id="C1", subject="Acme", standard="ISO9001", expires_at=future_aware)
+    )
+    out = reg.transition("C1", "verified", evidence_ref="CERT-2024-001")
+    assert out["status"] == "verified"
+    assert reg.get("C1").status == "verified"

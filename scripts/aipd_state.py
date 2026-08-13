@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""DEPRECATED — 旧版单项目状态 CLI（v4 时代）。
+
+已被 ``aipd`` 主命令（``src/aipd_os/cli/``）取代，仅保留兼容；底层
+:class:`aipd_store.AIPDStore` 已废弃，生产状态用 ``AIPDStateDB``。
+"""
 from __future__ import annotations
 
 import argparse

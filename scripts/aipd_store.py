@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""DEPRECATED — 旧版单项目状态存储（v4 时代）。
+
+生产状态一律改用 ``src/aipd_os/state/db.py`` 的 :class:`AIPDStateDB`
+（多租户 + 乐观锁 + 加密 + 事务，是唯一权威实现）。
+
+本文件的 :data:`SCHEMA` 保留作为 v4→v5 数据迁移的历史 schema 锚点
+（``tests/test_migration.py`` 依赖）；:class:`AIPDStore` 类已废弃，
+仅被历史自检脚本（quality_gate / selftest_state / selftest_v4）与旧 CLI
+（aipd_state）引用。**新代码不得在本类上新增功能**，避免与新状态库语义漂移。
+"""
 from __future__ import annotations
 
 import json
@@ -137,6 +147,11 @@ def _json(value: Any) -> str:
 
 
 class AIPDStore:
+    """DEPRECATED — 旧单项目状态存储（仅历史自检脚本使用）。
+
+    生产路径请用 ``src/aipd_os/state/db.py`` 的 ``AIPDStateDB``。
+    """
+
     def __init__(self, db_path: str | Path):
         self.path = Path(db_path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
