@@ -36,6 +36,7 @@ from ._helpers import (
     _emit,
     _import_module,
     _is_legacy,
+    _is_release_excluded,
     _logger,
     _repo_root,
     _resolve_project,
@@ -516,4 +517,4 @@ COMMAND_FUNCS: dict[str, Any] = {
 
 PLANNED_COMMANDS = list(COMMAND_FUNCS.keys())
 
-__all__ = ["COMMAND_FUNCS", "PLANNED_COMMANDS"]
+__all__ = ["COMMAND_FUNCS", "PLANNED_COMMANDS", "_is_release_excluded"]
