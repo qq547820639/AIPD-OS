@@ -702,13 +702,13 @@
     },
     {
       "path": "scripts/aipd_state.py",
-      "size": 5375,
-      "sha256": "ffacddf22ce7c351060da6112bdcc9bc2bdd917a35c5ce4e5ae294f4ec0881e9"
+      "size": 5604,
+      "sha256": "efd0956feb05defa633d04dac7962e4e1e0afacbd113392af3bdde9f513b7786"
     },
     {
       "path": "scripts/aipd_store.py",
-      "size": 14534,
-      "sha256": "a1f2c72538158b6ee8b74ed67420b9a2b3c923ab55957b21a51bb83d92595a82"
+      "size": 15277,
+      "sha256": "4296ccf9340bd5a1b21a2c7062b6741c51e5a56305d155c31ae67e10dd623c65"
     },
     {
       "path": "scripts/aipd_supervisor.py",
@@ -797,8 +797,8 @@
     },
     {
       "path": "scripts/manual_chain_gate.py",
-      "size": 6108,
-      "sha256": "8012c6c4142bc918b4c2c1ba955dbc5dcc922693b47b36a4676cf5435be46821"
+      "size": 6460,
+      "sha256": "096ca0b3ddcb0cc4f6e878f1d7fa9c9b7ca413f3ed788e13fc8ca02e3e9bc184"
     },
     {
       "path": "scripts/manual_preflight.py",
@@ -1367,8 +1367,8 @@
     },
     {
       "path": "src/aipd_os/mail/client.py",
-      "size": 25733,
-      "sha256": "28082ff64de552150d4aad3e9d096a2e81356c6afa99f10c3113ddb0d5869f71"
+      "size": 26377,
+      "sha256": "87ca4973cb0367315b41a0f57589a789fee179d45827d329d11b36e718dd789f"
     },
     {
       "path": "src/aipd_os/mail/gmail_oauth.py",
@@ -1667,8 +1667,8 @@
     },
     {
       "path": "src/aipd_os/supply_chain/certification.py",
-      "size": 7965,
-      "sha256": "5b45625e2522fa816e92de259bff5dfb5132f5d1ea9cadc9bc2570ac7b0d7ed7"
+      "size": 7918,
+      "sha256": "307cb27b0378b62e0fda301ea91a6438cba87228dcbb9afebafca5ac0572a6f4"
     },
     {
       "path": "src/aipd_os/supply_chain/lab.py",
@@ -1802,8 +1802,8 @@
     },
     {
       "path": "src/aipd_os/visual_audit/auditor.py",
-      "size": 11693,
-      "sha256": "d015e8e7cf87dcc516fd16e390f37075b6609f98699578e37844d3b2f497417f"
+      "size": 14066,
+      "sha256": "5456ec2b46953aaf506e284850d2c5a442a649829f64185176894a7116939b4b"
     },
     {
       "path": "src/aipd_os/visual_audit/golden.py",
@@ -1872,8 +1872,8 @@
     },
     {
       "path": "tests/conftest.py",
-      "size": 273,
-      "sha256": "db9eef20e0a63fc622ff6a3c45ec9229c08ded8eb4f20a333a0e69562373cefe"
+      "size": 1785,
+      "sha256": "5765663727354661a24ced008b28d90420af2d061cb55028b97f74223fc5d959"
     },
     {
       "path": "tests/fixtures/__init__.py",
@@ -2017,8 +2017,8 @@
     },
     {
       "path": "tests/test_certification.py",
-      "size": 2455,
-      "sha256": "e292378a6cdb8fe607c1efad7092dad84e0892968d68e7b69c2f9f65557a8293"
+      "size": 3599,
+      "sha256": "23c85b6fa88d754ca956f5956d7dde1bda0ef612595fde4137bc2621b70e97ba"
     },
     {
       "path": "tests/test_claim_assessment.py",
@@ -2241,6 +2241,11 @@
       "sha256": "f3f86cdf2c91b4e390e0dc266865d55e844505f027b7e26b11843c067fc1356c"
     },
     {
+      "path": "tests/test_mail_attachment.py",
+      "size": 1749,
+      "sha256": "01547ba0fea1f8ab15a28054db119b42bf805897ac112eb8f8e6a87b7d150260"
+    },
+    {
       "path": "tests/test_mail_protocol.py",
       "size": 9706,
       "sha256": "a27357934b9ef9a021d8165856787afde5e0f7a2ddadbfd0fd19a2a09f2fae0e"
@@ -2252,8 +2257,8 @@
     },
     {
       "path": "tests/test_manual_chain_gate_visual.py",
-      "size": 7640,
-      "sha256": "022ab942dbe082cade664c37f5ea4c1d424b765ef12495f17dd6bad4064758ec"
+      "size": 7842,
+      "sha256": "39ea5a68499aadb312e24ef5c26acf1687fd1fd0e6f8d0b5a5dfec01e639229a"
     },
     {
       "path": "tests/test_manual_chain_honesty.py",
@@ -2532,8 +2537,8 @@
     },
     {
       "path": "tests/test_visual_honesty_guardrail.py",
-      "size": 2654,
-      "sha256": "17f0d7a5470ec9ad16e42dfca26faee11fcfc9774f4e153e5451e2464d6fd9cb"
+      "size": 3683,
+      "sha256": "c49df00b875c1516166f02e377683276c89f4b5eeba4d113f54f59b1288f3166"
     }
   ]
 }
