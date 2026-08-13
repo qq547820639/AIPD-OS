@@ -152,13 +152,13 @@
     },
     {
       "path": "QUICKSTART.md",
-      "size": 4071,
-      "sha256": "7630c5cfbdcfad976e7d021d08526cb4e7643d1f9782ae17ad1fc3129310607b"
+      "size": 3742,
+      "sha256": "d425edcfff6977b3613a73a78860a2c5319334e4bf64363b557ee13a975ebe7b"
     },
     {
       "path": "README.md",
-      "size": 13745,
-      "sha256": "439a304628b1986e8c2d566d02d98e82317e61d7679d7a142bcf395b52f200d7"
+      "size": 14469,
+      "sha256": "ba8e69317beb4d261ee4a896b1ed431b19d26fc042c6072cfebba773fac29958"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -177,8 +177,8 @@
     },
     {
       "path": "SKILL.md",
-      "size": 9282,
-      "sha256": "ed07416633be3698418f888dccf63c7724b4348aa6af03d44de3c28c4e5291d2"
+      "size": 9225,
+      "sha256": "5936eecc1b80d20a91234dc78ad34163746383391fc99be465e0917141051779"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -987,13 +987,13 @@
     },
     {
       "path": "src/aipd_os/cli/commands.py",
-      "size": 65372,
-      "sha256": "281dd05a7a43a90f6b36113a533592a783f7f4865077fbe6040d1f92cc56520b"
+      "size": 69498,
+      "sha256": "76656cd08844822289384b1a8d7495aefd37c9be21a558fe25009ccd2e74edde"
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 20323,
-      "sha256": "d3aa779b9b926a2a6be8152dafde2c962c59517747f83e76a29254cc522d78bf"
+      "size": 20884,
+      "sha256": "db520f5befed1298582cc88cd3b0a345e9f3391496d4ba6bf9e023f84d6099fa"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",

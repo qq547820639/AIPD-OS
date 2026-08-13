@@ -233,6 +233,23 @@ AI 找到的资料（证据）默认是「待确认」状态。只有经过确�
 **Q9：我可以用中文交流吗？**
 可以。AIPD 的中文界面与自然语言决策全程支持中文输入。
 
+**Q10：旧版命令还能用吗？**
+能用，但已废弃（deprecated）。v5.0 的 10 个旧命令保留功能不删除，执行时会打印
+`DeprecationWarning`，建议迁移到对应的一键主线命令（行为等价，主线命令额外支持 `--json`）：
+
+| 旧命令 | 主线命令 |
+|---|---|
+| `aipd init-project` | `aipd init` |
+| `aipd restore-project` | `aipd resume` |
+| `aipd run-supervisor` | `aipd run` |
+| `aipd project-summary` | `aipd status` |
+| `aipd submit-decision` | `aipd decide` |
+| `aipd run-manual-chain` | `aipd manual generate` |
+| `aipd run-cad-chain` | `aipd cad build` |
+| `aipd run-tests` | `aipd test` |
+| `aipd run-evals` | `aipd eval` |
+| `aipd build-release` | `aipd package` |
+
 ---
 
 ## 附录：面向开发者

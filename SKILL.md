@@ -56,9 +56,9 @@ description: 在AI对话框中作为“AI全链路产品开发与交付主管”
 运行：
 
 ```bash
-python scripts/aipd_state.py init --db <db> --project-id <id> --name <name> --goal <goal>
-python scripts/aipd_supervisor.py --db <db> init
-python scripts/aipd_supervisor.py --db <db> status
+aipd init --db <db> --project <id> --name <name> --goal <goal>
+aipd run --db <db> --project <id> --until-decision
+aipd status --db <db> --project <id>
 ```
 
 不要用长问卷阻塞项目。先提取已知信息、建立带状态假设并生成初始工作队列。
@@ -82,8 +82,8 @@ python scripts/aipd_supervisor.py --db <db> status
 每个工作包必须包含：阶段、模块、唯一目标、输入、输出、依赖、验收、能力地板和失败策略。调用：
 
 ```bash
-python scripts/aipd_supervisor.py --db <db> add-work ...
-python scripts/aipd_supervisor.py --db <db> next
+aipd run --db <db> --project <id> --until-decision
+aipd status --db <db> --project <id>
 ```
 
 下一任务优先级：阻塞多个下游的事实/安全缺口 > 产品架构 > 锚点与关键接口 > 普通内容与软目标。等待外部报价、样机或测试时继续其他独立工作。
