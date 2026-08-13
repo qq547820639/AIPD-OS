@@ -58,6 +58,11 @@ class Settings:
     vision_provider: str = ""
     cad_provider: str = ""
     mail_provider: str = ""
+    # 通用 LLM Provider（OpenAI 兼容）配置（v5.9.2 N-1）。
+    # model_name 未配置时 LLM 侧用合理默认（如 "gpt-4o-mini"），Settings 保持空串。
+    model_api_key: str = ""
+    model_base_url: str = ""
+    model_name: str = ""
     config_files: List[Path] = field(default_factory=list)
     extra: Dict[str, Any] = field(default_factory=dict)
 
@@ -116,6 +121,12 @@ class Settings:
             self.cad_provider = str(_env("CAD_PROVIDER"))
         if _env("MAIL_PROVIDER") is not None:
             self.mail_provider = str(_env("MAIL_PROVIDER"))
+        if _env("MODEL_API_KEY") is not None:
+            self.model_api_key = str(_env("MODEL_API_KEY"))
+        if _env("MODEL_BASE_URL") is not None:
+            self.model_base_url = str(_env("MODEL_BASE_URL"))
+        if _env("MODEL_NAME") is not None:
+            self.model_name = str(_env("MODEL_NAME"))
 
 
 def _load_json(path: Path) -> Dict[str, Any]:

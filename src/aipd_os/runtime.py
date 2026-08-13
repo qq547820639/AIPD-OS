@@ -268,17 +268,54 @@ def install_runtime(runtime: RuntimeContext) -> None:
 def _register_external_providers(ctx: RuntimeContext) -> None:
     """注册外部 provider 进 runtime（v5.8.2 Commit 4：ResearchStudio production wiring）。
 
+    配置驱动 LLM Provider 装配（v5.9.2 N-1）：
+    - 当 ``AIPD_MODEL_API_KEY`` 与 ``AIPD_MODEL_BASE_URL`` 均非空时，构造通用
+      :class:`LlmClient` 并装配 ``LlmProductIntelligenceProvider``（product.*
+      adapters 获得真实 provider）与 ``LlmIdeaDecompositionProvider``
+      （经 ``IdeaDecompositionProviderAdapter`` 注册进 ProviderRegistry 的
+      ``idea.decompose`` capability）；
+    - 未配置时保持诚实降级：product.* 以 ``provider=None`` 注册（discover
+      available=False → probe EXTERNAL_DEPENDENCY），idea.decompose 不注册
+      （probe UNAVAILABLE），与基线行为完全一致，绝不注册 fake。
+
     原则：注册 ≠ 可用。注册进 AdapterRegistry 后由 probe 判定四态；
     测试内注册成功不代表 production 已接入 —— 本函数即 production 接入点。
     """
     from aipd_os.research.providers.researchstudio import register_researchstudio
+    from aipd_os.tool_adapters.product_adapters import register_product_adapters
+
     provider = register_researchstudio(ctx.adapters)
     ctx.external_providers["researchstudio"] = provider
-    # v5.9.1（P0-10/38）：product.* adapters 注册进 production bootstrap。
-    # 生产 Provider 未配置 → discover.available=False → probe 诚实
-    # EXTERNAL_DEPENDENCY；execute 写外部任务包（不伪造成功）。
-    from aipd_os.tool_adapters.product_adapters import register_product_adapters
-    register_product_adapters(ctx.adapters, ctx.db, provider=None)
+
+    api_key = ctx.settings.model_api_key
+    base_url = ctx.settings.model_base_url
+    model_name = ctx.settings.model_name
+    if api_key and base_url:
+        from aipd_os.idea.decomposer import IdeaDecompositionProviderAdapter
+        from aipd_os.llm.client import LlmClient
+        from aipd_os.llm.idea_decomposer_provider import (
+            LlmIdeaDecompositionProvider,
+        )
+        from aipd_os.llm.product_intelligence_provider import (
+            LlmProductIntelligenceProvider,
+        )
+
+        client = LlmClient(
+            endpoint=base_url, api_key=api_key,
+            model=model_name or "gpt-4o-mini")
+
+        pi_provider = LlmProductIntelligenceProvider(client)
+        register_product_adapters(ctx.adapters, ctx.db, provider=pi_provider)
+        ctx.external_providers["llm-product-intelligence"] = pi_provider
+
+        dec_provider = LlmIdeaDecompositionProvider(client)
+        ctx.providers.register(IdeaDecompositionProviderAdapter(dec_provider))
+        ctx.external_providers["llm-idea-decomposer"] = dec_provider
+    else:
+        # v5.9.1（P0-10/38）：product.* adapters 注册进 production bootstrap。
+        # 生产 Provider 未配置 → discover.available=False → probe 诚实
+        # EXTERNAL_DEPENDENCY；execute 写外部任务包（不伪造成功）。
+        register_product_adapters(ctx.adapters, ctx.db, provider=None)
 
 
 # ---------------------------------------------------------------------------
