@@ -7,11 +7,14 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 _SRC = Path(__file__).resolve().parent.parent / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 
+@pytest.hookimpl(optionalhook=True)
 def pytest_json_modifyreport(json_report: dict) -> None:
     """为 pytest-json-report 注入发布证据所需的 freshness 字段。
 
@@ -21,6 +24,10 @@ def pytest_json_modifyreport(json_report: dict) -> None:
     - ``source_commit``：当前 git HEAD 完整 SHA；
     - ``package_version``：``aipd_os.__version__``；
     - ``generated_at``：ISO 时间（``created`` 为 epoch 秒，补充可读时间）。
+
+    ``optionalhook=True``：pytest-json-report 仅在传 ``--json-report`` 时
+    注册 ``pytest_json_modifyreport`` hookspec；不带该参数运行时本 hook
+    无对应 hookspec，optionalhook 使其不致报 unknown hook 错误。
     """
     try:
         head = subprocess.run(
