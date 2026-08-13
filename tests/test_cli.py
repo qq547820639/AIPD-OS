@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.cli import main as cli_main
+from aipd_os.cli.commands import cmd_doctor
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -391,3 +393,24 @@ def test_existing_commands_still_registered():
                  "submit-decision", "run-manual-chain", "run-cad-chain",
                  "run-tests", "run-evals", "build-release"]:
         assert name in PLANNED_COMMANDS, f"{name} 应保持向后兼容"
+
+
+def test_doctor_reports_capability_guidance(capsys, monkeypatch):
+    """doctor --json 对未实现/外部依赖能力给出可操作引导（R-7）。"""
+    monkeypatch.delenv("AIPD_MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("AIPD_MODEL_BASE_URL", raising=False)
+    args = SimpleNamespace(json=True)
+    cmd_doctor(args)
+    data = json.loads(capsys.readouterr().out)
+    checks = {c["name"]: c for c in data["checks"]}
+    # 外部依赖：产品智能转译 + 想法结构化给出可操作下一步
+    pi = checks["capability.product_intelligence"]
+    assert pi["status"] == "external_dependency"
+    assert "AIPD_MODEL_API_KEY" in pi["detail"]
+    assert "AIPD_MODEL_BASE_URL" in pi["detail"]
+    # 未实现：研究五能力诚实标注「当前未实现（规划中）」
+    ni = checks["capability.research_not_implemented"]
+    assert ni["status"] == "not_implemented"
+    assert "research.fulltext" in ni["detail"]
+    assert "research.novelty_check" in ni["detail"]
+    assert "research.asset_extract" in ni["detail"]

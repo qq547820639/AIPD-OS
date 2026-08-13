@@ -81,6 +81,25 @@ def test_probe_four_state_honest(runtime):
     assert probe["adapter_count"] > 0
 
 
+def test_probe_research_impl_annotates_not_implemented(runtime):
+    """probe.research_impl 诚实区分「未实现」与「外部依赖」（R-7 / N-3）。"""
+    probe = runtime.probe()
+    impl = probe["research_impl"]
+    # 结构锁定：research 保持字符串值不变，research_impl 提供并列结构
+    assert set(impl) == set(probe["research"])
+    # 已实现：academic_search 有 researchstudio adapter
+    assert impl["research.academic_search"]["implementation_status"] == "implemented"
+    # 未实现：五能力 + assess_relation 无真实代码路径
+    for cid in ("research.fulltext", "research.related_work",
+                "research.novelty_check", "research.idea_spark",
+                "research.asset_extract", "evidence.assess_relation"):
+        assert impl[cid]["implementation_status"] == "not_implemented", cid
+        assert impl[cid]["state"] == PROBE_UNAVAILABLE
+    # idea.decompose：配置驱动（无 LLM 配置时诚实标注外部依赖），adapters 视角无 adapter
+    assert impl["idea.decompose"]["implementation_status"] == "external_dependency"
+    assert impl["idea.decompose"]["state"] == PROBE_UNAVAILABLE
+
+
 def test_with_adapters_does_not_pollute_shared_registry(runtime):
     """命令级动态适配器经 with_adapters 叠加，不污染共享实例。"""
     from aipd_os.execution.adapter import ToolAdapter

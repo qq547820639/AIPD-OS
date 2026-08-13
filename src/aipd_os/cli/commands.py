@@ -1366,6 +1366,22 @@ def cmd_doctor(args):
                   "ok" if cq_ok else "external_dependency",
                   "cadquery available" if cq_ok else "cadquery not installed (external_dependency)")
 
+    # 4b) 模型驱动能力实现状态（诚实区分「未实现」与「外部依赖」并给出下一步）
+    api_key = os.environ.get("AIPD_MODEL_API_KEY", "").strip()
+    base_url = os.environ.get("AIPD_MODEL_BASE_URL", "").strip()
+    llm_configured = bool(api_key and base_url)
+    _doctor_check(
+        checks, "capability.product_intelligence",
+        "ok" if llm_configured else "external_dependency",
+        ("LLM 已配置（产品智能转译与想法结构化可用）" if llm_configured
+         else "配置 AIPD_MODEL_API_KEY + AIPD_MODEL_BASE_URL 可启用产品智能转译"
+              "与想法结构化（product.* + idea.decompose）"))
+    _doctor_check(
+        checks, "capability.research_not_implemented",
+        "not_implemented",
+        "当前未实现（规划中）：research.fulltext / research.related_work / "
+        "research.novelty_check / research.idea_spark / research.asset_extract")
+
     # 5) 数据库
     try:
         from aipd_os.state.db import AIPDStateDB

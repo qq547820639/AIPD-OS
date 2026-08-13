@@ -43,6 +43,18 @@ PROBE_EXTERNAL = "EXTERNAL_DEPENDENCY"  # 已注册但依赖外部服务未配�
 PROBE_PARTIAL = "PARTIAL"  # 多源部分可用（failed_sources 非空）
 PROBE_REGISTERED = "REGISTERED"  # 已注册，实时可用性需 live probe
 
+# 研究能力实现状态分类（诚实标注，区别于「外部依赖」= 有代码但需外部配置）。
+# - not_implemented：contract 已声明但无真实代码路径（无 provider / adapter）；
+# - external_dependency：有代码路径但依赖外部配置（未配置时诚实降级）。
+RESEARCH_NOT_IMPLEMENTED = frozenset({
+    "research.fulltext",
+    "research.related_work",
+    "research.novelty_check",
+    "research.idea_spark",
+    "research.asset_extract",
+    "evidence.assess_relation",
+})
+
 
 @dataclass
 class RuntimeContext:
@@ -107,20 +119,32 @@ class RuntimeContext:
         providers = [p.name for p in self.providers.all()]
         adapter_caps = sorted(a.capability_id() for a in self.adapters.all())
         research: dict[str, Any] = {}
+        # 与 research 并列的实现状态标注：区分「未实现」与「外部依赖」，
+        # 供 doctor 等消费方给出可操作引导（不改变 research[cid] 的字符串值）。
+        research_impl: dict[str, dict[str, str]] = {}
         for cid in ("research.academic_search", "research.fulltext",
                     "research.related_work", "research.novelty_check",
                     "research.idea_spark", "research.asset_extract",
                     "evidence.assess_relation", "idea.decompose"):
             adapter = self.adapters.get(cid)
             if adapter is None:
-                research[cid] = PROBE_UNAVAILABLE
-                continue
-            try:
-                available = adapter.discover().get("available", True)
-            except Exception:  # noqa: BLE001 - probe 不抛（诚实标注）
-                research[cid] = PROBE_EXTERNAL
-                continue
-            research[cid] = PROBE_AVAILABLE if available else PROBE_EXTERNAL
+                state = PROBE_UNAVAILABLE
+            else:
+                try:
+                    available = adapter.discover().get("available", True)
+                except Exception:  # noqa: BLE001 - probe 不抛（诚实标注）
+                    state = PROBE_EXTERNAL
+                else:
+                    state = PROBE_AVAILABLE if available else PROBE_EXTERNAL
+            research[cid] = state
+            if adapter is not None:
+                impl_status = "implemented"
+            elif cid in RESEARCH_NOT_IMPLEMENTED:
+                impl_status = "not_implemented"
+            else:
+                impl_status = "external_dependency"
+            research_impl[cid] = {"state": state,
+                                  "implementation_status": impl_status}
         # v5.9.1：product.* 动态四态（P0-38/64）—— adapter 已装但 provider
         # 未配置 → EXTERNAL_DEPENDENCY（声明存在 ≠ 可用）
         product: dict[str, Any] = {}
@@ -144,6 +168,7 @@ class RuntimeContext:
             "adapter_capabilities": adapter_caps,
             "adapter_count": len(adapter_caps),
             "research": research,
+            "research_impl": research_impl,
             "product": product,
             "external_providers": sorted(self.external_providers),
         }
@@ -349,4 +374,5 @@ __all__ = [
     "PROBE_EXTERNAL",
     "PROBE_PARTIAL",
     "PROBE_REGISTERED",
+    "RESEARCH_NOT_IMPLEMENTED",
 ]
