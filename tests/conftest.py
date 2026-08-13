@@ -21,21 +21,27 @@ def pytest_json_modifyreport(json_report: dict) -> None:
     发布门禁（``production_release_gate._check_test_report``）要求机器测试
     报告绑定 ``source_commit``（防 STALE 报告冒充 release PASS 证据）。
     pytest-json-report 默认不生成这些字段，故在此 hook 注入：
-    - ``source_commit``：当前 git HEAD 完整 SHA；
+    - ``source_commit``：优先读 ``AIPD_SOURCE_COMMIT`` 环境变量（发布流程
+      在代码提交 + 证据提交分离时用其锚定被测试的代码提交），否则取当前
+      git HEAD 完整 SHA；
     - ``package_version``：``aipd_os.__version__``；
-    - ``generated_at``：ISO 时间（``created`` 为 epoch 秒，补充可读时间）。
+    - ``generated_at``：ISO 时间。
 
     ``optionalhook=True``：pytest-json-report 仅在传 ``--json-report`` 时
     注册 ``pytest_json_modifyreport`` hookspec；不带该参数运行时本 hook
     无对应 hookspec，optionalhook 使其不致报 unknown hook 错误。
     """
-    try:
-        head = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=15,
-        ).stdout.strip()
-    except Exception:  # noqa: BLE001 - git 不可用时留空，由门禁判 STALE
-        head = ""
+    import os
+
+    head = os.environ.get("AIPD_SOURCE_COMMIT", "")
+    if not head:
+        try:
+            head = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                capture_output=True, text=True, timeout=15,
+            ).stdout.strip()
+        except Exception:  # noqa: BLE001 - git 不可用时留空，由门禁判 STALE
+            head = ""
     if head:
         json_report["source_commit"] = head
     try:
