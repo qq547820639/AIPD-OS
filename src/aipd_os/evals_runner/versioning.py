@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.evals_runner.completion import (
@@ -111,7 +111,7 @@ def load_baseline(report_dir: str, version: str) -> dict[str, Any]:
     path = Path(report_dir) / "eval_reports" / str(version) / "report.json"
     if not path.exists():
         raise FileNotFoundError(f"baseline missing: {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
 
 
 def _scores_by_case(report: dict[str, Any]) -> dict[str, float]:

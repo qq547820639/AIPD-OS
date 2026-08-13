@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any
+from typing import Any, cast
 
 _CASE_TAG = re.compile(r"\[eval case:\s*([^\]]+)\]")
 
@@ -144,7 +144,7 @@ class EnvCompletionProvider(CompletionProvider):
                 "用例应诚实标记为 external_dependency，不得伪造输出。"
             )
         try:
-            import requests  # 延迟导入：仅真实端点路径需要
+            import requests  # type: ignore[import-untyped]  # 延迟导入：仅真实端点路径需要
         except ImportError as exc:  # pragma: no cover - 依赖缺失时诚实报外部依赖
             raise ModelNotConfiguredError(
                 "缺少 requests 依赖，无法真实调用模型端点"
@@ -174,7 +174,7 @@ class EnvCompletionProvider(CompletionProvider):
             )
         try:
             data = resp.json()
-            return data["choices"][0]["message"]["content"]
+            return cast(str, data["choices"][0]["message"]["content"])
         except (ValueError, KeyError, IndexError, TypeError) as exc:
             raise RuntimeError(f"无法解析模型端点响应: {exc}") from exc
 

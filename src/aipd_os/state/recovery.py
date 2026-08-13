@@ -18,7 +18,7 @@ import shutil
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .db import AIPDStateDB, ProjectNotFoundError, now_iso
 from .state_backend import (
@@ -89,7 +89,7 @@ class UnifiedStateService:
     def _load_index(self) -> dict[str, Any]:
         if self._index_path.exists():
             try:
-                return json.loads(self._index_path.read_text(encoding="utf-8"))
+                return cast(dict[str, Any], json.loads(self._index_path.read_text(encoding="utf-8")))  # noqa: E501
             except (json.JSONDecodeError, OSError):
                 return {"version": 1, "entries": {}}
         return {"version": 1, "entries": {}}
@@ -100,7 +100,7 @@ class UnifiedStateService:
             json.dumps(self._index, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def _project_entries(self, project_id: str) -> dict[str, Any]:
-        return self._index.setdefault("entries", {}).setdefault(project_id, {})
+        return cast(dict[str, Any], self._index.setdefault("entries", {}).setdefault(project_id, {}))  # noqa: E501
 
     # --------------------------------------------------------------- objects
     def register_object(self, project_id: str, logical_key: str, data: bytes,
@@ -152,7 +152,7 @@ class UnifiedStateService:
                    if e.get("object_type") in ("manual_batch", "attachment")]
         if not entries:
             return []
-        by_prev: dict[str, list[dict[str, Any]]] = {}
+        by_prev: dict[Any, list[dict[str, Any]]] = {}
         for e in entries:
             by_prev.setdefault(e.get("chain_prev"), []).append(e)
         for lst in by_prev.values():
@@ -166,9 +166,9 @@ class UnifiedStateService:
                 seen.add(cur["key"])
                 chain.append(cur["key"])
                 nxt = by_prev.get(cur["key"], [])
-                cur = nxt[0] if nxt else None
-                if cur is None:
+                if not nxt:
                     break
+                cur = nxt[0]
         # 未纳入链的孤立条目按注册时间追加
         for e in sorted(entries, key=lambda x: x.get("registered_at", "")):
             if e["key"] not in seen:
@@ -334,7 +334,7 @@ class UnifiedStateService:
                 return matches[0]
             if len(matches) > 1:
                 # 仍多个 → 退回最近活动
-                return self._most_recent(matches)
+                return cast(dict[str, Any], self._most_recent(matches))
 
         # 3) 最近活动
         top = self._most_recent(projects)

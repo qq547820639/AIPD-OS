@@ -21,7 +21,7 @@ def key_env(monkeypatch):
     return "unit-test-key-1234"
 
 
-def _make_artifact(tmp_path) -> Path:
+def _make_artifact(tmp_path: Path) -> Path:
     p = tmp_path / "release.tar.gz"
     p.write_bytes(b"fake-release-bytes-" * 100)
     return p

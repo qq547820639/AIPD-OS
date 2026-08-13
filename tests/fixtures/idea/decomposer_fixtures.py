@@ -45,7 +45,7 @@ class FakeIdeaDecompositionProvider(IdeaDecompositionProvider):
 
     name = "fake-idea-decomposer"
 
-    def __init__(self, candidate: dict[str, Any | None] = None) -> None:
+    def __init__(self, candidate: dict[str, Any | None] | None = None) -> None:
         self._candidate = candidate or FIXTURE_ELDERLY_REHAB_CANDIDATE
         self.decompose_count = 0
 
@@ -53,7 +53,7 @@ class FakeIdeaDecompositionProvider(IdeaDecompositionProvider):
         return True
 
     def decompose(self, raw_input: str,
-                  idea_context: dict[str, Any | None] = None) -> StructuredCandidate:
+                  idea_context: dict[str, Any | None] | None = None) -> StructuredCandidate:
         self.decompose_count += 1
         data = dict(self._candidate)
         data.pop("EPISTEMIC_NOTE", None)
@@ -69,7 +69,7 @@ class BrokenFakeIdeaDecompositionProvider(IdeaDecompositionProvider):
         return True
 
     def decompose(self, raw_input: str,
-                  idea_context: dict[str, Any | None] = None) -> StructuredCandidate:
+                  idea_context: dict[str, Any | None] | None = None) -> StructuredCandidate:
         # 缺 title / claims（schema required）
         return StructuredCandidate(title="", goal="g", problem="p",
                                    target_user="u", desired_outcome="o",

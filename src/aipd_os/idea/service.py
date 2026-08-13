@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import builtins
 from typing import Any
 
 from aipd_os.state.db import AIPDStateDB, now_iso
@@ -127,19 +128,19 @@ class IdeaService:
         return self.update(tenant_id, project_id, idea_id, expected_version,
                            actor=actor, lifecycle_status="archived")
 
-    def list(self, tenant_id: str, project_id: str) -> list[Idea]:
+    def list(self, tenant_id: str, project_id: str) -> builtins.list[Idea]:
         with self._db.connect() as c:
             rows = c.execute(
                 "SELECT * FROM ideas WHERE project_id=? AND tenant_id=? ORDER BY created_at",
                 (project_id, tenant_id)).fetchall()
         return [self._row_to_idea(r) for r in rows]
 
-    def list_ids(self, tenant_id: str, project_id: str) -> list[str]:
+    def list_ids(self, tenant_id: str, project_id: str) -> builtins.list[str]:
         return [i.idea_id for i in self.list(tenant_id, project_id)]
 
     # ------------------------------------------------------- constraints
     def get_constraints(self, tenant_id: str, project_id: str,
-                        idea_id: str) -> list[str]:
+                        idea_id: str) -> builtins.list[str]:
         """读取 Idea 的约束列表（经 serializer 解析，兼容旧 repr 遗留数据）。"""
         idea = self.get(tenant_id, project_id, idea_id)
         return parse_constraints(idea.constraints_json)

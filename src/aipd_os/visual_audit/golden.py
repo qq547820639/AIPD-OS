@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.visual_audit.auditor import (
     A4_PX,
@@ -105,7 +105,7 @@ class GoldenGapEvaluator:
         if not golden:
             return None
         if golden.get("facts") is not None:
-            return golden["facts"]
+            return cast(dict[str, Any], golden["facts"])
         if golden.get("params") is not None:
             return {"params": golden["params"]}
         return None
@@ -142,7 +142,7 @@ class GoldenGapEvaluator:
                 if op.get("page_id"):
                     defns[op["page_id"]] = op.get("defn") or {}
 
-        pages_dir = Path(pages_dir)
+        pages_path = Path(pages_dir)
         prior = self._prior_hashes(golden)
         golden_facts = self._golden_facts(golden)
         module_set = (golden or {}).get("modules")
@@ -153,7 +153,7 @@ class GoldenGapEvaluator:
 
         pages: list[dict[str, Any]] = []
         for pid, defn in defns.items():
-            png = pages_dir / f"{pid}.png"
+            png = pages_path / f"{pid}.png"
             if not png.exists():
                 dims = {d: _dim(0.0, False, note="render_missing: PNG 未找到") for d in self.DIMENSIONS}  # noqa: E501
                 pages.append(

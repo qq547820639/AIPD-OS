@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from typing import cast
 
 from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.evals_runner.completion import EnvCompletionProvider
@@ -105,7 +106,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    return cast(int, args.func(args))
 
 
 if __name__ == "__main__":

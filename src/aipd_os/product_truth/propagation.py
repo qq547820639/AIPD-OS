@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 import contextlib
-from typing import Callable
+from typing import Any, Callable
 
 from .lineage import LineageGraph
 from .models import ReworkTask, now_iso
@@ -43,7 +43,7 @@ class PropagationEngine:
     # ------------------------------------------------------------- 失效传播
     def on_upstream_changed(self, upstream_id: str,
                             reason: str | None = None,
-                            max_attempts: int | None = None) -> dict[str, object]:
+                            max_attempts: int | None = None) -> dict[str, Any]:
         """上游 truth 变化/过期时，计算下游受影响项，全部标 stale 并生成返工任务。
 
         返回 {affected, stale, tasks, explanation}。
@@ -151,7 +151,7 @@ class PropagationEngine:
 
     # ------------------------------------------------------------- 有界返工
     def run_rework(self, task_id: str,
-                   rework_fn: Callable[[str], bool] | None = None) -> dict[str, object]:
+                   rework_fn: Callable[[str], bool] | None = None) -> dict[str, Any]:
         """执行一次返工尝试。
 
         - 递增 attempts；若已达到上限 → blocked（抛 ReworkExhaustedError）。
@@ -252,7 +252,7 @@ class PropagationEngine:
             "reason": reason or "upstream truth changed",
         }
 
-    def pending_approval(self) -> list[dict[str, object]]:
+    def pending_approval(self) -> list[dict[str, Any]]:
         """汇总所有需要 owner 批准的解释（面向 blocked 或 pending 任务）。"""
         out = []
         for t in self.list_tasks():

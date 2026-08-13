@@ -77,7 +77,7 @@ def verify_artifact(record: dict[str, Any]) -> bool:
     p = Path(path)
     if not p.is_file():
         return False
-    return sha256_file(p) == sha
+    return bool(sha256_file(p) == sha)
 
 
 __all__ = [

@@ -118,7 +118,7 @@ class CostBudget:
         # RLock：snapshot() 在持锁时可能调用 state()，需可重入
         self._lock = threading.RLock()
 
-    def track(self, cost: float) -> BudgetState:
+    def track(self, cost: float) -> str:
         """记录一次成本；超限时按 stop_on_exceed 决定告警或抛异常。"""
         with self._lock:
             self.spent += float(cost)

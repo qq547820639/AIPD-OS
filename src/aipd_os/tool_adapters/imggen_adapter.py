@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
 from aipd_os.tool_adapters._common import env, meta, token_meta
@@ -22,7 +22,7 @@ class ImageGenAdapter(ToolAdapter):
         return meta(
             self.capability_id(),
             "Image Generation (manual)",
-            env(_BACKEND_ENV, "none"),
+            cast(str, env(_BACKEND_ENV, "none")),
             "1.0",
             available=self._is_available(),
         )

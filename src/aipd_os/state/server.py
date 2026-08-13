@@ -18,7 +18,7 @@ import os
 import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from . import migrations
 from .audit import AuditLogger
@@ -139,7 +139,7 @@ class StateService:
         weak = (secret is None or secret in _WEAK_SECRET_VALUES
                 or len(secret) < MIN_STRONG_SECRET_LEN)
         if not weak:
-            return secret
+            return cast(str, secret)
         if insecure_dev_mode:
             logging.warning("insecure dev mode: weak secret allowed (AIPD_INSECURE_DEV_MODE=1)")
             return secret or "change-me-secret"
@@ -489,7 +489,7 @@ class _RpcHandler(BaseHTTPRequestHandler):
             raise UnauthorizedError("missing auth credentials (user + token required)")
         if not self.service.auth.authenticate(user, token):
             raise UnauthorizedError("invalid or expired auth token")
-        return user
+        return cast(str, user)
 
     def _inject_actor(self, method: str, params: dict[str, Any], actor: str) -> dict[str, Any]:
         """对支持 actor 的方法注入认证身份，使 :meth:`StateService._authorize` 生效。
@@ -513,7 +513,7 @@ class _RpcHandler(BaseHTTPRequestHandler):
             params["actor"] = actor
         return params
 
-    def log_message(self, *args):  # 默认会打印到 stderr，静默处理
+    def log_message(self, format: str, *args: Any) -> None:  # 默认会打印到 stderr，静默处理
         pass
 
 
@@ -522,6 +522,7 @@ def run_http(service: StateService, host: str = "0.0.0.0", port: int = 8000) -> 
     _RpcHandler.service = service
     httpd = ThreadingHTTPServer((host, port), _RpcHandler)
     httpd.serve_forever()
+    return httpd
 
 
 def main(argv: list | None = None) -> None:

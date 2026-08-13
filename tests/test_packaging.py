@@ -102,7 +102,7 @@ def test_release_manifest_hashes_match_disk() -> None:
     assert not mismatches, "发布清单与磁盘不一致：\n" + "\n".join(mismatches)
 
 
-def _find_source_manifest() -> Path:
+def _find_source_manifest() -> Path | None:
     """定位新证据体系的 SOURCE_MANIFEST.json（仓库根优先，否则 releases/ 下最新）。"""
     candidates = [ROOT / "SOURCE_MANIFEST.json"]
     releases_dir = ROOT / "releases"

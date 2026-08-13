@@ -11,6 +11,8 @@
 """
 from __future__ import annotations
 
+from typing import Any, cast
+
 import pytest
 
 from aipd_os.idea import (
@@ -39,7 +41,7 @@ def _claim(claim_type: str = "problem", **kw) -> Claim:
     defaults = dict(claim_id="", tenant_id="default", project_id="P1",
                     claim_type=claim_type, statement="s", epistemic_status="A")
     defaults.update(kw)
-    return Claim(**defaults)
+    return Claim(**cast(dict[str, Any], defaults))
 
 
 def _rel(claim, rtype, review_status="reviewed", **kw) -> EvidenceRelation:

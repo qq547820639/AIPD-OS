@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.execution.adapter import AdapterError, ToolAdapter
 from aipd_os.execution.models import (
@@ -380,7 +380,7 @@ class ExecutionRouter:
         selector = capability_selector or (lambda w: w.get("capability_floor"))
         results = []
         for item in work_items:
-            work_id = item.get("work_id")
+            work_id = cast(str, item.get("work_id"))
             cid = selector(item)
             if not cid:
                 results.append(

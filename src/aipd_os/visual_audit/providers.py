@@ -21,6 +21,7 @@ import time
 import urllib.request
 import uuid
 from pathlib import Path
+from typing import cast
 
 
 class VisionAuditUnavailable(RuntimeError):
@@ -48,7 +49,7 @@ class VisionAuditProvider:
         return bool(self.url and self.api_key)
 
     def _endpoint(self) -> str:
-        base = self.url.rstrip("/")
+        base = cast(str, self.url).rstrip("/")
         if base.endswith("/chat/completions"):
             return base
         return base + "/chat/completions"

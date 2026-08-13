@@ -6,7 +6,7 @@ external_blocked，绝不伪造 CAD 结果。
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
 from aipd_os.tool_adapters._common import env, meta, token_meta
@@ -22,7 +22,7 @@ class CadAdapter(ToolAdapter):
         return meta(
             self.capability_id(),
             "Text-to-CAD",
-            env(_PROVIDER_ENV, "none"),
+            cast(str, env(_PROVIDER_ENV, "none")),
             "1.0",
             available=self._is_available(),
         )

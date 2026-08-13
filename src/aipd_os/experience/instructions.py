@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from ..state.db import AIPDStateDB
 
@@ -226,8 +226,8 @@ def apply_instruction(instruction: Instruction, db: AIPDStateDB, project_id: str
         return result
 
     if kind == "choose":
-        choice = instruction.params.get("choice")
-        decision_id = instruction.target or instruction.params.get("decision_id")
+        choice = cast(str, instruction.params.get("choice"))
+        decision_id = cast(str, instruction.target or instruction.params.get("decision_id"))
         open_ds = db.list_open_decisions(tenant_id, project_id)
         target_dec = next((d for d in open_ds if d["decision_id"] == decision_id), None)
         if target_dec is not None and choice:

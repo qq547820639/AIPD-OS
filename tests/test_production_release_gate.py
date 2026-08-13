@@ -28,7 +28,7 @@ def run_gate(manifest: Path, target: str, max_age: float = 8760.0) -> subprocess
     )
 
 
-def write_complete_manifest(tmp_path, **overrides) -> Path:
+def write_complete_manifest(tmp_path: Path, **overrides) -> Path:
     m = {
         "runtime": "native_brep",
         "model_version": "1.0.0",

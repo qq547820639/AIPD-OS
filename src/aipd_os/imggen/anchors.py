@@ -276,9 +276,9 @@ class AnchorRegistry:
                         "reason": "not in registry",
                     }
                 )
-        consistent = sum(1 for it in items if it["consistent"])
-        score = round((consistent / len(items)) if items else 1.0, 4)
-        return {"score": score, "consistent": consistent, "total": len(items), "items": items}
+        consistent_count = sum(1 for it in items if it["consistent"])
+        score = round((consistent_count / len(items)) if items else 1.0, 4)
+        return {"score": score, "consistent": consistent_count, "total": len(items), "items": items}
 
     def to_dict(self) -> dict:
         return {

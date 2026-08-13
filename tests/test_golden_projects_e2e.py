@@ -30,7 +30,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -111,8 +111,8 @@ def _cli(cwd: Path, *args: str) -> str:
     return r.stdout
 
 
-def _load_state(state: Path) -> dict:
-    return json.loads(state.read_text(encoding="utf-8"))
+def _load_state(state: Path) -> dict[str, Any]:
+    return cast(dict[str, Any], json.loads(state.read_text(encoding="utf-8")))
 
 
 # ======================================================================
@@ -264,7 +264,7 @@ def test_golden_project_A_manual_chain(tmp_path) -> None:
     assert db.list_gates("default", "golden-A")[-1]["result"] == "HOLD"
 
     # ---- 7) 发布报告引用最终 HEAD SHA ----
-    report = {
+    report: dict[str, Any] = {
         "project_id": "golden-A",
         "name": "连续附件产品手册",
         "source_commit": head,
@@ -363,7 +363,7 @@ def test_golden_project_B_cad_engineering_change(tmp_path) -> None:
     assert check["valid"] is True and check["checks"]["kernel_build"] is True
 
     # ---- 4) 工程变更写回下游（spec/bom/manual/verification_plan 全 +1）----
-    manifest = {
+    manifest: dict[str, Any] = {
         "model": {"revision": "R1", "parameters": dict(m0["parameters"])},
         "spec": {"revision": "R1", "content_ref": "spec.md"},
         "bom": {"revision": "R1", "content_ref": "bom.csv"},
@@ -422,7 +422,7 @@ def test_golden_project_B_cad_engineering_change(tmp_path) -> None:
     cm = CheckpointManager(db)
     cp_id = cm.save_checkpoint("golden-B", {"step": step1.name, "manifest": out_manifest},
                                summary={"phase": "engineering_change", "revision": "R2"})
-    restored = cm.restore_latest("golden-B")
+    restored = cast(dict[str, Any], cm.restore_latest("golden-B"))
     assert restored["checkpoint_id"] == cp_id
     assert restored["data"]["manifest"]["model"]["revision"] == "R2"
 
@@ -499,7 +499,7 @@ def test_golden_project_C_supply_chain(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("AIPD_OUTPUT_DIR", str(cwd))
     monkeypatch.delenv("AIPD_MAIL_PROVIDER", raising=False)
     reg = build_registry()
-    adapter = reg.get("supply.rfq")
+    adapter = cast(Any, reg.get("supply.rfq"))
     with pytest.raises(AdapterError) as ei:
         adapter.execute({"supplier": "Acme", "part": "Widget-X", "work_id": "w1"})
     assert ei.value.classification == "external_blocked"
@@ -553,8 +553,8 @@ def test_golden_project_C_supply_chain(tmp_path, monkeypatch) -> None:
     assert tasks[0]["type"] == "correction" and tasks[0]["test_item"] == "drop_test"
     assert tasks[0]["action"] in ("rerun", "redesign")
     # 回归判断
-    reg = mark_regression(analysis, {"drop_test": "pass"})
-    assert reg["regressions"] == ["drop_test"]
+    regression = mark_regression(analysis, {"drop_test": "pass"})
+    assert regression["regressions"] == ["drop_test"]
     # 事实更新：无失败才算通过
     facts = update_facts({}, analysis, "evt")
     assert facts["verification"]["evt"]["passed_flag"] is False
@@ -586,7 +586,7 @@ def test_golden_project_C_supply_chain(tmp_path, monkeypatch) -> None:
                        metadata={"sha256": _sha(quote_csv), "source_commit": head})
     cp_id = cm.save_checkpoint("golden-C", {"quote": quote_csv.name, "tasks": tasks},
                                summary={"phase": "correction", "tasks": len(tasks)})
-    restored = cm.restore_latest("golden-C")
+    restored = cast(dict[str, Any], cm.restore_latest("golden-C"))
     assert restored["checkpoint_id"] == cp_id
     assert restored["data"]["tasks"] == tasks
 
@@ -605,7 +605,7 @@ def test_golden_project_C_supply_chain(tmp_path, monkeypatch) -> None:
     assert db.list_gates("default", "golden-C")[-1]["result"] == "HOLD"
 
     # ---- 8) 发布报告引用最终 HEAD SHA ----
-    report = {
+    report: dict[str, Any] = {
         "project_id": "golden-C",
         "name": "RFQ / 报价 / 实验数据 / 纠正任务",
         "source_commit": head,

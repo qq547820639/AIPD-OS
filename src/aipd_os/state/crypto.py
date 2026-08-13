@@ -27,7 +27,7 @@ try:  # cryptography 为可选依赖
     _HAS_CRYPTOGRAPHY = True
 except Exception:  # pragma: no cover - 环境回退分支
     Fernet = None  # type: ignore
-    InvalidToken = Exception
+    InvalidToken = Exception  # type: ignore[assignment, misc]
     _HAS_CRYPTOGRAPHY = False
 
 

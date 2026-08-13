@@ -15,6 +15,7 @@ import hmac
 import secrets
 import time
 from dataclasses import dataclass, field
+from typing import cast
 
 from .db import AIPDStateDB
 
@@ -84,7 +85,7 @@ class AuthManager:
             return None
         if not self._verify_password(password, user["password_hash"]):
             return None
-        return user["user_id"]
+        return cast(str, user["user_id"])
 
     # ---------------------------------------------------------------- token
     def issue_token(self, user_id: str, ttl: int = TOKEN_TTL_SECONDS) -> str:

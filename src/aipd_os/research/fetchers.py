@@ -12,7 +12,7 @@ PDF/TXT 解析通过可插拔解析器（``DOCUMENT_PARSERS``）完成；未注�
 from __future__ import annotations
 
 import abc
-from typing import Any
+from typing import Any, cast
 
 from .models import Citation, Document, FullText
 
@@ -89,7 +89,7 @@ class ContractFetcher(DocumentFetcher):
 
     def parse(self, raw: bytes, citation: Citation, ext: str = ".txt") -> FullText:
         parser = DOCUMENT_PARSERS.get(ext, _no_parser)
-        return parser(raw, citation, fmt=ext.strip("."))
+        return cast(FullText, parser(raw, citation, fmt=ext.strip(".")))
 
     def fetch(self, citation: Citation) -> Document:
         key = None

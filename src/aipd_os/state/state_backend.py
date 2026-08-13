@@ -16,6 +16,7 @@ from __future__ import annotations
 import builtins
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import NoReturn
 
 from .objects import ObjectStore
 
@@ -128,7 +129,7 @@ class RemoteStateBackend(StateBackend):
     def name(self) -> str:
         return "remote"
 
-    def _raise(self) -> None:
+    def _raise(self) -> NoReturn:
         raise ExternalDependencyError(
             f"{self.EXTERNAL_DEPENDENCY} not configured: no real cloud credentials. "
             "Implement RemoteStateBackend.put/get/... against your provider to enable "

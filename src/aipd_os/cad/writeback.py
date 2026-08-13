@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.cad.evidence import utc_now_iso
 
@@ -28,7 +28,7 @@ _DOWNSTREAM_ALIASES = {
 def _find_key(d: dict[str, Any], candidates) -> str | None:
     for k in candidates:
         if k in d:
-            return k
+            return cast(str, k)
     return None
 
 

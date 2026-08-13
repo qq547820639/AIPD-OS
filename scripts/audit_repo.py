@@ -130,8 +130,13 @@ def _parse_ci_jobs(repo_root: Path) -> list:
                 m = job_key_re.match(line)
                 if m:
                     jobs.append(m.group(1))
-    seen = set()
-    return [j for j in jobs if not (j in seen or seen.add(j))]
+    seen: set[str] = set()
+    unique: list[str] = []
+    for j in jobs:
+        if j not in seen:
+            seen.add(j)
+            unique.append(j)
+    return unique
 
 
 def _verify_release_manifest(repo_root: Path) -> dict:

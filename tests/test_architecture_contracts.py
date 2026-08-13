@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -27,7 +28,7 @@ except ImportError:  # pragma: no cover - Python 3.9/3.10
 
 def _pyproject() -> dict:
     with open(REPO_ROOT / "pyproject.toml", "rb") as fh:
-        return tomllib.load(fh)
+        return cast(dict[str, Any], tomllib.load(fh))
 
 
 def _doc(path: str) -> str:

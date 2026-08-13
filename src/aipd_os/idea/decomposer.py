@@ -136,7 +136,7 @@ class IdeaDecompositionProvider(abc.ABC):
 
     @abc.abstractmethod
     def decompose(self, raw_input: str,
-                  idea_context: dict[str, Any | None] = None) -> StructuredCandidate:
+                  idea_context: dict[str, Any | None] | None = None) -> StructuredCandidate:
         """把 Raw Idea 分解为结构化候选。能力不可用抛
         :class:`IdeaDecompositionUnavailable`。"""
 
@@ -165,7 +165,7 @@ class UnavailableProvider(IdeaDecompositionProvider):
         return False
 
     def decompose(self, raw_input: str,
-                  idea_context: dict[str, Any | None] = None) -> StructuredCandidate:
+                  idea_context: dict[str, Any | None] | None = None) -> StructuredCandidate:
         raise IdeaDecompositionUnavailable(
             f"idea decomposition capability unavailable for input {raw_input!r}; "
             "external_dependency (CAPABILITY_UNAVAILABLE)")

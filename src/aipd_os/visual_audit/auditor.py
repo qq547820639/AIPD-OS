@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from typing import Any, cast
 
 from PIL import Image
 
@@ -46,10 +47,10 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def _intrinsic_size(path: str) -> tuple | None:
+def _intrinsic_size(path: str) -> tuple[int, int] | None:
     try:
         with Image.open(path) as im:
-            return im.size
+            return cast(tuple[int, int], im.size)
     except Exception:
         return None
 
@@ -114,7 +115,7 @@ class VisualAuditor:
         }
 
         # 4) 角色完整性
-        required = REQUIRED_BY_ROLE.get(page_defn.get("role"), ["title", "body"])
+        required = REQUIRED_BY_ROLE.get(page_defn.get("role", ""), ["title", "body"])
         missing = [k for k in required if not page_defn.get(k)]
         dims["page_role_completeness"] = {
             "passed": not missing, "role": page_defn.get("role"),
@@ -194,7 +195,7 @@ class VisualAuditor:
                     prior_hashes: list[str] | None = None) -> dict:
         """审计整批，定位失败页面与维度，产出仅重建责任页的 rebuild_plan。"""
         self.prior_hashes = list(prior_hashes or [])
-        pages_dir = Path(pages_dir)
+        pages_path = Path(pages_dir)
 
         # 从 batch_runs 汇总各页 defn
         defns: dict[str, dict] = {}
@@ -208,9 +209,9 @@ class VisualAuditor:
         rebuild_plan = []
         vision_pending = []
         for pid, defn in defns.items():
-            png = pages_dir / f"{pid}.png"
+            png = pages_path / f"{pid}.png"
             if not png.exists():
-                res = {
+                res: dict[str, Any] = {
                     "page_id": pid, "passed": False,
                     "dimensions": {"render_missing": {"passed": False, "reason": "png not found"}},
                     "pixel_statistics_only": False, "vision_pending": [], "rendered_by_us": False,
@@ -232,7 +233,7 @@ class VisualAuditor:
                     vision_pending.append({"page_id": pid, "dimensions": vdims})
 
         # 页码单调
-        numbers = [d.get("page_number") for d in defns.values() if isinstance(d.get("page_number"), int)]  # noqa: E501
+        numbers = [cast(int, d.get("page_number")) for d in defns.values() if isinstance(d.get("page_number"), int)]  # noqa: E501
         monotonic = all(b > a for a, b in zip(numbers, numbers[1:])) if len(numbers) > 1 else True
 
         # 批次连续性：非首批需有 prior_batch 附件

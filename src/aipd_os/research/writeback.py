@@ -14,7 +14,7 @@ v5.7 语义收敛（Commit 7A）：**retrieval verified ≠ 命题 verified**。
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from .fetchers import DocumentFetcher
 from .models import (
@@ -43,7 +43,7 @@ class ResearchBackend:
         meta["scope"] = scope  # abstract / full_text
         if extra_meta:
             meta.update(extra_meta)
-        return self._db.add_evidence(
+        evidence_id = self._db.add_evidence(
             self._tenant,
             self._project,
             kind=citation.kind,
@@ -55,6 +55,7 @@ class ResearchBackend:
             metadata=meta,
             accessed_at=citation.accessed_at,
         )
+        return cast(str, evidence_id)
 
     # ------------------------------------------------------------ Product Truth
     def write_finding(self, finding: ResearchFinding,
@@ -95,7 +96,7 @@ class ResearchBackend:
         )
         for eid in evidence_ids:
             self._db.link_evidence(self._tenant, self._project, fact_id, eid, relation="supports")
-        return fact_id
+        return cast(str, fact_id)
 
     def write_evidence_only(self, finding: ResearchFinding) -> list[str]:
         """仅登记证据（用于 not_verified / 摘要级发现 / 非事实结论），不写 Product Truth。"""

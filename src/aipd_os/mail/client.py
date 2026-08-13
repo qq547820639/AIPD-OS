@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.message import EmailMessage
 from email.utils import format_datetime
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.supply_chain.mail import (
     ExternalDependencyError,
@@ -211,7 +211,7 @@ def _parse_part(part: email.message.Message) -> bytes | None:
     payload = part.get_payload(decode=True)
     if payload is None:
         return None
-    return payload
+    return cast(bytes, payload)
 
 
 def _parse_message(raw: bytes) -> ReceivedMail:
@@ -296,7 +296,7 @@ def fetch_emails(
             typ2, msgdata = conn.fetch(num, "(BODY.PEEK[])")
             if typ2 != "OK" or not msgdata or msgdata[0] is None:
                 continue
-            raw = msgdata[0][1]
+            raw = cast(bytes, msgdata[0][1])
             results.append(_parse_message(raw))
         return results
     finally:
@@ -473,7 +473,7 @@ class MailClient:
     ) -> str:
         """创建一封待审批草稿，返回 ``Message-ID``。状态为 draft。"""
         message_id = _new_message_id(from_addr)
-        meta = {
+        meta: dict[str, Any] = {
             "message_id": message_id,
             "direction": "outbox",
             "status": "draft",
@@ -662,7 +662,7 @@ class MailClient:
             raise MailError(f"未知收件 message_id: {message_id!r}")
         for att in meta.get("_attachments", []):
             if att.filename == filename:
-                return att.data
+                return cast(bytes, att.data)
         raise MailError(f"邮件 {message_id} 中不存在附件 {filename!r}")
 
     # ---------------------------------------------------------------- 查询
@@ -673,7 +673,7 @@ class MailClient:
             for f in self.db.list_facts(self.tenant_id, self.project_id):
                 if (_safe_key(f.get("value", {}).get("message_id", ""))
                         == _safe_key(message_id)) or _safe_key(str(f.get("key", ""))).endswith(_safe_key(message_id)):  # noqa: E501
-                    return f.get("value", {})
+                    return cast(dict[str, Any], f.get("value", {}))
         raise KeyError(f"未知 message_id: {message_id!r}")
 
     def all_records(self) -> list[dict[str, Any]]:

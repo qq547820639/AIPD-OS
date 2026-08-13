@@ -313,12 +313,13 @@ class ClosureRun:
                        ) -> dict[str, Any] | None:
         """在独立线程中调用 router.run，支持超时/取消中断在途工作。"""
         assert self.store is not None and self.router is not None
+        router = self.router
         holder: dict[str, Any] = {}
         step_start = _now_monotonic()
 
         def _worker() -> None:
             try:
-                holder["out"] = self.router.run(
+                holder["out"] = router.run(
                     self.work_id, step.capability_id, step.inputs,
                     context=context, project_id=self.project_id)
             except Exception as exc:  # noqa: BLE001

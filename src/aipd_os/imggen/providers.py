@@ -26,7 +26,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from PIL import Image, ImageDraw
 
@@ -115,7 +115,7 @@ def _montage(prior_images: list[dict], thumb: int = 96, gap: int = 8, max_count:
     thumbs = []
     for im in prior_images[:max_count]:
         try:
-            p = Image.open(io.BytesIO(im.get("data") or b""))
+            p: Image.Image = Image.open(io.BytesIO(im.get("data") or b""))
             p = p.convert("RGB")
             p.thumbnail((thumb, thumb))
             thumbs.append(p)
@@ -209,7 +209,7 @@ class PILImageGenProvider(ImageGenProvider):
             }
             results.append(
                 GeneratedImage(
-                    page_id=page.get("page_id"),
+                    page_id=cast(str, page.get("page_id")),
                     data=data,
                     format="PNG",
                     width=FIG_SIZE[0],
@@ -294,7 +294,7 @@ class RealImageGenProvider(ImageGenProvider):
         return bool(self.url and self.api_key)
 
     def _endpoint(self) -> str:
-        base = self.url.rstrip("/")
+        base = cast(str, self.url).rstrip("/")
         if base.endswith("/images/generations"):
             return base
         return base + "/images/generations"
@@ -398,7 +398,7 @@ class RealImageGenProvider(ImageGenProvider):
             }
             results.append(
                 GeneratedImage(
-                    page_id=page.get("page_id"),
+                    page_id=cast(str, page.get("page_id")),
                     data=data,
                     format=fmt or "PNG",
                     width=w,

@@ -13,6 +13,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 from PIL import Image
 
@@ -61,14 +62,14 @@ def sha(path) -> str:
     return h.hexdigest()
 
 
-def load_state(state: Path) -> dict:
-    return json.loads(Path(state).read_text(encoding="utf-8"))
+def load_state(state: Path) -> dict[str, Any]:
+    return cast(dict[str, Any], json.loads(Path(state).read_text(encoding="utf-8")))
 
 
-def batch_output_pages(state: Path, batch_id: str) -> list:
+def batch_output_pages(state: Path, batch_id: str) -> list[Any]:
     for br in load_state(state)["batch_runs"]:
         if br["batch_id"] == batch_id:
-            return br["output_pages"]
+            return cast(list[Any], br["output_pages"])
     raise AssertionError(f"batch {batch_id} not found")
 
 

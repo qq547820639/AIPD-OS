@@ -13,7 +13,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.execution.models import ExecutionRecord
 
@@ -320,7 +320,7 @@ class RunStore:
         if row is None:
             raise KeyError(run_id)
         try:
-            return json.loads(row["result_json"] or "{}")
+            return cast(dict[str, Any], json.loads(row["result_json"] or "{}"))
         except (json.JSONDecodeError, TypeError):
             return {}
 

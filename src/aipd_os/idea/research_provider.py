@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
 from aipd_os.execution.execution_router import ExecutionRouter
@@ -232,7 +232,7 @@ class ResearchIntegration:
         declared = result.get(RELATION_KEY)
         if declared in ("supports", "contradicts", "partially_supports",
                         "inconclusive", "not_applicable"):
-            return declared
+            return cast(str, declared)
         return "inconclusive"
 
     @staticmethod

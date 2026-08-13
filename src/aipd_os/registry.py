@@ -22,7 +22,7 @@ import importlib.util
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 CLASSIFICATIONS = [
     "fully_implemented",
@@ -183,7 +183,7 @@ def load_default_registry() -> CapabilityRegistry:
     reg = CapabilityRegistry()
     if registry_data is not None and hasattr(registry_data, "CAPABILITIES"):
         for entry in registry_data.CAPABILITIES:
-            cap = Capability(**entry)
+            cap = Capability(**cast(dict[str, Any], entry))
             reg.register(cap)
     return reg
 
@@ -211,7 +211,7 @@ def _resolve_entry_candidate(spec: str) -> bool:
         if not mod or not parts:
             return False
         try:
-            obj = importlib.import_module(mod)
+            obj: Any = importlib.import_module(mod)
         except Exception:
             return False
         for attr in parts:

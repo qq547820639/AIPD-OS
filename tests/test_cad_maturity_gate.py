@@ -28,7 +28,7 @@ def run_gate(manifest: Path, target: str) -> subprocess.CompletedProcess:
     )
 
 
-def make_manifest(tmp_path, runtime: str, evidence: dict) -> Path:
+def make_manifest(tmp_path: Path, runtime: str, evidence: dict) -> Path:
     p = tmp_path / "manifest.json"
     p.write_text(json.dumps({"runtime": runtime, "evidence": evidence}), encoding="utf-8")
     return p

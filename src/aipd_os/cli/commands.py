@@ -19,7 +19,7 @@ import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.cli.product_commands import cmd_product_gate, cmd_product_show
 from aipd_os.logging_utils import get_logger, log_event
@@ -44,7 +44,7 @@ def _import_module(name: str, subdir: str = "scripts"):
     """按路径加载仓库内的顶层脚本模块（非包）。"""
     path = _repo_root() / subdir / f"{name}.py"
     spec = importlib.util.spec_from_file_location(name, str(path))
-    mod = importlib.util.module_from_spec(spec)
+    mod = importlib.util.module_from_spec(cast(Any, spec))
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod
 
@@ -57,7 +57,7 @@ def _resolve_project(db, tenant: str = DEFAULT_TENANT) -> str:
     projects = db.list_projects(tenant)
     if not projects:
         raise ValueError("当前租户下没有项目；请先用 `aipd init-project` 初始化。")
-    return projects[0]["project_id"]
+    return cast(str, projects[0]["project_id"])
 
 
 def _sha256(path: Path) -> str:
@@ -187,7 +187,7 @@ def cmd_run_supervisor(args: argparse.Namespace) -> int:
 
     for r in decisions:
         did = r["decision"]["decision_id"]
-        card = build_decision_card(db, pid, decision_id=did, tenant_id=DEFAULT_TENANT)
+        card = cast(dict[str, Any], build_decision_card(db, pid, decision_id=did, tenant_id=DEFAULT_TENANT))  # noqa: E501
         print(f"  [决策] {card['decision_id']}：{card['topic']}")
         print(f"    AI 建议：{card['ai_recommendation']}")
         print(f"    可选方案：{'、'.join(card['options'])}")
@@ -391,7 +391,7 @@ def _build_artifact_zip(repo: Path, artifact: Path, out_dir: Path) -> None:
 def _sign_file(path: Path) -> dict[str, Any]:
     os.environ.setdefault("AIPD_RELEASE_SIGNING_KEY", "aipd-os-dev-signing-key")
     signer = _import_module("sign_release")
-    return signer.sign_release(str(path))
+    return cast(dict[str, Any], signer.sign_release(str(path)))
 
 
 def cmd_build_release(args: argparse.Namespace) -> int:

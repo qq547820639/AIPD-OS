@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from PIL import Image, ImageDraw
 
@@ -58,7 +58,7 @@ def _draw_body(draw, lines: list[str], x, y, font, fill, line_gap) -> float:
     for line in lines:
         draw.text((x, y), line, font=font, fill=fill)
         y += line_gap
-    return y
+    return cast(float, y)
 
 
 def _draw_curve(draw, curve, x, y, w, h, font, label_fill, line_fill, grid_fill):
@@ -152,7 +152,7 @@ def render_page(defn: dict, out_png: str,
     muted = (120, 120, 120)
     gold = (200, 160, 60)
 
-    y = MARGIN
+    y: float = MARGIN
 
     # 顶部装饰条 + 图标式标注色块（注释形状）
     draw.rectangle([MARGIN, y, MARGIN + 90, y + 90], fill=gold)

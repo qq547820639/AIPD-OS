@@ -38,29 +38,29 @@ def rebuild_failed_pages(
         报告：``{rebuilt, rebuilt_page_ids, unchanged_pages_verified,
         unexpected_changes, hash_preservation_ok, before_hashes, after_hashes}``。
     """
-    pages_dir = Path(pages_dir)
-    pages_dir.mkdir(parents=True, exist_ok=True)
+    pages_path = Path(pages_dir)
+    pages_path.mkdir(parents=True, exist_ok=True)
 
     # 快照所有现存页面的哈希（改前）
-    existing = sorted(p.stem for p in pages_dir.glob("*.png"))
-    before = {pid: _sha_file(pages_dir / f"{pid}.png") for pid in existing}
+    existing = sorted(p.stem for p in pages_path.glob("*.png"))
+    before = {pid: _sha_file(pages_path / f"{pid}.png") for pid in existing}
 
     failed_set = set(failed_page_ids)
     # 只重建失败页，绝不触碰成功页
     rebuilt = []
     for pid in failed_page_ids:
         new_bytes = rebuild_page(pid)
-        (pages_dir / f"{pid}.png").write_bytes(new_bytes)
+        (pages_path / f"{pid}.png").write_bytes(new_bytes)
         rebuilt.append(
             {
                 "page_id": pid,
                 "before_sha256": before.get(pid),
-                "after_sha256": _sha_file(pages_dir / f"{pid}.png"),
+                "after_sha256": _sha_file(pages_path / f"{pid}.png"),
             }
         )
 
     # 改后哈希
-    after = {pid: _sha_file(pages_dir / f"{pid}.png") for pid in existing}
+    after = {pid: _sha_file(pages_path / f"{pid}.png") for pid in existing}
 
     # 未修改页：不在失败集内，且改前/改后哈希一致
     unchanged = {

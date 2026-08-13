@@ -25,6 +25,7 @@ import sys
 from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import cast
 
 logger = logging.getLogger("aipd.supervisor")
 PHASES = [
@@ -172,7 +173,7 @@ class Supervisor:
     def _resolve_project_id(self, project_id: str | None) -> str:
         if project_id is not None:
             return project_id
-        return self.project_id()
+        return cast(str, self.project_id())
 
     def _decisions_has_tenant(self, c) -> bool:
         cols = {r[1] for r in c.execute("PRAGMA table_info(decisions)").fetchall()}

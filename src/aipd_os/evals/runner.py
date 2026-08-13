@@ -167,7 +167,7 @@ def _default_http_client(cfg: ModelEvalConfig) -> ClientFn:
     """
 
     def caller(sample: str, cfg_: ModelEvalConfig) -> dict[str, Any]:
-        import requests
+        import requests  # type: ignore[import-untyped]
 
         url = cfg_.base_url.rstrip("/")
         if not url.endswith("/chat/completions"):

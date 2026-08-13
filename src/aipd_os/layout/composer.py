@@ -44,12 +44,12 @@ def build_zip(pages: Iterable[str], out_zip: str) -> str:
 
 def assemble(pages_dir: str, out_dir: str) -> dict:
     """从 pages_dir 读取所有 PNG，产出 PDF + ZIP 到 out_dir。返回产物清单。"""
-    pages_dir = Path(pages_dir)
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    pngs = sorted(pages_dir.glob("*.png"))
-    pdf = compose_pdf(pngs, str(out_dir / "manual.pdf"))
-    zipped = build_zip(pngs, str(out_dir / "manual.zip"))
+    pages_path = Path(pages_dir)
+    out_path = Path(out_dir)
+    out_path.mkdir(parents=True, exist_ok=True)
+    pngs = sorted(str(p) for p in pages_path.glob("*.png"))
+    pdf = compose_pdf(pngs, str(out_path / "manual.pdf"))
+    zipped = build_zip(pngs, str(out_path / "manual.zip"))
     return {
         "pages": [str(p) for p in pngs],
         "pdf": pdf,

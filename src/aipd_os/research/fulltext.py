@@ -20,7 +20,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from urllib.parse import urlparse
 
 from .documents import sha256_of
@@ -89,7 +89,7 @@ def classify_text(item: dict[str, Any] | None) -> str:
     item = item or {}
     explicit = item.get("text_type")
     if explicit in TEXT_TYPES:
-        return explicit
+        return cast(str, explicit)
     if bool(item.get("ocr") or item.get("is_ocr")):
         return TEXT_TYPE_OCR_TEXT
     if item.get("full_text") is not None or item.get("body") is not None:
@@ -176,7 +176,7 @@ class FullTextCache:
         if self._dir is not None:
             self._dir.mkdir(parents=True, exist_ok=True)
 
-    def _path_for(self, url: str) -> Path:
+    def _path_for(self, url: str) -> Path | None:
         digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:24]
         return (self._dir / f"{digest}.json") if self._dir is not None else None
 

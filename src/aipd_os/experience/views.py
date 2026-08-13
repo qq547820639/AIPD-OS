@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from ..state.checkpoint import CheckpointManager
 from ..state.db import AIPDStateDB
@@ -223,7 +223,7 @@ class OwnerView:
         projects = self._db.list_projects(self._tenant)
         if not projects:
             raise ValueError("当前租户下没有项目")
-        return projects[0]["project_id"]
+        return cast(str, projects[0]["project_id"])
 
 
 def to_markdown(view: dict[str, Any]) -> str:

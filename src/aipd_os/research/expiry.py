@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 # facts 表既有状态位：见 aipd_os.state.db 的 FACT_STATUSES
 # ⚠️ 警示：FACT_STATUSES 中的 "S" 本义是 Simulation（模拟/仿真值）；本模块沿用
@@ -80,7 +80,7 @@ def _find_evidence(db: Any, tenant_id: str, project_id: str, evidence_id: str) -
                     ev["metadata_json"] = json.loads(raw)
                 except (ValueError, TypeError):
                     ev["metadata_json"] = {}
-            return ev
+            return cast(dict[str, Any], ev)
     raise KeyError(evidence_id)
 
 

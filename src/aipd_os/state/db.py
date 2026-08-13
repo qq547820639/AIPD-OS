@@ -22,7 +22,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .crypto import decrypt_secret, encrypt_secret
 
@@ -734,7 +734,7 @@ class AIPDStateDB:
         if row.get("url"):
             keys.add(("url", AIPDStateDB._canonical_url(row["url"])))
         keys.add(("title_year", AIPDStateDB._title_year_hash(
-            row.get("title"), src_md.get("year"))))
+            cast(str, row.get("title")), src_md.get("year"))))
         return keys
 
     def get_or_create_evidence(self, tenant_id: str, project_id: str, *,
@@ -837,7 +837,7 @@ class AIPDStateDB:
                 "UPDATE evidence SET metadata_json=?, version_no=version_no+1 "
                 "WHERE tenant_id=? AND project_id=? AND evidence_id=?",
                 (_json(md), tenant_id, project_id, existing["evidence_id"]))
-        return existing["evidence_id"]
+        return cast(str, existing["evidence_id"])
 
     def list_evidence(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
@@ -1030,7 +1030,7 @@ class AIPDStateDB:
 
     # ---------------------------------------------------------------- gates
     def add_gate(self, tenant_id: str, project_id: str, gate: str, result: str,
-                 checks: dict[str, Any] = None, approved_by: str = "AI-internal") -> None:
+                 checks: dict[str, Any] | None = None, approved_by: str = "AI-internal") -> None:
         ts = now_iso()
         with self.connect() as c:
             c.execute("INSERT INTO gates(project_id,tenant_id,gate,result,checks_json,approved_by,created_at) "  # noqa: E501
@@ -1083,7 +1083,7 @@ class AIPDStateDB:
                             "VALUES(?,?,?,?,?)",
                             (project_id, tenant_id, _json(data),
                              _json(summary) if summary is not None else None, ts))
-            return int(cur.lastrowid)
+            return cast(int, cur.lastrowid)
 
     def latest_checkpoint(self, tenant_id: str, project_id: str) -> dict[str, Any] | None:
         with self.connect() as c:

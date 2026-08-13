@@ -303,7 +303,8 @@ class LocalMailService(MailConnector):
         return msg
 
     # ---------------------------------------------------------- 发送（幂等+重试）
-    def send(
+    # 具体实现签名比抽象基类更具体（显式重试参数），调用侧兼容，故豁免 override 检查。
+    def send(  # type: ignore[override]
         self,
         message: Any,
         max_retries: int = 3,

@@ -175,9 +175,9 @@ def evaluate_output(
     case_gen,
     output: str,
     *,
-    state: dict[str, Any] | None = None,
+    state: list[dict[str, Any]] | None = None,
     artifacts: list[dict[str, Any]] | None = None,
-    db: dict[str, Any] | None = None,
+    db: list[dict[str, Any]] | None = None,
     judge: JudgeFn | None = None,
 ) -> dict[str, Any]:
     """对单个 case 的输出做组合评分，并如实记录实际使用的评分维度。

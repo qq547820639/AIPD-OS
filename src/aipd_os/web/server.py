@@ -112,7 +112,7 @@ class OwnerHandler(BaseHTTPRequestHandler):
             supplied = self.headers.get("X-AIPD-Token", "")
         if not supplied:
             query = urlparse(self.path).query
-            supplied = (parse_qs(query).get("token") or [None])[0] or ""
+            supplied = (parse_qs(query).get("token") or [""])[0] or ""
         return hmac.compare_digest(supplied, expected)
 
     def _form(self) -> dict[str, str]:

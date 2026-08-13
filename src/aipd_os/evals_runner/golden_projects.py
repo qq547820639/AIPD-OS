@@ -188,20 +188,20 @@ def run_golden_project(
     minimum_pages: int | None = None,
 ) -> dict[str, Any]:
     """运行一个黄金项目，返回黄金报告。"""
-    workdir = Path(workdir)
-    workdir.mkdir(parents=True, exist_ok=True)
+    workdir_path = Path(workdir)
+    workdir_path.mkdir(parents=True, exist_ok=True)
     min_pages = minimum_pages or project.minimum_pages
     wall_start = time.monotonic()
     trajectory: list[dict[str, Any]] = []
 
     # 1) 临时 DB + 项目
-    db = AIPDStateDB(str(workdir / "state.sqlite"))
+    db = AIPDStateDB(str(workdir_path / "state.sqlite"))
     db.ensure_default_tenant()
     db.init_project("default", project.id, project.name, project.goal)
 
     # 2) 生成并渲染手册页面
     pages = build_manual_pages(project, min_pages)
-    pages_dir = workdir / "pages"
+    pages_dir = workdir_path / "pages"
     pages_dir.mkdir(parents=True, exist_ok=True)
     rendered: list[str] = []
     for defn in pages:
@@ -229,7 +229,7 @@ def run_golden_project(
     )
 
     # 4) 假图像适配器经真实路由驱动（诚实外部任务包）
-    store = RunStore(str(workdir / "runs.sqlite"))
+    store = RunStore(str(workdir_path / "runs.sqlite"))
     registry = build_registry()
     registry.register(FakeImageAdapter())
     router = ExecutionRouter(store, registry)
@@ -248,8 +248,8 @@ def run_golden_project(
             external_pkgs = [pkg]
 
     # 5) PDF/ZIP
-    pdf = compose_pdf(rendered, str(workdir / "manual.pdf"))
-    zipf = build_zip(rendered, str(workdir / "manual.zip"))
+    pdf = compose_pdf(rendered, str(workdir_path / "manual.pdf"))
+    zipf = build_zip(rendered, str(workdir_path / "manual.zip"))
 
     # 记录真实执行轨迹（来自 RunStore 的规范化执行记录）
     run_records = store.list_runs(project.id)

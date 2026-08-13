@@ -13,6 +13,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 from aipd_os.imggen.providers import (
     BatchRequest,
@@ -76,14 +77,14 @@ def cli_expect(cwd: Path, code: int, *args: str) -> str:
     return r.stdout
 
 
-def load_state(state: Path) -> dict:
-    return json.loads(Path(state).read_text(encoding="utf-8"))
+def load_state(state: Path) -> dict[str, Any]:
+    return cast(dict[str, Any], json.loads(Path(state).read_text(encoding="utf-8")))
 
 
-def batch_run(state: Path, batch_id: str) -> dict:
+def batch_run(state: Path, batch_id: str) -> dict[str, Any]:
     for br in load_state(state)["batch_runs"]:
         if br["batch_id"] == batch_id:
-            return br
+            return cast(dict[str, Any], br)
     raise AssertionError(f"batch {batch_id} not found")
 
 

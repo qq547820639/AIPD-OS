@@ -17,7 +17,7 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, cast
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
 from aipd_os.tool_adapters._common import env, meta, token_meta
@@ -89,7 +89,7 @@ class ResearchAdapter(ToolAdapter):
                 work_id=None,
             ) from exc
         try:
-            return json.loads(raw)
+            return cast(dict[str, Any], json.loads(raw))
         except (json.JSONDecodeError, TypeError) as exc:
             raise external_blocked_error(
                 self.capability_id(),
