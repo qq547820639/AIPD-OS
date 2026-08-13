@@ -7,8 +7,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from aipd_os.evals_runner.registry import BEHAVIOR_CONTRACTS, LOGIC_CONTRACTS  # noqa: E402
-from aipd_os.evals_runner.scoring import semantic_check  # noqa: E402
+from aipd_os.evals_runner.registry import (  # noqa: E402
+    BEHAVIOR_CONTRACTS,
+    LOGIC_CONTRACTS,
+    MODEL_GATED_CONTRACTS,
+)
+from aipd_os.evals_runner.scoring import semantic_check, semantic_checks  # noqa: E402
 from aipd_os.execution.decision_policy import should_ask_decision  # noqa: E402
 from aipd_os.execution.execution_router import ExecutionRouter  # noqa: E402
 from aipd_os.execution.runs import RunStore  # noqa: E402
@@ -38,10 +42,21 @@ def test_all_10_contracts_registered():
 
 
 def test_every_contract_has_semantic_checker():
+    """每个行为契约都有确定性语义检查器，且可调用（返回 bool）。
+
+    诊断结论：``semantic_checks``（scoring.py）覆盖全部 10 个
+    BEHAVIOR_CONTRACTS；``LOGIC_CONTRACTS``（9 项，代码驱动评估）与
+    ``MODEL_GATED_CONTRACTS``（{"no_long_questionnaire"}，需真实模型评估）
+    合起来恰好等于 BEHAVIOR_CONTRACTS —— 这是「logic vs model」的**有意分层**，
+    与「检查器存在性」是正交维度。此前 ``assert c in LOGIC_CONTRACTS or True``
+    把二者混淆，留下恒真占位；现替换为对检查器表的真实存在性 + 可调用性断言。
+    """
     for c in BEHAVIOR_CONTRACTS:
-        # 确定性检查器必须存在且可调用（返回 bool）
-        assert c in LOGIC_CONTRACTS or True  # noqa: SIM222 - 既有占位（or True 恒真），语义检查器未全覆盖，保持原行为
-        assert callable(semantic_check) is True
+        assert c in semantic_checks, f"契约 {c} 缺少确定性语义检查器"
+        assert callable(semantic_checks[c])
+    # 分层完备且无重叠：logic ∪ model_gated == 全部契约
+    assert set(LOGIC_CONTRACTS) | set(MODEL_GATED_CONTRACTS) == set(BEHAVIOR_CONTRACTS)
+    assert set(LOGIC_CONTRACTS) & set(MODEL_GATED_CONTRACTS) == set()
 
 
 def test_no_long_questionnaire_semantic():
