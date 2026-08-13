@@ -151,5 +151,9 @@ default=str、SystemExit 保护、onboarding 去重/缓存。本轮补齐剩余�
 | product_commands `_emit` indent 漂移 | 与 `_helpers._emit` 同契约（单行 + default=str）|
 
 新增回归测试 6 个（多条件事实/影响并集、精确回滚、历史记录诚实降级、
-共享助手同源、_silent 转发），全量回归与发布收口结果见下：
-（收口完成后补最终数字）
+共享助手同源、_silent 转发）。
+
+**第二轮最终结果**：全量回归 **1057 passed / 0 failed / 3 skipped**；ruff/mypy 0；
+提交 `496f011`（代码）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
+496f011，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
+**8/8 PASS**；已推送 origin。
