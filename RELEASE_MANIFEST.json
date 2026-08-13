@@ -1,7 +1,7 @@
 {
   "name": "aipd-orchestrator",
   "version": "5.6.0",
-  "release_date": "2026-08-12",
+  "release_date": "2026-08-13",
   "release_type": "AI full-chain product development and delivery supervisor",
   "theory_reference": "references/AIPD-OS-v4.0.docx",
   "files": [
@@ -691,6 +691,11 @@
       "sha256": "1dc9b146a4c1fc822b0938f5af742882ac1dc358ae16896b7acc1c7051418a37"
     },
     {
+      "path": "scripts/_v592_p004_check.py",
+      "size": 1876,
+      "sha256": "3f4f3fff6b1694adfb81c4887af95d40cb9ef93a74466e4a7e037e4c59c92e20"
+    },
+    {
       "path": "scripts/_v592_p009_check.py",
       "size": 3652,
       "sha256": "6fc708a4ea39a960967c4b85a1812e1800e0c9fc2e9651ca75115a354b1d0264"
@@ -997,8 +1002,8 @@
     },
     {
       "path": "src/aipd_os/config.py",
-      "size": 6526,
-      "sha256": "685a5b7f34d7488415a0143cd4b98c361a2ee6aad2e4f8896d6c0df407740b6a"
+      "size": 7093,
+      "sha256": "2789c1b72c9588522df478448307e15969ad99f785b8916a3e0e71cd71be1b5b"
     },
     {
       "path": "src/aipd_os/evals/__init__.py",
@@ -1286,9 +1291,29 @@
       "sha256": "4947fd3df9c82f419e14132792882ab2332f98fb3c92c1e1aade23e4aa47ad1d"
     },
     {
+      "path": "src/aipd_os/llm/__init__.py",
+      "size": 864,
+      "sha256": "52d9f6587ccd09a143c4b45f8fcb90327389bd9dd46e7431f27436024240ec18"
+    },
+    {
+      "path": "src/aipd_os/llm/client.py",
+      "size": 4195,
+      "sha256": "de1e7d8af41bedfabdf956dd738062dd3b7a591d59d78fea3076c26693150948"
+    },
+    {
+      "path": "src/aipd_os/llm/idea_decomposer_provider.py",
+      "size": 4483,
+      "sha256": "62022d1970d4947818a78c7175b45c0ffe95c0323d049d78923d52e9ad635269"
+    },
+    {
+      "path": "src/aipd_os/llm/product_intelligence_provider.py",
+      "size": 10696,
+      "sha256": "e4d85fb0e377f6e724a03b71eed1c562d3eb9dede09b3d09b036296d2e152f7a"
+    },
+    {
       "path": "src/aipd_os/logging_utils.py",
-      "size": 3616,
-      "sha256": "094cd55465f9ff4d57e1e7f9b491c0bac6df28a6644245551e55f7b4f572ace1"
+      "size": 3732,
+      "sha256": "6bd6edb24d4daf1297440dd6e137693c23685b4a8b073487e90dca18d380fb91"
     },
     {
       "path": "src/aipd_os/mail/__init__.py",
@@ -1392,8 +1417,8 @@
     },
     {
       "path": "src/aipd_os/registry.py",
-      "size": 12398,
-      "sha256": "922d27d8a71a2afd482d4b2813ab95cfe70a932d35247cb20a0dad8546056ded"
+      "size": 12399,
+      "sha256": "bfb7c5dc173003314a0faa898bbe52bb5dbf7d7caee1d08160c2d8602ecdde8d"
     },
     {
       "path": "src/aipd_os/registry_data.py",
@@ -1457,8 +1482,8 @@
     },
     {
       "path": "src/aipd_os/runtime.py",
-      "size": 13871,
-      "sha256": "807f14994d03e0a0c3a023a8e407897842b8aa84f9445ed692e2e03bf70394c4"
+      "size": 15635,
+      "sha256": "e501987562a42f09715027ccc9b5a76916f7e7a17bed24b7f5b2560f6e242744"
     },
     {
       "path": "src/aipd_os/scripts/__init__.py",
@@ -2146,6 +2171,21 @@
       "sha256": "ad75c46c99425fdabfbcae5bd8f5d4ea8c53c90e11135d801f7f826fd0710af7"
     },
     {
+      "path": "tests/test_llm_providers.py",
+      "size": 13285,
+      "sha256": "af1b152215c6a84b3ce1af5a43eb4e16216fc1a6c5cdf3fe4464ab91d0c78758"
+    },
+    {
+      "path": "tests/test_llm_runtime_wiring.py",
+      "size": 2797,
+      "sha256": "27f55072b59aa6691aadbef98419ae57561f76e7b030a27c41d4a853c857ff59"
+    },
+    {
+      "path": "tests/test_logging_utils.py",
+      "size": 2327,
+      "sha256": "f3f86cdf2c91b4e390e0dc266865d55e844505f027b7e26b11843c067fc1356c"
+    },
+    {
       "path": "tests/test_mail_protocol.py",
       "size": 9717,
       "sha256": "a1f5128f642ab0c0f13c5d8311450ddfcdf10d1c85ed8772c7b496c0c502ddc7"
@@ -2284,6 +2324,11 @@
       "path": "tests/test_recovery.py",
       "size": 16283,
       "sha256": "4c97633b9e466d7afa5ce658a72556bd8579dba86ffa12b0783a637b0b1501f5"
+    },
+    {
+      "path": "tests/test_registry_export.py",
+      "size": 930,
+      "sha256": "dab18e46080b9d08dfca39ec6e7feab3a33edaae7bbc92aa2c16620fa7104799"
     },
     {
       "path": "tests/test_relation_versioning.py",
