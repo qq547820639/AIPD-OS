@@ -44,6 +44,26 @@ def _file_handler(path: Path) -> logging.Handler:
     return fh
 
 
+def _attach_handlers(logger: logging.Logger, log_file: Optional[Path]) -> None:
+    """给 logger 装配标准 handler（清空旧 handler 后重建）。
+
+    装配内容：stdout StreamHandler(JsonFormatter)、可选 FileHandler（自动
+    mkdir 父目录）、以及 :class:`_AttachFieldsFilter`；并关闭 propagate。
+    """
+    logger.handlers.clear()
+    logger.propagate = False
+
+    stream = logging.StreamHandler(sys.stdout)
+    stream.setFormatter(JsonFormatter())
+    logger.addHandler(stream)
+
+    if log_file is not None:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        logger.addHandler(_file_handler(log_file))
+
+    logger.addFilter(_AttachFieldsFilter())
+
+
 def setup_logging(
     name: str = "aipd",
     level: str = "INFO",
@@ -60,31 +80,11 @@ def setup_logging(
     logger = logging.getLogger(name)
     logger.setLevel(level.upper())
 
-    if force or not _configured_loggers:
-        logger.handlers.clear()
-        logger.propagate = False
-
-        stream = logging.StreamHandler(sys.stdout)
-        stream.setFormatter(JsonFormatter())
-        logger.addHandler(stream)
-
-        if log_file is not None:
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-            logger.addHandler(_file_handler(log_file))
-
-        logger.addFilter(_AttachFieldsFilter())
+    # 按 name 判定是否已装配：同一 name 已配置过 → no-op（不重复加 handler）；
+    # 不同 name 各自独立装配（互不干扰）；force=True 强制重建。
+    if force or name not in _configured_loggers:
+        _attach_handlers(logger, log_file)
         _configured_loggers.add(name)
-
-    # 避免重复初始化时重复添加 handler
-    else:
-        logger.handlers.clear()
-        stream = logging.StreamHandler(sys.stdout)
-        stream.setFormatter(JsonFormatter())
-        logger.addHandler(stream)
-        if log_file is not None:
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-            logger.addHandler(_file_handler(log_file))
-        logger.addFilter(_AttachFieldsFilter())
 
 
 class _AttachFieldsFilter(logging.Filter):

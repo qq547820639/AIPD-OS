@@ -307,7 +307,7 @@ def probe_classification(
     return "not_verifiable"
 
 
-_all__ = [
+__all__ = [
     "Capability",
     "CapabilityRegistry",
     "CLASSIFICATIONS",
