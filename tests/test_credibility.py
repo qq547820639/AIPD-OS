@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from aipd_os.research.credibility import (
     assumption_factor,
     score_evidence,

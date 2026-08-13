@@ -20,7 +20,6 @@ import base64
 import hashlib
 import hmac
 import os
-from typing import Optional
 
 try:  # cryptography 为可选依赖
     from cryptography.fernet import Fernet, InvalidToken  # type: ignore

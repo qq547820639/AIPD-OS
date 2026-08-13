@@ -7,9 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
-
-import pytest
 
 from aipd_os.logging_utils import JsonFormatter
 from aipd_os.security.secrets import (

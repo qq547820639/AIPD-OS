@@ -9,14 +9,14 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional
 
-from ..state.db import AIPDStateDB
 from ..state.checkpoint import CheckpointManager
-from .project_summary import build_project_summary
-from .decision_card import build_decision_card
-from .resume_summary import build_resume_summary
+from ..state.db import AIPDStateDB
 from .artifact_preview import artifact_preview
-from .risk_health import compute_risk_health
+from .decision_card import build_decision_card
 from .external_wait import summarize_external_wait
+from .project_summary import build_project_summary
+from .resume_summary import build_resume_summary
+from .risk_health import compute_risk_health
 
 # 健康灯 → 带图标的彩色标签
 _HEALTH_LABEL = {"green": "🟢 良好", "yellow": "🟡 需关注", "red": "🔴 高风险"}

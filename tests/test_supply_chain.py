@@ -9,42 +9,41 @@ from pathlib import Path
 import pytest
 
 from aipd_os.execution.adapter import AdapterError
-from aipd_os.tool_adapters.builtin import build_registry
-from aipd_os.supply_chain.quotes import normalize_quote, parse_quote_file, QuoteRegistry
-from aipd_os.supply_chain.suppliers import SupplierProfile, SupplierRegistry
-from aipd_os.supply_chain.lab import import_lab_csv, import_lab_report
+from aipd_os.state.db import AIPDStateDB
 from aipd_os.supply_chain.analysis import (
     analyze_stage,
     create_correction_tasks,
     mark_regression,
-    update_facts,
     propagate_impact,
-)
-from aipd_os.supply_chain.mail import (
-    LocalMailService,
-    MailAttachment,
-    MailMessage,
-    SmtpConnector,
-    ImapConnector,
-    ExternalDependencyError,
-    retry_with_backoff,
-    MailError,
+    update_facts,
 )
 from aipd_os.supply_chain.certification import (
     Certification,
-    CertificationRegistry,
-    import_certificate_file,
     expiring_certs,
+    import_certificate_file,
 )
+from aipd_os.supply_chain.lab import import_lab_csv, import_lab_report
+from aipd_os.supply_chain.mail import (
+    ExternalDependencyError,
+    ImapConnector,
+    LocalMailService,
+    MailAttachment,
+    MailError,
+    MailMessage,
+    SmtpConnector,
+    retry_with_backoff,
+)
+from aipd_os.supply_chain.persistence import SupplyChainStore
+from aipd_os.supply_chain.quotes import QuoteRegistry, normalize_quote, parse_quote_file
 from aipd_os.supply_chain.stages import (
-    import_stage_report,
     extract_root_cause,
+    import_stage_report,
     propose_corrective_actions,
     verify_regression,
 )
-from aipd_os.supply_chain.persistence import SupplyChainStore
+from aipd_os.supply_chain.suppliers import SupplierProfile, SupplierRegistry
 from aipd_os.supply_chain.writeback import PhysicalWriteback
-from aipd_os.state.db import AIPDStateDB
+from aipd_os.tool_adapters.builtin import build_registry
 
 CANONICAL_CSV = (
     "supplier,part,moq,tooling_fee,unit_price,lead_time_days\n"

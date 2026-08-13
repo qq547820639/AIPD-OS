@@ -175,7 +175,7 @@ def _check_format(path: str, fmt: str) -> bool:
         return ext in (".md", ".markdown")
     if fmt == "json":
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 json.load(f)
             return True
         except Exception:
@@ -217,7 +217,7 @@ def verify_file(path: str, fmt: Optional[str] = None,
 class ArtifactVerifier:
     """产物集合校验入口：存在性 / 格式 / SHA-256 / 语义。"""
 
-    def verify(self, step: "ClosureStep", produced: List[str],
+    def verify(self, step: ClosureStep, produced: List[str],
                result: Dict[str, Any]) -> List[Dict[str, Any]]:
         checks: List[Dict[str, Any]] = []
         for p in produced:

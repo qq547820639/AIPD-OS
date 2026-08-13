@@ -32,9 +32,9 @@ from .gate import (
     GATE_CONDITIONAL,
     GATE_DECISION_TOPIC,
     GATE_READY,
+    OWNER_CHOICES,
     CriterionResult,
     GateEvaluation,
-    OWNER_CHOICES,
     ProductDefinitionGate,
     SnapshotAlreadyCommittedError,
 )

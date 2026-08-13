@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from aipd_os.state.auth import AuthManager, AuthError
+from aipd_os.state.auth import AuthError, AuthManager
 from aipd_os.state.db import AIPDStateDB
 
 

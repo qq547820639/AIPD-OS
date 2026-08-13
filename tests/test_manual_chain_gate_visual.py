@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from aipd_os.layout.renderer import A4_PX, render_page
+from aipd_os.layout.renderer import render_page
 
 ROOT = Path(__file__).resolve().parent.parent
 MANUAL = ROOT / "scripts" / "manual_chain.py"

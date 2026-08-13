@@ -5,11 +5,18 @@ P1-1 提供结构化的 Product Truth（事实/假设/需求/CTQ/证据/决策/�
 """
 from __future__ import annotations
 
-from .models import (TRUTH_TYPES, TRUST_LEVELS, REWORK_STATUS, TRUTH_STATUS,
-                     TruthRecord, ReworkTask, TrustAssessment)
-from .store import ProductTruthStore
-from .lineage import LineageGraph, CycleDetectedError
+from .lineage import CycleDetectedError, LineageGraph
+from .models import (
+                     REWORK_STATUS,
+                     TRUST_LEVELS,
+                     TRUTH_STATUS,
+                     TRUTH_TYPES,
+                     ReworkTask,
+                     TrustAssessment,
+                     TruthRecord,
+)
 from .propagation import PropagationEngine, ReworkExhaustedError
+from .store import ProductTruthStore
 
 __all__ = [
     "TRUTH_TYPES", "TRUST_LEVELS", "REWORK_STATUS", "TRUTH_STATUS",

@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from aipd_os.security import (
+    can_access,
     classify_sensitive,
     mask_sensitive,
-    can_access,
     require_mask,
 )
 

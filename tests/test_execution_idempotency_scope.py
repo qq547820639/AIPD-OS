@@ -12,8 +12,6 @@ Idempotency Scope = (tenant_id, project_id, capability, idempotency_key)。
 """
 from __future__ import annotations
 
-import pytest
-
 from aipd_os.execution.adapter import AdapterError, ToolAdapter
 from aipd_os.execution.execution_router import ExecutionRouter
 from aipd_os.execution.registry import AdapterRegistry

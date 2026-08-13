@@ -11,16 +11,22 @@ import json
 
 import pytest
 
-from aipd_os.state.db import AIPDStateDB
-from aipd_os.state.checkpoint import CheckpointManager
-from aipd_os.experience.intent_engine import parse_intent
 from aipd_os.experience.impact_analysis import analyze_impact, estimate_cost_time
-from aipd_os.experience.operations import (
-    ProgressTracker, run_operation_loop, revert_operation)
-from aipd_os.experience.owner_dashboard import (
-    build_dashboard, render_dashboard_text, render_dashboard_json)
+from aipd_os.experience.intent_engine import parse_intent
 from aipd_os.experience.onboarding import (
-    onboard, reset_project, provider_config_status, list_examples)
+    list_examples,
+    onboard,
+    provider_config_status,
+    reset_project,
+)
+from aipd_os.experience.operations import ProgressTracker, revert_operation, run_operation_loop
+from aipd_os.experience.owner_dashboard import (
+    build_dashboard,
+    render_dashboard_json,
+    render_dashboard_text,
+)
+from aipd_os.state.checkpoint import CheckpointManager
+from aipd_os.state.db import AIPDStateDB
 
 
 @pytest.fixture

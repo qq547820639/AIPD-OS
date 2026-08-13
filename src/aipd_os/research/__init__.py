@@ -23,8 +23,8 @@ from .credibility import (
     separate_facts_from_assumptions,
     source_credibility,
     source_metadata,
-    timeliness,
     time_decay,
+    timeliness,
 )
 from .documents import (
     ALLOWED_EXTENSIONS,
@@ -37,6 +37,14 @@ from .documents import (
     sha256_of,
 )
 from .expiry import STALE_STATUS, expire_evidence_list, mark_evidence_expired
+from .fetchers import (
+    DOCUMENT_PARSERS,
+    ContractFetcher,
+    DocumentFetcher,
+    HttpDocumentFetcher,
+    parse_pdf,
+    parse_txt,
+)
 from .fulltext import (
     ACCESS_BLOCKED,
     ACCESS_OPEN,
@@ -65,14 +73,6 @@ from .fulltext import (
     regulation_provider,
     standard_provider,
     tag_text,
-)
-from .fetchers import (
-    DOCUMENT_PARSERS,
-    ContractFetcher,
-    DocumentFetcher,
-    HttpDocumentFetcher,
-    parse_pdf,
-    parse_txt,
 )
 from .models import (
     EPISTEMIC_EXTERNAL_EVIDENCE,

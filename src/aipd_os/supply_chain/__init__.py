@@ -6,14 +6,6 @@
 
 from __future__ import annotations
 
-from aipd_os.supply_chain.quotes import (
-    normalize_quote,
-    parse_quote_file,
-    QuoteVersion,
-    QuoteRegistry,
-)
-from aipd_os.supply_chain.suppliers import SupplierProfile, SupplierRegistry
-from aipd_os.supply_chain.lab import import_lab_csv, import_lab_json, import_lab_report, import_lab_xlsx
 from aipd_os.supply_chain.analysis import (
     analyze_stage,
     create_correction_tasks,
@@ -24,27 +16,40 @@ from aipd_os.supply_chain.analysis import (
 from aipd_os.supply_chain.certification import (
     Certification,
     CertificationRegistry,
-    import_certificate_file,
     expiring_certs,
+    import_certificate_file,
+)
+from aipd_os.supply_chain.lab import (
+    import_lab_csv,
+    import_lab_json,
+    import_lab_report,
+    import_lab_xlsx,
 )
 from aipd_os.supply_chain.mail import (
-    MailConnector,
-    SmtpConnector,
+    ExternalDependencyError,
     ImapConnector,
     LocalMailService,
+    MailConnector,
     MailError,
-    ExternalDependencyError,
     MailMessage,
     SendResult,
+    SmtpConnector,
     retry_with_backoff,
 )
+from aipd_os.supply_chain.persistence import SupplyChainStore
+from aipd_os.supply_chain.quotes import (
+    QuoteRegistry,
+    QuoteVersion,
+    normalize_quote,
+    parse_quote_file,
+)
 from aipd_os.supply_chain.stages import (
-    import_stage_report,
     extract_root_cause,
+    import_stage_report,
     propose_corrective_actions,
     verify_regression,
 )
-from aipd_os.supply_chain.persistence import SupplyChainStore
+from aipd_os.supply_chain.suppliers import SupplierProfile, SupplierRegistry
 from aipd_os.supply_chain.writeback import PhysicalWriteback
 
 __all__ = [

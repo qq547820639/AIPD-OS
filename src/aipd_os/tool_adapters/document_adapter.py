@@ -5,10 +5,9 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any, Dict
 
-from aipd_os.execution.adapter import ToolAdapter, now, output_dir
+from aipd_os.execution.adapter import ToolAdapter, output_dir
 from aipd_os.tool_adapters._common import meta, token_meta
 
 

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from aipd_os.execution.adapter import AdapterError, ToolAdapter
 from aipd_os.execution.execution_router import ExecutionRouter
 from aipd_os.execution.registry import AdapterRegistry

@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import html
-from typing import Any, Dict, List
+from typing import Any, List
 
 from .views import WebConsole
 

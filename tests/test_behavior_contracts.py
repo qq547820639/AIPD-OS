@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -10,8 +9,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from aipd_os.evals_runner.registry import BEHAVIOR_CONTRACTS, LOGIC_CONTRACTS  # noqa: E402
 from aipd_os.evals_runner.scoring import semantic_check  # noqa: E402
-
-from aipd_os.execution.adapter import external_blocked_error  # noqa: E402
 from aipd_os.execution.decision_policy import should_ask_decision  # noqa: E402
 from aipd_os.execution.execution_router import ExecutionRouter  # noqa: E402
 from aipd_os.execution.runs import RunStore  # noqa: E402
@@ -19,7 +16,6 @@ from aipd_os.state.checkpoint import CheckpointManager  # noqa: E402
 from aipd_os.state.db import AIPDStateDB  # noqa: E402
 from aipd_os.tool_adapters.builtin import build_registry  # noqa: E402
 from aipd_os.tool_adapters.faceted_adapter import FacetedAdapter  # noqa: E402
-from aipd_os.tool_adapters.imggen_adapter import ImageGenAdapter  # noqa: E402
 from aipd_os.visual_audit import VisualAuditor  # noqa: E402
 
 EXPECTED = [

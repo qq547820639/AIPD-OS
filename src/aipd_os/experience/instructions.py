@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Optional
 
 from ..state.db import AIPDStateDB
 
-
 _APPROVE_RE = re.compile(r"批准|同意|approve|确认执行", re.IGNORECASE)
 _COST_RE = re.compile(r"(?:成本|价钱|价格|价位|售价)[^0-9]*(\d+(?:\.\d+)?)\s*%")
 _INDUSTRIAL_RE = re.compile(r"工业化|更工业|工业风")
@@ -108,7 +107,7 @@ def parse_instruction(text: str, db: AIPDStateDB, project_id: str,
     # 3) 更工业化的外观风格
     if _INDUSTRIAL_RE.search(text):
         target = artifact
-        impact = [f"记录设计意图：外观更工业化"]
+        impact = ["记录设计意图：外观更工业化"]
         if artifact:
             impact.append(f"@{artifact} 相关外观/手册类页面标记为过期")
         return Instruction(kind="style_constraint", target=target,
@@ -118,7 +117,7 @@ def parse_instruction(text: str, db: AIPDStateDB, project_id: str,
     # 4) 避免医疗风格
     if _MEDICAL_RE.search(text):
         target = artifact
-        impact = [f"记录设计意图：避免医疗风外观"]
+        impact = ["记录设计意图：避免医疗风外观"]
         if artifact:
             impact.append(f"@{artifact} 相关外观/手册类页面标记为过期")
         return Instruction(kind="style_constraint", target=target,

@@ -16,7 +16,6 @@ from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.evals_runner.completion import (
     CATEGORY_LABELS,
     PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE,
-    PROVIDER_CATEGORY_REAL_MODEL,
 )
 
 

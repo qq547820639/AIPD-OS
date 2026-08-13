@@ -25,7 +25,7 @@ import sys
 from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 logger = logging.getLogger("aipd.supervisor")
 PHASES = [

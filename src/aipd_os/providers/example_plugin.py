@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from aipd_os.providers.sdk import Provider, ProbeResult, available
+from aipd_os.providers.sdk import ProbeResult, Provider, available
 
 
 class ExamplePlugin(Provider):

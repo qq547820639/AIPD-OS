@@ -13,7 +13,6 @@
 """
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
@@ -28,9 +27,9 @@ from aipd_os.mail.client import (
 )
 from aipd_os.mail.gmail_oauth import GmailOAuthClient
 from aipd_os.supply_chain.mail import (
+    ExternalDependencyError,
     MailAttachment,
     MailError,
-    ExternalDependencyError,
 )
 from aipd_os.tool_adapters.builtin import build_registry
 

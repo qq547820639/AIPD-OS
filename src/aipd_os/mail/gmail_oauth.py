@@ -11,14 +11,13 @@
 """
 from __future__ import annotations
 
-import base64
 from typing import Any, Dict, List, Optional
 
 from aipd_os.mail.client import fetch_emails, send_email
 from aipd_os.supply_chain.mail import (
+    ExternalDependencyError,
     MailAttachment,
     MailError,
-    ExternalDependencyError,
 )
 
 SCOPES = "https://mail.google.com/"

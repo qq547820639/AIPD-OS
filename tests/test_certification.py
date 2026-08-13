@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-import pytest
-
 from aipd_os.supply_chain.certification import (
     Certification,
     CertificationRegistry,

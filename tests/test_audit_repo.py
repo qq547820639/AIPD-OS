@@ -47,7 +47,7 @@ def _parse_version() -> str:
 
 def test_report_has_required_keys():
     report = audit_repo(REPO_ROOT)
-    assert REQUIRED_KEYS <= set(report.keys()), (
+    assert set(report.keys()) >= REQUIRED_KEYS, (
         f"缺少必需键: {REQUIRED_KEYS - set(report.keys())}"
     )
 
@@ -77,7 +77,7 @@ def test_json_report_file_exists_and_matches():
     # 注意 latest_commit_sha 是"生成报告时"的提交，而包含该报告的提交会改变 HEAD，
     # 因此自引用报告无法与当前 HEAD 恒等（总会落后一个提交），此处不比较 SHA 相等。
     assert on_disk["version"] == live["version"] == _parse_version()
-    assert REQUIRED_KEYS <= set(on_disk.keys())
+    assert set(on_disk.keys()) >= REQUIRED_KEYS
     # 磁盘记录的是一个真实提交对象（16 位十六进制前缀）
     sha = on_disk["latest_commit_sha"]
     assert len(sha) >= 7 and all(c in "0123456789abcdef" for c in sha), (

@@ -16,6 +16,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.audit_repo import audit_repo  # noqa: E402
 from scripts.capability_matrix import CLASSIFICATIONS, _build_capability_matrix  # noqa: E402
+
 from aipd_os.registry import load_default_registry  # noqa: E402
 
 AUDIT_DIR = REPO_ROOT / "docs" / "audit"

@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from aipd_os.research import (
@@ -39,7 +37,6 @@ from aipd_os.research import (
     timeliness,
 )
 from aipd_os.state.db import AIPDStateDB
-
 from tests.fixtures.research.retriever_fixtures import (
     competitors_test_retriever,
     patents_test_retriever,
@@ -191,7 +188,6 @@ def test_patent_and_competitor_retrievers():
 
 def test_production_retrievers_default_external_dependency():
     """生产默认不再返回测试数据：available()=False，search 返回空（诚实降级）。"""
-    from aipd_os.research import CompetitorRetriever, PatentRetriever, StandardsRetriever
 
     for make in (StandardsRetriever, PatentRetriever, CompetitorRetriever):
         r = make()

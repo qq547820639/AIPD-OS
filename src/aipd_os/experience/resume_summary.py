@@ -6,10 +6,10 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-from ..state.db import AIPDStateDB
 from ..state.checkpoint import CheckpointManager
+from ..state.db import AIPDStateDB
 
 
 def build_resume_summary(db: AIPDStateDB, project_id: str,

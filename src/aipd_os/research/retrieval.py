@@ -22,7 +22,7 @@ from __future__ import annotations
 import abc
 from typing import List, Optional
 
-from .models import Abstract, Citation, Document, STATUS_NOT_VERIFIED
+from .models import Abstract, Document
 
 
 class Retriever(abc.ABC):

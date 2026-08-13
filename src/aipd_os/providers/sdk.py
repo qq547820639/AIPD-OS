@@ -13,7 +13,8 @@
 from __future__ import annotations
 
 import abc
-from typing import Any, Dict, List, Optional, Sequence
+from collections.abc import Sequence
+from typing import Any, Dict, List, Optional
 
 from jsonschema import Draft7Validator, ValidationError
 

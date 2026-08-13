@@ -87,7 +87,7 @@ class AnchorFeature:
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> "AnchorFeature":
+    def from_dict(cls, d: dict) -> AnchorFeature:
         return cls(
             kind=d.get("kind", ""),
             name=d.get("name", ""),
@@ -156,7 +156,7 @@ class VisualBible:
     lighting: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_truth(cls, facts: Optional[dict]) -> "VisualBible":
+    def from_truth(cls, facts: Optional[dict]) -> VisualBible:
         facts = facts or {}
         return cls(
             structure=(facts.get("product") or {}).get("structure", ""),
@@ -207,7 +207,7 @@ class AnchorRegistry:
     visual_bible: Optional[VisualBible] = None
 
     @classmethod
-    def build(cls, facts: Optional[dict]) -> "AnchorRegistry":
+    def build(cls, facts: Optional[dict]) -> AnchorRegistry:
         return cls(features=features_from_facts(facts), visual_bible=VisualBible.from_truth(facts))
 
     def register(self, feature: AnchorFeature) -> None:
@@ -223,7 +223,7 @@ class AnchorRegistry:
             out.setdefault(f.kind, {})[f.name] = f.digest()
         return out
 
-    def compare(self, other: "AnchorRegistry") -> dict:
+    def compare(self, other: AnchorRegistry) -> dict:
         """比较两个注册表的一致度，返回按 kind 的一致度与总体 score。"""
         a = self.fingerprint()
         b = other.fingerprint()
@@ -288,7 +288,7 @@ class AnchorRegistry:
         }
 
     @classmethod
-    def from_dict(cls, d: Optional[dict]) -> "AnchorRegistry":
+    def from_dict(cls, d: Optional[dict]) -> AnchorRegistry:
         d = d or {}
         features = [AnchorFeature.from_dict(x) for x in (d.get("features") or [])]
         vb = None

@@ -160,7 +160,7 @@ class ExecutionRecord:
         return asdict(self)
 
     @classmethod
-    def from_db_row(cls, row: Dict[str, Any]) -> "ExecutionRecord":
+    def from_db_row(cls, row: Dict[str, Any]) -> ExecutionRecord:
         import json
 
         def _loads(raw: Any, default: Any) -> Any:

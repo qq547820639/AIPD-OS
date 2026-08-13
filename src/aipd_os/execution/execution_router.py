@@ -16,10 +16,8 @@ from typing import Any, Dict, List, Optional
 
 from aipd_os.execution.adapter import AdapterError, ToolAdapter
 from aipd_os.execution.models import (
-    ERROR_CLASSIFICATIONS,
     RETRYABLE_CLASSIFICATIONS,
     ExecutionRecord,
-    ToolResult,
 )
 from aipd_os.execution.registry import AdapterRegistry
 from aipd_os.execution.runs import RunStore, canonical_hash

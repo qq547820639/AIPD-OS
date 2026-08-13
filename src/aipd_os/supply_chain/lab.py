@@ -57,7 +57,7 @@ def _records_from_rows(rows: List[Dict[str, Any]], stage: str, source: str, fmt:
 def import_lab_csv(path: Union[str, Path], stage: str) -> Dict[str, Any]:
     """解析含表头的实验室结果 CSV。规范表头需含 test_item/pass_fail 等字段。"""
     p = Path(path)
-    with open(p, "r", newline="", encoding="utf-8") as fh:
+    with open(p, newline="", encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
         rows = list(reader)
     return _records_from_rows(rows, stage, str(p), "csv")
@@ -66,7 +66,7 @@ def import_lab_csv(path: Union[str, Path], stage: str) -> Dict[str, Any]:
 def import_lab_json(path: Union[str, Path], stage: str) -> Dict[str, Any]:
     """解析 JSON 实验室记录。"""
     p = Path(path)
-    with open(p, "r", encoding="utf-8") as fh:
+    with open(p, encoding="utf-8") as fh:
         data = json.load(fh)
     if isinstance(data, dict):
         rows = data.get("records") or data.get("results") or []

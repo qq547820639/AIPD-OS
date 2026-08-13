@@ -14,8 +14,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PIL import Image
-
 from aipd_os.imggen.providers import (
     BatchRequest,
     ExternalImageGenProvider,

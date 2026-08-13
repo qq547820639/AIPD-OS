@@ -1,8 +1,8 @@
 """健康检查。"""
 from __future__ import annotations
 
-from aipd_os.state.health import health_check
 from aipd_os.state.db import AIPDStateDB
+from aipd_os.state.health import health_check
 
 
 def test_health_ok(tmp_path):

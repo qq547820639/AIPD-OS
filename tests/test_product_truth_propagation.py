@@ -3,12 +3,10 @@ from __future__ import annotations
 
 import pytest
 
-from aipd_os.product_truth.models import (ReworkTask, SourceRef, TrustAssessment,
-                                          TruthRecord)
+from aipd_os.product_truth.lineage import CycleDetectedError, LineageGraph
+from aipd_os.product_truth.models import TruthRecord
+from aipd_os.product_truth.propagation import PropagationEngine, ReworkExhaustedError
 from aipd_os.product_truth.store import ProductTruthStore
-from aipd_os.product_truth.lineage import LineageGraph, CycleDetectedError
-from aipd_os.product_truth.propagation import (PropagationEngine,
-                                               ReworkExhaustedError)
 
 
 @pytest.fixture

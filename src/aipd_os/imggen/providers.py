@@ -155,7 +155,7 @@ class PILImageGenProvider(ImageGenProvider):
         seed = request.seed if request.seed is not None else 1
         rng = random.Random(seed)
         req_id = request.request_id or f"req-{uuid.uuid4().hex[:12]}"
-        prior_images = list((prior_batch.images or [])) if prior_batch else []
+        prior_images = list(prior_batch.images or []) if prior_batch else []
         prior_data = [im.get("data") or b"" for im in prior_images]
         att_hash = prior_batch.attachment_hash() if prior_batch else None
 
@@ -346,7 +346,7 @@ class RealImageGenProvider(ImageGenProvider):
                 "real image provider not configured (missing AIPD_IMAGE_PROVIDER_URL / "
                 "AIPD_IMAGE_API_KEY); chain stays HOLD; no image bytes fabricated"
             )
-        prior_images = list((prior_batch.images or [])) if prior_batch and prior_batch.images else []
+        prior_images = list(prior_batch.images or []) if prior_batch and prior_batch.images else []
         # 前一批真实图像作为图像条件（base64 data URI），供后端做条件生成。
         prior_attachments = []
         for im in prior_images:

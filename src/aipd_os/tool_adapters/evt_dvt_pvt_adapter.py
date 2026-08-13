@@ -15,7 +15,12 @@ from aipd_os.supply_chain.analysis import (
     create_correction_tasks,
     propagate_impact,
 )
-from aipd_os.supply_chain.lab import import_lab_csv, import_lab_json, import_lab_report, import_lab_xlsx
+from aipd_os.supply_chain.lab import (
+    import_lab_csv,
+    import_lab_json,
+    import_lab_report,
+    import_lab_xlsx,
+)
 from aipd_os.tool_adapters._common import meta, token_meta
 
 VALID_STAGES = {"evt", "dvt", "pvt"}

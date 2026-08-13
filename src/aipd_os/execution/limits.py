@@ -34,14 +34,14 @@ class CancelledError(LimitError):
 class CancellationToken:
     """取消标志；子 token 与其父 token 的取消状态联动（取消传播）。"""
 
-    def __init__(self, parent: Optional["CancellationToken"] = None) -> None:
+    def __init__(self, parent: Optional[CancellationToken] = None) -> None:
         self._parent = parent
         self._cancelled = False
 
     def cancel(self) -> None:
         self._cancelled = True
 
-    def child(self) -> "CancellationToken":
+    def child(self) -> CancellationToken:
         """创建一个联动父 token 的子 token（父被取消则子视为取消）。"""
         return CancellationToken(parent=self)
 

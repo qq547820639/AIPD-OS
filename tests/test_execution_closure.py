@@ -17,8 +17,8 @@ from aipd_os.execution.closure_core import (
     ArtifactVerifier,
     ClosureStep,
     ClosureStore,
-    RunControl,
     ReworkMachine,
+    RunControl,
     build_failure_message,
     check_maturity_floor,
     maturity_index,
@@ -26,7 +26,6 @@ from aipd_os.execution.closure_core import (
     verify_file,
 )
 from aipd_os.execution.execution_router import ExecutionRouter
-from aipd_os.execution.registry import AdapterRegistry
 from aipd_os.execution.runs import RunStore
 from aipd_os.state.db import AIPDStateDB
 from aipd_os.tool_adapters.builtin import build_registry

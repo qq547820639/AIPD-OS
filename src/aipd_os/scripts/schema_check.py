@@ -31,7 +31,7 @@ def validate_schemas(schemas_dir: Path) -> int:
     failures = 0
     for path in files:
         try:
-            with open(path, "r", encoding="utf-8") as fh:
+            with open(path, encoding="utf-8") as fh:
                 data = json.load(fh)
             if not isinstance(data, dict):
                 raise ValueError("顶层必须是 JSON 对象")

@@ -21,7 +21,6 @@ from .models import (
     STATUS_NOT_VERIFIED,
     STATUS_VERIFIED,
     Citation,
-    EPISTEMIC_EXTERNAL_EVIDENCE,
     ResearchFinding,
     default_epistemic_status,
 )

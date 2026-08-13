@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 from aipd_os.research.fulltext import (
     ACCESS_BLOCKED,
     ACCESS_OPEN,

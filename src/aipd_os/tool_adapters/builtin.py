@@ -9,17 +9,16 @@ from typing import List
 
 from aipd_os.execution.adapter import ToolAdapter
 from aipd_os.execution.registry import AdapterRegistry
-
-from aipd_os.tool_adapters.research_adapter import ResearchAdapter
+from aipd_os.tool_adapters.cad_adapter import CadAdapter
 from aipd_os.tool_adapters.document_adapter import DocumentGenAdapter
+from aipd_os.tool_adapters.evt_dvt_pvt_adapter import ValidationDataAdapter
+from aipd_os.tool_adapters.faceted_adapter import FacetedAdapter
 from aipd_os.tool_adapters.imggen_adapter import ImageGenAdapter
 from aipd_os.tool_adapters.layout_adapter import LayoutAdapter
-from aipd_os.tool_adapters.cad_adapter import CadAdapter
 from aipd_os.tool_adapters.local_brep_adapter import LocalBrepAdapter
-from aipd_os.tool_adapters.faceted_adapter import FacetedAdapter
 from aipd_os.tool_adapters.mail_rfq_adapter import MailRfqAdapter
+from aipd_os.tool_adapters.research_adapter import ResearchAdapter
 from aipd_os.tool_adapters.supplier_adapter import SupplierAdapter
-from aipd_os.tool_adapters.evt_dvt_pvt_adapter import ValidationDataAdapter
 
 
 def builtin_adapters() -> List[ToolAdapter]:

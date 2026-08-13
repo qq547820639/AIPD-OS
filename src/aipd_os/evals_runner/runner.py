@@ -22,7 +22,6 @@ from typing import Any, Dict, List, Optional
 from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.evals_runner.completion import (
     PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE,
-    PROVIDER_CATEGORY_REAL_MODEL,
     CompletionProvider,
     EnvCompletionProvider,
     ModelNotConfiguredError,

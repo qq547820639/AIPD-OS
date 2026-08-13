@@ -16,10 +16,6 @@ import threading
 import time
 from typing import Any, Dict, List, Optional
 
-from aipd_os.execution.adapter import AdapterError
-from aipd_os.execution.execution_router import ExecutionRouter
-from aipd_os.execution.registry import AdapterRegistry
-from aipd_os.execution.runs import canonical_hash
 from aipd_os.execution.closure_core import (
     EVENT_CANCELLED,
     EVENT_COMPLETE,
@@ -35,11 +31,14 @@ from aipd_os.execution.closure_core import (
     ClosureStep,
     ClosureStore,
     CostLedger,
-    RunControl,
     ReworkMachine,
+    RunControl,
     build_failure_message,
     check_maturity_floor,
 )
+from aipd_os.execution.execution_router import ExecutionRouter
+from aipd_os.execution.registry import AdapterRegistry
+from aipd_os.execution.runs import canonical_hash
 
 
 def _now_monotonic() -> float:
@@ -92,7 +91,7 @@ class ClosureRun:
         max_step_duration_s: float = 120.0,
         max_rework: int = 3,
         heartbeat_interval_s: float = 0.1,
-    ) -> "ClosureRun":
+    ) -> ClosureRun:
         self.store = store
         self.router = router
         self.registry = registry

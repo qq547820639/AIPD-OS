@@ -209,7 +209,7 @@ def parse_quote_file(path: Union[str, Path, List[Dict[str, Any]]]) -> Dict[str, 
         raise FileNotFoundError(f"报价文件不存在: {p}")
 
     if ext == ".csv":
-        with open(p, "r", newline="", encoding="utf-8") as fh:
+        with open(p, newline="", encoding="utf-8") as fh:
             reader = csv.DictReader(fh)
             rows = list(reader)
         records = [normalize_quote(r) for r in rows]
@@ -223,7 +223,7 @@ def parse_quote_file(path: Union[str, Path, List[Dict[str, Any]]]) -> Dict[str, 
         }
 
     if ext == ".json":
-        with open(p, "r", encoding="utf-8") as fh:
+        with open(p, encoding="utf-8") as fh:
             data = json.load(fh)
         if isinstance(data, dict):
             rows = data.get("records") or data.get("quotes") or []

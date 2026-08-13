@@ -13,7 +13,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Iterable, List, Optional
+from collections.abc import Iterable
+from typing import Any, Dict, List, Optional
 
 # 凭据类别的常见环境变量名后缀集合（用于判定一个变量是否疑似敏感）
 SENSITIVE_SUFFIXES = (

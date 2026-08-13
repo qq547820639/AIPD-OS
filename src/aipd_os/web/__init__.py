@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from .server import OwnerHTTPServer, OwnerHandler, serve, start_server
+from .server import OwnerHandler, OwnerHTTPServer, serve, start_server
 from .views import RunController, WebConsole, safe_ref
 
 __all__ = ["WebConsole", "RunController", "safe_ref",

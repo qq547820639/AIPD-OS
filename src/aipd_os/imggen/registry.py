@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 # 锚点页角色：封面、原理、参数表、模块主图（产品身份/安装结构语言）
 ANCHOR_PAGE_ROLES = ["cover", "principle", "parameter_table", "module_main"]
@@ -24,7 +24,7 @@ class VisualBible:
     lighting: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_truth(cls, facts: dict) -> "VisualBible":
+    def from_truth(cls, facts: dict) -> VisualBible:
         facts = facts or {}
         return cls(
             structure=(facts.get("product") or {}).get("structure", ""),
@@ -46,7 +46,7 @@ class VisualBible:
         }
 
     @classmethod
-    def from_dict(cls, d: Optional[dict]) -> "VisualBible":
+    def from_dict(cls, d: Optional[dict]) -> VisualBible:
         d = d or {}
         return cls(
             structure=d.get("structure", ""),
@@ -82,7 +82,7 @@ class AnchorRegistry:
     lighting: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def build(cls, plan: list, facts: dict) -> "AnchorRegistry":
+    def build(cls, plan: list, facts: dict) -> AnchorRegistry:
         facts = facts or {}
         anchors = [
             {"page_id": e.get("page_id"), "role": e.get("role")}
@@ -112,7 +112,7 @@ class AnchorRegistry:
         }
 
     @classmethod
-    def from_dict(cls, d: Optional[dict]) -> "AnchorRegistry":
+    def from_dict(cls, d: Optional[dict]) -> AnchorRegistry:
         d = d or {}
         return cls(
             anchors=list(d.get("anchors") or []),

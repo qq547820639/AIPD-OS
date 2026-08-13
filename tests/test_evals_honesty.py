@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 from pathlib import Path
@@ -18,12 +17,10 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-import pytest
 
 from aipd_os.evals_runner.completion import (  # noqa: E402
     PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE,
     PROVIDER_CATEGORY_REAL_MODEL,
-    EnvCompletionProvider,
     RecordedCompletionProvider,
 )
 from aipd_os.evals_runner.registry import Case, load_cases  # noqa: E402
@@ -133,9 +130,10 @@ def test_no_credential_real_model_run_marked_external(tmp_path):
 
 def test_real_model_smoke_with_credentials_runs_real(tmp_path):
     """配置凭据后真实模型 run 真实调用并产出 real-model 结果。"""
+    import re as _re
+
     from aipd_os.evals_runner.completion import PROVIDER_CATEGORY_REAL_MODEL as RM
     from aipd_os.evals_runner.runner import _DEFAULT_SCRIPT
-    import re as _re
 
     class SmokeProvider(RecordedCompletionProvider):
         def category(self):

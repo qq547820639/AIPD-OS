@@ -6,34 +6,34 @@
 """
 from __future__ import annotations
 
-from .project_summary import GATE_NAMES, build_project_summary
-from .decision_card import build_decision_card
-from .resume_summary import build_resume_summary
 from .artifact_preview import artifact_preview
-from .instructions import Instruction, apply_instruction, parse_instruction
-from .views import OwnerView, render_markdown, to_markdown
-from .intent_engine import Intent, parse_intent, build_clarifying_question
+from .decision_card import build_decision_card
 from .impact_analysis import analyze_impact, estimate_cost_time, type_cn
+from .instructions import Instruction, apply_instruction, parse_instruction
+from .intent_engine import Intent, build_clarifying_question, parse_intent
+from .onboarding import (
+    list_examples,
+    onboard,
+    provider_config_status,
+    recover_project,
+    reset_project,
+)
 from .operations import (
     ProgressTracker,
-    run_operation_loop,
-    auto_rework,
     auto_acceptance,
-    update_summary,
+    auto_rework,
     revert_operation,
+    run_operation_loop,
+    update_summary,
 )
 from .owner_dashboard import (
     build_dashboard,
-    render_dashboard_text,
     render_dashboard_json,
+    render_dashboard_text,
 )
-from .onboarding import (
-    onboard,
-    reset_project,
-    recover_project,
-    provider_config_status,
-    list_examples,
-)
+from .project_summary import GATE_NAMES, build_project_summary
+from .resume_summary import build_resume_summary
+from .views import OwnerView, render_markdown, to_markdown
 
 __all__ = [
     "GATE_NAMES",

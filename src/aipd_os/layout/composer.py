@@ -7,13 +7,11 @@
 from __future__ import annotations
 
 import zipfile
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
 
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-
-from aipd_os.layout.renderer import A4_PX, render_page
 
 
 def compose_pdf(pages: Iterable[str], out_pdf: str) -> str:

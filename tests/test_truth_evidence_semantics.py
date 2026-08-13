@@ -15,9 +15,9 @@ from pathlib import Path
 
 import pytest
 
+from aipd_os.product_truth.lineage import LineageGraph
 from aipd_os.product_truth.models import TruthRecord
 from aipd_os.product_truth.store import ProductTruthStore
-from aipd_os.product_truth.lineage import LineageGraph
 from aipd_os.research import (
     EPISTEMIC_EXTERNAL_EVIDENCE,
     EPISTEMIC_UNKNOWN,

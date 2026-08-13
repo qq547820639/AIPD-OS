@@ -8,14 +8,14 @@ import re
 
 import pytest
 
-from aipd_os.state.db import AIPDStateDB
-from aipd_os.state.checkpoint import CheckpointManager
-from aipd_os.experience.project_summary import build_project_summary
-from aipd_os.experience.decision_card import build_decision_card
-from aipd_os.experience.resume_summary import build_resume_summary
 from aipd_os.experience.artifact_preview import artifact_preview
+from aipd_os.experience.decision_card import build_decision_card
 from aipd_os.experience.instructions import apply_instruction, parse_instruction
+from aipd_os.experience.project_summary import build_project_summary
+from aipd_os.experience.resume_summary import build_resume_summary
 from aipd_os.experience.views import OwnerView
+from aipd_os.state.checkpoint import CheckpointManager
+from aipd_os.state.db import AIPDStateDB
 
 
 @pytest.fixture

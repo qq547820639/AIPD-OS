@@ -13,7 +13,7 @@ import os
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 try:  # pyyaml 为可选依赖
     import yaml  # type: ignore
@@ -67,7 +67,7 @@ class Settings:
     extra: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Settings":
+    def from_dict(cls, data: Dict[str, Any]) -> Settings:
         """从字典构造 Settings，忽略未知字段，未知字段放入 ``extra``。"""
         known = {f for f in cls.__dataclass_fields__}
         values: Dict[str, Any] = {}
@@ -130,7 +130,7 @@ class Settings:
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
-    with open(path, "r", encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
     if not isinstance(data, dict):
         raise ValueError(f"配置文件 {path} 顶层必须是对象")
@@ -138,7 +138,7 @@ def _load_json(path: Path) -> Dict[str, Any]:
 
 
 def _load_yaml(path: Path) -> Dict[str, Any]:
-    data = yaml.safe_load(open(path, "r", encoding="utf-8"))
+    data = yaml.safe_load(open(path, encoding="utf-8"))
     if data is None:
         return {}
     if not isinstance(data, dict):

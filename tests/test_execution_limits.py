@@ -1,20 +1,17 @@
 """长任务资源限制 / 并发 / 取消 / 断点恢复测试。"""
 from __future__ import annotations
 
-import threading
-import time
-
 import pytest
 
 from aipd_os.execution.limits import (
-    CancelledError,
     CancellationToken,
+    CancelledError,
     CheckpointStore,
     ConcurrencyGate,
     DurationBudget,
     LimitError,
-    ResumableLimiter,
     ResourceLimits,
+    ResumableLimiter,
     RetryPolicy,
     TaskLimiter,
 )

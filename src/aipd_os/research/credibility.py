@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # 已知来源类型 -> 基础得分
 SOURCE_CREDIBILITY = {

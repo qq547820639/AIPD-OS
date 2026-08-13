@@ -19,7 +19,7 @@ from ..state.db import AIPDStateDB
 from .artifact_preview import artifact_preview
 from .decision_card import build_decision_card
 from .external_wait import summarize_external_wait
-from .impact_analysis import milestone_cn, type_cn
+from .impact_analysis import milestone_cn
 from .project_summary import build_project_summary
 from .risk_health import compute_risk_health
 

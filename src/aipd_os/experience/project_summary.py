@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from ..state.db import AIPDStateDB
 from ..state.checkpoint import CheckpointManager
+from ..state.db import AIPDStateDB
 
 # gate 代号 → 人类可读里程碑名称（仅用于 details 之后的展示，不暴露给顶层字段）
 GATE_NAMES: Dict[str, str] = {

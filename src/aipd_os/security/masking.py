@@ -13,7 +13,8 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable, List, Optional, Set
+from collections.abc import Iterable
+from typing import List, Optional, Set
 
 from aipd_os.state.crypto import encrypt_secret
 

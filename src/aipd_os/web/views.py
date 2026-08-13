@@ -22,9 +22,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from aipd_os.config import get_settings
-from aipd_os.state.checkpoint import CheckpointManager
-from aipd_os.state.db import AIPDStateDB
-from aipd_os.state.objects import ObjectStore
 
 # 复用经验层
 from aipd_os.experience.artifact_preview import artifact_preview
@@ -36,6 +33,9 @@ from aipd_os.experience.operations import ProgressTracker, run_operation_loop
 from aipd_os.experience.owner_dashboard import build_dashboard
 from aipd_os.experience.project_summary import build_project_summary
 from aipd_os.experience.resume_summary import build_resume_summary
+from aipd_os.state.checkpoint import CheckpointManager
+from aipd_os.state.db import AIPDStateDB
+from aipd_os.state.objects import ObjectStore
 
 DEFAULT_TENANT = "default"
 

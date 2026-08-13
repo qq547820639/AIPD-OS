@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -30,7 +29,6 @@ from aipd_os.layout.renderer import render_page
 from aipd_os.state.db import AIPDStateDB
 from aipd_os.tool_adapters.builtin import build_registry
 from aipd_os.visual_audit import VisualAuditor
-
 
 DEFAULT_ROLES = [
     "cover", "principle", "parameter_table", "module", "user_scene",

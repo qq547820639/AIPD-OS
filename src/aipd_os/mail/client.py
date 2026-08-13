@@ -29,9 +29,9 @@ from email.utils import format_datetime
 from typing import Any, Dict, List, Optional
 
 from aipd_os.supply_chain.mail import (
+    ExternalDependencyError,
     MailAttachment,
     MailError,
-    ExternalDependencyError,
     SendResult,
 )
 
@@ -359,7 +359,7 @@ class MailConfig:
         self.imap = imap or ImapConfig()
 
     @classmethod
-    def from_env(cls) -> "MailConfig":
+    def from_env(cls) -> MailConfig:
         import os
 
         smtp_host = os.environ.get("AIPD_SMTP_HOST") or os.environ.get("AIPD_MAILPIT_SMTP_HOST")

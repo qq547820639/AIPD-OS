@@ -8,9 +8,9 @@
 
 from aipd_os.imggen.adapter import ImageGenAdapter, ImageGenUnavailable
 from aipd_os.imggen.providers import (
+    ExternalImageGenProvider,
     ImageGenProvider,
     PILImageGenProvider,
-    ExternalImageGenProvider,
     RealImageGenProvider,
     provider_from_name,
 )
