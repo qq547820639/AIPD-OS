@@ -13,7 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from aipd_os.cli import commands as cli_commands
+from aipd_os.cli import _helpers as cli_helpers
 from aipd_os.cli import main as cli_main
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -35,23 +35,23 @@ LEGACY_TO_MAINLINE = {
 
 def _mock_heavy(monkeypatch) -> None:
     """把会真正跑 pytest/evals/打包的底层换成 no-op，避免测试套件递归。"""
-    monkeypatch.setattr(cli_commands, "_run_pytest", lambda repo: 0)
-    monkeypatch.setattr(cli_commands, "_run_evals_cli", lambda *a, **k: 0)
-    monkeypatch.setattr(cli_commands, "_build_release_impl", lambda args: 0)
+    monkeypatch.setattr(cli_helpers, "_run_pytest", lambda repo: 0)
+    monkeypatch.setattr(cli_helpers, "_run_evals_cli", lambda *a, **k: 0)
+    monkeypatch.setattr(cli_helpers, "_build_release_impl", lambda args: 0)
 
     fake_mc = SimpleNamespace(
         cmd_init=lambda *a, **k: None,
         cmd_plan_batches=lambda *a, **k: None,
         cmd_run_batch=lambda *a, **k: None,
     )
-    real_import = cli_commands._import_module
+    real_import = cli_helpers._import_module
 
     def _fake_import(name, subdir="scripts"):
         if name == "manual_chain":
             return fake_mc
         return real_import(name, subdir=subdir)
 
-    monkeypatch.setattr(cli_commands, "_import_module", _fake_import)
+    monkeypatch.setattr(cli_helpers, "_import_module", _fake_import)
 
 
 def _init_db(tmp_path: Path) -> Path:
