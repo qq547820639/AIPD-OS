@@ -4,8 +4,11 @@
 - ``service``：IdeaService（tenant+project scoped / audited / versioned CRUD）；
 - ``maturity``：IdeaMaturity 枚举（I0-I3，I3 只定义 contract）；
 - ``decomposer``：IdeaDecompositionProvider contract + CAPABILITY_UNAVAILABLE 路径
-  （真实 LLM provider 在 Commit 12）；
-- ``projections``：Idea Truth projection 骨架（Commit 14 填充）；
+  （真实 LLM provider 由生产装配配置驱动：``AIPD_MODEL_API_KEY`` +
+  ``AIPD_MODEL_BASE_URL`` 配置后注册 ``LlmIdeaDecompositionProvider``，
+  见 ``aipd_os.runtime._register_external_providers``）；
+- ``projections``：IdeaTruthProjection / IdeaTruthSnapshot（已实装，
+  动态聚合 maturity / claims / evidence counts）；
 - ``claims`` / ``claim_service``：Claim Domain（Candidate Claim 默认 A/U，绝不默认 V）；
 - ``evidence_relations``：Claim ↔ 现有 evidence 表 的关系（复用 canonical evidence）；
 - ``evidence_graph``：EvidenceGraph 查询 API（SQLite 实现）。

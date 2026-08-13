@@ -1,8 +1,11 @@
 """Research Provider contract + ResearchIntegration（v5.8 Commit 13 / v5.8.1 Commit 5-6）。
 
-ResearchStudio 检查结果：**/Volumes/Extra/CodeProj/ 下不存在 researchstudio /
-research-studio 目录** —— 本轮只实现 Provider contract 与 capability 注册骨架，
-诚实标注 external_dependency，不伪造 integration。
+本模块实现研究能力的 Provider contract（ResearchProvider /
+UnavailableResearchProvider / EvidenceRequest / capability 声明）与
+:class:`ResearchIntegration` 的**完整实现**（``link_evidence_for_claim``：
+Claim evidence gap → 路由 → canonical evidence 去重落库 → per-source
+EvidenceRelation → EvidenceGraph 可查）。无真实后端时经
+``UnavailableResearchProvider`` 诚实标注 external_dependency，不伪造 integration。
 
 能力按真实研究语义拆分（上层 Domain 依赖 capability 不依赖具体 provider 名）：
   - research.academic_search  —— 学术检索（Search）
