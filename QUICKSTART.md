@@ -86,7 +86,7 @@ aipd status --db state.db --project p1   # 复核门禁与决策
 ## 11. 工业化 / 验证 / 发布就绪
 
 ```bash
-aipd industrialize --db state.db --quote quotes.csv --stage dv   # 供应链 + 验证
+aipd industrialize --db state.db --quote quotes.csv --stage dvt  # 供应链 + 验证
 aipd validate --manifest release.json --target C7                # 生产发布证据门禁
 aipd release check --target C7 --repo .                          # 发布就绪检查
 ```

@@ -18,7 +18,14 @@ from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import Any
 
-from .models import SourceRef, TrustAssessment, TruthRecord, ensure_trust, now_iso
+from .models import (
+    TRUTH_STATUS,
+    SourceRef,
+    TrustAssessment,
+    TruthRecord,
+    ensure_trust,
+    now_iso,
+)
 
 SCHEMA = r"""
 CREATE TABLE IF NOT EXISTS product_truth (
@@ -68,7 +75,11 @@ def _json(value: Any) -> str:
 
 
 def _row_to_record(row: sqlite3.Row) -> TruthRecord:
-    src = SourceRef.from_dict(json.loads(row["source"]))
+    try:
+        src = SourceRef.from_dict(json.loads(row["source"]))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        # 遗留损坏 source 不阻断整行读取（与 metadata 同级别的保护）
+        src = SourceRef()
     try:
         metadata = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
     except (json.JSONDecodeError, TypeError):
@@ -259,6 +270,16 @@ class ProductTruthStore:
             elif k == "metadata":
                 values.append(_json(fields[k] if isinstance(fields[k], dict) else {}))
             elif k == "status":
+                # 状态枚举校验：非法状态不得落库（此前任意字符串可写入，
+                # 破坏下游 truth 语义）。
+                if fields[k] not in TRUTH_STATUS:
+                    raise ValueError(
+                        f"invalid truth status {fields[k]!r}; "
+                        f"expected one of {sorted(TRUTH_STATUS)}")
+                values.append(fields[k])
+            elif k == "version":
+                if not isinstance(fields[k], int) or fields[k] < 1:
+                    raise ValueError(f"invalid truth version {fields[k]!r}")
                 values.append(fields[k])
             else:
                 values.append(fields[k])

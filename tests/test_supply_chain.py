@@ -243,6 +243,22 @@ def test_lab_report_pdf_external_blocked(tmp_path):
     assert ei.value.classification == "external_blocked"
 
 
+def test_lab_report_xlsx_dispatched_to_import_lab_xlsx(tmp_path, monkeypatch):
+    """回归：import_lab_report 必须把 .xlsx 派发给 import_lab_xlsx
+    （此前 .xlsx 断链：错误信息谎称支持，实际走不到 xlsx 解析器）。"""
+    from aipd_os.supply_chain import lab as lab_mod
+
+    def fake_import_lab_xlsx(path, stage):
+        return {"format": "xlsx", "stage": stage, "records": []}
+
+    monkeypatch.setattr(lab_mod, "import_lab_xlsx", fake_import_lab_xlsx)
+    p = tmp_path / "report.xlsx"
+    p.write_bytes(b"PK\x03\x04 fake xlsx")
+    out = import_lab_report(p, "dvt")
+    assert out["format"] == "xlsx"
+    assert out["stage"] == "dvt"
+
+
 # ======================================================================
 # P1-6 新增：邮件连接器 / 报价 XLSX+PDF / 持久化 / 证书到期 / 阶段导入 /
 # 根因 / 回写（HOLD）
@@ -378,6 +394,18 @@ def test_quote_json_parse(tmp_path):
     assert parsed["count"] == 1
     assert parsed["errors"] == []
     assert parsed["records"][0]["unit_price"] == 1.5
+
+
+def test_quote_csv_header_missing_columns_reported(tmp_path):
+    """回归：CSV 表头缺列必须显式报错，而不是恒返回规范表头掩盖实际文件。"""
+    p = tmp_path / "quote.csv"
+    p.write_text("supplier,part,unit_price\nAcme,X,1.25\n", encoding="utf-8")
+    parsed = parse_quote_file(p)
+    assert parsed["format"] == "csv"
+    assert parsed["count"] == 1
+    assert parsed["header"] == ["supplier", "part", "unit_price"]
+    assert parsed["errors"], "缺列必须报错"
+    assert "lead_time_days" in parsed["errors"][0]
 
 
 # ---------------------------------------------------------------- 持久化

@@ -208,7 +208,7 @@ def build_parser() -> argparse.ArgumentParser:
     cp.set_defaults(func=COMMAND_FUNCS["cad build"])
 
     p = sub.add_parser("industrialize", help="供应链 + 验证执行（报价登记/阶段分析/纠偏任务；无数据则如实报告不虚构）。"  # noqa: E501
-                                             " Example: aipd industrialize --db state.db --quote quotes.csv --stage dv --lab-data lab.csv")  # noqa: E501
+                                             " Example: aipd industrialize --db state.db --quote quotes.csv --stage dvt --lab-data lab.csv")  # noqa: E501
     p.add_argument("--db")
     p.add_argument("--quote")
     p.add_argument("--stage")
@@ -257,6 +257,7 @@ def build_parser() -> argparse.ArgumentParser:
                    default="fake")
     p.add_argument("--out")
     p.add_argument("--threshold", type=float, default=0.1)
+    p.add_argument("--baseline")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["eval"])
 
@@ -391,7 +392,15 @@ def main(argv: list | None = None) -> int:
     try:
         return int(func(args))
     except SystemExit as exc:
-        return int(exc.code or 0)
+        code = exc.code
+        if code is None:
+            return 0
+        try:
+            return int(code)
+        except (TypeError, ValueError):
+            # SystemExit 带字符串消息（如 eval --provider pure-contract）
+            print(f"错误：{code}", file=sys.stderr)
+            return 1
     except Exception as exc:  # noqa: BLE001 - CLI 顶层兜底
         log_event(_logger, "cli_error", command=args.command, error=str(exc))
         if getattr(args, "json", False):

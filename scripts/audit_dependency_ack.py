@@ -37,17 +37,23 @@ def documented_ids() -> set[str]:
 
 def main() -> int:
     ack = documented_ids()
-    if not ack:
-        print("✗ 审查文档中未解析到任何 CVE ID，拒绝继续（避免静默忽略）。")
-        return 1
-
+    # 空承认集合 = 文档未记录任何 CVE → 按 docstring 契约执行严格审计
+    # （不带 --ignore-vuln：任何命中都阻断发布），而不是直接拒绝。
     cmd = [sys.executable, "-m", "pip_audit"]
     for cve in sorted(ack):
         cmd += ["--ignore-vuln", cve]
 
+    if not ack:
+        print("审查文档中未解析到任何 CVE ID；执行严格审计（不忽略任何命中）。")
+    else:
+        print(f"已显式承认并在文档中记录的 CVE/告警 ID 数量：{len(ack)}")
     print(f"运行：{' '.join(cmd)}")
-    print(f"已显式承认并在文档中记录的 CVE/告警 ID 数量：{len(ack)}")
-    proc = subprocess.run(cmd)
+    try:
+        proc = subprocess.run(cmd)
+    except FileNotFoundError:
+        print("✗ pip-audit 未安装；无法执行依赖审计（fail-closed）。")
+        print("  安装：pip install pip-audit")
+        return 1
     if proc.returncode == 0:
         print("✓ pip-audit 通过（所有命中均为已记录 CVE，其余依赖无已知漏洞）")
         return 0

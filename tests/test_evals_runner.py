@@ -80,3 +80,17 @@ def test_env_provider_raises_when_unconfigured(monkeypatch):
     prov = EnvCompletionProvider()
     with pytest.raises(ModelNotConfiguredError):
         prov.complete([{"role": "user", "content": "hi"}])
+
+
+def test_estimate_tokens_unified_across_runner_and_adapters():
+    """回归：evals_runner 与 tool_adapters 必须共用同一 token 估算口径。"""
+    from aipd_os.evals_runner.runner import _estimate_tokens
+    from aipd_os.llm.tokens import estimate_tokens
+    from aipd_os.tool_adapters._common import token_meta
+
+    for text in ("", "hello world", "中文文本估算", "x" * 500):
+        assert _estimate_tokens(text) == estimate_tokens(text)
+    meta = token_meta("hello world " * 10)
+    assert meta["tokens_in"] == estimate_tokens("hello world " * 10)
+    assert meta["tokens_in"] > 0
+    assert meta["tokens_out"] == 0  # 输入侧文本计入 tokens_in

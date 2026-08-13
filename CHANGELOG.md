@@ -1,5 +1,44 @@
 # Changelog
 
+## [Unreleased] — 5.6.0 之后的连续迭代（v5.7 ~ v5.9.2 + 收口迭代）
+
+> 说明：包版本暂保持 5.6.0（版本双轨制留待正式发布统一）；以下按 workstream
+> 记录已交付能力。各批次的实现/审计证据见 `docs/audit/`。
+
+- **v5.7 状态服务生产化**：单库多租户 `AIPDStateDB`（tenants / user_access 行级授权）、
+  canonical decisions、多项目/租户作用域 Supervisor、迁移/备份/检查点/追加式审计、
+  静态加密与健康检查；
+- **v5.8 想法与证据运行时**：Idea 证据图（Claim / EvidenceRelation / 成熟度 I0-I2）、
+  研究检索→写回链（诚实降级：检索到 ≠ 证实）、`aipd doctor` / `aipd version --verbose`；
+- **v5.8.1 证据运行时**：统一 RuntimeContext bootstrap（唯一装配入口）、
+  外部 Provider 接入（ResearchStudio）、能力四态探测（AVAILABLE / EXTERNAL_DEPENDENCY /
+  NOT_IMPLEMENTED 等）；
+- **v5.8.2 架构真实性**：层次泄漏反转（idea 域零 execution 依赖）、CLI 大文件拆分、
+  门禁拆分与生成脚本幂等化、租户过滤修复、诚实标注升级；
+- **v5.9 产品智能**：证据 → 洞察 → 机会 → 原则 → 需求 → 功能 全链转译
+  （canonical lineage + 回溯验收）、Product Definition Gate（AI 不自批，Owner 批准）、
+  Snapshot 冻结与失效传播；
+- **v5.9.1 产品定义运行时**：product.* 动态四态探测、fail-closed 语义、
+  Owner 批准 waiver 流程（P0-04/10/38/64）；
+- **v5.9.2 快照运行时 + N-1 配置驱动 LLM**：Snapshot runtime commit 闭环、
+  通用 `LlmClient`（OpenAI 兼容）与 LlmProductIntelligenceProvider /
+  LlmIdeaDecompositionProvider 生产装配（`AIPD_MODEL_API_KEY` + `AIPD_MODEL_BASE_URL`），
+  未配置时诚实 EXTERNAL_DEPENDENCY；
+- **收口迭代（2026-08-14+）**：P1×4 缺陷修复（视觉审核诚实降级 / 认证时区 /
+  邮件附件 / 状态双重维护标注）+ 发布证据门禁全绿；随后一批代码质量与 UX 收口
+  （详见 `docs/audit/IMPRESSION_*` 与本迭代的修复清单）：
+  - 修复 closure fact↔evidence 证据自链、决策中心影响列渲染、PDF 假全文、
+    视觉审核 `passed` 非布尔假通过、lab .xlsx 断链、Gmail XOAUTH2 认证、
+    时间戳时区三态、Gate maturity 字符串比较等正确性问题；
+  - 发布门禁 fail-closed（CVE/证据缺失/git 不可用不再空真通过）、
+    rollback_v5 按 project 过滤防多项目数据污染；
+  - UX：`aipd doctor` 不再因无关敏感环境变量硬失败、CLI 状态去 emoji 纯文本、
+    provider 配置提示与实现真实环境变量对齐、`--json` 输出纯净、skip-link 可聚焦、
+    `aipd operate` 打印进度事件；
+  - 卫生：三套 token 估算口径统一、三套 LLM JSON 解析助手收敛、废弃
+    `aipd_store` 自检切换 AIPDStateDB、一次性补丁脚本归档、SKILL/state_service
+    文档刷新、CI 增加 lint（ruff/mypy）job。
+
 ## [5.6.0] — 2026-08-06
 
 AIPD-OS v5.6「Release Candidate 产品化收口版」—— 从“可靠的 Beta 编排内核”推进为“可复现、可实际操作、对产品所有者友好的 Release Candidate”。

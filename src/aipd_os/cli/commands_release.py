@@ -73,7 +73,8 @@ def cmd_test(args):
 def cmd_eval(args):
     out = args.out or str(_repo_root() / "evals_out")
     rc = _run_evals_cli(_repo_root(), args.evals, args.provider, out,
-                        args.threshold, None)
+                        args.threshold, getattr(args, "baseline", None),
+                        json_mode=bool(getattr(args, "json", False)))
     result = {"command": "eval", "ok": rc == 0, "out": out}
     if getattr(args, "json", False):
         print(json.dumps(result, ensure_ascii=False))

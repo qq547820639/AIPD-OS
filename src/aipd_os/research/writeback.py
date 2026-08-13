@@ -30,7 +30,7 @@ from .retrieval import Retriever
 class ResearchBackend:
     """研究链回写后端：把研究结果写入 Product Truth 与 Evidence Register。"""
 
-    def __init__(self, db: Any, tenant_id: str = "default", project_id: str = "p1") -> None:
+    def __init__(self, db: Any, tenant_id: str = "default", project_id: str = "default") -> None:
         self._db = db
         self._tenant = tenant_id
         self._project = project_id

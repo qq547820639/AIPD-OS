@@ -127,6 +127,24 @@ jobs:
       - name: Run gitleaks
         run: gitleaks detect --source . --redact --verbose
 
+  # 本地硬基线（ruff 0 / mypy 0）此前在 CI 不设防；补 lint job 使之成为门禁。
+  lint:
+    name: Lint and type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -e ".[full,dev]"
+      - name: Run ruff
+        run: ruff check src tests state_service
+      - name: Run mypy
+        run: mypy
+
   dependency-audit:
     name: Dependency audit
     runs-on: ubuntu-latest
@@ -232,6 +250,7 @@ jobs:
       - package-build
       - audit
       - skill-quality-and-coverage
+      - lint
     # 明确注释：本 job 不降级任何既有 job 的失败语义；任一上游失败都会阻止发布。
     runs-on: ubuntu-latest
     steps:

@@ -40,6 +40,10 @@ def write_complete_manifest(tmp_path: Path, **overrides) -> Path:
         "units": "mm",
         "datum_scheme": "DRF-A",
         "approval_status": "approved",
+        # fail-closed 证据项所需数据（缺失即失败，不得空真通过）
+        "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
+        "gdt": [{"feature": "hole_a"}],
+        "timestamp": "2026-08-01T00:00:00Z",
         "evidence": full_evidence(),
     }
     m.update(overrides)
@@ -141,6 +145,64 @@ def test_consistent_c2_manifest_passes(tmp_path):
     assert out["achieved"] == "C7"
     assert r.returncode == 0
     assert all(c["passed"] for c in out["evidence_checks"])
+
+
+def test_missing_revision_data_fails_closed(tmp_path):
+    """fail-closed：drawings_version 缺失不得空真通过。"""
+    m = json.loads(write_complete_manifest(tmp_path).read_text(encoding="utf-8"))
+    del m["drawings_version"]
+    p = tmp_path / "m2.json"
+    p.write_text(json.dumps(m), encoding="utf-8")
+    out = json.loads(run_gate(p, "C2").stdout)
+    assert get_check(out, "drawing_cad_same_revision")["passed"] is False
+
+
+def test_missing_timestamp_fails_closed(tmp_path):
+    """fail-closed：timestamp 缺失不得空真通过。"""
+    m = json.loads(write_complete_manifest(tmp_path).read_text(encoding="utf-8"))
+    del m["timestamp"]
+    p = tmp_path / "m2.json"
+    p.write_text(json.dumps(m), encoding="utf-8")
+    out = json.loads(run_gate(p, "C2").stdout)
+    assert get_check(out, "evidence_not_expired")["passed"] is False
+
+
+def test_missing_ctq_data_fails_closed(tmp_path):
+    """fail-closed：ctq/gdt 缺失不得空真通过。"""
+    m = json.loads(write_complete_manifest(tmp_path).read_text(encoding="utf-8"))
+    del m["ctq"]
+    del m["gdt"]
+    p = tmp_path / "m2.json"
+    p.write_text(json.dumps(m), encoding="utf-8")
+    out = json.loads(run_gate(p, "C2").stdout)
+    assert get_check(out, "gdt_covers_ctq")["passed"] is False
+    assert get_check(out, "ctq_has_inspection")["passed"] is False
+
+
+def test_cve_check_fails_closed_when_pip_audit_missing(tmp_path, monkeypatch):
+    """fail-closed：pip-audit 不可用时 no_unacknowledged_cve 必须失败而非跳过
+    （有依赖清单的仓库不可空真通过）。"""
+    (tmp_path / "requirements-quality.txt").write_text("jsonschema>=4.0\n",
+                                                       encoding="utf-8")
+    import shutil
+    monkeypatch.setattr(shutil, "which", lambda _name: None)
+    ok, issues, note = _NS["_check_cve_license"](tmp_path)
+    assert ok is False
+    assert issues
+
+
+def test_cve_check_vacuous_pass_without_dependency_manifests(tmp_path):
+    """仓库未声明任何依赖清单 → 无第三方依赖可审计，显式 vacuous 通过。"""
+    ok, issues, note = _NS["_check_cve_license"](tmp_path)
+    assert ok is True
+    assert "vacuous" in note
+
+
+def test_workspace_clean_fails_closed_outside_git(tmp_path):
+    """fail-closed：非 git 仓库不得把「查不到脏文件」当干净。"""
+    ok, dirty = _NS["_check_workspace_clean"](tmp_path)
+    assert ok is False
+    assert dirty
 
 
 def _valid_cad_contract() -> dict:

@@ -270,6 +270,34 @@ def test_write_back_to_state_db(tmp_path, monkeypatch):
     assert any(e["title"] == "Document generated" for e in evidence)
 
 
+def test_write_back_links_fact_to_evidence_not_evidence_to_itself(tmp_path, monkeypatch):
+    """回归：closure 写回必须把 fact 与 evidence 正确关联。
+
+    此前把 evidence_id 同时当 fact_id 传入 link_evidence，证据被链到它自己
+    身上，``list_evidence_for_fact`` 永远查不到该事实的证据。
+    """
+    monkeypatch.setenv("AIPD_OUTPUT_DIR", str(tmp_path))
+    db = AIPDStateDB(str(tmp_path / "state.db"))
+    db.ensure_default_tenant("default")
+    db.init_project("default", "P1", "Proj", "Goal")
+    _, registry, router, cstore = _make_env(tmp_path)
+    step = ClosureStep(
+        step_id="s1", capability_id="doc.generate",
+        inputs={"title": "T", "sections": [{"heading": "H", "body": "b"}]},
+        write_back={
+            "fact_key": "document.title", "fact_value": "T",
+            "evidence_title": "Document generated", "evidence_kind": "execution",
+        })
+    run = _bind(ClosureRun(), cstore, registry, router, state_db=db, tenant_id="default")
+    result = run.execute("WB", [step], project_id="P1")
+    assert result["status"] == "complete"
+    fact = next(f for f in db.list_facts("default", "P1")
+                if f["key"] == "document.title")
+    linked = db.list_evidence_for_fact("default", "P1", fact["fact_id"])
+    assert linked, "fact 必须有证据关联（不能是 evidence→evidence 自链）"
+    assert any(e["title"] == "Document generated" for e in linked)
+
+
 # ---------------------------------------------------------------------------
 # 8) stale 影响传播
 # ---------------------------------------------------------------------------

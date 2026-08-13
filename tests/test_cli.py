@@ -308,11 +308,11 @@ def test_industrialize_with_quote_and_lab(tmp_path, capsys):
     lab = tmp_path / "lab.csv"
     lab.write_text(
         "stage,test_item,sample_id,result,pass_fail,notes\n"
-        "dv,扭矩,S1,0.9,pass,ok\n", encoding="utf-8")
+        "dvt,扭矩,S1,0.9,pass,ok\n", encoding="utf-8")
     capsys.readouterr()
     rc = cli_main.main([
         "industrialize", "--db", str(db), "--quote", str(quote),
-        "--stage", "dv", "--lab-data", str(lab), "--json",
+        "--stage", "dvt", "--lab-data", str(lab), "--json",
     ])
     out = capsys.readouterr().out
     assert rc == 0
@@ -330,6 +330,12 @@ def test_validate_minimal_manifest(tmp_path, capsys):
         "runtime": "native_brep",
         "design_intent": "已定义", "coordinate_system": "ISO", "overall_dimensions": "ok",
         "units": "mm", "owner_release": True, "approval_status": "approved",
+        # fail-closed 证据项数据（缺失即失败，不得空真通过）
+        "model_version": "1.0.0", "drawings_version": "1.0.0",
+        "model_part_count": 1, "bom_line_count": 1, "drawing_count": 1,
+        "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
+        "gdt": [{"feature": "hole_a"}],
+        "timestamp": "2026-08-01T00:00:00Z",
     }), encoding="utf-8")
     rc = cli_main.main(["validate", "--manifest", str(manifest), "--target", "C0"])
     out = capsys.readouterr().out
@@ -343,6 +349,12 @@ def test_release_check_on_minimal_repo(tmp_path, capsys):
         "version": "5.1.0", "runtime": "native_brep",
         "design_intent": "已定义", "coordinate_system": "ISO", "overall_dimensions": "ok",
         "units": "mm", "owner_release": True, "approval_status": "approved",
+        # fail-closed 证据项数据（缺失即失败，不得空真通过）
+        "model_version": "1.0.0", "drawings_version": "1.0.0",
+        "model_part_count": 1, "bom_line_count": 1, "drawing_count": 1,
+        "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
+        "gdt": [{"feature": "hole_a"}],
+        "timestamp": "2026-08-01T00:00:00Z",
     }), encoding="utf-8")
     rc = cli_main.main([
         "release", "check", "--target", "C0", "--repo", str(tmp_path), "--json",
@@ -414,3 +426,47 @@ def test_doctor_reports_capability_guidance(capsys, monkeypatch):
     assert "research.fulltext" in ni["detail"]
     assert "research.novelty_check" in ni["detail"]
     assert "research.asset_extract" in ni["detail"]
+
+
+def test_doctor_unrelated_sensitive_env_not_hard_fail(capsys, monkeypatch):
+    """回归：环境里存在与 AIPD 无关的敏感变量（如 CODEBUDDY_API_KEY）
+    不得让 doctor 硬失败——只审查 AIPD_* 前缀变量。"""
+    monkeypatch.setenv("CODEBUDDY_API_KEY", "unrelated-secret")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "unrelated-secret")
+    monkeypatch.delenv("AIPD_MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("AIPD_MODEL_BASE_URL", raising=False)
+    args = SimpleNamespace(json=True)
+    rc = cmd_doctor(args)
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert data["ok"] is True
+    cred = {c["name"]: c for c in data["checks"]}["security.credentials"]
+    assert cred["status"] in ("ok", "warn")
+
+
+def test_doctor_unregistered_aipd_sensitive_env_warns_not_fails(capsys, monkeypatch):
+    """AIPD_* 未登记敏感变量降级为 warn（可操作提示），不再是硬失败。"""
+    monkeypatch.setenv("AIPD_SOMETHING_SECRET", "value")
+    monkeypatch.delenv("AIPD_MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("AIPD_MODEL_BASE_URL", raising=False)
+    args = SimpleNamespace(json=True)
+    rc = cmd_doctor(args)
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert data["ok"] is True
+    cred = {c["name"]: c for c in data["checks"]}["security.credentials"]
+    assert cred["status"] == "warn"
+
+
+def test_industrialize_invalid_stage_rejected(tmp_path, capsys):
+    """--stage 必须是 evt/dvt/pvt（缺省 validation），非法值报错退出。"""
+    lab = tmp_path / "lab.csv"
+    lab.write_text("stage,test_item,sample_id,result,pass_fail\n"
+                   "pvt,drop,A-1,broken,fail\n", encoding="utf-8")
+    rc = cli_main.main([
+        "industrialize", "--db", str(tmp_path / "state.db"),
+        "--lab-data", str(lab), "--stage", "dv", "--json",
+    ])
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert data.get("ok") is False

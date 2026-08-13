@@ -112,6 +112,19 @@ class VisionAuditProvider:
             parsed = json.loads(content) if isinstance(content, str) else (content or {})
         except Exception:
             parsed = {}
+        if not isinstance(parsed, dict):
+            parsed = {}
+
+        # 诚实护栏：`passed` 必须是真布尔。模型若返回字符串 "false"/"no"
+        # （非空字符串 truthy）会被 bool() 误判为通过——显式拒绝。
+        raw_passed = parsed.get("passed")
+        passed = raw_passed if isinstance(raw_passed, bool) else False
+        raw_score = parsed.get("score")
+        if not isinstance(raw_score, (int, float)) or isinstance(raw_score, bool):
+            raw_score = None
+        conclusion = parsed.get("conclusion")
+        if conclusion is not None and not isinstance(conclusion, str):
+            conclusion = str(conclusion)
 
         return {
             "provider": {"id": self.id, "model": self.model, "url": self.url},
@@ -122,9 +135,10 @@ class VisionAuditProvider:
                 "total_tokens": usage.get("total_tokens"),
             },
             "trace_id": trace_id,
-            "score": parsed.get("score"),
-            "passed": parsed.get("passed"),
-            "conclusion": parsed.get("conclusion"),
+            "score": raw_score,
+            "passed": passed,
+            "parse_error": not isinstance(parsed.get("passed"), bool),
+            "conclusion": conclusion,
             "dimensions": parsed.get("dimensions"),
         }
 

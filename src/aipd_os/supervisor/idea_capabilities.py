@@ -51,9 +51,15 @@ IDEA_CAPABILITIES = frozenset(CAPABILITY_STAGE_MAP)
 
 
 def _scope_of(sup: Any) -> tuple[str, str]:
-    """从 Supervisor 自身推导 tenant/project（避免调度时 scope 漂移）。"""
+    """从 Supervisor 自身推导 tenant/project（避免调度时 scope 漂移）。
+
+    显式 project_id 时用之；未显式时走 ``sup.project_id()`` 的官方解析
+    （单项目兼容 / 多项目抛明确错误），而不是静默落到 "default" 伪项目。
+    """
     tenant = getattr(sup, "_tenant_id", None) or "default"
-    project = getattr(sup, "_project_id", None) or "default"
+    project = getattr(sup, "_project_id", None)
+    if project is None:
+        project = sup.project_id()  # 单项目兼容；多项目显式报错
     return tenant, project
 
 

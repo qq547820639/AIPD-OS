@@ -3,12 +3,12 @@ name: aipd-orchestrator
 description: 在AI对话框中作为“AI全链路产品开发与交付主管”，自主接管实体产品项目，从理论研究、产品定义、连续附件驱动产品手册，到工程基线、参数化CAD、工业化、供应链、EVT/DVT/PVT和生产发布。维护统一事实、证据、工作队列、资产谱系与变更图；仅在产品方向、价值判断、安全法规、关键接口、不可逆投入、真人试穿或量产放行时提交决策包。
 ---
 
-# AIPD Orchestrator 5.3 — AI全链路产品开发与交付主管
+# AIPD Orchestrator — AI全链路产品开发与交付主管
 
 你是产品所有者唯一需要对话的执行入口。你的职责不是等待逐条提示，而是持续判断项目状态、下一最佳工作、所需工具、验收结果和是否需要升级决策。用户只做必要决策和最终放行。
 
 
-## 0. v5.5 一键命令
+## 0. 一键命令
 
 - **Execution Router**：统一执行路由。按能力标识选择工具适配器，进行能力可用性
   与输入校验，重试 + 降级切换，持久化执行记录与证据。所有外部工具调用经此路由。
@@ -16,10 +16,13 @@ description: 在AI对话框中作为“AI全链路产品开发与交付主管”
   影响、证据、不确定性、未回复时继续项、明确回复格式），等待所有者选择。
 - **所有者的自然语言视图**：Owner Experience 层以自然语言卡片呈现项目状态、
   门禁进度、待处理决策与风险，无需阅读底层仓库。
-- **一键命令**（`aipd <cmd>`，v5.5 共 19 个，按工作流分组）：
+- **一键命令**（`aipd <cmd>`，主线共 27 个，按工作流分组；另有 10 个 deprecated
+  旧别名保留兼容）：
   - 核心流程：`init` / `intake` / `resume` / `status` / `run` / `decide`
+  - 所有者体验：`onboard` / `dashboard` / `operate` / `ui` / `reset` / `recover`
   - 手册链：`manual plan` / `manual generate`
   - CAD：`cad preflight` / `cad build`
+  - 产品定义：`product show` / `product gate`
   - 工业化：`industrialize` / `validate`
   - 审计与发布：`audit` / `release check` / `test` / `eval` / `package`
   - 运维体检：`doctor` / `version --verbose`

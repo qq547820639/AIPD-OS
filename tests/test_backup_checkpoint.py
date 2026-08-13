@@ -56,6 +56,21 @@ def test_retention_prune(tmp_path, db):
     assert bm.list_backups() == []
 
 
+def test_retention_prune_tolerates_naive_timestamps(tmp_path, db):
+    """回归：naive 时间戳（历史 manifest 可能混入）不得与 aware cutoff 比较崩溃。"""
+    _seed(db)
+    bm = BackupManager(str(db.path), backup_dir=str(tmp_path / "backups"))
+    bm.create_backup(str(db.path))
+    for b in bm.list_backups():
+        mf_path = __import__("pathlib").Path(b["backup_dir"]) / "manifest.json"
+        mf = json.loads(mf_path.read_text())
+        mf["backup_created_at"] = "2020-01-01T00:00:00"  # naive
+        mf_path.write_text(json.dumps(mf), encoding="utf-8")
+
+    removed = bm.retention_prune(bm.list_backups(), retention_days=30)
+    assert len(removed) == 1
+
+
 def test_checkpoint_save_restore(db):
     _seed(db)
     cm = CheckpointManager(db)

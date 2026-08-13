@@ -29,26 +29,19 @@ _SYSTEM_BASE = (
 
 
 def _strip_markdown_fence(text: str) -> str:
-    """剥离 markdown 代码围栏（```json / ```）与前后空白。"""
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.splitlines()
-        if lines and lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        text = "\n".join(lines).strip()
-    return text
+    """剥离 markdown 代码围栏（```json / ```）与前后空白（共享实现）。"""
+    from aipd_os.llm.json_helpers import strip_markdown_fence
+    return strip_markdown_fence(text)
 
 
 def _parse_json_object(raw: str) -> dict[str, Any]:
     """把 LLM 响应解析为 JSON 对象；失败抛 IdeaDecompositionUnavailable。"""
-    text = _strip_markdown_fence(raw)
+    from aipd_os.llm.json_helpers import parse_json_text
     try:
-        data = json.loads(text)
+        data = parse_json_text(raw)
     except ValueError as exc:
         raise IdeaDecompositionUnavailable(
-            f"LLM 响应不是合法 JSON（{exc}）; CAPABILITY_UNAVAILABLE") from exc
+            f"{exc}; CAPABILITY_UNAVAILABLE") from exc
     if not isinstance(data, dict):
         raise IdeaDecompositionUnavailable(
             "LLM 响应必须是 JSON 对象; CAPABILITY_UNAVAILABLE")

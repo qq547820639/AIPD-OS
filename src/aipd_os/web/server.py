@@ -120,6 +120,19 @@ class OwnerHandler(BaseHTTPRequestHandler):
         if length > MAX_FORM_BYTES:
             raise ValueError("request body too large (limit 1MB)")
         raw = self.rfile.read(length).decode("utf-8") if length else ""
+        if not raw.strip():
+            return {}
+        content_type = (self.headers.get("Content-Type") or "").lower()
+        if "application/json" in content_type:
+            # POST JSON 体此前被静默忽略（只解析 form-urlencoded）
+            try:
+                data = json.loads(raw)
+            except ValueError as exc:
+                raise ValueError(f"invalid JSON body: {exc}") from exc
+            if not isinstance(data, dict):
+                raise ValueError("JSON body 必须是对象")
+            return {str(k): (v[0] if isinstance(v, list) and v else str(v))
+                    for k, v in data.items()}
         return {k: v[0] if v else "" for k, v in parse_qs(raw).items()}
 
     # ----------------------------------------------------------- GET 路由

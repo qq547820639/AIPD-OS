@@ -314,3 +314,26 @@ def test_anchor_visual_bible_machine_comparable():
     tokens = ["color=工程橙/金属灰", "material=铝合金6061", "finish=阳极氧化"]
     assert con["cmf"]["tokens"] == tokens
     assert vb.fingerprint()["digest"]
+
+
+def test_decode_image_rejects_error_body_and_non_image_bytes(clear_image_creds):
+    """回归：JSON 错误体/非图像字节不得被当真实图产出。"""
+    from aipd_os.imggen.providers import ImageGenUnavailable, RealImageGenProvider
+
+    with pytest.raises(ImageGenUnavailable):
+        RealImageGenProvider._decode_image(
+            b'{"error": {"message": "invalid api key"}}', "application/json")
+    with pytest.raises(ImageGenUnavailable):
+        RealImageGenProvider._decode_image(b"<html>not an image</html>", "text/html")
+    with pytest.raises(ImageGenUnavailable):
+        RealImageGenProvider._decode_image(
+            b'{"data": [{"prompt": "x"}]}', "application/json")
+    # 合法 PNG 签名可正常通过
+    import base64
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk"
+        "YAAAAAYAAjCB0C8AAAAASUVORK5CYII=")
+    raw, fmt, src = RealImageGenProvider._decode_image(
+        b'{"data": [{"b64_json": "' + base64.b64encode(png) + b'"}]}',
+        "application/json")
+    assert raw[:4] == b"\x89PNG" and fmt == "PNG" and src == "b64_json"

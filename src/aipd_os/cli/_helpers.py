@@ -86,28 +86,35 @@ def _run_pytest(repo: Path) -> int:
     )
     tail = (r.stdout or "")[-2000:]
     if tail:
-        print(tail)
+        # 进度/报告只走 stderr：--json 模式下 stdout 必须是纯净 JSON
+        print(tail, file=sys.stderr)
     if r.stderr:
         print((r.stderr or "")[-500:], file=sys.stderr)
-    print(f"测试退出码：{r.returncode}")
+    print(f"测试退出码：{r.returncode}", file=sys.stderr)
     return r.returncode
 
 
 def _run_evals_cli(repo: Path, evals: str, provider: str, out: str,
-                   threshold: float, baseline: str | None) -> int:
+                   threshold: float, baseline: str | None,
+                   json_mode: bool = False) -> int:
     from aipd_os.evals_runner.cli import build_parser as evals_parser
     argv = ["run", "--evals", evals, "--provider", provider, "--out", out,
             "--threshold", str(threshold)]
     if baseline:
         argv += ["--baseline", baseline]
     ns = evals_parser().parse_args(argv)
+    if json_mode:
+        # --json 模式下 stdout 必须是纯净 JSON：评估报告重定向到 stderr
+        import contextlib
+        with contextlib.redirect_stdout(sys.stderr):
+            return int(ns.func(ns))
     return int(ns.func(ns))
 
 
 def _emit(args, result, prose):
     """统一输出：--json 时打印单个 JSON 对象，否则打印 prose 文本。"""
     if getattr(args, "json", False):
-        print(json.dumps(result, ensure_ascii=False))
+        print(json.dumps(result, ensure_ascii=False, default=str))
     else:
         prose()
 
@@ -197,14 +204,14 @@ def _build_release_impl(args: argparse.Namespace) -> int:
 
     # (a) 运行测试
     if not args.no_tests:
-        print("== 步骤 1/6：运行测试 ==")
+        print("== 步骤 1/6：运行测试 ==", file=sys.stderr)
         rc = _run_pytest(repo)
         if rc != 0:
             print(f"测试失败（exit {rc}），中止发布。", file=sys.stderr)
             return rc
 
     # (b) 确定性评估
-    print("== 步骤 2/6：运行确定性评估 ==")
+    print("== 步骤 2/6：运行确定性评估 ==", file=sys.stderr)
     evals_out = out_dir / "evals"
     evals_rc = _run_evals_cli(repo, "evals/evals.json", "fake", str(evals_out),
                               0.1, None)
@@ -213,17 +220,17 @@ def _build_release_impl(args: argparse.Namespace) -> int:
         return evals_rc
 
     # (c) SBOM
-    print("== 步骤 3/6：生成 SBOM ==")
+    print("== 步骤 3/6：生成 SBOM ==", file=sys.stderr)
     from aipd_os.security.sbom import generate_sbom
     generate_sbom(str(repo), str(out_dir / "sbom.json"))
 
     # (d) 构建发布产物 zip
-    print("== 步骤 4/6：构建发布产物 ==")
+    print("== 步骤 4/6：构建发布产物 ==", file=sys.stderr)
     artifact = out_dir / f"aipd-os-{version}.zip"
     _build_artifact_zip(repo, artifact, out_dir)
 
     # (e) 逐文件 SHA-256 清单
-    print("== 步骤 5/6：计算逐文件 SHA-256 ==")
+    print("== 步骤 5/6：计算逐文件 SHA-256 ==", file=sys.stderr)
     per_file = sorted(
         [{"path": p.as_posix(), "sha256": _sha256(repo / p)}
          for p in _collect_release_files(repo)],
@@ -234,7 +241,7 @@ def _build_release_impl(args: argparse.Namespace) -> int:
         json.dumps(per_file, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # (f) 签名清单
-    print("== 步骤 6/6：签名清单 ==")
+    print("== 步骤 6/6：签名清单 ==", file=sys.stderr)
     sig = _sign_file(sha_manifest)
 
     artifact_sha = _sha256(artifact)
@@ -251,10 +258,10 @@ def _build_release_impl(args: argparse.Namespace) -> int:
 
     log_event(_logger, "build_release", version=version, artifact=str(artifact),
               sha256=artifact_sha)
-    print(f"发布产物：{artifact}")
-    print(f"产物 SHA-256：{artifact_sha}")
-    print(f"清单签名：{sig['signature']}")
-    print(f"发布清单：{out_dir / 'RELEASE_MANIFEST.json'}")
+    print(f"发布产物：{artifact}", file=sys.stderr)
+    print(f"产物 SHA-256：{artifact_sha}", file=sys.stderr)
+    print(f"清单签名：{sig['signature']}", file=sys.stderr)
+    print(f"发布清单：{out_dir / 'RELEASE_MANIFEST.json'}", file=sys.stderr)
     return 0
 
 

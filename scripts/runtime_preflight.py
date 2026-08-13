@@ -4,6 +4,10 @@ from __future__ import annotations
 import argparse, importlib.util, json, os, shutil, subprocess, sys
 from pathlib import Path
 
+_SRC = str(Path(__file__).resolve().parents[1] / "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+
 def command_version(cmd):
  exe=shutil.which(cmd)
  if not exe:return {'found':False,'path':None,'version':None}
@@ -25,7 +29,10 @@ def has_module(name):return importlib.util.find_spec(name) is not None
 
 def main():
  ap=argparse.ArgumentParser(); ap.add_argument('--skill-root',default=str(Path(__file__).resolve().parents[1])); ap.add_argument('--cad-skill-dir',default=os.getenv('AIPD_CAD_SKILL_DIR')); ap.add_argument('--json-out'); ap.add_argument('--require-any-cad',action='store_true'); a=ap.parse_args()
- root=Path(a.skill_root).resolve(); architecture_files=['SKILL.md','scripts/aipd_state.py','scripts/aipd_store.py','scripts/cad_convergence.py','scripts/e2e_acceptance.py','references/cad-production-pipeline.md']
+ root=Path(a.skill_root).resolve()
+ # 状态运行时判据锚定唯一权威实现 src/aipd_os/state/db.py（此前锚定在
+ # 废弃的 scripts/aipd_state.py + aipd_store.py 文件存在性上）。
+ architecture_files=['SKILL.md','src/aipd_os/state/db.py','scripts/cad_convergence.py','scripts/e2e_acceptance.py','references/cad-production-pipeline.md']
  architecture={f:(root/f).is_file() for f in architecture_files}; codex=command_version('codex')
  plugin=inspect_plugin([a.cad_skill_dir,Path.cwd()/'.agents/skills/cad',Path.home()/'.agents/skills/cad',Path.home()/'.codex/plugins/text-to-cad/skills/cad'])
  local_brep={'available':has_module('build123d') and has_module('OCP'),'modules':{'build123d':has_module('build123d'),'OCP':has_module('OCP')}}
@@ -34,7 +41,7 @@ def main():
  if plugin['detected']:modes.append('provider_cad_skill')
  if local_brep['available']:modes.append('local_native_brep')
  if local_faceted['available']:modes.append('local_faceted_brep')
- report={'architecture_ready':all(architecture.values()),'architecture_files':architecture,'python':{'version':sys.version.split()[0]},'codex':codex,'provider_plugin':plugin,'local_native_brep':local_brep,'local_faceted_brep':local_faceted,'available_cad_modes':modes,'cad_runtime_capable':bool(modes),'state_runtime_ready':(root/'scripts/aipd_state.py').is_file() and (root/'scripts/aipd_store.py').is_file()}
+ report={'architecture_ready':all(architecture.values()),'architecture_files':architecture,'python':{'version':sys.version.split()[0]},'codex':codex,'provider_plugin':plugin,'local_native_brep':local_brep,'local_faceted_brep':local_faceted,'available_cad_modes':modes,'cad_runtime_capable':bool(modes),'state_runtime_ready':has_module('aipd_os.state.db')}
  report['classification']='runtime_capable' if report['architecture_ready'] and report['state_runtime_ready'] and report['cad_runtime_capable'] else ('architecture_closed' if report['architecture_ready'] else 'not_ready')
  report['full_digital_chain_ready']=False; report['note']='Project closure requires real project artifacts and e2e_acceptance.py; preflight never declares closure.'
  text=json.dumps(report,ensure_ascii=False,indent=2); print(text)

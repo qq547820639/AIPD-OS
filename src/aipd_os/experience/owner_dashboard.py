@@ -31,7 +31,7 @@ _ACTION_CN = {
 _OBJECT_CN = {
     "deliverable": "制品", "fact": "参数/事实", "decision": "决策", "risk": "风险",
 }
-_HEALTH_LABEL = {"green": "🟢 良好", "yellow": "🟡 需关注", "red": "🔴 高风险"}
+_HEALTH_LABEL = {"green": "良好", "yellow": "需关注", "red": "高风险"}
 
 
 def _impact_cn(v: Any) -> str:
@@ -115,7 +115,7 @@ def build_dashboard(db: AIPDStateDB, project_id: str,
         # 增值区块（仍在所有者视角，不暴露内部代号）
         "health": _HEALTH_LABEL.get(
             compute_risk_health(risks, [], project.get("status"))["traffic_light"],
-            "🟢 良好"),
+            "良好"),
         "artifact_versions": _artifact_versions(ap),
 
         # 内部技术细节（默认隐藏）

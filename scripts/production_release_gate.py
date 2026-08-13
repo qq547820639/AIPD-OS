@@ -220,8 +220,9 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
         add('drawing_cad_same_revision', 'C6', same,
             f"drawings_version={dv!r} model_version={mv!r}")
     else:
-        add('drawing_cad_same_revision', 'C6', True,
-            'drawings_version/model_version not both present')
+        # 数据缺失即失败（fail-closed），不允许空真通过
+        add('drawing_cad_same_revision', 'C6', False,
+            'drawings_version/model_version missing; cannot verify revision match')
 
     # bom_matches_model: bom_line_count must equal model_part_count.
     b = val(d, 'bom_line_count')
@@ -230,7 +231,8 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
         same = b == mp
         add('bom_matches_model', 'C6', same, f"bom_line_count={b} model_part_count={mp}")
     else:
-        add('bom_matches_model', 'C6', True, 'bom_line_count/model_part_count not both present')
+        add('bom_matches_model', 'C6', False,
+            'bom_line_count/model_part_count missing; cannot verify BOM matches model')
 
     # units_datum_tolerance_complete: units present; datum_scheme when tolerance_gdt
     # present; each drawing entry needs tolerance or a global tolerance_gdt.
@@ -262,7 +264,9 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
             f"ctq features not covered by gdt: {uncovered}" if uncovered
             else 'all ctq features covered by gdt')
     else:
-        add('gdt_covers_ctq', 'C5', True, 'ctq/gdt not both lists present')
+        # 数据缺失即失败（fail-closed），不允许空真通过
+        add('gdt_covers_ctq', 'C5', False,
+            'ctq/gdt not both lists present; cannot verify GD&T covers CTQ')
 
     # ctq_has_inspection: every ctq item must have inspection_method or test_method.
     if isinstance(ctq, list) and ctq:
@@ -276,7 +280,9 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
             f"ctq items lacking inspection: {missing_ins}" if missing_ins
             else 'all ctq items have inspection')
     else:
-        add('ctq_has_inspection', 'C6', True, 'no ctq present')
+        # 数据缺失即失败（fail-closed），不允许空真通过
+        add('ctq_has_inspection', 'C6', False,
+            'no ctq present; cannot verify inspection coverage')
 
     # tool_capability_supports_level: runtime ceiling must allow the claimed level.
     cap_ok = ceiling_idx >= target_idx
@@ -297,7 +303,9 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
         add('evidence_not_expired', 'C7', age_h <= max_age_hours,
             f"evidence age {age_h:.1f}h <= {max_age_hours}h")
     else:
-        add('evidence_not_expired', 'C7', True, 'no timestamp to check')
+        # 数据缺失即失败（fail-closed），不允许空真通过
+        add('evidence_not_expired', 'C7', False,
+            'no timestamp to check; cannot verify evidence freshness')
 
     return checks
 
@@ -345,8 +353,15 @@ def _regenerate_bundle_manifest(repo: Path, bundle: Path) -> dict:
 
 
 def _check_workspace_clean(repo: Path):
-    porcelain = _run_git(repo, ['status', '--porcelain'])
-    dirty = [ln for ln in porcelain.splitlines() if ln.strip()]
+    # fail-closed：git 不可用/非仓库时不得把「查不到脏文件」当「干净」。
+    try:
+        proc = subprocess.run(['git', 'status', '--porcelain'], cwd=str(repo),
+                              capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return False, [f'git status unavailable: {exc}']
+    if proc.returncode != 0:
+        return False, [f'git status failed (not a git repository?): {repo}']
+    dirty = [ln for ln in proc.stdout.splitlines() if ln.strip()]
     return (not dirty), dirty
 
 
@@ -506,24 +521,50 @@ def _check_secrets(repo: Path, source_manifest):
 
 
 def _check_cve_license(repo: Path):
-    """pip-audit 若可用则检查未承认 CVE；许可证/密钥之外再扫 .env 模式。"""
+    """pip-audit 检查未承认 CVE（fail-closed：无法执行即失败，绝不空真通过）。
+
+    已在 ``docs/security/dependency-cve-review.md`` 记录并显式承认的 CVE 通过
+    ``--ignore-vuln`` 传入（承认集合与文档绑定）；其余命中一律失败。
+
+    唯一例外：仓库不声明任何依赖清单（requirements*.txt 均不存在）时，
+    没有第三方依赖可审计，返回「空真通过」并显式标注 vacuous（有依赖清单的
+    仓库无法借此绕过）。
+    """
+    dep_manifests = ["requirements-quality.txt", "requirements.txt",
+                     "requirements-dev.txt", "requirements-lock.txt"]
+    if not any((repo / name).is_file() for name in dep_manifests):
+        return (True, [],
+                'no dependency manifest present; nothing to audit (vacuous pass)')
     issues = []
-    # pip-audit 尽力而为：可用则运行，失败(网络等)不阻断
     pip_audit = shutil.which('pip-audit')
-    note = 'pip-audit not available; CVE check skipped'
-    if pip_audit:
-        try:
-            proc = subprocess.run(
-                [pip_audit, '--skip-editable', '--no-deps', '-r',
-                 str(repo / 'requirements-quality.txt')],
-                capture_output=True, text=True, timeout=180)
-            if proc.returncode != 0:
-                issues.append(f'pip-audit found vulnerabilities:\n{proc.stdout[:2000]}')
-            else:
-                note = 'pip-audit: no unacknowledged CVE'
-        except Exception as exc:
-            note = f'pip-audit could not run: {exc}'
-    return (not issues), issues, note
+    if not pip_audit:
+        return (False,
+                ['pip-audit not available; cannot verify no_unacknowledged_cve '
+                 '(fail-closed, install pip-audit to run the check)'], '')
+    # 承认集合来自审查文档（与 audit_dependency_ack.py 同源解析）。
+    ack: list[str] = []
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from audit_dependency_ack import documented_ids  # noqa: PLC0415
+        ack = sorted(documented_ids())
+    except SystemExit as exc:
+        return (False, [f'CVE review doc missing/unparsable (exit {exc.code}); '
+                        'cannot verify no_unacknowledged_cve'], '')
+    except Exception as exc:  # noqa: BLE001
+        return (False, [f'CVE review doc parse failed: {exc}'], '')
+    cmd = [pip_audit, '--skip-editable', '--no-deps', '-r',
+           str(repo / 'requirements-quality.txt')]
+    for cve in ack:
+        cmd += ['--ignore-vuln', cve]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    except Exception as exc:  # noqa: BLE001 - 无法执行即失败，不静默跳过
+        return (False, [f'pip-audit could not run: {exc}'], '')
+    if proc.returncode != 0:
+        issues.append(f'pip-audit found unacknowledged vulnerabilities:\n'
+                      f'{proc.stdout[:2000]}')
+        return (False, issues, '')
+    return (True, [], 'pip-audit: no unacknowledged CVE')
 
 
 def run_release_ready(repo: Path, tag: str | None, test_report: Path | None) -> dict:

@@ -316,13 +316,21 @@ class RealImageGenProvider(ImageGenProvider):
 
     @staticmethod
     def _decode_image(raw: bytes, content_type: str) -> tuple:
-        """解析真实图像字节，返回 (bytes, format, source)。"""
+        """解析真实图像字节，返回 (bytes, format, source)。
+
+        诚实护栏：端点返回 JSON 错误体（{"error": ...}）或非图像响应时
+        拒绝——不得把错误响应当真实图产出。
+        """
         # 优先解析 OpenAI-compatible JSON
         try:
             obj = json.loads(raw.decode("utf-8", "replace"))
         except Exception:
             obj = None
         if isinstance(obj, dict):
+            if "error" in obj and "data" not in obj:
+                raise ImageGenUnavailable(
+                    f"image endpoint returned error: {str(obj.get('error'))[:300]}; "
+                    "no image bytes fabricated")
             data_list = obj.get("data")
             if isinstance(data_list, list) and data_list:
                 first = data_list[0]
@@ -333,7 +341,14 @@ class RealImageGenProvider(ImageGenProvider):
                 if url_:
                     with urllib.request.urlopen(url_, timeout=60) as r:  # noqa: S310
                         return r.read(), "PNG", "url"
-        # 兜底：原始二进制图
+            raise ImageGenUnavailable(
+                "image endpoint response has no data[].b64_json/url; "
+                "no image bytes fabricated")
+        # 兜底：原始二进制图（必须是可识别的图像签名）
+        if not (raw[:4] == b"\x89PNG" or raw[:3] == b"\xff\xd8\xff"):
+            raise ImageGenUnavailable(
+                "image endpoint returned unrecognized bytes (not PNG/JPEG); "
+                "no image bytes fabricated")
         ct = (content_type or "").lower()
         fmt = "JPEG" if ("jpeg" in ct or "jpg" in ct) else "PNG"
         return raw, fmt, "binary"
@@ -359,11 +374,9 @@ class RealImageGenProvider(ImageGenProvider):
         req_id = request.request_id or f"req-{uuid.uuid4().hex[:12]}"
         results: list[GeneratedImage] = []
         for page in request.pages:
+            from aipd_os.imggen.adapter import _normalize_size
             size = request.generation_params.get("size") or [1024, 1024]
-            if isinstance(size, str):
-                w, h = (int(x) for x in size.lower().split("x"))
-            else:
-                w, h = int(size[0]), int(size[1])
+            w, h = _normalize_size(size)  # 复用统一解析（含校验），避免双实现漂移
             prompt = (
                 f"{request.prompt_template} {page.get('title', '')} / "
                 f"{page.get('page_id', '')} / {page.get('expected_cmf', '')}"

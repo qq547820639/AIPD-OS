@@ -63,6 +63,19 @@ def test_expiry_detection(store):
     assert {r.record_id for r in store.list_expired()} == {expired}
 
 
+def test_expiry_detection_mixed_naive_aware_timestamps(store):
+    """回归：naive 与 aware 时间戳混用不得抛 TypeError（按 UTC 归一化比较）。"""
+    naive_past = _mk(store, "assumption", "naive old",
+                     expires_at="2000-01-01T00:00:00")  # naive 视为 UTC
+    aware_past = _mk(store, "assumption", "aware old",
+                     expires_at="2000-01-01T00:00:00+00:00")
+    assert store.is_expired(naive_past) is True
+    assert store.is_expired(aware_past) is True
+    naive_future = _mk(store, "assumption", "naive new",
+                       expires_at="2099-01-01T00:00:00")
+    assert store.is_expired(naive_future) is False
+
+
 def test_trust_assessment_with_missing_evidence(store):
     # 无证据支撑 → low
     bare = _mk(store, "requirement", "speed > 100m/s")

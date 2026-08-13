@@ -70,3 +70,22 @@ def test_run_supervisor_no_work_stops(tmp_path, monkeypatch):
     monkeypatch.setenv("AIPD_OUTPUT_DIR", str(tmp_path))
     sup = _make_sup(tmp_path)
     assert sup.run_supervisor(steps=1) == []
+
+
+def test_mark_stale_exact_dependency_match(tmp_path):
+    """回归：_mark_stale 必须按依赖列表精确匹配，不得用 LIKE 子串误伤
+    （此前 "%W-001%" 会命中 W-0010 等前缀型 ID）。"""
+    sup = _make_sup(tmp_path)
+    w1 = sup.add_work("S1_theory", "research", "t1", "o1")
+    w2 = sup.add_work("S1_theory", "research", "t2", "o2",
+                      depends=[w1])
+    w3 = sup.add_work("S2_product_definition", "product", "t3", "o3")
+    # w3 不依赖 w1
+    sup.complete(w2, {"x": 1})
+    # 直接构造一个依赖关系为 [w1] 的行与一个相似前缀行
+    with sup.connect() as c:
+        c.execute("UPDATE supervisor_work_items SET status='complete' "
+                  "WHERE work_id=?", (w3,))
+    stale = sup._mark_stale(w1)
+    assert w2 in stale["stale"]
+    assert w3 not in stale["stale"]

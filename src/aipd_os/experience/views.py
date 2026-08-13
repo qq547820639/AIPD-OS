@@ -19,7 +19,7 @@ from .resume_summary import build_resume_summary
 from .risk_health import compute_risk_health
 
 # 健康灯 → 带图标的彩色标签
-_HEALTH_LABEL = {"green": "🟢 良好", "yellow": "🟡 需关注", "red": "🔴 高风险"}
+_HEALTH_LABEL = {"green": "良好", "yellow": "需关注", "red": "高风险"}
 _WAIT_BUCKET_CN = {"supplier": "供应商", "lab": "测试实验室", "other": "其他"}
 
 # 影响档位代号 → 中文（不在正文暴露 medium/high 等英文）
@@ -96,7 +96,7 @@ def _build_risk_and_wait(db, tenant: str, project_id: str) -> dict[str, Any]:
 def _health_section(rh: dict[str, Any]) -> str:
     """渲染风险健康状态的 Markdown 段落（不暴露内部代号）。"""
     light = rh.get("traffic_light", "green")
-    label = _HEALTH_LABEL.get(light, "🟢 良好")
+    label = _HEALTH_LABEL.get(light, "良好")
     reason = rh.get("reason", "")
     return f"{label}" + (f" — {reason}" if reason else "")
 

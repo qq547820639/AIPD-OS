@@ -21,7 +21,6 @@ from aipd_os.evals_runner.registry import load_cases
 from aipd_os.evals_runner.runner import EvalRunner, build_report
 from aipd_os.evals_runner.versioning import (
     load_baseline,
-    save_eval_report,
     should_block_release,
 )
 
@@ -68,9 +67,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     cases = load_cases(args.evals)
     provider = _make_provider(args.provider)
     runner = EvalRunner(provider=provider, version=args.version)
+    # runner.run 已保存版本化报告（runner.py 内 save_eval_report），此处不再重复写
     results = runner.run(cases, out_dir=args.out, report_version=args.version)
     report = build_report(results, version=args.version)
-    save_eval_report(report, args.out, version=args.version)
     _print_report(report)
 
     if args.baseline:

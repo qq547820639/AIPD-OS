@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import platform
 import sys
 import tempfile
@@ -143,7 +144,8 @@ class RunController:
     def available_actions(self) -> list[str]:
         s = self.state
         actions: list[str] = []
-        if s in ("running", "paused", "needs_approval", "needs_clarification"):
+        # 已 paused 时不再提供 pause（pause() 不处理 paused 状态，属无效动作）
+        if s in ("running", "needs_approval", "needs_clarification"):
             actions.append("pause")
         if s == "paused":
             actions.append("resume")
@@ -295,23 +297,49 @@ class WebConsole:
         }
 
     def _providers(self) -> list[dict[str, Any]]:
+        # 提示文案必须与实现真实读取的环境变量一致（此前提示 *_PROVIDER
+        # 字段，实现却读 *_API_KEY / *_BACKEND / cadquery，照着提示配会配错）。
         s = get_settings()
+        model_configured = bool(s.model_api_key and s.model_base_url)
+        image_configured = bool(os.environ.get("AIPD_IMGGEN_BACKEND")
+                                or (os.environ.get("AIPD_IMAGE_PROVIDER_URL")
+                                    and os.environ.get("AIPD_IMAGE_API_KEY")))
+        vision_configured = bool(os.environ.get("AIPD_VISION_PROVIDER_URL")
+                                 and os.environ.get("AIPD_VISION_API_KEY"))
+        try:
+            import importlib.util
+            cad_configured = importlib.util.find_spec("cadquery") is not None
+        except Exception:  # noqa: BLE001
+            cad_configured = False
+        mail_configured = bool(os.environ.get("AIPD_SMTP_HOST")
+                               or os.environ.get("AIPD_MAILPIT_SMTP_HOST"))
         return [
-            {"name": "Model 模型", "key": "model_provider", "env": "AIPD_MODEL_PROVIDER",
-             "value": s.model_provider, "configured": bool(s.model_provider),
-             "guide": "设置 AIPD_MODEL_PROVIDER 指向真实模型端点；未配置时评估使用确定性夹具，绝不描述为真实模型。"},  # noqa: E501
-            {"name": "Image 图像生成", "key": "image_provider", "env": "AIPD_IMAGE_PROVIDER",
-             "value": s.image_provider, "configured": bool(s.image_provider),
-             "guide": "设置 AIPD_IMAGE_PROVIDER 指向可用图像后端；未配置时手册页生成为外部任务包并标记 HOLD，绝不伪造图片。"},  # noqa: E501
-            {"name": "Vision 视觉", "key": "vision_provider", "env": "AIPD_VISION_PROVIDER",
-             "value": s.vision_provider, "configured": bool(s.vision_provider),
-             "guide": "设置 AIPD_VISION_PROVIDER 以启用视觉审计；未配置时视觉校验如实标记外部依赖。"},  # noqa: E501
-            {"name": "CAD 内核", "key": "cad_provider", "env": "AIPD_CAD_PROVIDER",
-             "value": s.cad_provider, "configured": bool(s.cad_provider),
-             "guide": "安装/配置 CAD 内核后成熟度可达 C2 及以上；未配置时如实标记 external_dependency，绝不越级。"},  # noqa: E501
-            {"name": "Mail 邮件", "key": "mail_provider", "env": "AIPD_MAIL_PROVIDER",
-             "value": s.mail_provider, "configured": bool(s.mail_provider),
-             "guide": "设置 AIPD_MAIL_PROVIDER 以启用 RFQ 收发；未配置时供应链保持 HOLD。"},
+            {"name": "Model 模型", "key": "model_provider",
+             "env": "AIPD_MODEL_API_KEY + AIPD_MODEL_BASE_URL",
+             "value": s.model_base_url or "",
+             "configured": model_configured,
+             "guide": "同时设置 AIPD_MODEL_API_KEY 与 AIPD_MODEL_BASE_URL 可启用产品智能转译与想法结构化（product.* / idea.decompose）；真实评估端点另设 AIPD_EVAL_MODEL_ENDPOINT。"},  # noqa: E501
+            {"name": "Image 图像生成", "key": "image_provider",
+             "env": "AIPD_IMGGEN_BACKEND（或 AIPD_IMAGE_PROVIDER_URL + AIPD_IMAGE_API_KEY）",
+             "value": os.environ.get("AIPD_IMGGEN_BACKEND") or os.environ.get("AIPD_IMAGE_PROVIDER_URL", ""),  # noqa: E501
+             "configured": image_configured,
+             "guide": "设置 AIPD_IMGGEN_BACKEND 指向可用图像后端（或 AIPD_IMAGE_PROVIDER_URL + AIPD_IMAGE_API_KEY 走真实图像端点）；未配置时手册页生成为外部任务包并标记 HOLD，绝不伪造图片。"},  # noqa: E501
+            {"name": "Vision 视觉", "key": "vision_provider",
+             "env": "AIPD_VISION_PROVIDER_URL + AIPD_VISION_API_KEY",
+             "value": os.environ.get("AIPD_VISION_PROVIDER_URL", ""),
+             "configured": vision_configured,
+             "guide": "同时设置 AIPD_VISION_PROVIDER_URL 与 AIPD_VISION_API_KEY 以启用视觉审计；未配置时视觉校验如实标记外部依赖，绝不假通过。"},  # noqa: E501
+            {"name": "CAD 内核", "key": "cad_provider",
+             "env": "pip install aipd-os[cad]",
+             "value": "cadquery" if cad_configured else "",
+             "configured": cad_configured,
+             "guide": "安装 cadquery 内核（pip install aipd-os[cad]）后成熟度可达 C2 及以上；未安装时如实标记 external_dependency，绝不越级。"},  # noqa: E501
+            {"name": "Mail 邮件", "key": "mail_provider",
+             "env": "AIPD_SMTP_HOST（+ AIPD_SMTP_USER / AIPD_SMTP_PASSWORD）",
+             "value": os.environ.get("AIPD_SMTP_HOST", ""),
+             "configured": mail_configured,
+             "guide": "设置 AIPD_SMTP_HOST（配合 AIPD_SMTP_USER / AIPD_SMTP_PASSWORD）"
+                      "以启用 RFQ 收发；未配置时供应链保持 HOLD。"},
         ]
 
     def fix_issue(self, name: str) -> dict[str, Any]:
@@ -358,7 +386,7 @@ class WebConsole:
             "cost": cost_display,
             "time_estimate": self._time_estimate(ps),
             "next_step": self._next_action_cn(rs),
-            "health": view.get("health", "🟢 良好"),
+            "health": view.get("health", "良好"),
             "details": {
                 "project_id": pid,
                 "gate": project.get("gate"),

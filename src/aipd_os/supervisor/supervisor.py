@@ -480,12 +480,18 @@ class Supervisor:
             pid = row["project_id"] if row else self.project_id()
             tenant = row["tenant_id"] if row else self._tenant_id
             deps = c.execute(
-                "SELECT work_id FROM supervisor_work_items "
-                "WHERE project_id=? AND tenant_id=? AND status='complete' "
-                "AND depends_on_json LIKE ?",
-                (pid, tenant, f"%{wid}%")).fetchall()
+                "SELECT work_id, depends_on_json FROM supervisor_work_items "
+                "WHERE project_id=? AND tenant_id=? AND status='complete'",
+                (pid, tenant)).fetchall()
             for d in deps:
-                stale.append(d["work_id"])
+                # 精确依赖匹配：解析 depends_on_json 后判等，而不是 LIKE 子串
+                # 匹配（此前 "%W-001%" 会误伤 W-0010 等前缀型 ID）。
+                try:
+                    depends = json.loads(d["depends_on_json"] or "[]")
+                except (TypeError, ValueError):
+                    depends = []
+                if isinstance(depends, list) and wid in depends:
+                    stale.append(d["work_id"])
         for s in stale:
             self.add_lineage("work_item", wid, "work_item", s,
                              relation="invalidates")

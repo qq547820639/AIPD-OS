@@ -67,18 +67,8 @@ def normalize_quote(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _records_from_rows(rows: list[dict[str, Any]], source: str) -> dict[str, Any]:
-    records = [normalize_quote(r) for r in rows]
-    return {
-        "source": source,
-        "format": "dict",
-        "records": records,
-        "count": len(records),
-        "errors": [],
-    }
-
-
-def _records_result(rows: list[dict[str, Any]], source: str, fmt: str) -> dict[str, Any]:
+def _records_from_rows(rows: list[dict[str, Any]], source: str,
+                       fmt: str = "dict") -> dict[str, Any]:
     records = [normalize_quote(r) for r in rows]
     return {
         "source": source,
@@ -87,6 +77,11 @@ def _records_result(rows: list[dict[str, Any]], source: str, fmt: str) -> dict[s
         "count": len(records),
         "errors": [],
     }
+
+
+def _records_result(rows: list[dict[str, Any]], source: str, fmt: str) -> dict[str, Any]:
+    # 与 _records_from_rows 唯一差异是 format 字段——合并为单实现，避免漂移
+    return _records_from_rows(rows, source, fmt=fmt)
 
 
 def _not_verified_result(source: str, fmt: str, error: str) -> dict[str, Any]:
@@ -212,15 +207,14 @@ def parse_quote_file(path: str | Path | list[dict[str, Any]]) -> dict[str, Any]:
         with open(p, newline="", encoding="utf-8") as fh:
             reader = csv.DictReader(fh)
             rows = list(reader)
-        records = [normalize_quote(r) for r in rows]
-        return {
-            "source": str(p),
-            "format": "csv",
-            "header": CANONICAL_CSV_HEADER,
-            "records": records,
-            "count": len(records),
-            "errors": [],
-        }
+            actual_header = list(reader.fieldnames or [])
+        result = _records_result(rows, str(p), "csv")
+        result["header"] = actual_header
+        missing = [c for c in CANONICAL_CSV_HEADER if c not in actual_header]
+        if missing:
+            # 表头缺失显式报错（此前恒返回规范表头，掩盖文件实际表头）
+            result["errors"] = [f"csv header missing columns: {missing}"]
+        return result
 
     if ext == ".json":
         with open(p, encoding="utf-8") as fh:

@@ -163,8 +163,9 @@ def test_accessibility_and_responsive_markers_present(srv):
     assert "width=device-width" in html
     # 无障碍：aria-label
     assert "aria-label" in html
-    # 键盘操作：tabindex
-    assert "tabindex" in html
+    # 键盘操作：跳转链接（原生按钮/输入框可聚焦，无需冗余 tabindex）
+    assert 'class="skip"' in html
+    assert 'href="#main"' in html
     # 语义标签
     for tag in ("<header", "<nav", "<main", "<section", "<footer", "<h1", "<h2"):
         assert tag in html, f"应包含语义标签 {tag}"
@@ -325,3 +326,43 @@ def test_oversized_request_body_rejected(srv):
         resp.read()
     finally:
         conn.close()
+
+
+# ------------------------------------------ 决策影响列 / 运行控制状态机 / POST JSON
+def test_decisions_html_renders_impact_dimensions_not_option_text(srv):
+    """回归：决策中心「影响」列必须渲染成本/性能/时间/安全四维，
+    而不是把选项文本当影响（此前把 dict 当 list 迭代）。"""
+    _, base = srv
+    status, html = _get(base + "/decisions")
+    assert status == 200
+    assert "成本:" in html
+    assert "性能:" in html
+    assert "时间:" in html
+    assert "安全:" in html
+
+
+def test_run_controller_does_not_offer_pause_when_paused(console):
+    """回归：paused 状态不得再提供 pause 动作（pause() 不处理 paused）。"""
+    from aipd_os.web.views import RunController
+
+    rc = RunController()
+    rc.start("测试意图", [], {"status": "ok"})
+    rc.state = "paused"
+    actions = rc.available_actions()
+    assert "pause" not in actions
+    assert "resume" in actions
+
+
+def test_post_json_body_parsed_as_form(srv, console):
+    """回归：POST application/json 体此前被静默忽略；现在按 JSON 解析。"""
+    _, base = srv
+    payload = json.dumps({"name": "JSON 项目", "goal": "JSON 目标"}).encode()
+    req = Request(base + "/api/onboarding/create", method="POST", data=payload,
+                  headers={"Content-Type": "application/json"})
+    try:
+        with urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            assert resp.status == 200
+            assert data.get("ok") is True
+    except HTTPError as exc:
+        raise AssertionError(f"POST JSON failed: {exc}") from exc

@@ -317,7 +317,7 @@ def _register_external_providers(ctx: RuntimeContext) -> None:
     model_name = ctx.settings.model_name
     if api_key and base_url:
         from aipd_os.idea.decomposer import IdeaDecompositionProviderAdapter
-        from aipd_os.llm.client import LlmClient
+        from aipd_os.llm.client import DEFAULT_MODEL, LlmClient
         from aipd_os.llm.idea_decomposer_provider import (
             LlmIdeaDecompositionProvider,
         )
@@ -327,7 +327,7 @@ def _register_external_providers(ctx: RuntimeContext) -> None:
 
         client = LlmClient(
             endpoint=base_url, api_key=api_key,
-            model=model_name or "gpt-4o-mini")
+            model=model_name or DEFAULT_MODEL)
 
         pi_provider = LlmProductIntelligenceProvider(client)
         register_product_adapters(ctx.adapters, ctx.db, provider=pi_provider)

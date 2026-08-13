@@ -187,7 +187,12 @@ class GateCriteriaEvaluator:
                               "no canonical Idea exists")
         idea = ideas[-1]
         maturity = IdeaMaturity.evaluate(idea, self._graph)
-        if maturity.value < "I2":
+        # 按枚举声明顺序比较成熟度（此前用字符串 "<" 依赖字典序，脆弱）
+        order = list(IdeaMaturity)
+        below_i2 = (maturity in order
+                    and order.index(maturity)
+                    < order.index(IdeaMaturity.I2_EVIDENCE_BACKED_IDEA))
+        if below_i2:
             return _criterion(
                 CRITERION_IDEA_MATURITY, CRIT_FAIL, SEV_HARD,
                 f"Idea maturity {maturity.value} < I2: "

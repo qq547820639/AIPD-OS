@@ -32,6 +32,14 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _as_utc(value: str) -> datetime:
+    """解析 ISO 时间并统一为 aware UTC（naive 视为 UTC）。"""
+    dt = datetime.fromisoformat(value)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def ensure_type(record_type: str) -> None:
     if record_type not in TRUTH_TYPES:
         raise ValueError(
@@ -104,14 +112,18 @@ class TruthRecord:
                 f"invalid truth status {self.status!r}; expected one of {sorted(TRUTH_STATUS)}")
 
     def is_expired(self, at: str | None = None) -> bool:
-        """按绝对时间判定是否过期。无 expires_at 视为永不过期。"""
+        """按绝对时间判定是否过期。无 expires_at 视为永不过期。
+
+        解析前统一时区语义：naive 时间视为 UTC；aware 原样比较。混合
+        naive/aware 不再抛 TypeError（此前只捕获 ValueError）。
+        """
         if not self.expires_at:
             return False
         ref = at or now_iso()
         try:
-            e = datetime.fromisoformat(self.expires_at)
-            r = datetime.fromisoformat(ref)
-        except ValueError:
+            e = _as_utc(self.expires_at)
+            r = _as_utc(ref)
+        except (ValueError, TypeError):
             return False
         return r >= e
 

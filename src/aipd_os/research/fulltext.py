@@ -260,7 +260,16 @@ def fetch_fulltext(
         return base
 
     raw = getter(url)
-    text = raw.decode("utf-8", errors="replace")
+    # 诚实契约：getter 只保证文本内容。二进制（如 PDF）直接 decode 只会得到
+    # 乱码，不是真实全文——此时按「无法获取」处理，绝不把乱码当全文。
+    try:
+        text = raw.decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        text = ""
+    if not text.strip() or "\ufffd" in text:
+        base.access = ACCESS_RESTRICTED
+        base.sha256 = sha256_of(raw)
+        return base
     record = TextRecord(
         text_type=TEXT_TYPE_FULL_TEXT,
         text=text,
@@ -279,8 +288,10 @@ def fetch_fulltext(
 
 # ------------------------------------------------------------------ 结论绑定
 def default_expires_at(days: int = 180) -> str:
-    """默认过期时间：now + days，UTC ISO。"""
-    return (_utc() + timedelta(days=days)).isoformat() + "Z"
+    """默认过期时间：now + days，UTC aware ISO（不再追加 "Z"——aware isoformat
+    已含 +00:00，追加 "Z" 会产生 "...+00:00Z" 双时区后缀，导致 _parse_iso
+    解析失败、过期时间静默失效）。"""
+    return (_utc() + timedelta(days=days)).isoformat()
 
 
 def refetch_strategy(expires_at: str | None, now: datetime | None = None) -> str:

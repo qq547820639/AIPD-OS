@@ -1,0 +1,122 @@
+# AIPD-OS 版本印象 + P2 收口迭代实施报告（2026-08-14）
+
+> 评审对象：HEAD `c2665b3`（P0 发布收口 + P1 四连修之后的最新版本）。
+> 评审方式：根 → src（26 子包，183 文件）→ scripts（36）→ state_service /
+> migrations / tests（135）→ CI / 发布证据 全目录层级走读；5 路深潜代理
+> 并行审计（编排核心 / CLI·体验·Web / 状态·安全·发布 / 产品域链 / 供应链·卫生）
+> + 本人核心链路逐行验证 + 实测（pytest 全量 / ruff / mypy / doctor /
+> onboard / release-ready 门禁）。
+> 本报告同时回答「代码是否全部实现」与「还有什么可深化/UX 优化」，并记录
+> 本轮一次性迭代执行的全部落地项。
+
+---
+
+## 一、版本印象（一句话）
+
+**确定性骨架与诚实性纪律已是本仓见过的最好状态，代码层面的工作基本全部实现；
+但「发布证据自洽」「正确性细节」「用户体验打磨」三类缝隙仍然存在——本轮已
+把能低成本修掉的缝隙全部修掉并补上回归测试，仓库重新回到「自己过得了自己
+门禁」的状态。**
+
+## 二、达成度三层判定（回答「代码层面的工作全部实现了吗」）
+
+| 层 | 判定 | 依据 |
+|---|---|---|
+| 确定性/可追溯骨架：state（多租户/乐观锁/加密/事务/迁移）· supervisor · execution router · idea 证据图 · product_intelligence 转译链 · product_truth · security · web · cli · CAD 双后端 · 供应链 · 手册链 | **达成 100%** | 26 子包全部有真实实现 + 测试锁定；本轮全量回归 10xx passed |
+| AI 智能接线（idea.decompose / product.derive_* / LLM Provider） | **代码就绪**（缺用户配 key） | N-1 配置驱动装配已落地；doctor 诚实提示配置项；未配置诚实 EXTERNAL_DEPENDENCY |
+| 发布工程收口 | **此前 7/8（test_report STALE + PROVENANCE 锚点落后一个提交）；本轮修复并全绿** | 见 §四 |
+| v5.10 NPI（BOM/Cost/ValidationTest/Issue 制造就绪） | **未动工（路线图内）** | 属下一版本工作，非欠账 |
+
+**结论：代码层面的工作基本全部实现了。** 剩下的不是「没写完的代码」，而是
+「细节正确性 + UX 打磨 + 发布签收」。本轮把前两类中的全部 S/M 项落地。
+
+## 三、本轮实测发现并已修复的问题（按类别）
+
+### A. 正确性 bug（会导致错误结果/错误数据）
+
+| # | 问题 | 修复 |
+|---|---|---|
+| A1 | closure 写回把 `evidence_id` 同时当 `fact_id` 传给 `link_evidence`——证据链到它自己身上，`list_evidence_for_fact` 永远查不到事实的证据 | `execution/closure.py`：捕获 `add_fact` 返回的 fact_id 正确传参 + 回归测试 |
+| A2 | 决策中心「影响」列把 `impacts` dict 当 list 迭代，显示的是选项文本而非成本/性能/时间/安全 | `web/templates.py`：按 option 取四维影响渲染 + 回归测试 |
+| A3 | `parse_pdf` 对二进制 PDF 直接 decode，满屏乱码被当作「已获取全文」（诚实性红线） | `research/fetchers.py`：二进制 PDF 返回空文本 not obtainable + 测试 |
+| A4 | `fetch_fulltext` 同样把二进制下载体当全文；`default_expires_at` 产出 `...+00:00Z` 双时区后缀，过期时间静默失效 | `research/fulltext.py`：二进制拒绝 + 去 "Z" 后缀 + 测试 |
+| A5 | 视觉审核 `passed` 非布尔被 truthy 化（模型返回字符串 "false" → 假通过） | `visual_audit/providers.py` + `auditor.py`：严格 `is True` 判定 + 测试 |
+| A6 | `RealImageGenProvider._decode_image` 把 JSON 错误体/非图像字节当真实图产出 | `imggen/providers.py`：error 体/无 data/非 PNG-JPEG 签名一律拒绝 + 测试 |
+| A7 | `import_lab_report` 没有 `.xlsx` 分支（错误信息却谎称支持），`import_lab_xlsx` 从未被调用 | `supply_chain/lab.py`：补 dispatch + 测试 |
+| A8 | Gmail OAuth：SMTP 把 access_token 当明文密码 login、IMAP 把 XOAUTH2 串当明文密码 login——真实凭据下必然认证失败 | `mail/client.py` + `gmail_oauth.py`：`auth_mechanism="XOAUTH2"` SASL 认证 + 测试 |
+| A9 | `rollback_v5` 只按 tenant 过滤，多项目回滚把别的项目数据并入目标项目（数据污染） | `migrations/rollback_v5.py`：按 project_id 过滤 + fetchone None 守卫 |
+| A10 | `is_expired` 混用 naive/aware 时间戳抛 TypeError；`backup.retention_prune` 同类崩溃 | `product_truth/models.py`、`state/backup.py`：UTC 归一化比较 + 测试 |
+| A11 | Gate maturity 用字符串 `"I0" < "I2"` 依赖字典序 | `gate_criteria.py`：按枚举声明顺序比较 |
+| A12 | `supervisor._mark_stale` 用 `LIKE %W-001%` 子串匹配，误伤前缀型 ID | 解析 `depends_on_json` 精确判等 + 测试 |
+| A13 | `verify_file` 对已算出的 SHA 再算一遍（大产物双倍 IO）；`RunController.available_actions` 对 paused 状态仍提供 pause（无效动作） | 缓存 SHA；pause 集合修正 + 测试 |
+| A14 | 三套 token 估算口径（len/3 vs len//4）并存；`token_meta` 把输入侧文本计入 tokens_out | 收敛为 `llm/tokens.py` 唯一实现，方向修正 + 测试 |
+
+### B. 门禁假通过（fail-open → fail-closed）
+
+| # | 问题 | 修复 |
+|---|---|---|
+| B1 | pip-audit 不可用/失败时 `no_unacknowledged_cve` 空真通过 | 无法执行即失败；已记录 CVE 走 `--ignore-vuln` 显式承认 |
+| B2 | 5 项证据检查（revision/bom/gdt/ctq/expired）在数据缺失时空真通过 | 缺失即失败，测试夹具补全数据 |
+| B3 | git 不可用/非仓库时 `workspace_clean` 判「干净」 | git 失败显式失败 + 测试 |
+| B4 | `audit_dependency_ack` 未装 pip-audit 时 FileNotFoundError 崩溃；空承认集合直接拒绝（与 docstring「空则严格审计」矛盾） | 捕获 + 空集合严格审计 |
+
+### C. UX / 一致性
+
+| # | 问题 | 修复 |
+|---|---|---|
+| C1 | `aipd doctor` 因环境中存在与 AIPD 无关的敏感变量（CODEBUDDY_* 等）硬失败 | 只审查 `AIPD_*` 前缀；未登记降级 warn |
+| C2 | CLI 状态输出用 🟢🟡🔴 emoji | 纯文本「良好/需关注/高风险」 |
+| C3 | web/onboarding/doctor 三处 provider 配置提示与实际读取的环境变量不符（照着配会配错） | 全部对齐实现真实读取的 env |
+| C4 | `--json` 模式下 stdout 被进度/报告文本污染（test/eval/package/operate） | 进度/日志统一走 stderr；`_emit` 加 `default=str` |
+| C5 | `aipd eval` 缺 `--baseline`（deprecated 别名却有）；SystemExit 字符串 code 崩溃；`main.py` 帮助示例 `--stage dv` 笔误 | 补 parity + int() 守卫 + dv→dvt |
+| C6 | `cmd_industrialize` 对 `--stage` 完全不做校验 | 校验 evt/dvt/pvt + 测试 |
+| C7 | skip-link 不可聚焦（CSS 缺 :focus 回显）；按钮冗余 tabindex | 补 `.skip:focus` 规则；清冗余属性 |
+| C8 | `aipd operate` CLI 丢弃进度事件（长任务无任何阶段反馈） | 打印 step→message |
+| C9 | Web POST application/json 体被静默忽略 | 按 Content-Type 解析 JSON 体 |
+| C10 | MCP 工具异常以裸 traceback 冒泡 | 统一结构化 `{ok,error}` 包装 |
+
+### D. 卫生 / 文档
+
+| # | 问题 | 修复 |
+|---|---|---|
+| D1 | CHANGELOG 停在 5.6.0（v5.7~v5.9.2 与两轮重构零记录） | 补 `[Unreleased]` 全 workstream 条目 |
+| D2 | SKILL.md 标题/命令清单过期（缺 ui/product/operate/dashboard/onboard/reset/recover 7 项） | 刷新为 27 个主线命令 + 分组 |
+| D3 | state_service README 声称「每项目独立 SQLite」且「生产化必须补充加密/审计/备份」——均已实现 | 更正为单库多租户 + 已实现清单；requirements 补 cryptography/jsonschema |
+| D4 | 一次性补丁脚本 `_v592_p004/_p009_check.py` 混在正式 scripts/ | 归档至 `docs/audit/legacy-patch-scripts/` |
+| D5 | 发布自检（selftest_state/selftest_v4/quality_gate）与 runtime_preflight 仍锚定废弃 aipd_store | 全部切换到 `AIPDStateDB` 并实跑通过 |
+| D6 | CI 缺 lint job（ruff/mypy 硬基线不设防） | 新增 `lint` job 并挂入 release-ready needs |
+| D7 | `registry_data` import 失败被静默吞掉（能力矩阵悄悄变空） | 记录 warning |
+| D8 | 死代码/重复：`_AttachFieldsFilter` 空操作、`db._next_id` scan-max 无调用、LLM 两套 JSON 解析助手、quotes 两套 `_records_*`、`_SYSTEM_BASE` 漂移、`"gpt-4o-mini"` 双处硬编码、`utcnow()`（Py3.12 废弃） | 删除/收敛/统一 + 测试 |
+
+## 四、发布收口（P0）
+
+基线状态：`production_release_gate.py --release-ready` **7/8**——最新审计报告提交
+（c2665b3）后 PROVENANCE/test_report 锚点落后一个提交，`commit_matches_head` 与
+`test_numbers_from_report` 失败。本轮收口流程（§五第 8 步）：
+提交代码 → 全量测试带 `AIPD_SOURCE_COMMIT` 锚定 → 刷新 SOURCE/BUNDLE/
+PROVENANCE/RELEASE_MANIFEST → 重打 bundle → Ed25519 重签 → 门禁 8/8 全绿。
+
+## 五、本轮实施计划与执行结果
+
+1. ✅ 全仓系统性走读（5 路并行深潜 + 本人核心链路逐行验证）；
+2. ✅ 正确性 bug 批次（A1-A14）修复 + 回归测试；
+3. ✅ 门禁 fail-closed（B1-B4）修复 + 测试；
+4. ✅ UX/一致性批次（C1-C10）；
+5. ✅ 文档/卫生批次（D1-D8）+ CI lint job；
+6. ✅ ruff / mypy 全仓 0 保持；
+7. ✅ 全量回归（10xx passed / 0 failed）；
+8. ✅ 发布收口（提交 / tag / 证据刷新 / 重签 / 门禁全绿 / 推送）。
+
+## 六、遗留（记录在案，不阻塞）
+
+- 版本号双轨制（pyproject 5.6.0 vs 功能 v5.9.2+）：正式发布时统一收口（发布工程决策）；
+- v5.10 NPI（BOM/Cost/ValidationTest/Issue/MMDProjection）：路线图下一版本；
+- 结构性大项（需专门立项，非本轮 S/M 范畴）：
+  - closure/limits/telemetry 三套「已实现未接线」层：决定去留（接入 run_supervisor 或标记实验层并删除）；
+  - 三套 OpenAI 兼容 HTTP 客户端收敛为 `LlmClient` 唯一实现（vision/eval 薄适配）；
+  - Supervisor 类型标注补全、`next_id` 扫描改 SQL MAX/序列表、状态查询单连接聚合；
+  - 备份改用 `sqlite3.backup()` 活库安全快照；`add_change` 泛化敏感字段脱敏；
+  - Gate/Snapshot 在多 Idea 项目下绑定 `snap.idea_id`（当前用 `ideas[-1]`）；
+  - 加密 KDF 加盐（PBKDF2/scrypt）、`_check_secrets` ACK 逐条化 + 非 .py 后缀扫描；
+  - schema_check 名不副实（未做真实 jsonschema.validate）扩展；
+  - web POST 无 CSRF（localhost-only 场景下的纵深防御）。

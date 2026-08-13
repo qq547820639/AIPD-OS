@@ -71,31 +71,42 @@ class GmailOAuthClient:
         from_addr: str | None = None,
         attachments: list[MailAttachment] | None = None,
     ) -> dict[str, Any]:
-        """以 Gmail OAuth2 身份真实发送。无凭据时抛外部依赖错误。"""
+        """以 Gmail OAuth2 身份真实发送。无凭据时抛外部依赖错误。
+
+        认证走真实 ``XOAUTH2`` SASL 机制（``SMTP.auth("XOAUTH2", ...)``），
+        而不是把 access_token 当明文密码 ``login``（两者都失败且后者是
+        误导性的明文 AUTH）。
+        """
         self._require_credentials()
         sender = from_addr or self.user or ""
         message_id = send_email(
             "smtp.gmail.com",
             self.smtp_port,
             self.user,
-            self.access_token,
+            self._xoauth2_token(),
             sender,
             [a for a in to_addrs],
             subject,
             body,
             attachments=attachments,
+            auth_mechanism="XOAUTH2",
         )
         # 说明：真实投递已由 send_email 完成；此处仅记录结果元数据。
         return {"provider": self.provider, "message_id": message_id, "to": list(to_addrs)}
 
     def fetch_emails(self, folder: str = "INBOX") -> Any:
-        """以 Gmail OAuth2 身份真实收件。无凭据时抛外部依赖错误。"""
+        """以 Gmail OAuth2 身份真实收件。无凭据时抛外部依赖错误。
+
+        认证走真实 ``XOAUTH2`` SASL 机制（``IMAP4.authenticate("XOAUTH2", ...)``），
+        而不是把 XOAUTH2 串当明文密码 ``login``（后者必然认证失败）。
+        """
         self._require_credentials()
         return fetch_emails(
             "imap.gmail.com",
             self.imap_port,
             self.user or "",
             self._xoauth2_token(),
+            auth_mechanism="XOAUTH2",
         )
 
     def _xoauth2_token(self) -> str:

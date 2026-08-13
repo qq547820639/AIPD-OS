@@ -53,6 +53,10 @@ button,.btn{display:inline-block;background:var(--accent);color:#fff;border:none
 border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;margin:4px 4px 0 0}
 button:focus-visible,.btn:focus-visible,a:focus-visible{outline:3px solid #93c5fd;
 outline-offset:2px}
+/* 可访问性：跳转链接聚焦时回到视口内（键盘用户可见、可操作） */
+a.skip{position:absolute;left:-9999px;top:0}
+a.skip:focus{left:8px;top:8px;background:#fff;color:var(--ink);z-index:100;
+padding:8px 12px;border-radius:6px;outline:3px solid #93c5fd}
 button.secondary{background:#374151}
 button.danger{background:var(--bad)}
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -93,7 +97,7 @@ def render_page(title: str, active: str, body: str) -> str:
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
             f"<title>{_e(title)} · AIPD-OS Owner</title>"
             f"<style>{_CSS}</style></head><body>"
-            f'<a class="skip" href="#main" style="position:absolute;left:-9999px">'
+            f'<a class="skip" href="#main">'
             f'<span>跳到主要内容</span></a>'
             '<header class="top"><span class="brand">AIPD-OS · 所有者控制台</span></header>'
             f'<nav aria-label="主导航">{nav}</nav>'
@@ -113,12 +117,12 @@ def render_onboarding(console: WebConsole) -> str:
                      '<p class="muted">还没有项目。请先创建项目，或从内置示例导入一个。</p>'
                      '<form method="post" action="/api/onboarding/create">'
                      '<label for="onb_name">项目名称</label> '
-                     '<input id="onb_name" name="name" required tabindex="0"> '
+                     '<input id="onb_name" name="name" required > '
                      '<label for="onb_goal">目标</label> '
-                     '<input id="onb_goal" name="goal" required tabindex="0"> '
-                     '<button type="submit" tabindex="0">创建项目</button></form>'
+                     '<input id="onb_goal" name="goal" required > '
+                     '<button type="submit" >创建项目</button></form>'
                      '<form method="post" action="/api/onboarding/import">'
-                     '<button type="submit" class="secondary" tabindex="0">导入示例项目</button>'
+                     '<button type="submit" class="secondary" >导入示例项目</button>'
                      '</form></section>')
     else:
         parts.append('<section class="card" aria-label="项目就绪">'
@@ -133,7 +137,7 @@ def render_onboarding(console: WebConsole) -> str:
         if c.get("fixable"):
             parts.append(f'<form method="post" action="/api/onboarding/fix">'
                          f'<input type="hidden" name="name" value="{_e(c["name"])}">'
-                         f'<button type="submit" tabindex="0">一键修复</button></form>')
+                         f'<button type="submit" >一键修复</button></form>')
     parts.append('</ul></section>')
 
     creds = data.get("needs_credentials") or []
@@ -190,12 +194,17 @@ def render_decisions(console: WebConsole) -> str:
 
     body.append('<section class="card" aria-label="可选方案">'
                 '<h2>可选方案</h2><table><thead><tr><th>方案</th><th>影响</th></tr></thead><tbody>')
-    for option, impact in zip(data.get("options") or [], data.get("impacts") or []):
-        body.append(f'<tr><td>{_e(option)}</td><td>{_e(impact)}</td></tr>')
+    impacts = data.get("impacts") or {}
+    for option in data.get("options") or []:
+        imp = impacts.get(option, {}) if isinstance(impacts, dict) else {}
+        body.append(
+            f'<tr><td>{_e(option)}</td><td>'
+            f'成本:{_e(imp.get("cost", "-"))} / 性能:{_e(imp.get("performance", "-"))} / '
+            f'时间:{_e(imp.get("time", "-"))} / 安全:{_e(imp.get("safety", "-"))}</td></tr>')
     body.append('</tbody></table>'
                 '<form method="post" action="/api/decisions/approve">'
                 f'<input type="hidden" name="ref" value="{_e(data["ref"])}">'
-                '<button type="submit" tabindex="0">批准（按 AI 建议）</button></form></section>')
+                '<button type="submit" >批准（按 AI 建议）</button></form></section>')
 
     body.append(f'<section class="card" aria-label="批准后系统行为">'
                 f'<h2>批准后将自动执行</h2><p>{_e(data["after_approval"])}</p></section>')
@@ -231,13 +240,13 @@ def render_artifacts(console: WebConsole) -> str:
                         f'<td>{_e(a["version"])}</td>'
                         f'<td><form method="post" action="/api/artifacts/approve">'
                         f'<input type="hidden" name="ref" value="{_e(a["ref"])}">'
-                        f'<button type="submit" class="secondary" tabindex="0">批准</button></form>'
+                        f'<button type="submit" class="secondary" >批准</button></form>'
                         f'<form method="post" action="/api/artifacts/reject">'
                         f'<input type="hidden" name="ref" value="{_e(a["ref"])}">'
-                        f'<button type="submit" class="danger" tabindex="0">退回</button></form>'
+                        f'<button type="submit" class="danger" >退回</button></form>'
                         f'<form method="post" action="/api/artifacts/rework">'
                         f'<input type="hidden" name="ref" value="{_e(a["ref"])}">'
-                        f'<button type="submit" tabindex="0">局部返工</button></form></td></tr>')
+                        f'<button type="submit" >局部返工</button></form></td></tr>')
         body.append('</tbody></table></section>')
 
     if data.get("cad_versions"):
@@ -272,8 +281,8 @@ def render_run(console: WebConsole) -> str:
                 '<h2>发起运行</h2>'
                 '<form method="post" action="/api/run/start">'
                 '<label for="run_intent">一句自然语言指令</label> '
-                '<input id="run_intent" name="intent" required tabindex="0"> '
-                '<button type="submit" tabindex="0">开始</button></form></section>')
+                '<input id="run_intent" name="intent" required > '
+                '<button type="submit" >开始</button></form></section>')
 
     actions = [
         ("/api/run/pause", "暂停", "secondary"),
@@ -284,7 +293,7 @@ def render_run(console: WebConsole) -> str:
     body.append('<section class="card" aria-label="控制操作"><h2>控制操作</h2>'
                 + "".join(
                     f'<form method="post" action="{url}" style="display:inline">'
-                    f'<button type="submit" class="{cls2}" tabindex="0">{label}</button></form>'
+                    f'<button type="submit" class="{cls2}" >{label}</button></form>'
                     for url, label, cls2 in actions)
                 + '</section>')
 

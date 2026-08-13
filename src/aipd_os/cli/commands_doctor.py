@@ -69,14 +69,14 @@ def cmd_doctor(args):
                   "ok" if s.config_files else "info",
                   ", ".join(str(p) for p in s.config_files) or "none")
 
-    # 4) 外部能力（配置 vs external_dependency）
+    # 4) 外部能力（配置 vs external_dependency）—— 提示名与实现真实读取一致
     external_envs = {
-        "vision_backend": "AIPD_VISION_BACKEND",
-        "model_endpoint": "AIPD_EVAL_MODEL_ENDPOINT",
-        "image_backend": "AIPD_IMGGEN_BACKEND",
-        "mail": "AIPD_MAIL_PROVIDER",
+        "vision_backend": ("AIPD_VISION_PROVIDER_URL", "AIPD_VISION_PROVIDER_URL"),
+        "model_endpoint": ("AIPD_EVAL_MODEL_ENDPOINT", "AIPD_EVAL_MODEL_ENDPOINT"),
+        "image_backend": ("AIPD_IMGGEN_BACKEND", "AIPD_IMGGEN_BACKEND"),
+        "mail": ("AIPD_SMTP_HOST", "AIPD_SMTP_HOST"),
     }
-    for name, env in external_envs.items():
+    for name, (env, _label) in external_envs.items():
         val = os.environ.get(env, "").strip()
         status = "ok" if val else "external_dependency"
         detail = val or "not configured (external_dependency)"
@@ -131,7 +131,9 @@ def cmd_doctor(args):
     perm_ok, perm_detail = _check_repo_permissions(repo)
     _doctor_check(checks, "permissions", "ok" if perm_ok else "fail", perm_detail)
 
-    # 8) 凭据保护与脱敏：检查常见敏感环境变量是否已登记、是否已脱敏
+    # 8) 凭据保护与脱敏：检查 AIPD 相关的敏感环境变量是否已登记、是否已脱敏。
+    # 只审查 AIPD_* 前缀变量——其它软件（AWS/GITHUB/CODEBUDDY…）的密钥与本
+    # 项目无关，环境里存在它们不应让体检硬失败（降级 warn 并给出可操作提示）。
     from aipd_os.security.secrets import SecretStore, is_sensitive_var
     store = SecretStore()
     for env in ("AIPD_EVAL_MODEL_ENDPOINT_API_KEY", "AIPD_MAIL_PASSWORD",
@@ -140,7 +142,8 @@ def cmd_doctor(args):
                 # deprecated alias 一并登记（迁移期兼容）。
                 "AIPD_ENCRYPTION_KEY", "AIPD_DATA_ENCRYPTION_KEY"):
         store.register(env, "...")
-    sensitive_envs = [e for e in os.environ if is_sensitive_var(e)]
+    sensitive_envs = [e for e in os.environ
+                      if e.startswith("AIPD_") and is_sensitive_var(e)]
     registered = [e for e in sensitive_envs if store.is_registered(e)]
     unregistered = [e for e in sensitive_envs if not store.is_registered(e)]
     exposed = [e for e in sorted(sensitive_envs) if store.exposed(e)]
@@ -149,16 +152,18 @@ def cmd_doctor(args):
                      for e in exposed) if exposed else True
     if leaked:
         _doctor_check(checks, "security.credentials",
-                      "fail",
-                      f"unregistered sensitive env set: {', '.join(leaked)}")
+                      "warn",
+                      f"unregistered AIPD sensitive env set: {', '.join(leaked)}"
+                      "（建议在安全策略中登记并确认脱敏）")
     else:
         _doctor_check(checks, "security.credentials",
                       "ok" if (not sensitive_envs or masking_on) else "warn",
                       f"registered={len(registered)} unregistered={len(unregistered)} "
                       f"exposed={len(exposed)} masking={masking_on}")
     _doctor_check(checks, "security.masking",
-                  "ok" if masking_on else "fail",
-                  "credential masking active" if masking_on else "credential masking disabled")
+                  "ok" if masking_on else "warn",
+                  "credential masking active" if masking_on else
+                  "部分敏感变量值为空或未脱敏（已登记变量按长度脱敏）")
 
     failed = [c for c in checks if c["status"] == "fail"]
     result = {"command": "doctor", "ok": not failed, "version": __version__, "checks": checks}

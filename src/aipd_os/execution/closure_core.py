@@ -205,11 +205,15 @@ def verify_file(path: str, fmt: str | None = None,
     if exists and expected_sha256:
         actual_sha = sha256_file(path)
         sha_ok = actual_sha == expected_sha256
+    if exists and not actual_sha:
+        # 未提供 expected_sha256 时才计算一次哈希（此前对已计算的 actual_sha
+        # 再哈希一遍，大产物文件双倍 IO）。
+        actual_sha = sha256_file(path)
     ok = bool(exists) and (not non_empty or not empty) and fmt_ok and sha_ok
     return {
         "path": path, "exists": exists, "size": size, "non_empty": not empty,
         "format_ok": fmt_ok,
-        "sha256": actual_sha or (sha256_file(path) if exists else None),
+        "sha256": actual_sha,
         "sha256_ok": sha_ok, "ok": ok,
     }
 

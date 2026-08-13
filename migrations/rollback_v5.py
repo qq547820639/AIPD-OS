@@ -43,11 +43,20 @@ def rollback_v5(new_path: str, legacy_path: str, tenant_id: str = "default",
         project_id = rows[0]["project_id"]
 
     def rows(table: str, cols: str) -> List[Dict[str, Any]]:
+        # 数据完整性：必须同时按 tenant_id + project_id 过滤。此前只过滤
+        # tenant_id，会把同租户下其他项目的数据并入目标项目（多项目回滚
+        # 数据污染，且可能触发 UNIQUE(project_id,key,version) 冲突崩溃）。
         return [dict(r) for r in new_conn.execute(
-            f"SELECT {cols} FROM {table} WHERE tenant_id=?", (tenant_id,)).fetchall()]
+            f"SELECT {cols} FROM {table} WHERE tenant_id=? AND project_id=?",
+            (tenant_id, project_id)).fetchall()]
 
-    project = dict(new_conn.execute(
-        "SELECT * FROM projects WHERE tenant_id=? AND project_id=?", (tenant_id, project_id)).fetchone())
+    project_row = new_conn.execute(
+        "SELECT * FROM projects WHERE tenant_id=? AND project_id=?",
+        (tenant_id, project_id)).fetchone()
+    if project_row is None:
+        new_conn.close()
+        raise ValueError(f"project {project_id!r} not found in tenant {tenant_id!r}")
+    project = dict(project_row)
 
     facts = rows("facts", "*")
     evidence = rows("evidence", "*")

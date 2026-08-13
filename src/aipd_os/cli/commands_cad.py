@@ -56,6 +56,7 @@ def cmd_industrialize(args):
     from aipd_os.supply_chain.analysis import analyze_stage, create_correction_tasks
     from aipd_os.supply_chain.lab import import_lab_csv
     from aipd_os.supply_chain.quotes import QuoteRegistry, parse_quote_file
+    from aipd_os.supply_chain.stages import VALID_STAGES
 
     official_quotes = []
     quotes_note = None
@@ -76,7 +77,10 @@ def cmd_industrialize(args):
     correction_tasks = []
     lab_note = None
     if args.lab_data:
-        stage = args.stage or "validation"
+        stage = (args.stage or "validation").strip().lower()
+        if stage != "validation" and stage not in VALID_STAGES:
+            raise ValueError(
+                f"无效 --stage {stage!r}；合法值: evt / dvt / pvt（缺省 validation）")
         lab = import_lab_csv(args.lab_data, stage)
         analysis = analyze_stage(lab["records"], stage)
         correction_tasks = create_correction_tasks(analysis, stage)

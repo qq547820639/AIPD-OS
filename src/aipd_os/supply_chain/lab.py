@@ -109,8 +109,8 @@ def import_lab_xlsx(path: str | Path, stage: str) -> dict[str, Any]:
 def import_lab_report(path: str | Path, stage: str) -> dict[str, Any]:
     """导入实验室报告。
 
-    - .json/.csv 委托给对应解析器
-    - .pdf/.docx 无法在本地机器机器解析，抛 ``external_blocked``（不声称成功）
+    - .csv/.json/.xlsx 委托给对应解析器
+    - .pdf/.docx 无法在本地机器解析，抛 ``external_blocked``（不声称成功）
     """
     p = Path(path)
     ext = p.suffix.lower()
@@ -118,6 +118,8 @@ def import_lab_report(path: str | Path, stage: str) -> dict[str, Any]:
         return import_lab_csv(p, stage)
     if ext == ".json":
         return import_lab_json(p, stage)
+    if ext == ".xlsx":
+        return import_lab_xlsx(p, stage)
     if ext in REPORT_EXTENSIONS:
         raise AdapterError(
             f"无法在本地机器解析 {ext} 实验室报告: {p}；需外部工具/人工提取数据",

@@ -22,10 +22,24 @@ class ImageGenUnavailable(RuntimeError):
 
 
 def _normalize_size(size: Size) -> tuple[int, int]:
+    from typing import Any
     if isinstance(size, str):
-        w, h = size.lower().split("x")
-        return int(w), int(h)
-    return int(size[0]), int(size[1])
+        parts = size.lower().split("x")
+        if len(parts) != 2:
+            raise ValueError(f"无法解析图像尺寸 {size!r}；应为 'WxH'（如 '1024x1024'）")
+        w_raw: Any = parts[0]
+        h_raw: Any = parts[1]
+    else:
+        if len(size) < 2:
+            raise ValueError(f"图像尺寸必须为 (width, height)，收到: {size!r}")
+        w_raw, h_raw = size[0], size[1]
+    try:
+        w, h = int(w_raw), int(h_raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"无法解析图像尺寸 {size!r}；宽高必须为整数") from exc
+    if w <= 0 or h <= 0:
+        raise ValueError(f"图像尺寸必须为正整数，收到: {size!r}")
+    return w, h
 
 
 class ImageGenAdapter:

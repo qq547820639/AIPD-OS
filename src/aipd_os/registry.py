@@ -177,7 +177,10 @@ def load_default_registry() -> CapabilityRegistry:
     """
     try:
         from aipd_os import registry_data  # type: ignore
-    except Exception:  # pragma: no cover - 回退路径
+    except Exception as exc:  # noqa: BLE001 - 记录后返回空表；不得静默吞掉
+        import logging
+        logging.getLogger("aipd.registry").warning(
+            "registry_data import failed; capability registry will be empty: %s", exc)
         registry_data = None  # type: ignore
 
     reg = CapabilityRegistry()

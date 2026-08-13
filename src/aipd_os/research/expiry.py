@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, cast
 
 # facts 表既有状态位：见 aipd_os.state.db 的 FACT_STATUSES
@@ -25,7 +25,7 @@ _EXPIRY_REASON_KEY = "expiry_reason"
 
 def _iso(dt: datetime | None) -> str:
     if dt is None:
-        return datetime.utcnow().isoformat()
+        return datetime.now(timezone.utc).isoformat()
     return dt.isoformat()
 
 

@@ -71,6 +71,7 @@ class _ProductGenerationAdapter(ToolAdapter):
             "name": self.capability_id(),
             "provider": self.provider,
             "version": "1.0",
+            "maturity_ceiling": None,
             "available": self._provider is not None
             and getattr(self._provider, "configured", True),
         }

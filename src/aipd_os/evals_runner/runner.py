@@ -160,8 +160,10 @@ def _prompt_hash(messages: list[dict[str, Any]]) -> str:
 
 
 def _estimate_tokens(text: str) -> int:
-    """对输出做 token 估算（中英文混合：字符数/3 近似）。标为估算值。"""
-    return max(0, int(len(text or "") / 3))
+    """对输出做 token 估算。统一口径（唯一实现：aipd_os.llm.tokens），
+    避免与 tool_adapters 各持一套 len/3 vs len//4 的漂移。标为估算值。"""
+    from aipd_os.llm.tokens import estimate_tokens
+    return estimate_tokens(text)
 
 
 class EvalRunner:

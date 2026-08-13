@@ -375,14 +375,16 @@ class ClosureRun:
                 self.logger.warning("evidence write-back failed: %s", exc)
         if spec.get("fact_key") is not None:
             try:
-                self.state_db.add_fact(
+                fact_id = self.state_db.add_fact(
                     self.tenant_id, pid, spec["fact_key"],
                     spec.get("fact_value", result), status=spec.get("fact_status", "V"),
                     source=spec.get("fact_source", f"closure:{step.step_id}"),
                     version=spec.get("fact_version"),
                     confidence=spec.get("fact_confidence", 0.8))
-                if evidence_id:
-                    self.state_db.link_evidence(self.tenant_id, pid, evidence_id,
+                if evidence_id and fact_id:
+                    # link_evidence 契约是 (fact_id, evidence_id)：此前误把
+                    # evidence_id 同时当 fact_id，把证据链到了它自己身上。
+                    self.state_db.link_evidence(self.tenant_id, pid, fact_id,
                                                 evidence_id, relation="supports")
             except Exception as exc:  # noqa: BLE001
                 self.logger.warning("fact write-back failed: %s", exc)

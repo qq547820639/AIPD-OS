@@ -156,8 +156,10 @@ class Telemetry:
                  budget_warn_after: float | None = None,
                  stop_on_exceed: bool = True) -> None:
         self.metrics = Metrics()
+        # budget_limit=None 语义为「无预算上限」（此前默认 0.0，任何正成本
+        # 立即超限，默认构造即陷阱）。
         self.budget = CostBudget(
-            limit=budget_limit if budget_limit is not None else 0.0,
+            limit=budget_limit if budget_limit is not None else float("inf"),
             warn_after=budget_warn_after, stop_on_exceed=stop_on_exceed)
 
     def snapshot(self) -> dict[str, Any]:

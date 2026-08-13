@@ -30,3 +30,19 @@ def test_unavailable_write_external_task_package(tmp_path) -> None:
     assert loaded["size"]["width"] == 1024
     # 绝不生成假图片
     assert not out.exists()
+
+
+def test_normalize_size_validates_and_rejects_bad_input():
+    """回归：_normalize_size 对坏输入给可读错误，而不是裸 ValueError。"""
+    from aipd_os.imggen.adapter import _normalize_size
+
+    assert _normalize_size("1024x768") == (1024, 768)
+    assert _normalize_size((640, 480)) == (640, 480)
+    with pytest.raises(ValueError, match="图像尺寸"):
+        _normalize_size("abc")
+    with pytest.raises(ValueError, match="图像尺寸"):
+        _normalize_size("1024x")
+    with pytest.raises(ValueError, match="正整数"):
+        _normalize_size("0x0")
+    with pytest.raises(ValueError, match="width, height"):
+        _normalize_size((640,))

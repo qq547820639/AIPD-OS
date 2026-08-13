@@ -152,6 +152,16 @@ def mcp_export_checkpoint(service: StateService, principal: AuthenticatedPrincip
                                                 actor=principal.user_id), ensure_ascii=False)
 
 
+def _tool_safe(name: str, fn, *args, **kwargs) -> str:
+    """工具调用统一错误包装：异常以结构化 JSON 返回，而不是让 traceback
+    冒泡进 MCP 协议（客户端拿到可读错误而非裸栈）。"""
+    try:
+        return fn(*args, **kwargs)
+    except Exception as exc:  # noqa: BLE001 - 边界包装，向上游交付结构化错误
+        return json.dumps({"ok": False, "tool": name, "error": str(exc)},
+                          ensure_ascii=False)
+
+
 # ---- 仅在已安装 mcp 时注册 FastMCP 工具 ----
 try:  # pragma: no cover - 取决于运行环境是否安装 mcp
     from mcp.server.fastmcp import FastMCP  # type: ignore
@@ -160,33 +170,39 @@ try:  # pragma: no cover - 取决于运行环境是否安装 mcp
 
     @mcp.tool()
     def init_project(project_id: str, name: str, goal: str) -> str:  # noqa: F811
-        return mcp_init_project(_get_service(), get_mcp_principal(), project_id, name, goal)
+        return _tool_safe("init_project", mcp_init_project, _get_service(),
+                          get_mcp_principal(), project_id, name, goal)
 
     @mcp.tool()
     def project_summary(project_id: str) -> str:  # noqa: F811
-        return mcp_project_summary(_get_service(), get_mcp_principal(), project_id)
+        return _tool_safe("project_summary", mcp_project_summary, _get_service(),
+                          get_mcp_principal(), project_id)
 
     @mcp.tool()
     def add_fact(project_id: str, key: str, value_json: str, status: str,  # noqa: F811
                  unit: str = "", source: str = "", confidence: float = 0.5) -> str:
-        return mcp_add_fact(_get_service(), get_mcp_principal(), project_id, key, value_json,
-                            status, unit=unit, source=source, confidence=confidence)
+        return _tool_safe("add_fact", mcp_add_fact, _get_service(), get_mcp_principal(),
+                          project_id, key, value_json, status, unit=unit, source=source,
+                          confidence=confidence)
 
     @mcp.tool()
     def propose_decision(project_id: str, topic: str, recommendation: str,  # noqa: F811
                          options_json: str, trigger: str = "") -> str:
-        return mcp_propose_decision(_get_service(), get_mcp_principal(), project_id, topic,
-                                    recommendation, options_json, trigger=trigger)
+        return _tool_safe("propose_decision", mcp_propose_decision, _get_service(),
+                          get_mcp_principal(), project_id, topic, recommendation,
+                          options_json, trigger=trigger)
 
     @mcp.tool()
     def resolve_decision(project_id: str, decision_id: str, choice: str,  # noqa: F811
                          comment: str = "") -> str:
-        return mcp_resolve_decision(_get_service(), get_mcp_principal(), project_id,
-                                    decision_id, choice, comment=comment)
+        return _tool_safe("resolve_decision", mcp_resolve_decision, _get_service(),
+                          get_mcp_principal(), project_id, decision_id, choice,
+                          comment=comment)
 
     @mcp.tool()
     def export_checkpoint(project_id: str) -> str:  # noqa: F811
-        return mcp_export_checkpoint(_get_service(), get_mcp_principal(), project_id)
+        return _tool_safe("export_checkpoint", mcp_export_checkpoint, _get_service(),
+                          get_mcp_principal(), project_id)
 
     _MCP_AVAILABLE = True
 except Exception:  # pragma: no cover - mcp 未安装时的安全回退

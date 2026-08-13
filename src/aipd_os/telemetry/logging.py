@@ -4,7 +4,7 @@
 日志：每次调用可通过 :func:`new_trace_id` 生成并贯穿相关日志记录，便于检索
 与追踪单次请求/任务。
 
-可选匿名遥测开关：默认关闭（``AIPD_TELEMETRY=0`` / 未设置时不发送任何数据）。
+可选匿名遥测开关：默认关闭（``AIPD_TELEMETRY_ENABLED=0`` / 未设置时不发送任何数据）。
 ：class:`TelemetryLogger` 只在开关开启时附带匿名遥测字段。
 """
 from __future__ import annotations

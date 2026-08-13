@@ -45,8 +45,8 @@ def _file_handler(path: Path) -> logging.Handler:
 def _attach_handlers(logger: logging.Logger, log_file: Path | None) -> None:
     """给 logger 装配标准 handler（清空旧 handler 后重建）。
 
-    装配内容：stdout StreamHandler(JsonFormatter)、可选 FileHandler（自动
-    mkdir 父目录）、以及 :class:`_AttachFieldsFilter`；并关闭 propagate。
+    装配内容：stdout StreamHandler(JsonFormatter) 与可选 FileHandler
+    （自动 mkdir 父目录）；并关闭 propagate。
     """
     logger.handlers.clear()
     logger.propagate = False
@@ -58,8 +58,6 @@ def _attach_handlers(logger: logging.Logger, log_file: Path | None) -> None:
     if log_file is not None:
         log_file.parent.mkdir(parents=True, exist_ok=True)
         logger.addHandler(_file_handler(log_file))
-
-    logger.addFilter(_AttachFieldsFilter())
 
 
 def setup_logging(
@@ -83,13 +81,6 @@ def setup_logging(
     if force or name not in _configured_loggers:
         _attach_handlers(logger, log_file)
         _configured_loggers.add(name)
-
-
-class _AttachFieldsFilter(logging.Filter):
-    """将 LogRecord 上的 aipd_fields 属性剥离，避免标准 Formatter 报错。"""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        return True
 
 
 def get_logger(name: str = "aipd") -> logging.Logger:

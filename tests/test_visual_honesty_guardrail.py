@@ -103,3 +103,59 @@ def test_vision_dims_pass_with_real_provider(tmp_path):
         assert dims[name]["requiring_vision"] is False, name
 
     assert result["vision_pending"] == []
+
+
+def test_vision_provider_rejects_non_bool_passed(tmp_path):
+    """回归：provider 返回字符串 "false"/"no" 等非布尔 passed 不得被 truthy 化。
+
+    修复前 ``bool("false")`` 为 True → 视觉审核假通过；现在非布尔一律不通过。
+    """
+    from aipd_os.visual_audit.providers import VisionAuditProvider
+
+    class _StringFalseProvider:
+        def available(self) -> bool:
+            return True
+
+        def audit(self, image_path: str, question: str,
+                  context: dict | None = None) -> dict:
+            return {"passed": "false", "score": 1.0, "conclusion": "not ok",
+                    "dimensions": {}}
+
+    png = tmp_path / "p1.png"
+    _write_png(png)
+    auditor = VisualAuditor(vision_provider=_StringFalseProvider())
+    result = auditor.audit_page(_make_defn(), str(png))
+    dims = result["dimensions"]
+    for name in VISION_DIMS:
+        assert dims[name]["passed"] is False, name
+
+    # provider 层自身也必须做布尔强校验
+    class _FakeResponse:
+        status = 200
+
+    provider = VisionAuditProvider(url="http://unused.invalid", api_key="k")
+    # 直接断言解析逻辑：passed 非布尔 → False + parse_error 标记
+    import json as _json
+    import urllib.request
+
+    class _Resp:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self) -> bytes:
+            return _json.dumps({
+                "choices": [{"message": {"content":
+                    _json.dumps({"passed": "false", "score": 0.9})}}],
+                "usage": {}}).encode()
+
+    import unittest.mock as _mock
+    with _mock.patch.object(urllib.request, "urlopen", return_value=_Resp()):
+        out = provider.audit(str(png), "q")
+    assert out["passed"] is False
+    assert out["parse_error"] is True
+    assert out["score"] == 0.9

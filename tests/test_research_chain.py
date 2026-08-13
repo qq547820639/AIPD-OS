@@ -145,6 +145,17 @@ def test_parse_txt_and_pdf_pluggable():
     assert pf.obtainable and "pdf-ish" in pf.text
 
 
+def test_parse_pdf_binary_not_faked_as_fulltext():
+    """回归：二进制 PDF 不是文本层，decode 后是乱码，不得标记 obtainable。"""
+    from aipd_os.research.fetchers import parse_pdf
+
+    cite = Citation(source="patent", title="P")
+    binary = b"%PDF-1.7\n" + bytes(range(256))
+    pf = parse_pdf(binary, cite)
+    assert pf.obtainable is False
+    assert pf.text == ""
+
+
 def test_http_fetcher_unavailable_marks_not_verified():
     fetcher = HttpDocumentFetcher()  # 无密钥
     assert fetcher.available() is False

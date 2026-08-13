@@ -19,7 +19,7 @@ import logging
 import sqlite3
 import threading
 from collections.abc import Iterator
-from contextlib import contextmanager, suppress
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
@@ -592,15 +592,6 @@ class AIPDStateDB:
             c.execute("DELETE FROM projects WHERE project_id=? AND tenant_id=?", (project_id, tenant_id))  # noqa: E501
 
     # ---------------------------------------------------------------- facts
-    def _next_id(self, c: sqlite3.Connection, table: str, column: str, prefix: str) -> str:
-        values = [r[0] for r in c.execute(f"SELECT {column} FROM {table}").fetchall()]
-        nums = []
-        for value in values:
-            if isinstance(value, str) and value.startswith(prefix + "-"):
-                with suppress(ValueError):
-                    nums.append(int(value.split("-")[-1]))  # 跳过非数字后缀的既有 id
-        return f"{prefix}-{max(nums, default=0) + 1:03d}"
-
     def add_fact(self, tenant_id: str, project_id: str, key: str, value: Any, status: str,
                  unit: str | None = None, tolerance: str | None = None,
                  conditions: str | None = None, confidence: float = 0.5,
@@ -617,10 +608,16 @@ class AIPDStateDB:
                       "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                       (fact_id, project_id, tenant_id, key, self._store_value(key, value), unit,
                        tolerance, conditions, status, confidence, source, version, ts, ts, 1))
+            # 敏感 key 的变更审计不落明文（facts.value_json 已加密；
+            # changes.after_json 也必须脱敏，避免经 list_changes 泄漏）
+            audit_value: Any = value
+            if key in SENSITIVE_KEYS:
+                audit_value = "<redacted: sensitive>"
             c.execute("INSERT INTO changes(project_id,tenant_id,object_type,object_id,action,after_json,"  # noqa: E501
                       "reason,created_at) VALUES(?,?,?,?,?,?,?,?)",
                       (project_id, tenant_id, "fact", fact_id, "create",
-                       _json({"key": key, "value": value, "status": status}), "add fact", ts))
+                       _json({"key": key, "value": audit_value, "status": status}),
+                       "add fact", ts))
         return fact_id
 
     def list_facts(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:

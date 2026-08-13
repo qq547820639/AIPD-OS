@@ -1,6 +1,9 @@
 # AIPD MCP State Service
 
-这是跨对话持久化的参考实现。它将每个项目存为独立 SQLite 数据库，并通过 MCP 工具暴露初始化、摘要、事实、决策和检查点操作。
+这是跨对话持久化的参考实现。它基于 **单库多租户** 的 `AIPDStateDB`
+（`src/aipd_os/state/db.py`，`tenants` / `user_access` / 项目行级授权，
+非「每项目一个 SQLite」），并通过 MCP 工具暴露初始化、摘要、事实、决策
+和检查点操作。
 
 ## 本地运行
 
@@ -27,13 +30,20 @@ python mcp_server.py
 - 所有 MCP 工具的目标租户恒取 `principal.tenant_id`（调用方不可指定/伪造），
   因此 tenant A principal 无法触达 tenant B 项目；项目级访问走 `user_access`
   授权表，无授权即拒绝。
+- 工具调用失败以结构化 JSON（`{"ok": false, "tool": ..., "error": ...}`）
+  返回，而不是让 traceback 冒泡进 MCP 协议。
 - 未安装 `mcp` 时本模块仍可导入（`_MCP_AVAILABLE=False`），但 `run()` 会
   明确报错拒绝启动。
 
-## 生产化必须补充
+## 已实现的生产化能力（在 `src/aipd_os/state/`）
 
-- 加密、密钥管理和审计日志；
-- 备份、迁移和高可用数据库；
+- 静态加密（`crypto.py`：Fernet 优先，dev 回退 fail-closed）与敏感字段加密（`db.py`）；
+- 密钥管理（`AIPD_ENCRYPTION_KEY` canonical / 别名兼容）与审计日志（`audit.py` 追加式 JSONL + DB）；
+- 备份（`backup.py`）与迁移（`migrations.py`，`AIPDStateDB` 初始化即全链迁移）；
+- 健康检查（`health.py`）与检查点恢复（`checkpoint.py` / `recovery.py`）。
+
+## 仍需外部完成
+
 - 网络传输配置和限流；
 - MCP 注册/Plugin 打包及 `agents/openai.yaml` 中的真实依赖信息。
 

@@ -98,13 +98,17 @@ class BackupManager:
             created = b.get("backup_created_at", "")
             try:
                 dt = datetime.fromisoformat(created)
-            except (ValueError, TypeError):
+                if dt.tzinfo is None:
+                    # naive 时间戳视为 UTC（历史/外部 manifest 可能存在）
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if dt < cutoff:
+                    d = Path(b["backup_dir"])
+                    if d.is_dir():
+                        shutil.rmtree(d)
+                        removed.append(str(d))
+            except (ValueError, TypeError, OSError):
+                # 不可解析时间/目录删除失败：跳过该备份，绝不误删
                 continue
-            if dt < cutoff:
-                d = Path(b["backup_dir"])
-                if d.is_dir():
-                    shutil.rmtree(d)
-                    removed.append(str(d))
         return removed
 
 

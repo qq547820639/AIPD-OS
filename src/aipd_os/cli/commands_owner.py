@@ -26,6 +26,10 @@ def cmd_operate(args):
         print(json.dumps(result, ensure_ascii=False, default=str))
         return 0
 
+    # 进度事件（意图→影响→返工→验收）逐步打印：长任务不再静默
+    for ev in tracker.events():
+        print(f"[{ev.get('step', '')}] {ev.get('message', '')}")
+
     status = result["status"]
     if status == "needs_clarification":
         print("需要澄清：")

@@ -72,12 +72,10 @@ def should_ask_decision(
     if safety in {"high", "critical"}:
         return True
     regulatory = _flag(work_item, "regulatory_impact") or _flag(ctx, "regulatory_impact") or "none"
-    if regulatory in {"high", "critical"}:
-        return True
-    # 普通类别（重做/检索/批量等）不触发决策
-    if cat in NO_ASK_CATEGORIES:
-        return False
-    return False
+    # 普通类别（重做/检索/批量等）不触发决策。
+    # 注：NO_ASK_CATEGORIES 与「非 ASK 一律不征询」语义相同；保留常量仅为
+    # 文档化意图（显式列出普通工作类别），判定上统一走「未列入 ASK 即 False」。
+    return regulatory in {"high", "critical"}
 
 
 def _now() -> str:

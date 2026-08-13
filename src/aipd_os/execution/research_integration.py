@@ -81,10 +81,17 @@ class ResearchToolAdapter(ToolAdapter):
         return refs
 
     def classify_failure(self, exc: Exception) -> str:
-        return "external_blocked"
+        # 只有「能力未配置/未接线」的诚实降级才算 external_blocked；
+        # 瞬时网络/解析错误归类 transient，让路由层重试机制真正生效
+        # （此前恒 external_blocked 导致重试对该适配器永远失效）。
+        from aipd_os.execution.adapter import AdapterError  # noqa: PLC0415
+        if isinstance(exc, AdapterError) and \
+                getattr(exc, "classification", "") == "external_blocked":
+            return "external_blocked"
+        return "transient"
 
     def retry_limits(self) -> int:
-        return 1
+        return 3
 
     def fallback_chain(self) -> list[str]:
         return []

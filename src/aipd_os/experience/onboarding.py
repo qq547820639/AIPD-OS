@@ -17,16 +17,21 @@ from ..state.db import AIPDStateDB
 from .impact_analysis import type_cn
 from .owner_dashboard import build_dashboard
 
-# 需要外部配置的 Provider 与其环境变量/说明
+# 需要外部配置的 Provider 与其环境变量/说明。
+# 提示文案必须与实现真实读取的环境变量一致（envs 为多候选：任一非空即已配置）。
 EXTERNAL_PROVIDERS = [
-    {"name": "Image 图像生成", "env": "AIPD_IMGGEN_BACKEND",
-     "guide": "设置 AIPD_IMGGEN_BACKEND 指向可用的图像后端（如本地/远程服务）。未配置时，手册页会生成为外部任务包并标记 HOLD，绝不伪造图片。"},  # noqa: E501
-    {"name": "Model 模型", "env": "AIPD_EVAL_MODEL_ENDPOINT",
-     "guide": "设置 AIPD_EVAL_MODEL_ENDPOINT 指向真实模型端点。未配置时评估使用确定性 contract-test 夹具，不描述为真实模型。"},  # noqa: E501
-    {"name": "CAD 内核", "env": "AIPD_CAD_KERNEL",
-     "guide": "安装 cadquery 内核后 CAD 可达到 C2 及以上；未安装时如实标 external_dependency，绝不越级。"},  # noqa: E501
-    {"name": "Mail 邮件", "env": "AIPD_MAIL_PROVIDER",
-     "guide": "设置 AIPD_MAIL_PROVIDER 以启用 RFQ 收发。未配置时供应链保持 HOLD。"},
+    {"name": "Image 图像生成",
+     "envs": ["AIPD_IMGGEN_BACKEND", "AIPD_IMAGE_PROVIDER_URL"],
+     "guide": "设置 AIPD_IMGGEN_BACKEND 指向可用的图像后端（或 AIPD_IMAGE_PROVIDER_URL + AIPD_IMAGE_API_KEY 走真实图像端点）。未配置时，手册页会生成为外部任务包并标记 HOLD，绝不伪造图片。"},  # noqa: E501
+    {"name": "Model 模型",
+     "envs": ["AIPD_MODEL_API_KEY", "AIPD_EVAL_MODEL_ENDPOINT"],
+     "guide": "同时设置 AIPD_MODEL_API_KEY 与 AIPD_MODEL_BASE_URL 可启用产品智能与想法结构化；评估真实端点另设 AIPD_EVAL_MODEL_ENDPOINT。未配置时评估使用确定性 contract-test 夹具，不描述为真实模型。"},  # noqa: E501
+    {"name": "CAD 内核",
+     "envs": [],
+     "guide": "安装 cadquery 内核（pip install aipd-os[cad]）后 CAD 可达到 C2 及以上；未安装时如实标 external_dependency，绝不越级。"},  # noqa: E501
+    {"name": "Mail 邮件",
+     "envs": ["AIPD_SMTP_HOST", "AIPD_MAILPIT_SMTP_HOST"],
+     "guide": "设置 AIPD_SMTP_HOST（配合 AIPD_SMTP_USER / AIPD_SMTP_PASSWORD）以启用 RFQ 收发。未配置时供应链保持 HOLD。"},  # noqa: E501
 ]
 
 
@@ -47,8 +52,8 @@ def _first_result(db: AIPDStateDB, project_id: str, idea: str,
                 source="onboarding", conditions="产品所有者一句话需求")
     produced.append({"kind": "fact", "label": "记录项目目标", "detail": idea})
 
-    # 2) 初始风险（确定性：含"量产/量产"字样给供应链风险，否则给需求澄清风险）
-    if any(w in idea for w in ("量产", "量产", "供应链", "成本")):
+    # 2) 初始风险（确定性：含量产/供应链/成本字样给供应链风险，否则给需求澄清风险）
+    if any(w in idea for w in ("量产", "供应链", "成本")):
         db.add_risk(tenant_id, project_id, "量产与供应链投入待评估",
                     probability="medium", impact="high",
                     mitigation="先完成设计与验证，再评估量产路径")
@@ -81,11 +86,19 @@ def provider_config_status() -> list[dict[str, Any]]:
     """返回各 Provider 的配置状态（configured / external_dependency）。"""
     out: list[dict[str, Any]] = []
     for p in EXTERNAL_PROVIDERS:
-        val = os.environ.get(p["env"], "").strip()
+        if p["name"] == "CAD 内核":
+            try:
+                import importlib.util
+                configured = importlib.util.find_spec("cadquery") is not None
+            except Exception:  # noqa: BLE001
+                configured = False
+        else:
+            configured = any(
+                os.environ.get(e, "").strip() for e in p["envs"])
         out.append({
-            "name": p["name"], "env": p["env"],
-            "configured": bool(val),
-            "status": "ok" if val else "external_dependency",
+            "name": p["name"], "env": " / ".join(p["envs"]) or "cadquery",
+            "configured": bool(configured),
+            "status": "ok" if configured else "external_dependency",
             "guide": p["guide"],
         })
     return out
@@ -131,14 +144,15 @@ def onboard(db: AIPDStateDB, idea: str, project_id: str | None = None,
     backup_path = str(Path(db.path).parent / "backups")
     BackupManager(db.path, backup_dir=backup_path).create_backup(db, out_dir=backup_path)
 
+    providers = provider_config_status()
     return {
         "project_id": pid,
         "name": name,
         "goal": idea,
         "produced": produced,
         "first_result": build_dashboard(db, pid, tenant_id),
-        "capabilities": provider_config_status(),
-        "external_config_needed": [c for c in provider_config_status()
+        "capabilities": providers,
+        "external_config_needed": [c for c in providers
                                    if c["status"] == "external_dependency"],
         "examples": list_examples(),
         "reset": "可用 `aipd reset --db <db> --project <id>` 重置本项目",

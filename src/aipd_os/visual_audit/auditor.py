@@ -101,7 +101,9 @@ class VisualAuditor:
         try:
             provider = cast(VisionAuditProvider, self.vision_provider)
             result = provider.audit(page_png, question=question)
-            passed = bool(result.get("passed"))
+            # 只用真布尔 True 判通过；provider 已保证 passed 为 bool，
+            # 此处仍严格 ``is True`` 以防任何非布尔值被 truthy 化。
+            passed = result.get("passed") is True
             return {
                 "passed": passed,
                 "requiring_vision": False,

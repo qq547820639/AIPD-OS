@@ -119,6 +119,34 @@ def test_fetch_open_without_getter_honest_restricted():
     assert rec.text == ""
 
 
+def test_fetch_fulltext_binary_body_not_faked_as_text():
+    """回归：二进制（PDF）下载体不得被 decode 成乱码当全文。"""
+    url = "https://arxiv.org/abs/2401.00002"
+    binary = b"%PDF-1.7\n" + bytes(range(256))
+    rec = fetch_fulltext(url, source="arxiv", getter=lambda u: binary)
+    assert rec.access == ACCESS_RESTRICTED
+    assert rec.text == ""
+    assert rec.sha256  # 仍记录内容哈希，便于溯源
+
+
+def test_fetch_fulltext_utf8_text_still_works():
+    url = "https://arxiv.org/abs/2401.00003"
+    rec = fetch_fulltext(url, source="arxiv", getter=lambda u: "纯文本全文".encode())
+    assert rec.access == ACCESS_OPEN
+    assert rec.text == "纯文本全文"
+
+
+def test_default_expires_at_is_parseable_aware_iso():
+    """回归：default_expires_at 曾产出 '...+00:00Z' 双时区后缀导致解析失败、
+    过期时间静默失效。"""
+    from aipd_os.research.fulltext import _parse_iso
+    exp = default_expires_at(days=1)
+    assert not exp.endswith("Z")
+    parsed = _parse_iso(exp)
+    assert parsed is not None
+    assert parsed > datetime.now(timezone.utc)
+
+
 # ---------------------------------------------------------------- 版权/访问边界
 def test_classify_access_boundaries():
     # 开放许可

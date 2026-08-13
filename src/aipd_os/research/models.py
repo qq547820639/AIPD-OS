@@ -16,7 +16,7 @@ v5.7 语义收敛（Commit 7A）：
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 # 发现状态：verified=已获取并解析；not_verified=未能获取/未验证；external_pending=等外部回填
@@ -51,7 +51,9 @@ def default_epistemic_status(finding: ResearchFinding) -> str:
 
 
 def utc_now_iso() -> str:
-    return datetime.utcnow().isoformat() + "Z"
+    # 统一 aware UTC ISO（此前 datetime.utcnow() 产 naive + 手拼 "Z"，
+    # 与其他模块 aware 时间戳不一致，且 Py3.12 起 utcnow 已废弃）。
+    return datetime.now(timezone.utc).isoformat()
 
 
 @dataclass

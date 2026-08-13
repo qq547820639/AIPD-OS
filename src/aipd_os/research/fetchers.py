@@ -58,9 +58,16 @@ def parse_txt(raw: bytes, citation: Citation, fmt: str = "txt") -> FullText:
 
 
 def parse_pdf(raw: bytes, citation: Citation, fmt: str = "pdf") -> FullText:
-    # 无真实 PDF 渲染库时，用文本层提取非结构化内容；仅当能提取出内容才标记 obtainable。
-    text = raw.decode("utf-8", errors="replace")
-    return FullText(title=citation.title, text=text, citation=citation, format=fmt)
+    # 无真实 PDF 渲染库：PDF 是二进制格式，直接 decode 只会得到满屏乱码，
+    # 不是真实全文。诚实契约：仅当字节可按 UTF-8 解码且不含替换符时视为
+    # 可用的文本层；二进制 PDF 返回空文本（obtainable=False），绝不伪造全文。
+    try:
+        decoded = raw.decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        return FullText(title=citation.title, text="", citation=citation, format=fmt)
+    if not decoded.strip() or "\ufffd" in decoded:
+        return FullText(title=citation.title, text="", citation=citation, format=fmt)
+    return FullText(title=citation.title, text=decoded, citation=citation, format=fmt)
 
 
 def _no_parser(raw: bytes, citation: Citation, fmt: str) -> FullText:

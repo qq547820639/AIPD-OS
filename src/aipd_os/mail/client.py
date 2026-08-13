@@ -110,12 +110,18 @@ def send_email(
     attachments: list[MailAttachment] | None = None,
     use_tls: bool = True,
     timeout: float = DEFAULT_TIMEOUT,
+    auth_mechanism: str | None = None,
 ) -> str:
     """真实发送一封邮件，返回分配的 ``Message-ID``。
 
     host 已配置时**必须**真正建立连接并发送；连接/认证/投递失败时抛出底层
     ``smtplib`` 异常（不吞异常、不降级为 external_dependency）。仅当 host 为空
     时才抛 :class:`ExternalDependencyError`。
+
+    :param auth_mechanism: 提供时走 ``server.auth(mechanism, callback)``
+        SASL 认证（如 Gmail 的 ``XOAUTH2``）；此时 ``password`` 应传完整的
+        SASL 响应串（``user=...\\x01auth=Bearer <token>\\x01\\x01``）。
+        缺省走 ``server.login`` 明文认证。
     """
     if not host:
         raise ExternalDependencyError("未配置 SMTP host，无法发送邮件（外部依赖）。")
@@ -133,7 +139,13 @@ def send_email(
             server.starttls()
     try:
         if user and password:
-            server.login(user, password)
+            if auth_mechanism:
+                # smtplib 的 auth() 对 initial-response 机制（XOAUTH2）以
+                # 零参调用 authobject；对 challenge 机制以一参调用。
+                server.auth(auth_mechanism,  # type: ignore[arg-type]
+                            lambda _challenge=None: password)
+            else:
+                server.login(user, password)
         refused = server.sendmail(from_addr, to_addrs, msg.as_string())
         if refused:
             raise MailError(f"SMTP 部分收件人被拒绝: {refused}")
@@ -269,17 +281,27 @@ def fetch_emails(
     folder: str = "INBOX",
     since: str | None = None,
     timeout: float = DEFAULT_TIMEOUT,
+    auth_mechanism: str | None = None,
 ) -> list[ReceivedMail]:
     """真实连接 IMAP 读取收件箱，返回解析后的邮件列表。
 
     host 已配置时**必须**真正连接并读取；连接/认证失败时抛出底层
     ``imaplib`` 异常。仅当 host 为空时才抛 :class:`ExternalDependencyError`。
+
+    :param auth_mechanism: 提供时走 ``conn.authenticate(mechanism, callback)``
+        SASL 认证（如 Gmail 的 ``XOAUTH2``）；此时 ``password`` 应传完整的
+        SASL 响应串。缺省走 ``conn.login`` 明文认证。
     """
     if not host:
         raise ExternalDependencyError("未配置 IMAP host，无法读取收件箱（外部依赖）。")
     conn = imaplib.IMAP4_SSL(host, port, timeout=timeout)
     try:
-        conn.login(user, password)
+        if auth_mechanism:
+            # imaplib XOAUTH2 回调需返回 bytes（SMTP 侧为 str）
+            conn.authenticate(  # type: ignore[arg-type]
+                auth_mechanism, lambda _challenge: password.encode("utf-8"))
+        else:
+            conn.login(user, password)
         status, _ = conn.select(folder)
         if status != "OK":
             raise MailError(f"IMAP 无法选择文件夹 {folder!r}: {status}")
