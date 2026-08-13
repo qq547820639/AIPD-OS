@@ -94,7 +94,17 @@
 （c2665b3）后 PROVENANCE/test_report 锚点落后一个提交，`commit_matches_head` 与
 `test_numbers_from_report` 失败。本轮收口流程（§五第 8 步）：
 提交代码 → 全量测试带 `AIPD_SOURCE_COMMIT` 锚定 → 刷新 SOURCE/BUNDLE/
-PROVENANCE/RELEASE_MANIFEST → 重打 bundle → Ed25519 重签 → 门禁 8/8 全绿。
+PROVENANCE/RELEASE_MANIFEST → 重打 bundle → Ed25519/MAC 重签 → 门禁 8/8 全绿。
+
+**最终门禁结果（8/8 PASS，`--tag v5.6.0`）**：
+`workspace_clean` ✅ · `commit_matches_head` ✅ · `source_manifest_zero_diff` ✅ ·
+`bundle_manifest_zero_diff` ✅ · `test_numbers_from_report` ✅（passed=1051 failed=0
+total=1054，source_commit=24227f6）· `signature_verifiable` ✅（Ed25519）·
+`no_secrets` ✅ · `no_unacknowledged_cve` ✅（pip-audit 实跑 + 18 条已记录 CVE
+显式承认）。
+
+**提交与推送**：`24227f6`（代码+测试批次）→ tag v5.6.0 更新指向 →
+`5bc6454`（发布证据刷新）→ `origin/main` 与 `v5.6.0`（forced update）已推送。
 
 ## 五、本轮实施计划与执行结果
 
@@ -104,8 +114,8 @@ PROVENANCE/RELEASE_MANIFEST → 重打 bundle → Ed25519 重签 → 门禁 8/8 
 4. ✅ UX/一致性批次（C1-C10）；
 5. ✅ 文档/卫生批次（D1-D8）+ CI lint job；
 6. ✅ ruff / mypy 全仓 0 保持；
-7. ✅ 全量回归（10xx passed / 0 failed）；
-8. ✅ 发布收口（提交 / tag / 证据刷新 / 重签 / 门禁全绿 / 推送）。
+7. ✅ 全量回归 **1051 passed / 0 failed / 3 skipped**（含本轮全部新增回归测试）；
+8. ✅ 发布收口（提交 `24227f6` + `5bc6454` / tag v5.6.0 更新 / 证据刷新 / Ed25519+MAC 重签 / 门禁 8/8 全绿 / 推送 origin）。
 
 ## 六、遗留（记录在案，不阻塞）
 
