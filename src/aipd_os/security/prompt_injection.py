@@ -102,11 +102,10 @@ def detect_suspicious_instructions(text: str) -> list[str]:
 
     # 门禁/安全策略控制尝试
     for kw in _POLICY_KEYWORDS:
-        if kw in lowered:
-            # 需要命令式动词，避免把中性描述当指令
-            if any(v in lowered for v in _IMPERATIVE_VERBS):
-                detected.append(f"policy_override: external content references {kw!r}")
-                break
+        # 需要命令式动词，避免把中性描述当指令
+        if kw in lowered and any(v in lowered for v in _IMPERATIVE_VERBS):
+            detected.append(f"policy_override: external content references {kw!r}")
+            break
 
     # 去重（保持顺序）
     seen = set()
@@ -127,9 +126,8 @@ def external_never_controls_policy(text: str) -> bool:
         return False
     lowered = text.lower()
     for kw in _POLICY_KEYWORDS:
-        if kw in lowered:
-            if any(v in lowered for v in _IMPERATIVE_VERBS):
-                return True
+        if kw in lowered and any(v in lowered for v in _IMPERATIVE_VERBS):
+            return True
     return False
 
 
@@ -139,9 +137,7 @@ def is_external_content_allowed(kind: str) -> bool:
     外部内容永远不能修改成熟度门禁或安全策略，因此对 ``maturity_gate`` 与
     ``security_policy`` 两类作用域返回 False。
     """
-    if kind in ("maturity_gate", "security_policy"):
-        return False
-    return True
+    return kind not in ("maturity_gate", "security_policy")
 
 
 # 外部内容不得请求发送/外泄敏感信息（防数据外泄 + 最小权限）

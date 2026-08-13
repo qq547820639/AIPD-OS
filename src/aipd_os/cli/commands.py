@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import importlib.util
 import json
@@ -360,9 +361,7 @@ def _is_release_excluded(rel: str) -> bool:
     parts = rel.split("/")
     if any(p in _RELEASE_EXCLUDE_PART for p in parts):
         return True
-    if any(p.endswith(_RELEASE_EXCLUDE_SUFFIX) for p in parts):
-        return True
-    return False
+    return bool(any(p.endswith(_RELEASE_EXCLUDE_SUFFIX) for p in parts))
 
 
 def _collect_release_files(repo: Path) -> list[Path]:
@@ -1304,11 +1303,8 @@ def cmd_doctor(args):
             db.ensure_default_tenant()
             _doctor_check(checks, "database", "ok", "AIPDStateDB init + default tenant ok")
         finally:
-            try:
-                os.unlink(db_path)
-            except OSError:
-                # noqa: EMPTY_EXCEPT - 清理探测用临时 db 文件：不存在/被占用时忽略
-                pass
+            with contextlib.suppress(OSError):
+                os.unlink(db_path)  # 清理探测用临时 db 文件：不存在/被占用时忽略
     except Exception as exc:  # noqa: BLE001
         _doctor_check(checks, "database", "fail", str(exc))
 

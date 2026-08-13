@@ -132,14 +132,13 @@ def run_research_chain(
         for doc in docs[:1]:
             finding.add_citation(doc.citation)
 
-    if fetcher is not None:
-        if finding.citations:
-            doc = fetcher.fetch(finding.citations[0])
-            if doc.status != STATUS_VERIFIED:
-                finding.status = STATUS_NOT_VERIFIED
-                eids = [backend.register_evidence(c, scope="abstract") for c in finding.citations]
-                return {"status": finding.status, "evidence_ids": eids, "fact_id": None}
-            finding.status = STATUS_VERIFIED
+    if fetcher is not None and finding.citations:
+        doc = fetcher.fetch(finding.citations[0])
+        if doc.status != STATUS_VERIFIED:
+            finding.status = STATUS_NOT_VERIFIED
+            eids = [backend.register_evidence(c, scope="abstract") for c in finding.citations]
+            return {"status": finding.status, "evidence_ids": eids, "fact_id": None}
+        finding.status = STATUS_VERIFIED
 
     fact_id = backend.write_finding(finding)
     # write_finding 已登记全部引用为 full_text 证据（写入 Evidence Register）

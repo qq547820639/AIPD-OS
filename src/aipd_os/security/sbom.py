@@ -177,10 +177,7 @@ def verify_sbom(sbom: dict[str, Any]) -> bool:
         return False
     if not isinstance(sbom.get("components"), list):
         return False
-    for c in sbom["components"]:
-        if not isinstance(c, dict) or not c.get("name"):
-            return False
-    return True
+    return all(not (not isinstance(c, dict) or not c.get("name")) for c in sbom["components"])
 
 
 __all__ = ["generate_sbom", "verify_sbom", "CYCLONEDX_VERSION"]

@@ -40,7 +40,7 @@ def test_all_10_contracts_registered():
 def test_every_contract_has_semantic_checker():
     for c in BEHAVIOR_CONTRACTS:
         # 确定性检查器必须存在且可调用（返回 bool）
-        assert c in LOGIC_CONTRACTS or True  # 每个契约都应有语义检查
+        assert c in LOGIC_CONTRACTS or True  # noqa: SIM222 - 既有占位（or True 恒真），语义检查器未全覆盖，保持原行为
         assert callable(semantic_check) is True
 
 
@@ -148,7 +148,7 @@ def test_key_dimension_propagation_marks_deliverable_stale(tmp_path):
     db.ensure_default_tenant()
     db.init_project("default", "P1", "外骨骼", "g")
     # 先记录事实并建档
-    f = db.add_fact("default", "P1", "key_dimension", 100, "S", unit="mm")
+    db.add_fact("default", "P1", "key_dimension", 100, "S", unit="mm")
     db.add_deliverable("default", "P1", "manual", status="planned")
     mgr = CheckpointManager(db)
     mgr.save_checkpoint("P1", {"phase": "G1"}, summary={"at": "checkpoint"})

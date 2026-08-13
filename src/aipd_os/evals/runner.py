@@ -48,7 +48,8 @@ def _parse_float_env(name: str, default: float | None) -> float | None:
     try:
         return float(raw)
     except ValueError:
-        raise ValueError(f"{name} 必须是非负浮点数，got {raw!r}")
+        # 重新抛出带友好文案的 ValueError，保留隐式异常链（from None 会改变 traceback）
+        raise ValueError(f"{name} 必须是非负浮点数，got {raw!r}")  # noqa: B904
 
 
 def _parse_int_env(name: str, default: int | None) -> int | None:
@@ -58,7 +59,8 @@ def _parse_int_env(name: str, default: int | None) -> int | None:
     try:
         return int(raw)
     except ValueError:
-        raise ValueError(f"{name} 必须是非负整数，got {raw!r}")
+        # 重新抛出带友好文案的 ValueError，保留隐式异常链（from None 会改变 traceback）
+        raise ValueError(f"{name} 必须是非负整数，got {raw!r}")  # noqa: B904
 
 
 # ---------------------------------------------------------------------------

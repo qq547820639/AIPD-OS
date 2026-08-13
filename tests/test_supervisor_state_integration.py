@@ -100,7 +100,7 @@ def test_canonical_decision_project_scoped(tmp_path):
     """canonical 决策写入正确的 tenant/project（不串项目）。"""
     db, sup = _make_canonical_env(tmp_path)
     db.init_project("default", "P2", "P2", "goal2")
-    wid = sup.add_work("S3_manual", "m", "t", "o", owner_required=True)
+    sup.add_work("S3_manual", "m", "t", "o", owner_required=True)
     results = sup.run_supervisor(steps=1, project_id="P1")
     did = results[0]["decision"]["decision_id"]
 
@@ -148,8 +148,8 @@ def test_legacy_db_keeps_old_decisions_table_data(tmp_path, monkeypatch):
             "INSERT INTO decisions(decision_id,project_id,topic,status,"
             "options_json,created_at) VALUES('D-OLD','P1','old','resolved','[]',"
             "'2024-01-01T00:00:00Z')")
-    wid = sup.add_work("S5_cad", "release_gate", "release", "o",
-                       owner_required=True)
+    sup.add_work("S5_cad", "release_gate", "release", "o",
+                 owner_required=True)
     results = sup.run_supervisor(steps=1)
     did = results[0]["decision"]["decision_id"]
     with sup.connect() as c:

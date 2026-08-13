@@ -59,7 +59,7 @@ def test_retention_prune(tmp_path, db):
 def test_checkpoint_save_restore(db):
     _seed(db)
     cm = CheckpointManager(db)
-    cid = cm.save_checkpoint("p1", {"facts_seen": 1, "note": "phase G1"}, summary={"phase": "G1"})
+    cm.save_checkpoint("p1", {"facts_seen": 1, "note": "phase G1"}, summary={"phase": "G1"})
     cp = cm.restore_latest("p1")
     assert cp["data"]["note"] == "phase G1"
     assert cp["summary"]["phase"] == "G1"

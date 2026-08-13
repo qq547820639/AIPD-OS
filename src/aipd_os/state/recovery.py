@@ -143,7 +143,6 @@ class UnifiedStateService:
 
     def list_objects(self, project_id: str,
                          tenant_id: str | None = None) -> list[dict[str, Any]]:
-        tenant = tenant_id or self.tenant_id
         return [dict(e)
                 for e in self._project_entries(project_id).values()]
 

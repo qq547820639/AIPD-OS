@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 from typing import Callable
 
 from .lineage import LineageGraph
@@ -93,11 +94,8 @@ class PropagationEngine:
         nums = []
         for r in rows:
             if r["task_id"].startswith("RW-"):
-                try:
-                    nums.append(int(r["task_id"].rsplit("-", 1)[1]))
-                except ValueError:
-                    # noqa: EMPTY_EXCEPT - 跳过非数字后缀的既有任务 id（合法 id 过滤）
-                    pass
+                with contextlib.suppress(ValueError):
+                    nums.append(int(r["task_id"].rsplit("-", 1)[1]))  # 跳过非数字后缀的既有任务 id
         return f"RW-{max(nums, default=0) + 1:03d}"
 
     def list_tasks(self, status: str | None = None) -> list[ReworkTask]:

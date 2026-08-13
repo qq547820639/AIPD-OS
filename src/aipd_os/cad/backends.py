@@ -401,9 +401,13 @@ class CadQueryBackend(CadBackend):
             raise RuntimeError('CadQuery is not available')
         p = model['parameters']
         cq = self._cq
-        L = float(p['length']); W = float(p['width']); T = float(p['thickness'])
-        HD = float(p['hole_diameter']); n = max(1, int(p['hole_count']))
-        FR = float(p['fillet_radius']); CH = float(p['chamfer'])
+        L = float(p['length'])
+        W = float(p['width'])
+        T = float(p['thickness'])
+        HD = float(p['hole_diameter'])
+        n = max(1, int(p['hole_count']))
+        FR = float(p['fillet_radius'])
+        CH = float(p['chamfer'])
         plate = cq.Workplane('XY').box(L, W, T)
         # 0 半径/0 倒角 = 不应用该特征（契约 min=0.0 合法；内核不接受 0 值操作）。
         if FR > 0:

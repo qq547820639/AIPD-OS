@@ -5,7 +5,7 @@ ProductTruth.LineageGraph 逐步变成 compatibility facade（Phase 1：
 dual-read / canonical-write），不建第三套 lineage。
 
 验证：
-- LineageGraph.add_edge（有 canonical_db）→ truth_lineage（兼容读）+ 
+- LineageGraph.add_edge（有 canonical_db）→ truth_lineage（兼容读）+
   dependencies（canonical 写，node_type=product_truth）双写；
 - 旧 API（downstream_of/upstream_of/compute_affected/edges）行为不变；
 - remove_edge → truth_lineage 删除 + canonical soft-retire（历史保留）；

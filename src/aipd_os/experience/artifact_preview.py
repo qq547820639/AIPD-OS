@@ -66,9 +66,9 @@ def artifact_preview(db: AIPDStateDB, project_id: str,
         if ch.get("object_type") == "deliverable" and ch.get("action") in ("update", "create"):
             before = ch.get("before") or {}
             after = ch.get("after") or {}
-            if isinstance(before, dict) and isinstance(after, dict):
-                if before.get("version") != after.get("version"):
-                    cad_versions.append({
+            if (isinstance(before, dict) and isinstance(after, dict)
+                    and before.get("version") != after.get("version")):
+                cad_versions.append({
                         "deliverable_id": ch.get("object_id"),
                         "from_version": before.get("version"),
                         "to_version": after.get("version"),

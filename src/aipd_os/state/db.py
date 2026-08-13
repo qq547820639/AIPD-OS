@@ -19,7 +19,7 @@ import logging
 import sqlite3
 import threading
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -597,11 +597,8 @@ class AIPDStateDB:
         nums = []
         for value in values:
             if isinstance(value, str) and value.startswith(prefix + "-"):
-                try:
-                    nums.append(int(value.split("-")[-1]))
-                except ValueError:
-                    # noqa: EMPTY_EXCEPT - 跳过非数字后缀的既有 id（合法 id 过滤）
-                    pass
+                with suppress(ValueError):
+                    nums.append(int(value.split("-")[-1]))  # 跳过非数字后缀的既有 id
         return f"{prefix}-{max(nums, default=0) + 1:03d}"
 
     def add_fact(self, tenant_id: str, project_id: str, key: str, value: Any, status: str,

@@ -172,7 +172,7 @@ def test_ed25519_keygen_sign_verify_roundtrip(clean_repo, keys_env):
 
 def test_ed25519_sign_verify_file_roundtrip(clean_repo):
     target = clean_repo / "pkg" / "a.py"
-    info = sign_release.sign_file_ed25519(target)
+    sign_release.sign_file_ed25519(target)
     assert (clean_repo / "pkg" / "a.py.ed25519.sig").is_file()
     assert sign_release.verify_file_ed25519(target) is True
     # 篡改内容后验签失败

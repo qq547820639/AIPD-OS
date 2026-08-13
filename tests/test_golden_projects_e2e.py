@@ -217,12 +217,12 @@ def test_golden_project_A_manual_chain(tmp_path) -> None:
     del2 = db.add_deliverable("default", "golden-A", "manual_zip", str(zipf),
                               status="released", version="1.0.0", gate="G2",
                               metadata={"sha256": _sha(zipf)})
-    ev1 = db.add_evidence("default", "golden-A", "artifact", "manual.pdf",
-                          url=str(pdf), summary="A 手册 PDF 制品",
-                          metadata={"sha256": _sha(pdf), "source_commit": head})
-    ev2 = db.add_evidence("default", "golden-A", "artifact", "manual.zip",
-                          url=str(zipf), summary="A 手册 ZIP 制品",
-                          metadata={"sha256": _sha(zipf)})
+    db.add_evidence("default", "golden-A", "artifact", "manual.pdf",
+                    url=str(pdf), summary="A 手册 PDF 制品",
+                    metadata={"sha256": _sha(pdf), "source_commit": head})
+    db.add_evidence("default", "golden-A", "artifact", "manual.zip",
+                    url=str(zipf), summary="A 手册 ZIP 制品",
+                    metadata={"sha256": _sha(zipf)})
     # 中断恢复：保存检查点 → 模拟中断 → 恢复
     cm = CheckpointManager(db)
     cp_id = cm.save_checkpoint("golden-A", {"state": st, "deliverables": [del1, del2]},

@@ -129,16 +129,6 @@ def test_hashes_stable_and_sensitive_to_input(tmp_path):
     assert a["record"].output_hash == b["record"].output_hash
     # canonical_hash 稳定性
     assert canonical_hash({"a": 1, "b": [1, 2]}) == canonical_hash({"b": [1, 2], "a": 1})
-def test_hashes_stable_and_sensitive_to_input(tmp_path):
-    store, router = _router(tmp_path)
-    a = router.run("W1", "doc.generate", {"title": "A", "sections": []})
-    b = router.run("W1", "doc.generate", {"title": "A", "sections": []})
-    c = router.run("W1", "doc.generate", {"title": "B", "sections": []})
-    assert a["record"].input_hash == b["record"].input_hash
-    assert a["record"].input_hash != c["record"].input_hash
-    assert a["record"].output_hash == b["record"].output_hash
-    # canonical_hash 稳定性
-    assert canonical_hash({"a": 1, "b": [1, 2]}) == canonical_hash({"b": [1, 2], "a": 1})
 
 
 def test_project_id_passes_through_context(tmp_path):

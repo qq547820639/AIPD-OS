@@ -16,6 +16,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 import importlib
 import importlib.util
 import sys
@@ -257,17 +258,11 @@ def probe_entry_callable(entry_spec: str | None, repo_root=None) -> bool:
             sys.path.insert(0, sp)
             added = True
     try:
-        for candidate in entry_spec.split("/"):
-            if _resolve_entry_candidate(candidate):
-                return True
-        return False
+        return any(_resolve_entry_candidate(candidate) for candidate in entry_spec.split("/"))
     finally:
         if added:
-            try:
-                sys.path.remove(str(scripts_dir))
-            except ValueError:
-                # noqa: EMPTY_EXCEPT - 清理 sys.path 失败（路径本就不在）可安全忽略
-                pass
+            with contextlib.suppress(ValueError):
+                sys.path.remove(str(scripts_dir))  # 清理 sys.path 失败（路径本就不在）可安全忽略
 
 
 def probe_classification(

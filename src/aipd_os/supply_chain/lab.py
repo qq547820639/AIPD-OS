@@ -86,7 +86,8 @@ def import_lab_xlsx(path: str | Path, stage: str) -> dict[str, Any]:
     try:
         import openpyxl  # noqa: WPS433
     except ImportError:
-        raise AdapterError(
+        # 缺依赖转义为外部阻塞错误，保留隐式异常链
+        raise AdapterError(  # noqa: B904
             f"openpyxl 未安装，无法解析 xlsx 实验室数据: {p}；请安装 openpyxl 或走外部工具",
             classification="external_blocked",
         )

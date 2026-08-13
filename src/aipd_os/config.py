@@ -138,7 +138,8 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
-    data = yaml.safe_load(open(path, encoding="utf-8"))
+    with open(path, encoding="utf-8") as fh:
+        data = yaml.safe_load(fh)
     if data is None:
         return {}
     if not isinstance(data, dict):

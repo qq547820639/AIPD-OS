@@ -143,7 +143,7 @@ class Provider(abc.ABC):
     def capabilities(self) -> list[dict[str, Any]]:
         """返回本 Provider 提供的能力声明列表。"""
 
-    def configure(self, config: dict[str, Any]) -> None:
+    def configure(self, config: dict[str, Any]) -> None:  # noqa: B027 - 可选子类钩子，默认为无操作
         """注入配置（可选）。默认实现为无操作。"""
 
     @abc.abstractmethod

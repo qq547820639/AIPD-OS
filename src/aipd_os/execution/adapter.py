@@ -24,10 +24,7 @@ def now() -> str:
 def output_dir() -> Path:
     """返回稳定的输出目录（环境变量 AIPD_OUTPUT_DIR 优先，否则临时目录）。"""
     d = os.environ.get("AIPD_OUTPUT_DIR")
-    if d:
-        path = Path(d)
-    else:
-        path = Path(tempfile.gettempdir()) / "aipd_os_output"
+    path = Path(d) if d else Path(tempfile.gettempdir()) / "aipd_os_output"
     path.mkdir(parents=True, exist_ok=True)
     return path
 

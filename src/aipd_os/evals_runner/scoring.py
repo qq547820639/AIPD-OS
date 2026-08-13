@@ -71,9 +71,7 @@ def _no_long_questionnaire(text: str) -> bool:
 
 def _only_ask_when_necessary(text: str) -> bool:
     """只在必要决策时询问：普通工作不出现反复征询。"""
-    if "是否继续" in text or "你希望" in text:
-        return False
-    return True
+    return not ("是否继续" in text or "你希望" in text)
 
 
 def _attachment_continuity(text: str) -> bool:

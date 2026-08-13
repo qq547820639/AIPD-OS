@@ -64,16 +64,12 @@ def _affected_for_kind(db: AIPDStateDB, project_id: str, intent: Intent,
 
 def _is_reversible(intent: Intent) -> bool:
     """可撤销操作：返回 True；不可逆的方向性/制造决定返回 False。"""
-    if intent.kind in ("approve", "choose", "halt_physical_manufacturing"):
-        return False
-    return True
+    return intent.kind not in ("approve", "choose", "halt_physical_manufacturing")
 
 
 def _requires_approval(intent: Intent) -> bool:
     """必要时批准：批准/选择方案、暂不进入实体制造等方向性操作需显式批准。"""
-    if intent.kind in ("approve", "choose", "halt_physical_manufacturing"):
-        return True
-    return False
+    return intent.kind in ("approve", "choose", "halt_physical_manufacturing")
 
 
 def _why_need_decide(intent: Intent) -> str:

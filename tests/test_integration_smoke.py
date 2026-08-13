@@ -100,7 +100,7 @@ def test_integration_eval_report(tmp_path) -> None:
 
     report = build_report(results, version="5.5.0")
     assert report["version"] == "5.5.0"
-    out = save_eval_report(report, str(tmp_path / "reports"), version="5.5.0")
+    save_eval_report(report, str(tmp_path / "reports"), version="5.5.0")
     loaded = load_baseline(str(tmp_path / "reports"), version="5.5.0")
     assert loaded["version"] == "5.5.0"
     assert len(loaded["results"]) >= 1

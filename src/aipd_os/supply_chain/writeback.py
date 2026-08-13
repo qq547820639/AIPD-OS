@@ -147,10 +147,7 @@ class PhysicalWriteback:
         :param physical_ok: 是否有充分的已通过物理证据；False/缺失 -> HOLD。
         """
         result: str
-        if physical_ok:
-            result = "PASS"
-        else:
-            result = "HOLD"
+        result = "PASS" if physical_ok else "HOLD"
         self.db.add_gate(
             self.tenant_id,
             project_id,

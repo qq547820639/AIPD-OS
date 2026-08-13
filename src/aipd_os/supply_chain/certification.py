@@ -112,7 +112,7 @@ def _parse_expiry(value: str | None) -> datetime | None:
 
 
 def import_certificate_file(
-    path: Union[str, Path],
+    path: str | Path,
     cert_id: str | None = None,
     registry: CertificationRegistry | None = None,
 ) -> dict[str, Any]:

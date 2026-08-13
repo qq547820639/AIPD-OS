@@ -320,9 +320,9 @@ def test_onboarding_one_sentence_to_first_result(db):
     # 立即产出第一份有价值的结果
     assert r["produced"]
     labels = [p["label"] for p in r["produced"]]
-    assert any("项目目标" in l for l in labels)
-    assert any("需求规格" in l for l in labels)
-    assert any("待决定" in l for l in labels)
+    assert any("项目目标" in label for label in labels)
+    assert any("需求规格" in label for label in labels)
+    assert any("待决定" in label for label in labels)
     # 第一份结果 = owner dashboard
     assert "executing" in r["first_result"]
     # 能力与外部配置
@@ -347,11 +347,11 @@ def test_onboarding_provider_guide(db):
 
 
 def test_onboarding_reset(db):
-    r = onboard(db, "做一款轻量外骨骼", project_id="exo")
+    onboard(db, "做一款轻量外骨骼", project_id="exo")
     reset = reset_project(db, "exo")
     assert reset["reset"] is True
     assert reset["backup"]
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017 - 删除后查询抛底层异常，宽断言保持原语义
         db.get_project("default", "exo")  # 已被删除
 
 

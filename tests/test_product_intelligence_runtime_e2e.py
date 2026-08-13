@@ -94,7 +94,7 @@ def _env(tmp_path):
     sup = Supervisor(db_path, tenant_id="default", project_id="p1",
                      state_db=db)
     sup.init_lifecycle()
-    reg = register_product_adapters(
+    register_product_adapters(
         _base_registry(), db, provider=provider)
     reg2 = _base_registry()
     register_product_adapters(reg2, db, provider=provider)
@@ -208,7 +208,7 @@ def test_runtime_owner_approve_commits_exact_snapshot(tmp_path):
     assert evaluation.result == GATE_READY
     assert gate.authorization_status(snap.snapshot_id)["state"] == "PENDING"
     # Owner approve（绑定 snapshot）+ commit
-    opp = env["pi"].list_opportunities("default", "p1")[0]
+    env["pi"].list_opportunities("default", "p1")[0]
     for r in env["pi"].list_requirements("default", "p1"):
         env["pi"].update_requirement("default", "p1", r.requirement_id,
                                      r.version_no, "t",
@@ -431,7 +431,7 @@ def test_provider_missing_is_external_dependency(tmp_path):
     register_product_adapters(reg, env["db"], provider=None)
     router = ExecutionRouter(RunStore(str(Path(tmp_path) / "exec-nop.db")),
                              reg)
-    work_ids = schedule_product_intelligence_chain(
+    schedule_product_intelligence_chain(
         env["sup"], env["idea"].idea_id,
         steps=("derive_insights",))
     results = env["sup"].run_supervisor(

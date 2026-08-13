@@ -144,9 +144,8 @@ class VisualAuditor:
         mismatches = []
         for row in page_defn.get("param_table", []) or []:
             key = row.get("param")
-            if key in facts_params:
-                if row.get("value") != facts_params[key]:
-                    mismatches.append({"param": key, "defn": row.get("value"), "fact": facts_params[key]})  # noqa: E501
+            if key in facts_params and row.get("value") != facts_params[key]:
+                mismatches.append({"param": key, "defn": row.get("value"), "fact": facts_params[key]})  # noqa: E501
         dims["params_match_facts"] = {
             "passed": not mismatches, "mismatches": mismatches,
             "facts_provided": bool(facts and facts.get("params")),

@@ -178,7 +178,8 @@ def test_second_batch_receives_first_batch_image_bytes(tmp_path) -> None:
     facts_json.write_text(json.dumps(FACTS, ensure_ascii=False), encoding="utf-8")
     batches = setup_plan(tmp_path, state)
 
-    out1 = tmp_path / "out1"; out2 = tmp_path / "out2"
+    out1 = tmp_path / "out1"
+    out2 = tmp_path / "out2"
     # 第一批：用 PIL provider 真实生成配图字节
     run_batch_pil(tmp_path, state, batches[0], facts_json, out1)
     br1 = batch_run(state, batches[0])
@@ -247,7 +248,8 @@ def test_body_copy_from_product_truth(tmp_path) -> None:
     facts_json.write_text(json.dumps(FACTS, ensure_ascii=False), encoding="utf-8")
     setup_plan(tmp_path, state)
     # cover/module 在 batch_1，cmf 在 batch_2；跨批次合并检索正文来源
-    out1 = tmp_path / "out1"; out2 = tmp_path / "out2"
+    out1 = tmp_path / "out1"
+    out2 = tmp_path / "out2"
     run_batch_pil(tmp_path, state, "batch_1", facts_json, out1)
     run_batch_pil(tmp_path, state, "batch_2", facts_json, out2)
     pages = [op for br in load_state(state)["batch_runs"] for op in br["output_pages"]]
