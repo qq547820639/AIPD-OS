@@ -94,7 +94,7 @@ class ContractFetcher(DocumentFetcher):
     def fetch(self, citation: Citation) -> Document:
         key = None
         for k in self._fixtures:
-            if k.lower() in (citation.title or "").lower() or k.lower() in (citation.identifier or "").lower():
+            if k.lower() in (citation.title or "").lower() or k.lower() in (citation.identifier or "").lower():  # noqa: E501
                 key = k
                 break
         if key is None:

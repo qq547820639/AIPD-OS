@@ -20,11 +20,11 @@ from .owner_dashboard import build_dashboard
 # 需要外部配置的 Provider 与其环境变量/说明
 EXTERNAL_PROVIDERS = [
     {"name": "Image 图像生成", "env": "AIPD_IMGGEN_BACKEND",
-     "guide": "设置 AIPD_IMGGEN_BACKEND 指向可用的图像后端（如本地/远程服务）。未配置时，手册页会生成为外部任务包并标记 HOLD，绝不伪造图片。"},
+     "guide": "设置 AIPD_IMGGEN_BACKEND 指向可用的图像后端（如本地/远程服务）。未配置时，手册页会生成为外部任务包并标记 HOLD，绝不伪造图片。"},  # noqa: E501
     {"name": "Model 模型", "env": "AIPD_EVAL_MODEL_ENDPOINT",
-     "guide": "设置 AIPD_EVAL_MODEL_ENDPOINT 指向真实模型端点。未配置时评估使用确定性 contract-test 夹具，不描述为真实模型。"},
+     "guide": "设置 AIPD_EVAL_MODEL_ENDPOINT 指向真实模型端点。未配置时评估使用确定性 contract-test 夹具，不描述为真实模型。"},  # noqa: E501
     {"name": "CAD 内核", "env": "AIPD_CAD_KERNEL",
-     "guide": "安装 cadquery 内核后 CAD 可达到 C2 及以上；未安装时如实标 external_dependency，绝不越级。"},
+     "guide": "安装 cadquery 内核后 CAD 可达到 C2 及以上；未安装时如实标 external_dependency，绝不越级。"},  # noqa: E501
     {"name": "Mail 邮件", "env": "AIPD_MAIL_PROVIDER",
      "guide": "设置 AIPD_MAIL_PROVIDER 以启用 RFQ 收发。未配置时供应链保持 HOLD。"},
 ]
@@ -52,7 +52,7 @@ def _first_result(db: AIPDStateDB, project_id: str, idea: str,
         db.add_risk(tenant_id, project_id, "量产与供应链投入待评估",
                     probability="medium", impact="high",
                     mitigation="先完成设计与验证，再评估量产路径")
-        produced.append({"kind": "risk", "label": "识别初始风险", "detail": "量产与供应链投入待评估"})
+        produced.append({"kind": "risk", "label": "识别初始风险", "detail": "量产与供应链投入待评估"})  # noqa: E501
     else:
         db.add_risk(tenant_id, project_id, "需求细节需进一步澄清",
                     probability="low", impact="medium",

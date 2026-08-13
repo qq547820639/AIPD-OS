@@ -76,7 +76,7 @@ def load_cases(evals_json_path: str) -> list[Case]:
     data = json.loads(path.read_text(encoding="utf-8"))
     cases: list[Case] = []
     for item in data.get("cases", []):
-        contracts = item.get("contracts") or ([] if item.get("contract") is None else [item["contract"]])
+        contracts = item.get("contracts") or ([] if item.get("contract") is None else [item["contract"]])  # noqa: E501
         cases.append(
             Case(
                 id=item["id"],

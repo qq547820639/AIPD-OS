@@ -223,7 +223,7 @@ class RunStore:
         ts = _now()
         with self.connect() as c:
             c.execute(
-                "UPDATE execution_runs SET status='retried',end_time=?,duration_ms=? WHERE run_id=?",
+                "UPDATE execution_runs SET status='retried',end_time=?,duration_ms=? WHERE run_id=?",  # noqa: E501
                 (ts, 0, prev_run_id),
             )
         lineage = list(prev.retry_lineage) + [prev_run_id]

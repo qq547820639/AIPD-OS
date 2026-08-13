@@ -37,7 +37,7 @@ def health_check(db_path: str) -> dict[str, Any]:
     try:
         conn = sqlite3.connect(str(path))
         conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT created_at FROM backups ORDER BY created_at DESC LIMIT 1").fetchone()
+        row = conn.execute("SELECT created_at FROM backups ORDER BY created_at DESC LIMIT 1").fetchone()  # noqa: E501
         conn.close()
         if row:
             dt = datetime.fromisoformat(row["created_at"])

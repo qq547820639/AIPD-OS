@@ -73,6 +73,6 @@ class ImageGenAdapter:
         target = Path(out_path)
         target.parent.mkdir(parents=True, exist_ok=True)
         # 任务包路径与图片期望路径相邻，便于外部消费。
-        task_path = target.with_suffix(target.suffix + ".task.json") if target.suffix else target.with_name(target.name + ".task.json")
+        task_path = target.with_suffix(target.suffix + ".task.json") if target.suffix else target.with_name(target.name + ".task.json")  # noqa: E501
         task_path.write_text(json.dumps(pkg, ensure_ascii=False, indent=2), encoding="utf-8")
         return pkg

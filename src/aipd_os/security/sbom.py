@@ -66,7 +66,7 @@ def _project_modules(project_root: Path, pkg_name: str) -> list[str]:
         for py in sorted(pkg.rglob("*.py")):
             if py.name == "__init__.py":
                 rel = py.relative_to(pkg).parent
-                modules.append(pkg_name if str(rel) == "." else f"{pkg_name}.{rel.as_posix().replace('/', '.')}")
+                modules.append(pkg_name if str(rel) == "." else f"{pkg_name}.{rel.as_posix().replace('/', '.')}")  # noqa: E501
             else:
                 rel = py.relative_to(pkg)
                 modules.append(f"{pkg_name}.{rel.with_suffix('').as_posix().replace('/', '.')}")
@@ -74,7 +74,7 @@ def _project_modules(project_root: Path, pkg_name: str) -> list[str]:
     return sorted(set(modules))
 
 
-def _dependency_components(dependencies: list[str], optional: dict[str, list[str]]) -> list[dict[str, Any]]:
+def _dependency_components(dependencies: list[str], optional: dict[str, list[str]]) -> list[dict[str, Any]]:  # noqa: E501
     """把依赖声明转为 CycloneDX 组件。"""
     comps: dict[str, dict[str, Any]] = {}
     for item in dependencies:
@@ -83,7 +83,7 @@ def _dependency_components(dependencies: list[str], optional: dict[str, list[str
     for group, items in optional.items():
         for item in items:
             name = _dep_name(item)
-            base = comps.setdefault(name, {"type": "library", "name": name, "purl": _purl(name, item)})
+            base = comps.setdefault(name, {"type": "library", "name": name, "purl": _purl(name, item)})  # noqa: E501
             group_tags = base.setdefault("optional", [])
             if group not in group_tags:
                 group_tags.append(group)

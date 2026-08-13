@@ -183,7 +183,7 @@ def test_standards_retriever_fixture_deterministic():
 
 def test_patent_and_competitor_retrievers():
     assert patents_test_retriever().search("additive manufacturing")[0].citation.kind == "patent"
-    assert competitors_test_retriever().search("thermal management")[0].citation.kind == "competitor"
+    assert competitors_test_retriever().search("thermal management")[0].citation.kind == "competitor"  # noqa: E501
 
 
 def test_production_retrievers_default_external_dependency():
@@ -240,7 +240,7 @@ def test_write_verified_finding_creates_fact_and_evidence(db):
     finding = ResearchFinding(
         key="copper_thickness", value="1.6 mm", status=STATUS_VERIFIED,
         confidence=0.9,
-        citations=[Citation(source="official_standard", title="IPC-H05K", confidence=0.9, kind="standard")],
+        citations=[Citation(source="official_standard", title="IPC-H05K", confidence=0.9, kind="standard")],  # noqa: E501
     )
     fact_id = backend.write_finding(finding)
     assert fact_id is not None
@@ -297,7 +297,7 @@ def test_mark_evidence_expired_flags_linked_fact_stale(db):
 def test_expire_evidence_list_batch(db):
     backend = ResearchBackend(db, "default", "p1")
     f = ResearchFinding(key="k", value="v", status=STATUS_VERIFIED,
-                        citations=[Citation(source="patent", title="US-PAT-10404000", confidence=0.8)])
+                        citations=[Citation(source="patent", title="US-PAT-10404000", confidence=0.8)])  # noqa: E501
     backend.write_finding(f)
     ev = db.list_evidence("default", "p1")[0]
     out = mark_evidence_expired(db, "default", "p1", ev["evidence_id"])

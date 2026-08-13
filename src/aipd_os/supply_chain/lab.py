@@ -43,7 +43,7 @@ def _normalize_lab_record(record: dict[str, Any], stage: str) -> dict[str, Any]:
     return normalized
 
 
-def _records_from_rows(rows: list[dict[str, Any]], stage: str, source: str, fmt: str) -> dict[str, Any]:
+def _records_from_rows(rows: list[dict[str, Any]], stage: str, source: str, fmt: str) -> dict[str, Any]:  # noqa: E501
     records = [_normalize_lab_record(r, stage) for r in rows]
     return {
         "source": source,

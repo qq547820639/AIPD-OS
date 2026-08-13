@@ -81,7 +81,7 @@ class StateService:
         self.checkpoints = CheckpointManager(self.db)
         self._audit_logger = AuditLogger(self.db)
         base = Path(db_path).parent
-        self.objects = ObjectStore(object_dir or str(base / "objects"), retention_days=retention_days)
+        self.objects = ObjectStore(object_dir or str(base / "objects"), retention_days=retention_days)  # noqa: E501
         self.backup = BackupManager(db_path, backup_dir=str(base / "backups"))
         self.db.ensure_default_tenant(default_tenant)
 
@@ -276,8 +276,8 @@ class StateService:
                          recommendation: str, options: Any, trigger: str | None = "",
                          actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
-        did = self.db.propose_decision(tenant_id, project_id, topic, recommendation, options, trigger or None)
-        self._audit(actor, "propose_decision", tenant_id, project_id, after={"decision_id": did, "topic": topic})
+        did = self.db.propose_decision(tenant_id, project_id, topic, recommendation, options, trigger or None)  # noqa: E501
+        self._audit(actor, "propose_decision", tenant_id, project_id, after={"decision_id": did, "topic": topic})  # noqa: E501
         return did
 
     def resolve_decision(self, tenant_id: str, project_id: str, decision_id: str,
@@ -302,7 +302,7 @@ class StateService:
         self._authorize(actor, tenant_id, project_id)
         eid = self.db.add_evidence(tenant_id, project_id, kind, title, url, identifier,
                                    quality, summary, metadata)
-        self._audit(actor, "add_evidence", tenant_id, project_id, after={"evidence_id": eid, "title": title})
+        self._audit(actor, "add_evidence", tenant_id, project_id, after={"evidence_id": eid, "title": title})  # noqa: E501
         return eid
 
     # ---------------------------------------------------------------- risks
@@ -311,8 +311,8 @@ class StateService:
                  mitigation: str | None = None, status: str = "open",
                  actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
-        rid = self.db.add_risk(tenant_id, project_id, title, probability, impact, mitigation, status)
-        self._audit(actor, "add_risk", tenant_id, project_id, after={"risk_id": rid, "title": title})
+        rid = self.db.add_risk(tenant_id, project_id, title, probability, impact, mitigation, status)  # noqa: E501
+        self._audit(actor, "add_risk", tenant_id, project_id, after={"risk_id": rid, "title": title})  # noqa: E501
         return rid
 
     # ---------------------------------------------------------- deliverables
@@ -322,7 +322,7 @@ class StateService:
                         metadata: dict[str, Any] | None = None,
                         actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
-        return self.db.add_deliverable(tenant_id, project_id, dtype, path, status, version, gate, metadata)
+        return self.db.add_deliverable(tenant_id, project_id, dtype, path, status, version, gate, metadata)  # noqa: E501
 
     # ------------------------------------------------------------ checkpoints
     def save_checkpoint(self, tenant_id: str, project_id: str, data: Any,
@@ -525,7 +525,7 @@ def run_http(service: StateService, host: str = "0.0.0.0", port: int = 8000) -> 
 
 
 def main(argv: list | None = None) -> None:
-    """CLI 入口：AIPD_DB_DIR / AIPD_MODE / AIPD_PORT / AIPD_ENCRYPTION_KEY / AIPD_RETENTION_DAYS。"""
+    """CLI 入口：AIPD_DB_DIR / AIPD_MODE / AIPD_PORT / AIPD_ENCRYPTION_KEY / AIPD_RETENTION_DAYS。"""  # noqa: E501
     import argparse
 
     parser = argparse.ArgumentParser(description="AIPD-OS state service")
@@ -539,7 +539,7 @@ def main(argv: list | None = None) -> None:
     parser.add_argument("--insecure-dev-mode", action="store_true",
                         default=os.environ.get("AIPD_INSECURE_DEV_MODE", "")
                         not in ("", "0", "false", "False"))
-    parser.add_argument("--retention-days", type=int, default=int(os.environ.get("AIPD_RETENTION_DAYS", "90")))
+    parser.add_argument("--retention-days", type=int, default=int(os.environ.get("AIPD_RETENTION_DAYS", "90")))  # noqa: E501
     args = parser.parse_args(argv)
 
     svc = StateService(args.db, encryption_key=args.encryption_key, secret=args.secret,

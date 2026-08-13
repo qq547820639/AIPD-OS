@@ -1000,7 +1000,7 @@ def cmd_cad_preflight(args):
     manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     s = _cad_gate_summary(cmg, manifest, args.target)
     result = {"command": "cad preflight", "ok": True, **s}
-    result["passed"] = s["runtime_ceiling"] and cmg.idx(s["runtime_ceiling"]) >= cmg.idx(args.target)
+    result["passed"] = s["runtime_ceiling"] and cmg.idx(s["runtime_ceiling"]) >= cmg.idx(args.target)  # noqa: E501
 
     def prose():
         print(f"运行时：{s['runtime']}；上限 {s['runtime_ceiling']}；目标 {args.target}。")
@@ -1077,7 +1077,7 @@ def cmd_industrialize(args):
         if lab_note:
             print(lab_note)
         if analysis:
-            print(f"阶段分析：共 {analysis['total']} 项，通过 {analysis['passed']}，失败 {analysis['failed']}"
+            print(f"阶段分析：共 {analysis['total']} 项，通过 {analysis['passed']}，失败 {analysis['failed']}"  # noqa: E501
                   f"；阶段通过：{'是' if analysis['pass_flag'] else '否'}")
             print(f"纠偏任务：{len(correction_tasks)} 个")
             for t in correction_tasks:
@@ -1363,7 +1363,7 @@ def cmd_doctor(args):
         print(f"AIPD-OS doctor v{__version__}")
         for c in checks:
             print(f"[{c['status']:>18}] {c['name']}: {c['detail']}")
-        print("体检结论：" + ("通过（无硬失败）" if result["ok"] else f"存在 {len(failed)} 项硬失败"))
+        print("体检结论：" + ("通过（无硬失败）" if result["ok"] else f"存在 {len(failed)} 项硬失败"))  # noqa: E501
     return 0 if result["ok"] else 1
 
 
@@ -1403,7 +1403,7 @@ def cmd_operate(args):
         print("操作闭环已完成：")
         for line in result["impact"]["propagated_impact"]:
             print(f"· {line}")
-        print(f"· 自动返工 {result['rework']['count']} 项，自动验收 {result['acceptance']['count']} 项，摘要已更新。")
+        print(f"· 自动返工 {result['rework']['count']} 项，自动验收 {result['acceptance']['count']} 项，摘要已更新。")  # noqa: E501
     return 0
 
 

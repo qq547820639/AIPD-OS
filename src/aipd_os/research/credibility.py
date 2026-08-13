@@ -88,7 +88,7 @@ def score_evidence(source: str, days_old: float, is_fact: bool) -> dict[str, Any
     }
 
 
-def separate_facts_from_assumptions(evidence_list: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+def separate_facts_from_assumptions(evidence_list: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:  # noqa: E501
     """按每条证据的 is_fact 标志拆分为 事实 / 假设 两组。"""
     facts = []
     assumptions = []

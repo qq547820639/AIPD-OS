@@ -103,7 +103,7 @@ def _draw_curve(draw, curve, x, y, w, h, font, label_fill, line_fill, grid_fill)
         lx += draw.textlength(label, font=font) + 48 + 60
 
 
-def _draw_param_table(draw, rows, x, y, col_widths, header_font, cell_font, header_fill, line_fill, text_fill):
+def _draw_param_table(draw, rows, x, y, col_widths, header_font, cell_font, header_fill, line_fill, text_fill):  # noqa: E501
     if not rows:
         return y
     row_h = 90
@@ -192,7 +192,7 @@ def render_page(defn: dict, out_png: str,
     if curve:
         y += 20
         curve_h = 900
-        draw.rectangle([MARGIN, y, MARGIN + CONTENT_W, y + curve_h], outline=(210, 210, 210), width=4)
+        draw.rectangle([MARGIN, y, MARGIN + CONTENT_W, y + curve_h], outline=(210, 210, 210), width=4)  # noqa: E501
         _draw_curve(draw, curve, MARGIN + 60, y + 60, CONTENT_W - 120, curve_h - 160,
                     _load_font(font_path, 40), muted, (30, 60, 120), (225, 225, 225))
         y += curve_h + 40
@@ -210,9 +210,9 @@ def render_page(defn: dict, out_png: str,
         y += 70
 
     # 页脚 + 页码
-    draw.line([(MARGIN, PAGE_H - MARGIN - 60), (PAGE_W - MARGIN, PAGE_H - MARGIN - 60)], fill=primary, width=4)
+    draw.line([(MARGIN, PAGE_H - MARGIN - 60), (PAGE_W - MARGIN, PAGE_H - MARGIN - 60)], fill=primary, width=4)  # noqa: E501
     if footer:
-        draw.text((MARGIN, PAGE_H - MARGIN - 46), footer, font=_load_font(font_path, 36), fill=muted)
+        draw.text((MARGIN, PAGE_H - MARGIN - 46), footer, font=_load_font(font_path, 36), fill=muted)  # noqa: E501
     pn_txt = f"第 {page_number} 页"
     pn_w = draw.textlength(pn_txt, font=_load_font(font_path, 36))
     draw.text((PAGE_W - MARGIN - pn_w, PAGE_H - MARGIN - 46), pn_txt,

@@ -182,7 +182,7 @@ class ImapConnector(MailConnector):
 
     def send(self, message: MailMessage, **kwargs: Any) -> SendResult:
         # IMAP 连接器只负责读取，不负责发送。
-        raise ExternalDependencyError("IMAP 连接器不执行发送；发送请使用 SMTP 或 LocalMailService。")
+        raise ExternalDependencyError("IMAP 连接器不执行发送；发送请使用 SMTP 或 LocalMailService。")  # noqa: E501
 
     def read_inbox(self, **kwargs: Any) -> list[MailMessage]:
         if not self.host:
@@ -331,7 +331,7 @@ class LocalMailService(MailConnector):
             return SendResult(
                 ok=False,
                 message_id=message_id,
-                error=f"邮件 {message_id} 尚未审批（状态: {msg.status}），禁止发送；请先审批后再试。",
+                error=f"邮件 {message_id} 尚未审批（状态: {msg.status}），禁止发送；请先审批后再试。",  # noqa: E501
             )
 
         last_error = ""

@@ -72,7 +72,7 @@ def cli_expect(cwd: Path, code: int, *args: str) -> str:
     r = subprocess.run(
         [sys.executable, str(MANUAL), *args], capture_output=True, text=True, cwd=str(cwd)
     )
-    assert r.returncode == code, f"expected {code} got {r.returncode}: {args}\n{r.stdout}\n{r.stderr}"
+    assert r.returncode == code, f"expected {code} got {r.returncode}: {args}\n{r.stdout}\n{r.stderr}"  # noqa: E501
     return r.stdout
 
 
@@ -88,7 +88,7 @@ def batch_run(state: Path, batch_id: str) -> dict:
 
 
 def setup_plan(tmp_path: Path, state: Path) -> list:
-    cli(tmp_path, "init", "--state", str(state), "--project-id", "chain-exo", "--minimum-pages", "10")
+    cli(tmp_path, "init", "--state", str(state), "--project-id", "chain-exo", "--minimum-pages", "10")  # noqa: E501
     cli(tmp_path, "plan-batches", "--state", str(state), "--minimum-pages", "10")
     plan = load_state(state)["batch_plan"]
     assert len(plan) >= 10
@@ -268,7 +268,7 @@ def test_visual_failure_blocks_release(tmp_path) -> None:
     out = tmp_path / "out"
     run_batch_pil(tmp_path, state, "batch_1", facts_json, out)
 
-    # 检查发布门：无前哈希、全新页面，仅视觉维度 requiring_vision → release_blocked=True（绝不假通过）
+    # 检查发布门：无前哈希、全新页面，仅视觉维度 requiring_vision → release_blocked=True（绝不假通过）  # noqa: E501
     pages_dir = out / "pages"
     cli_expect(tmp_path, 1, "check-release", "--state", str(state),
                "--pages-dir", str(pages_dir), "--facts", str(facts_json))

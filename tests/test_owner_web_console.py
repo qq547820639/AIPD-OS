@@ -121,7 +121,7 @@ def test_all_json_api_endpoints_return_200(srv):
         assert status == 200, f"{path} 应返回 200"
 
 
-# ---------------------------------------------------------------- 决策中心：单一真决策、不暴露内部 ID
+# ---------------------------------------------------------------- 决策中心：单一真决策、不暴露内部 ID  # noqa: E501
 def test_decision_center_returns_single_real_decision_no_internal_id(srv, console):
     _, base = srv
     status, data = _get_json(base + "/api/decisions")
@@ -187,7 +187,7 @@ def test_chinese_english_terminology_consistent(srv):
         assert label in html, f"导航中应包含一致术语「{label}」"
 
 
-# ---------------------------------------------------------------- JSON API 与直接调用共用同一业务服务
+# ---------------------------------------------------------------- JSON API 与直接调用共用同一业务服务  # noqa: E501
 def test_json_api_uses_same_service_as_direct_call(srv, console):
     _, base = srv
     _, via_api = _get_json(base + "/api/overview")

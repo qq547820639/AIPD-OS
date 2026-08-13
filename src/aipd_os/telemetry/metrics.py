@@ -81,7 +81,7 @@ class Metrics:
     def histogram(self, name: str, buckets: list[float] | None = None) -> Histogram:
         with self._lock:
             if name not in self._histograms:
-                self._histograms[name] = Histogram(buckets if buckets is not None else [0.1, 0.5, 1.0, 5.0])
+                self._histograms[name] = Histogram(buckets if buckets is not None else [0.1, 0.5, 1.0, 5.0])  # noqa: E501
             return self._histograms[name]
 
     def observe(self, name: str, value: float, buckets: list[float] | None = None) -> None:

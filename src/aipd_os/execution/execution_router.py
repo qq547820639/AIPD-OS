@@ -360,7 +360,7 @@ class ExecutionRouter:
             end_time=self._now(),
             duration_ms=0,
             error_classification="external_blocked",
-            error_message=f"capability {adapter.capability_id()} unavailable; external task package: {pkg}",
+            error_message=f"capability {adapter.capability_id()} unavailable; external task package: {pkg}",  # noqa: E501
             artifacts=[pkg] if pkg else [],
             result={"external_task_package": pkg},
         )

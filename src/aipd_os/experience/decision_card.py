@@ -65,7 +65,7 @@ def _after_approval(decision: dict[str, Any]) -> str:
     override = meta.get("after_approval")
     if override:
         return str(override)
-    return f"批准后，系统将按推荐方案自动推进「{decision.get('topic')}」并同步更新相关产物与检查点。"
+    return f"批准后，系统将按推荐方案自动推进「{decision.get('topic')}」并同步更新相关产物与检查点。"  # noqa: E501
 
 
 def build_decision_card(db: AIPDStateDB, project_id: str,

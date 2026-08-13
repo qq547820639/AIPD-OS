@@ -135,7 +135,7 @@ def test_three_evidence_files_exist_and_complete(clean_repo):
     assert prov["build_time"]
     assert prov["dependency_lock"] is not None
     assert prov["test_report"]["parsed"] is True
-    assert prov["bundle_hash"] == bundle["bundle_sha256"] == _sha256(clean_repo / "aipd-os-5.6.0.zip")
+    assert prov["bundle_hash"] == bundle["bundle_sha256"] == _sha256(clean_repo / "aipd-os-5.6.0.zip")  # noqa: E501
 
     # 三份证据互不包含自身
     source_paths = {f["path"] for f in source["files"]}

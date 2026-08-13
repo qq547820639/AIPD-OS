@@ -5,9 +5,11 @@
   返回真实图像字节（``data``）/文件对象，而不是仅返回路径字符串。
 - ``PILImageGenProvider``：确定性本地后端。用 Pillow 真实渲染出每页配图字节，
   并把前一批的真实图像字节合成到新图（蒙太奇条带），从而让第二批真正“收到”第一批的字节。
-  它同时记录 request_id / model_version / seed / prompt / 附件哈希 / 生成参数 / cost / latency / 产物哈希。
+  它同时记录 request_id / model_version / seed / prompt / 附件哈希 / 生成参数 / cost / latency /
+  产物哈希。
 - ``ExternalImageGenProvider``：外部网络桩，标记 ``external_dependency``。未配置后端时
-  ``available()`` 为 False，``generate_batch`` 抛 ``ImageGenUnavailable``，链保持 HOLD 并输出外部任务包，
+  ``available()`` 为 False，``generate_batch`` 抛 ``ImageGenUnavailable``，链保持 HOLD 并
+  输出外部任务包，
   绝不假装生成了真实图像。
 """
 from __future__ import annotations
@@ -106,7 +108,7 @@ class ImageGenProvider(ABC):
         """为一批页面生成真实配图字节，并消费前一批的真实图像字节。"""
 
 
-def _montage(prior_images: list[dict], thumb: int = 96, gap: int = 8, max_count: int = 8) -> Image.Image | None:
+def _montage(prior_images: list[dict], thumb: int = 96, gap: int = 8, max_count: int = 8) -> Image.Image | None:  # noqa: E501
     """把前一批真实图像字节合成为底部蒙太奇条带（证明字节被消费）。"""
     if not prior_images:
         return None
@@ -162,14 +164,14 @@ class PILImageGenProvider(ImageGenProvider):
         results: list[GeneratedImage] = []
         for page in request.pages:
             t0 = time.monotonic()
-            prompt = f"{request.prompt_template} {page.get('title', '')} / {page.get('page_id', '')}"
+            prompt = f"{request.prompt_template} {page.get('title', '')} / {page.get('page_id', '')}"  # noqa: E501
             prompt_hash = _sha(prompt.encode("utf-8"))
 
-            img = Image.new("RGB", FIG_SIZE, (rng.randint(30, 60), rng.randint(60, 110), rng.randint(120, 180)))
+            img = Image.new("RGB", FIG_SIZE, (rng.randint(30, 60), rng.randint(60, 110), rng.randint(120, 180)))  # noqa: E501
             draw = ImageDraw.Draw(img)
-            draw.text((60, 60), str(page.get("title", "")), font=_load_font(56), fill=(255, 255, 255))
-            draw.text((60, 150), f"page:{page.get('page_id', '')}", font=_load_font(36), fill=(230, 230, 230))
-            draw.text((60, 210), f"seed:{seed} prompt_hash:{prompt_hash[:12]}", font=_load_font(28), fill=(200, 200, 200))
+            draw.text((60, 60), str(page.get("title", "")), font=_load_font(56), fill=(255, 255, 255))  # noqa: E501
+            draw.text((60, 150), f"page:{page.get('page_id', '')}", font=_load_font(36), fill=(230, 230, 230))  # noqa: E501
+            draw.text((60, 210), f"seed:{seed} prompt_hash:{prompt_hash[:12]}", font=_load_font(28), fill=(200, 200, 200))  # noqa: E501
 
             strip = _montage(prior_images)
             if strip is not None:
@@ -244,7 +246,7 @@ class ExternalImageGenProvider(ImageGenProvider):
     ) -> list[GeneratedImage]:
         if not self.available():
             raise ImageGenUnavailable(
-                "no image generation backend configured; chain stays HOLD and emits external task package"
+                "no image generation backend configured; chain stays HOLD and emits external task package"  # noqa: E501
             )
         raise ImageGenUnavailable(
             "external backend client is not wired up; refusing to fabricate real image bytes"
@@ -422,8 +424,8 @@ class RealImageGenProvider(ImageGenProvider):
             "required_config": {
                 "url": "AIPD_IMAGE_PROVIDER_URL  (OpenAI-compatible POST <url>/images/generations)",
                 "api_key": "AIPD_IMAGE_API_KEY",
-                "model": f"AIPD_IMAGE_MODEL (default {self.model}; e.g. dall-e-3 / stable-diffusion-xl)",
-                "output_format": f"AIPD_IMAGE_OUTPUT (default {self.output_format}; e.g. png / jpeg)",
+                "model": f"AIPD_IMAGE_MODEL (default {self.model}; e.g. dall-e-3 / stable-diffusion-xl)",  # noqa: E501
+                "output_format": f"AIPD_IMAGE_OUTPUT (default {self.output_format}; e.g. png / jpeg)",  # noqa: E501
             },
             "request": {
                 "pages": [p.get("page_id") for p in request.pages],
@@ -431,7 +433,7 @@ class RealImageGenProvider(ImageGenProvider):
                 "prompt_template": request.prompt_template,
                 "generation_params": request.generation_params,
             },
-            "note": "no real image provider configured; chain stays HOLD; no image bytes fabricated",
+            "note": "no real image provider configured; chain stays HOLD; no image bytes fabricated",  # noqa: E501
         }
         task_path = out_path / f"real_{request.request_id or 'batch'}.task.json"
         task_path.write_text(json.dumps(pkg, ensure_ascii=False, indent=2), encoding="utf-8")

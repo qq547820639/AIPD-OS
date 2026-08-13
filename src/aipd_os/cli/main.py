@@ -104,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # ---- v5.1 新增 16 个一键命令 ----
     p = sub.add_parser("init", help="初始化一个新项目（--project/--name/--goal/--db）。"
-                                    " Example: aipd init --project p1 --name 外骨骼 --goal 助力 --db state.db")
+                                    " Example: aipd init --project p1 --name 外骨骼 --goal 助力 --db state.db")  # noqa: E501
     p.add_argument("--db", required=True)
     p.add_argument("--project", required=True)
     p.add_argument("--name", required=True)
@@ -124,7 +124,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=COMMAND_FUNCS["intake"])
 
     p = sub.add_parser("resume", help="恢复/迁移旧项目并打印会话续接摘要。"
-                                      " Example: aipd resume --db state.db --backup backups/backup_x")
+                                      " Example: aipd resume --db state.db --backup backups/backup_x")  # noqa: E501
     p.add_argument("--db", required=True)
     p.add_argument("--backup")
     p.add_argument("--project")
@@ -140,32 +140,32 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=COMMAND_FUNCS["status"])
 
     p = sub.add_parser("decide", help="裁定一个决策。可用 --decision-id/--choice 显式裁定，"
-                                      "或用 --natural 提供一句自然语言回复（如：批准 / 选A / 保留模块化）。"
-                                      " Example: aipd decide --db state.db --decision-id D1 --choice 单臂"
+                                      "或用 --natural 提供一句自然语言回复（如：批准 / 选A / 保留模块化）。"  # noqa: E501
+                                      " Example: aipd decide --db state.db --decision-id D1 --choice 单臂"  # noqa: E501
                                       " | aipd decide --db state.db --natural '选A'")
     p.add_argument("--db", required=True)
     p.add_argument("--project")
     p.add_argument("--decision-id")
     p.add_argument("--choice")
     p.add_argument("--comment")
-    p.add_argument("--natural", help="一句自然语言的所有者回复（批准/选A/保留模块化/暂不进入实体制造等）")
+    p.add_argument("--natural", help="一句自然语言的所有者回复（批准/选A/保留模块化/暂不进入实体制造等）")  # noqa: E501
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["decide"])
 
     # manual（两级）：manual plan / manual generate
     p_manual = sub.add_parser("manual", help="手工产品手册批次（plan 计划 / generate 生成）。"
-                                             " Example: aipd manual plan --db state.db --state m.json")
+                                             " Example: aipd manual plan --db state.db --state m.json")  # noqa: E501
     manual_sub = p_manual.add_subparsers(dest="manual_cmd", required=True)
     mp = manual_sub.add_parser("plan", help="生成手工批次计划。"
-                                            " Example: aipd manual plan --db state.db --state m.json --minimum-pages 10")
+                                            " Example: aipd manual plan --db state.db --state m.json --minimum-pages 10")  # noqa: E501
     mp.add_argument("--db")
     mp.add_argument("--state")
     mp.add_argument("--project")
     mp.add_argument("--minimum-pages", type=int, default=10)
     mp.add_argument("--json", action="store_true")
     mp.set_defaults(func=COMMAND_FUNCS["manual plan"])
-    mp = manual_sub.add_parser("generate", help="生成一个手工批次（图像后端不可用则生成外部任务包，不造假）。"
-                                                " Example: aipd manual generate --db state.db --batch-id batch_1 --prompt '封面' --output-dir out")
+    mp = manual_sub.add_parser("generate", help="生成一个手工批次（图像后端不可用则生成外部任务包，不造假）。"  # noqa: E501
+                                                " Example: aipd manual generate --db state.db --batch-id batch_1 --prompt '封面' --output-dir out")  # noqa: E501
     mp.add_argument("--db")
     mp.add_argument("--state")
     mp.add_argument("--project")
@@ -181,7 +181,7 @@ def build_parser() -> argparse.ArgumentParser:
                                        " Example: aipd cad build --manifest m.json --target C2")
     cad_sub = p_cad.add_subparsers(dest="cad_cmd", required=True)
     cp = cad_sub.add_parser("preflight", help="检查运行时上限与成熟度约束。"
-                                              " Example: aipd cad preflight --manifest m.json --target C2")
+                                              " Example: aipd cad preflight --manifest m.json --target C2")  # noqa: E501
     cp.add_argument("--manifest", required=True)
     cp.add_argument("--target", default="C2",
                     choices=["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7"])
@@ -195,8 +195,8 @@ def build_parser() -> argparse.ArgumentParser:
     cp.add_argument("--json", action="store_true")
     cp.set_defaults(func=COMMAND_FUNCS["cad build"])
 
-    p = sub.add_parser("industrialize", help="供应链 + 验证执行（报价登记/阶段分析/纠偏任务；无数据则如实报告不虚构）。"
-                                             " Example: aipd industrialize --db state.db --quote quotes.csv --stage dv --lab-data lab.csv")
+    p = sub.add_parser("industrialize", help="供应链 + 验证执行（报价登记/阶段分析/纠偏任务；无数据则如实报告不虚构）。"  # noqa: E501
+                                             " Example: aipd industrialize --db state.db --quote quotes.csv --stage dv --lab-data lab.csv")  # noqa: E501
     p.add_argument("--db")
     p.add_argument("--quote")
     p.add_argument("--stage")
@@ -205,14 +205,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=COMMAND_FUNCS["industrialize"])
 
     p = sub.add_parser("validate", help="生产发布证据门禁。"
-                                        " Example: aipd validate --manifest RELEASE_MANIFEST.json --target C7")
+                                        " Example: aipd validate --manifest RELEASE_MANIFEST.json --target C7")  # noqa: E501
     p.add_argument("--manifest", required=True)
     p.add_argument("--target", required=True,
                    choices=["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7"])
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["validate"])
 
-    p = sub.add_parser("audit", help="生成能力矩阵审计产物（repository_snapshot / capability_matrix）。"
+    p = sub.add_parser("audit", help="生成能力矩阵审计产物（repository_snapshot / capability_matrix）。"  # noqa: E501
                                      " Example: aipd audit --repo . --out docs/audit")
     p.add_argument("--repo")
     p.add_argument("--out", default="docs/audit")
@@ -223,7 +223,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_release = sub.add_parser("release", help="发布管理（check 就绪检查）。"
                                                " Example: aipd release check --target C7 --repo .")
     release_sub = p_release.add_subparsers(dest="release_cmd", required=True)
-    rp = release_sub.add_parser("check", help="发布就绪检查：版本真实性审计 + 生产发布门禁 + 通过性报告。"
+    rp = release_sub.add_parser("check", help="发布就绪检查：版本真实性审计 + 生产发布门禁 + 通过性报告。"  # noqa: E501
                                               " Example: aipd release check --target C7 --repo .")
     rp.add_argument("--repo")
     rp.add_argument("--target", required=True,
@@ -237,7 +237,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=COMMAND_FUNCS["test"])
 
     p = sub.add_parser("eval", help="运行评估套件。"
-                                    " Example: aipd eval --evals evals/evals.json --provider fake --out evals_out")
+                                    " Example: aipd eval --evals evals/evals.json --provider fake --out evals_out")  # noqa: E501
     p.add_argument("--evals", default="evals/evals.json")
     p.add_argument("--provider",
                    choices=["fake", "deterministic-fixture", "contract-test",
@@ -249,7 +249,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=COMMAND_FUNCS["eval"])
 
     p = sub.add_parser("package", help="构建发布包（zip + SHA-256 清单 + 签名）。"
-                                       " Example: aipd package --version 5.1.0 --out releases/5.1.0 --no-tests")
+                                       " Example: aipd package --version 5.1.0 --out releases/5.1.0 --no-tests")  # noqa: E501
     p.add_argument("--version", required=True)
     p.add_argument("--out")
     p.add_argument("--no-tests", action="store_true")
@@ -257,20 +257,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=COMMAND_FUNCS["package"])
 
     # ---- v5.5 新增：运维体检与详细版本 ----
-    p = sub.add_parser("version", help="打印包版本。搭配 --verbose 打印 Git HEAD / 构建时间 / 能力矩阵版本 / 发布清单哈希。"
+    p = sub.add_parser("version", help="打印包版本。搭配 --verbose 打印 Git HEAD / 构建时间 / 能力矩阵版本 / 发布清单哈希。"  # noqa: E501
                                        " Example: aipd version --verbose")
     p.add_argument("--verbose", action="store_true")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["version"])
 
-    p = sub.add_parser("doctor", help="一键体检：包版本、依赖可用性、配置、外部能力、数据库、对象存储与权限。"
+    p = sub.add_parser("doctor", help="一键体检：包版本、依赖可用性、配置、外部能力、数据库、对象存储与权限。"  # noqa: E501
                                       " Example: aipd doctor --json")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["doctor"])
 
     # ---- P2 所有者 UX ----
-    p = sub.add_parser("operate", help="自然语言操作闭环：意图→影响→受影响制品→成本/时间→可撤销预览→批准→自动返工→自动验收→摘要。"
-                                       " Example: aipd operate --db state.db --project p1 --intent '成本降低20%并且外观更工业化'")
+    p = sub.add_parser("operate", help="自然语言操作闭环：意图→影响→受影响制品→成本/时间→可撤销预览→批准→自动返工→自动验收→摘要。"  # noqa: E501
+                                       " Example: aipd operate --db state.db --project p1 --intent '成本降低20%并且外观更工业化'")  # noqa: E501
     p.add_argument("--db", required=True)
     p.add_argument("--project")
     p.add_argument("--intent", required=True, help="一句自然语言所有者指令")
@@ -278,7 +278,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["operate"])
 
-    p = sub.add_parser("dashboard", help="统一 Owner Dashboard：默认只展示 10 个所有者区块；--compact 紧凑移动端；--json 输出纯 JSON。"
+    p = sub.add_parser("dashboard", help="统一 Owner Dashboard：默认只展示 10 个所有者区块；--compact 紧凑移动端；--json 输出纯 JSON。"  # noqa: E501
                                          " Example: aipd dashboard --db state.db --project p1")
     p.add_argument("--db", required=True)
     p.add_argument("--project")
@@ -286,7 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["dashboard"])
 
-    p = sub.add_parser("onboard", help="首次使用引导：一句话建项→立即产出第一份结果→展示能力与需外部配置项→Provider 引导→示例项目→恢复/重置。"
+    p = sub.add_parser("onboard", help="首次使用引导：一句话建项→立即产出第一份结果→展示能力与需外部配置项→Provider 引导→示例项目→恢复/重置。"  # noqa: E501
                                        " Example: aipd onboard --db state.db --idea '做一款外骨骼'")
     p.add_argument("--db", required=True)
     p.add_argument("--idea", required=True, help="一句话产品想法")
@@ -301,7 +301,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["reset"])
 
-    p = sub.add_parser("recover", help="失败恢复：回滚最近可撤销操作；或 --backup 从备份恢复数据库。"
+    p = sub.add_parser("recover", help="失败恢复：回滚最近可撤销操作；或 --backup 从备份恢复数据库。"  # noqa: E501
                                        " Example: aipd recover --db state.db --project p1")
     p.add_argument("--db", required=True)
     p.add_argument("--project")
@@ -310,7 +310,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=COMMAND_FUNCS["recover"])
 
     # ---- v5.6 Owner Web Console ----
-    p = sub.add_parser("ui", help="启动本地 Owner Web Console（首次向导/项目总览/决策/制品/运行控制/外部等待）。"
+    p = sub.add_parser("ui", help="启动本地 Owner Web Console（首次向导/项目总览/决策/制品/运行控制/外部等待）。"  # noqa: E501
                                   " Example: aipd ui --db state.db")
     p.add_argument("--db", help="状态数据库路径（默认取配置 db_dir/state.db）")
     p.add_argument("--project", help="默认项目 ID（可选）")

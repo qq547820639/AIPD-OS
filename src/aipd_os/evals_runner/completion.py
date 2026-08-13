@@ -69,7 +69,7 @@ class CompletionProvider:
 class RecordedCompletionProvider(CompletionProvider):
     """脚本化假模型：从 system 消息提取 case_id 返回预设文本，并记录历史。"""
 
-    def __init__(self, script: dict[str, str] | None = None, model_version: str = "eval-fake-model") -> None:
+    def __init__(self, script: dict[str, str] | None = None, model_version: str = "eval-fake-model") -> None:  # noqa: E501
         self._script: dict[str, str] = dict(script or {})
         self._model_version = model_version
         self.history: list[dict[str, Any]] = []

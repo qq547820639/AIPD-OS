@@ -3,7 +3,8 @@
 这些测试标记为 ``@pytest.mark.integration``，全部驱动真实端到端流程
 （不依赖外部凭据，确定性可回归）：
 
-1. 手工链批次：``scripts/manual_chain.py`` init + plan-batches + run-batch + 真实排版光栅化 + 视觉审计；
+1. 手工链批次：``scripts/manual_chain.py`` init + plan-batches + run-batch + 真实排版光栅化 +
+  视觉审计；
 2. 评估报告：``evals_runner`` 运行确定性夹具并生成版本化报告；
 3. 研究链：``research`` ingest_attachment + run_research_chain（离线契约获取）；
 4. 恢复往返：``state.backup`` 创建备份并恢复到新库，验证数据一致。

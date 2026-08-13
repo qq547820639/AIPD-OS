@@ -167,7 +167,7 @@ def render_dashboard_text(view: dict[str, Any],
         lines.append(f"里程碑：{view['next_milestone']}")
         lines.append("最近变化：" + "；".join(view['recent_changes']))
         lines.append("可撤销操作：" + (
-            "、".join(f"{op['kind']}({op['affected_count']}项)" for op in view['reversible_operations'])
+            "、".join(f"{op['kind']}({op['affected_count']}项)" for op in view['reversible_operations'])  # noqa: E501
             or "无"))
         lines.append(f"健康：{view['health']}")
         return "\n".join(lines)

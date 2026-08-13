@@ -86,7 +86,7 @@ def test_parse_quote_unsupported_extension(tmp_path):
 
 
 def test_normalize_quote_coercion():
-    n = normalize_quote({"moq": "-3", "tooling_fee": "abc", "unit_price": "9.9", "lead_time_days": "2"})
+    n = normalize_quote({"moq": "-3", "tooling_fee": "abc", "unit_price": "9.9", "lead_time_days": "2"})  # noqa: E501
     assert n["moq"] == 0  # 负数钳到 0
     assert n["tooling_fee"] == 0.0  # 非法转 0
     assert n["unit_price"] == 9.9
@@ -98,8 +98,8 @@ def test_quote_registry_versioning_supersedes(tmp_path):
     p.write_text(CANONICAL_CSV, encoding="utf-8")
     parsed = parse_quote_file(p)
     reg = QuoteRegistry()
-    v1 = reg.add_quote(supplier="Acme", part="Widget-X", data=parsed["records"][0], source_file=str(p))
-    v2 = reg.add_quote(supplier="Acme", part="Widget-X", data={**parsed["records"][0], "unit_price": 0.9}, source_file=str(p))
+    v1 = reg.add_quote(supplier="Acme", part="Widget-X", data=parsed["records"][0], source_file=str(p))  # noqa: E501
+    v2 = reg.add_quote(supplier="Acme", part="Widget-X", data={**parsed["records"][0], "unit_price": 0.9}, source_file=str(p))  # noqa: E501
     assert v1.version == 1
     assert v2.version == 2
     assert v1.status == "superseded"
@@ -325,7 +325,7 @@ def test_local_mail_inbox_reply_association_and_attachment():
     inbox = svc.read_inbox()
     assert len(inbox) == 1
     assert svc.messages_for_thread(draft.thread_id) == [draft, reply]
-    assert svc.download_attachment(reply.message_id, "quote.csv") == b"supplier,part,unit_price\nAcme,X,1.25"
+    assert svc.download_attachment(reply.message_id, "quote.csv") == b"supplier,part,unit_price\nAcme,X,1.25"  # noqa: E501
     with pytest.raises(MailError):
         svc.download_attachment(reply.message_id, "missing.bin")
 

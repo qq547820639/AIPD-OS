@@ -31,11 +31,11 @@ CAPABILITY_SCHEMA: dict[str, Any] = {
         "name": {"type": "string", "minLength": 1},
         "domain": {
             "type": "string",
-            "description": "能力所属领域（model / image / vision / cad / research / mail / generic 等）",
+            "description": "能力所属领域（model / image / vision / cad / research / mail / generic 等）",  # noqa: E501
         },
         "category": {
             "type": "string",
-            "description": "能力类别（generation / retrieval / analysis / execution / verification 等）",
+            "description": "能力类别（generation / retrieval / analysis / execution / verification 等）",  # noqa: E501
         },
         "maturity_ceiling": {
             "type": "string",

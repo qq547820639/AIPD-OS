@@ -3,7 +3,8 @@
 使用 ``schema_migrations`` 表记录已应用的迁移版本，按顺序执行 ``up``，
 并支持按目标版本回滚到任意历史版本（执行 ``down``）。
 
-迁移列表中的每个条目：``{"version": int, "name": str, "up": [sql|callable], "down": [sql|callable]}``。
+迁移列表中的每个条目：``{"version": int, "name": str, "up": [sql|callable],
+"down": [sql|callable]}``。
 
 v5.8.1 Commit 8：**migration runner 是唯一 schema authority**——
 - V1 迁移使用**冻结的历史 SQL 文本**（:data:`V1_INITIAL_SCHEMA`），不再 import

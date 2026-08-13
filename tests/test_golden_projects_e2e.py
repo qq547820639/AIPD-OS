@@ -521,7 +521,7 @@ def test_golden_project_C_supply_chain(tmp_path, monkeypatch) -> None:
         "Acme", subject="Re: RFQ", body="quote attached", in_reply_to=draft.message_id,
         attachments=[MailAttachment("quote.csv", b"supplier,part,unit_price\nAcme,X,1.25")])
     assert reply.thread_id == draft.thread_id
-    assert svc.download_attachment(reply.message_id, "quote.csv") == b"supplier,part,unit_price\nAcme,X,1.25"
+    assert svc.download_attachment(reply.message_id, "quote.csv") == b"supplier,part,unit_price\nAcme,X,1.25"  # noqa: E501
 
     # ---- 2) 报价解析（真实本地能力，CSV）----
     quote_csv = cwd / "quote.csv"

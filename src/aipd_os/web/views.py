@@ -299,16 +299,16 @@ class WebConsole:
         return [
             {"name": "Model 模型", "key": "model_provider", "env": "AIPD_MODEL_PROVIDER",
              "value": s.model_provider, "configured": bool(s.model_provider),
-             "guide": "设置 AIPD_MODEL_PROVIDER 指向真实模型端点；未配置时评估使用确定性夹具，绝不描述为真实模型。"},
+             "guide": "设置 AIPD_MODEL_PROVIDER 指向真实模型端点；未配置时评估使用确定性夹具，绝不描述为真实模型。"},  # noqa: E501
             {"name": "Image 图像生成", "key": "image_provider", "env": "AIPD_IMAGE_PROVIDER",
              "value": s.image_provider, "configured": bool(s.image_provider),
-             "guide": "设置 AIPD_IMAGE_PROVIDER 指向可用图像后端；未配置时手册页生成为外部任务包并标记 HOLD，绝不伪造图片。"},
+             "guide": "设置 AIPD_IMAGE_PROVIDER 指向可用图像后端；未配置时手册页生成为外部任务包并标记 HOLD，绝不伪造图片。"},  # noqa: E501
             {"name": "Vision 视觉", "key": "vision_provider", "env": "AIPD_VISION_PROVIDER",
              "value": s.vision_provider, "configured": bool(s.vision_provider),
-             "guide": "设置 AIPD_VISION_PROVIDER 以启用视觉审计；未配置时视觉校验如实标记外部依赖。"},
+             "guide": "设置 AIPD_VISION_PROVIDER 以启用视觉审计；未配置时视觉校验如实标记外部依赖。"},  # noqa: E501
             {"name": "CAD 内核", "key": "cad_provider", "env": "AIPD_CAD_PROVIDER",
              "value": s.cad_provider, "configured": bool(s.cad_provider),
-             "guide": "安装/配置 CAD 内核后成熟度可达 C2 及以上；未配置时如实标记 external_dependency，绝不越级。"},
+             "guide": "安装/配置 CAD 内核后成熟度可达 C2 及以上；未配置时如实标记 external_dependency，绝不越级。"},  # noqa: E501
             {"name": "Mail 邮件", "key": "mail_provider", "env": "AIPD_MAIL_PROVIDER",
              "value": s.mail_provider, "configured": bool(s.mail_provider),
              "guide": "设置 AIPD_MAIL_PROVIDER 以启用 RFQ 收发；未配置时供应链保持 HOLD。"},

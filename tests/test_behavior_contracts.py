@@ -134,7 +134,7 @@ def test_no_cross_session_repeat_does_not_relist_resolved(tmp_path):
     db.ensure_default_tenant()
     db.init_project("default", "P1", "外骨骼", "g")
     mgr = CheckpointManager(db)
-    did = db.propose_decision("default", "P1", "单臂/双臂", "单臂", ["单臂", "双臂"], "architecture f")
+    did = db.propose_decision("default", "P1", "单臂/双臂", "单臂", ["单臂", "双臂"], "architecture f")  # noqa: E501
     db.resolve_decision("default", "P1", did, "单臂")
     summary = mgr.resume_summary("P1", "default")
     assert did in summary["resolved_decision_ids"]

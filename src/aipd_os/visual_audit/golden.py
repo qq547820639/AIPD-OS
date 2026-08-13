@@ -155,7 +155,7 @@ class GoldenGapEvaluator:
         for pid, defn in defns.items():
             png = pages_dir / f"{pid}.png"
             if not png.exists():
-                dims = {d: _dim(0.0, False, note="render_missing: PNG 未找到") for d in self.DIMENSIONS}
+                dims = {d: _dim(0.0, False, note="render_missing: PNG 未找到") for d in self.DIMENSIONS}  # noqa: E501
                 pages.append(
                     {"page_id": pid, "score": 0.0, "dims": dims, "render_missing": True}
                 )
@@ -163,7 +163,7 @@ class GoldenGapEvaluator:
             page_score, dims = self._evaluate_page(
                 defn, str(png), prior, golden_facts, module_set, copy_text, factory_kw
             )
-            pages.append({"page_id": pid, "score": page_score, "dims": dims, "render_missing": False})
+            pages.append({"page_id": pid, "score": page_score, "dims": dims, "render_missing": False})  # noqa: E501
 
         overall = 0.0
         if pages:
@@ -182,7 +182,7 @@ class GoldenGapEvaluator:
         factory_kw: list[str],
     ) -> tuple:
         aud = self.auditor.audit_page(
-            defn, png, facts={"params": (golden_facts or {}).get("params", {})} if golden_facts else None
+            defn, png, facts={"params": (golden_facts or {}).get("params", {})} if golden_facts else None  # noqa: E501
         )
         ad = aud["dimensions"]
         role = defn.get("role")
@@ -234,7 +234,7 @@ class GoldenGapEvaluator:
         # 7) 叙事连续性（复用 audit_page）
         d = ad.get("narrative_continuity", {})
         ok = bool(d.get("passed", False))
-        dims["narrative_continuity"] = _dim(_bool_score(ok), ok, page_number=defn.get("page_number"))
+        dims["narrative_continuity"] = _dim(_bool_score(ok), ok, page_number=defn.get("page_number"))  # noqa: E501
 
         # 8) 文案来源：caption 须出现在黄金理论/文案全文
         caption = str(defn.get("caption", "")).strip()
@@ -268,12 +268,12 @@ class GoldenGapEvaluator:
         # 11) 拼版（无拼版标记）
         plate = _PLATE_RE.search(text)
         ok = plate is None
-        dims["no_plate_making"] = _dim(_bool_score(ok), ok, note="检测到拼版/多页合并标记" if plate else "")
+        dims["no_plate_making"] = _dim(_bool_score(ok), ok, note="检测到拼版/多页合并标记" if plate else "")  # noqa: E501
 
         # 12) 旧图复用：页面哈希不得命中黄金旧图哈希
         cur = _sha256(png)
         ok = cur not in prior
-        dims["no_old_image_reuse"] = _dim(_bool_score(ok), ok, note="" if ok else "页面哈希命中黄金旧图(复用)")
+        dims["no_old_image_reuse"] = _dim(_bool_score(ok), ok, note="" if ok else "页面哈希命中黄金旧图(复用)")  # noqa: E501
 
         # 13) 低清放大：内部分辨率须接近 A4 (2480x3508)
         size = _intrinsic_size(png)
@@ -286,7 +286,7 @@ class GoldenGapEvaluator:
         # 14) 伪文字：无占位标记
         fake = any(m in text for m in PLACEHOLDER_MARKERS)
         ok = not fake
-        dims["no_fake_text"] = _dim(_bool_score(ok), ok, note="检测到占位/伪文字标记" if fake else "")
+        dims["no_fake_text"] = _dim(_bool_score(ok), ok, note="检测到占位/伪文字标记" if fake else "")  # noqa: E501
 
         # 15) 参数不臆造：param_table 与黄金事实一致
         if golden_facts is None:

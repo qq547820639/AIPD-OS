@@ -94,7 +94,7 @@ class FacetedAdapter(ToolAdapter):
         header = [
             "ISO-10303-21;", "HEADER;",
             "FILE_DESCRIPTION(('AIPD faceted BREP'),'2;1');",
-            f"FILE_NAME('faceted_digital_prototype.step','{now()}',('AIPD'),('AIPD'),'local fallback','AIPD-OS','internal digital prototype');",
+            f"FILE_NAME('faceted_digital_prototype.step','{now()}',('AIPD'),('AIPD'),'local fallback','AIPD-OS','internal digital prototype');",  # noqa: E501
             "FILE_SCHEMA(('CONFIG_CONTROL_DESIGN'));", "ENDSEC;", "DATA;",
         ]
         data = [f"#{i}={e};" for i, e in enumerate(entities, 1)]

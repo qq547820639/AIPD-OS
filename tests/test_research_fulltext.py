@@ -194,7 +194,7 @@ def test_conclusion_expiry_and_refetch_policy():
 
 # ---------------------------------------------------------------- 可替换 Provider
 def test_providers_default_to_external_dependency():
-    for prov in (standard_provider(), regulation_provider(), patent_provider(), competitor_provider()):
+    for prov in (standard_provider(), regulation_provider(), patent_provider(), competitor_provider()):  # noqa: E501
         assert prov.available() is False  # 未配置 -> external_dependency
         assert prov.provide("anything") == []  # 诚实等待，不伪造结果
         assert prov.kind in {"standard", "regulation", "patent", "competitor"}

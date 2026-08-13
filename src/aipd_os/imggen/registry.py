@@ -91,7 +91,7 @@ class AnchorRegistry:
         product = facts.get("product") or {}
         return cls(
             anchors=anchors,
-            product_structure={"name": product.get("name", ""), "structure": product.get("structure", "")},
+            product_structure={"name": product.get("name", ""), "structure": product.get("structure", "")},  # noqa: E501
             characters=list(facts.get("characters") or []),
             modules=list(facts.get("modules") or []),
             cmf=dict(facts.get("cmf") or {}),

@@ -66,7 +66,7 @@ def expire_evidence_list(db: Any, tenant_id: str, project_id: str,
             except ValueError:
                 dt = None
         results.append(
-            mark_evidence_expired(db, tenant_id, project_id, eid, dt, e.get("reason", "source superseded"))
+            mark_evidence_expired(db, tenant_id, project_id, eid, dt, e.get("reason", "source superseded"))  # noqa: E501
         )
     return results
 

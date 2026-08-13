@@ -86,10 +86,10 @@ class VisualAuditor:
         size = _intrinsic_size(page_png)
         if size is None:
             dims["structural_consistency"] = {
-                "passed": False, "reason": "cannot read image", "expected": list(A4_PX), "intrinsic": None}
+                "passed": False, "reason": "cannot read image", "expected": list(A4_PX), "intrinsic": None}  # noqa: E501
         elif size[0] < 1000 or size[1] < 1000:
             dims["structural_consistency"] = {
-                "passed": False, "reason": "very low resolution / likely upscaled from small source",
+                "passed": False, "reason": "very low resolution / likely upscaled from small source",  # noqa: E501
                 "intrinsic": list(size), "expected": list(A4_PX)}
         else:
             ok = abs(size[0] - A4_PX[0]) <= 5 and abs(size[1] - A4_PX[1]) <= 5
@@ -102,7 +102,7 @@ class VisualAuditor:
         dims["character_consistency"] = {
             "passed": self._vision(), "requiring_vision": not self._vision(),
             "expected": expected_char,
-            "note": "requires a real vision backend; not faked" if not self._vision() else "checked by vision backend",
+            "note": "requires a real vision backend; not faked" if not self._vision() else "checked by vision backend",  # noqa: E501
         }
 
         # 3) CMF 一致性（需视觉模型）
@@ -110,7 +110,7 @@ class VisualAuditor:
         dims["cmf_consistency"] = {
             "passed": self._vision(), "requiring_vision": not self._vision(),
             "expected": expected_cmf,
-            "note": "requires a real vision backend; not faked" if not self._vision() else "checked by vision backend",
+            "note": "requires a real vision backend; not faked" if not self._vision() else "checked by vision backend",  # noqa: E501
         }
 
         # 4) 角色完整性
@@ -146,7 +146,7 @@ class VisualAuditor:
             key = row.get("param")
             if key in facts_params:
                 if row.get("value") != facts_params[key]:
-                    mismatches.append({"param": key, "defn": row.get("value"), "fact": facts_params[key]})
+                    mismatches.append({"param": key, "defn": row.get("value"), "fact": facts_params[key]})  # noqa: E501
         dims["params_match_facts"] = {
             "passed": not mismatches, "mismatches": mismatches,
             "facts_provided": bool(facts and facts.get("params")),
@@ -233,7 +233,7 @@ class VisualAuditor:
                     vision_pending.append({"page_id": pid, "dimensions": vdims})
 
         # 页码单调
-        numbers = [d.get("page_number") for d in defns.values() if isinstance(d.get("page_number"), int)]
+        numbers = [d.get("page_number") for d in defns.values() if isinstance(d.get("page_number"), int)]  # noqa: E501
         monotonic = all(b > a for a, b in zip(numbers, numbers[1:])) if len(numbers) > 1 else True
 
         # 批次连续性：非首批需有 prior_batch 附件
@@ -273,4 +273,4 @@ class VisualAuditor:
 def audit_batch(batch_state: dict, pages_dir: str, facts: dict | None = None,
                 prior_hashes: list[str] | None = None) -> dict:
     """便捷函数：构造默认审计器并对整批审计。"""
-    return VisualAuditor().audit_batch(batch_state, pages_dir, facts=facts, prior_hashes=prior_hashes)
+    return VisualAuditor().audit_batch(batch_state, pages_dir, facts=facts, prior_hashes=prior_hashes)  # noqa: E501

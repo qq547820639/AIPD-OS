@@ -48,7 +48,7 @@ class ObjectStore:
                 if p.is_file():
                     st = p.stat()
                     items.append({"key": p.name, "size": st.st_size,
-                                  "modified": datetime.fromtimestamp(st.st_mtime, timezone.utc).isoformat()})
+                                  "modified": datetime.fromtimestamp(st.st_mtime, timezone.utc).isoformat()})  # noqa: E501
         return items
 
     def delete(self, project_id: str, key: str, tenant_id: str = DEFAULT_TENANT) -> None:

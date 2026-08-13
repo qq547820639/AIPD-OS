@@ -547,7 +547,7 @@ class ClosureStore:
     def list_tool_calls(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute(
-                "SELECT * FROM closure_tool_calls WHERE run_id=? ORDER BY seq", (run_id,)).fetchall()
+                "SELECT * FROM closure_tool_calls WHERE run_id=? ORDER BY seq", (run_id,)).fetchall()  # noqa: E501
         return [dict(r) for r in rows]
 
     # ---- dependencies / stale ----
@@ -577,7 +577,7 @@ class ClosureStore:
     def list_stale(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute(
-                "SELECT * FROM closure_stale WHERE run_id=? ORDER BY stale_id", (run_id,)).fetchall()
+                "SELECT * FROM closure_stale WHERE run_id=? ORDER BY stale_id", (run_id,)).fetchall()  # noqa: E501
         return [dict(r) for r in rows]
 
 

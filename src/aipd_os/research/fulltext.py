@@ -149,7 +149,7 @@ def is_open_access_url(url: str) -> bool:
     return any(host == d or host.endswith("." + d) for d in OPEN_ACCESS_DOMAINS)
 
 
-def classify_access(url: str, *, robots_disallowed: bool = False, license: str | None = None) -> str:
+def classify_access(url: str, *, robots_disallowed: bool = False, license: str | None = None) -> str:  # noqa: E501
     """判定某全文是否允许获取。
 
     - robots 明确禁止 -> ``blocked``（不抓取）；

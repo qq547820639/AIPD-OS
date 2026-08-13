@@ -22,20 +22,20 @@ def _build_legacy(path: str) -> None:
     conn = sqlite3.connect(path)
     conn.executescript(LEGACY_SCHEMA)
     conn.execute(
-        "INSERT INTO projects(project_id,name,goal,gate,status,version,owner_policy,created_at,updated_at) "
-        "VALUES('legacy-1','Legacy Project','migrate me','G1','active','0.2.0','AI','2024-01-01T00:00:00Z',"
+        "INSERT INTO projects(project_id,name,goal,gate,status,version,owner_policy,created_at,updated_at) "  # noqa: E501
+        "VALUES('legacy-1','Legacy Project','migrate me','G1','active','0.2.0','AI','2024-01-01T00:00:00Z',"  # noqa: E501
         "'2024-01-02T00:00:00Z')")
     conn.execute(
-        "INSERT INTO facts(fact_id,project_id,key,value_json,status,confidence,created_at,updated_at) "
+        "INSERT INTO facts(fact_id,project_id,key,value_json,status,confidence,created_at,updated_at) "  # noqa: E501
         "VALUES('F-001','legacy-1','latency','42','V',0.9,'2024-01-01T00:00:00Z','2024-01-01T00:00:00Z')")
     conn.execute(
         "INSERT INTO evidence(evidence_id,project_id,kind,title,created_at) "
         "VALUES('E-001','legacy-1','paper','Some paper','2024-01-01T00:00:00Z')")
     conn.execute(
-        "INSERT INTO fact_evidence(fact_id,evidence_id,relation) VALUES('F-001','E-001','supports')")
+        "INSERT INTO fact_evidence(fact_id,evidence_id,relation) VALUES('F-001','E-001','supports')")  # noqa: E501
     conn.execute(
-        "INSERT INTO decisions(decision_id,project_id,topic,recommendation,options_json,status,created_at) "
-        "VALUES('D-001','legacy-1','pick model','use A','[\"A\",\"B\"]','resolved','2024-01-01T00:00:00Z')")
+        "INSERT INTO decisions(decision_id,project_id,topic,recommendation,options_json,status,created_at) "  # noqa: E501
+        "VALUES('D-001','legacy-1','pick model','use A','[\"A\",\"B\"]','resolved','2024-01-01T00:00:00Z')")  # noqa: E501
     conn.execute(
         "INSERT INTO deliverables(deliverable_id,project_id,type,status,updated_at) "
         "VALUES('DEL-001','legacy-1','spec','planned','2024-01-01T00:00:00Z')")

@@ -120,7 +120,7 @@ def _parse_quote_xlsx(p: Path) -> dict[str, Any]:
     except ImportError:
         return _not_verified_result(
             str(p), "xlsx",
-            "openpyxl 未安装，无法解析 xlsx 报价；请安装 openpyxl 或走外部工具（数据保持 not_verified）",
+            "openpyxl 未安装，无法解析 xlsx 报价；请安装 openpyxl 或走外部工具（数据保持 not_verified）",  # noqa: E501
         )
     try:
         wb = openpyxl.load_workbook(str(p), data_only=True)
@@ -180,7 +180,7 @@ def _parse_quote_pdf(p: Path) -> dict[str, Any]:
         except ImportError:
             return _not_verified_result(
                 str(p), "pdf",
-                "pypdf/PyPDF2 未安装，无法解析 pdf 报价；请安装 pypdf 或走外部工具（数据保持 not_verified）",
+                "pypdf/PyPDF2 未安装，无法解析 pdf 报价；请安装 pypdf 或走外部工具（数据保持 not_verified）",  # noqa: E501
             )
     try:
         reader = PdfReader(str(p))

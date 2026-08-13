@@ -234,7 +234,7 @@ def _parse_message(raw: bytes) -> ReceivedMail:
                 fname = _decode_header(fname)
                 data = _parse_part(part)
                 if data is not None:
-                    attachments.append(MailAttachment(filename=fname, data=data, content_type=ctype))
+                    attachments.append(MailAttachment(filename=fname, data=data, content_type=ctype))  # noqa: E501
             elif ctype in ("text/plain", "text/html"):
                 data = _parse_part(part)
                 if data is not None:
@@ -366,7 +366,7 @@ class MailConfig:
         imap_host = os.environ.get("AIPD_IMAP_HOST") or os.environ.get("AIPD_MAILPIT_IMAP_HOST")
         smtp = SmtpConfig(
             host=smtp_host,
-            port=int(os.environ.get("AIPD_SMTP_PORT") or os.environ.get("AIPD_MAILPIT_SMTP_PORT") or 587),
+            port=int(os.environ.get("AIPD_SMTP_PORT") or os.environ.get("AIPD_MAILPIT_SMTP_PORT") or 587),  # noqa: E501
             user=os.environ.get("AIPD_SMTP_USER"),
             password=os.environ.get("AIPD_SMTP_PASSWORD"),
             from_addr=os.environ.get("AIPD_SMTP_FROM", "aipd@local.aipd-os.dev"),
@@ -374,7 +374,7 @@ class MailConfig:
         )
         imap = ImapConfig(
             host=imap_host,
-            port=int(os.environ.get("AIPD_IMAP_PORT") or os.environ.get("AIPD_MAILPIT_IMAP_PORT") or 993),
+            port=int(os.environ.get("AIPD_IMAP_PORT") or os.environ.get("AIPD_MAILPIT_IMAP_PORT") or 993),  # noqa: E501
             user=os.environ.get("AIPD_IMAP_USER"),
             password=os.environ.get("AIPD_IMAP_PASSWORD"),
         )
@@ -436,7 +436,7 @@ class MailClient:
         if self.db is not None:
             prefix = f"mail.outbox.{_safe_key(message_id)}"
             for f in self.db.list_facts(self.tenant_id, self.project_id):
-                if str(f.get("key", "")).startswith(prefix) and f.get("value", {}).get("status") == "sent":
+                if str(f.get("key", "")).startswith(prefix) and f.get("value", {}).get("status") == "sent":  # noqa: E501
                     return True
             return False
         return False
@@ -593,7 +593,7 @@ class MailClient:
 
         meta["status"] = "failed"
         failure = (
-            f"邮件 {message_id}（主题：{meta.get('subject')}，收件人：{'、'.join(meta.get('to', []))}）"
+            f"邮件 {message_id}（主题：{meta.get('subject')}，收件人：{'、'.join(meta.get('to', []))}）"  # noqa: E501
             f"发送失败：已重试 {retries_used} 次（最后原因：{last_error}）。"
             f"请检查收件人/连接后重试。"
         )
@@ -672,7 +672,7 @@ class MailClient:
         if self.db is not None:
             for f in self.db.list_facts(self.tenant_id, self.project_id):
                 if (_safe_key(f.get("value", {}).get("message_id", ""))
-                        == _safe_key(message_id)) or _safe_key(str(f.get("key", ""))).endswith(_safe_key(message_id)):
+                        == _safe_key(message_id)) or _safe_key(str(f.get("key", ""))).endswith(_safe_key(message_id)):  # noqa: E501
                     return f.get("value", {})
         raise KeyError(f"未知 message_id: {message_id!r}")
 

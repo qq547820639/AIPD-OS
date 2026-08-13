@@ -127,7 +127,7 @@ def render_onboarding(console: WebConsole) -> str:
 
     parts.append('<section class="card" aria-label="环境检测"><h2>环境检测</h2><ul>')
     for c in data["checks"]:
-        label = {"ok": "正常", "fail": "失败", "external_dependency": "待配置"}.get(c["status"], c["status"])
+        label = {"ok": "正常", "fail": "失败", "external_dependency": "待配置"}.get(c["status"], c["status"])  # noqa: E501
         parts.append(f'<li>{_e(c["name"])} {_badge(c["status"], label)} '
                      f'<span class="muted">{_e(c["detail"])}</span>')
         if c.get("fixable"):
@@ -242,13 +242,13 @@ def render_artifacts(console: WebConsole) -> str:
 
     if data.get("cad_versions"):
         body.append(f'<section class="card" aria-label="CAD 版本历史"><h2>CAD 版本历史</h2>'
-                    f'<p class="muted">{_e(len(data["cad_versions"]))} 个版本的几何变更记录。</p></section>')
+                    f'<p class="muted">{_e(len(data["cad_versions"]))} 个版本的几何变更记录。</p></section>')  # noqa: E501
     if data.get("bom_diffs"):
         body.append(f'<section class="card" aria-label="BOM 差异"><h2>BOM 差异</h2>'
                     f'<p class="muted">{_e(len(data["bom_diffs"]))} 项物料清单变更。</p></section>')
     if data.get("parameter_diffs"):
         body.append(f'<section class="card" aria-label="参数差异"><h2>参数差异</h2>'
-                    f'<p class="muted">{_e(len(data["parameter_diffs"]))} 项参数变更。</p></section>')
+                    f'<p class="muted">{_e(len(data["parameter_diffs"]))} 项参数变更。</p></section>')  # noqa: E501
     return render_page("制品中心", "/artifacts", "\n".join(body))
 
 

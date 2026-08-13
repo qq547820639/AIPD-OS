@@ -462,7 +462,7 @@ class AIPDStateDB:
     def _store_value(self, key: str, value: Any) -> str:
         global _plaintext_warned
         if self._encryption_key and key in SENSITIVE_KEYS:
-            return _json({"__encrypted__": True, "data": encrypt_secret(_json(value), self._encryption_key)})
+            return _json({"__encrypted__": True, "data": encrypt_secret(_json(value), self._encryption_key)})  # noqa: E501
         if key in SENSITIVE_KEYS and not _plaintext_warned:
             # 无 encryption_key 时敏感字段明文落库：fail-open 仅限本地/dev 模式，
             # 生产 server 模式已在 StateService 层 fail-closed。
@@ -519,7 +519,7 @@ class AIPDStateDB:
         # project_id 为 None 时写入 '*'（规范化租户通配），不再写 NULL 行。
         effective = project_id if project_id is not None else "*"
         with self.connect() as c:
-            c.execute("INSERT OR IGNORE INTO user_access(user_id,tenant_id,project_id) VALUES(?,?,?)",
+            c.execute("INSERT OR IGNORE INTO user_access(user_id,tenant_id,project_id) VALUES(?,?,?)",  # noqa: E501
                       (user_id, tenant_id, effective))
 
     def has_access(self, user_id: str, tenant_id: str, project_id: str | None = None) -> bool:
@@ -552,9 +552,9 @@ class AIPDStateDB:
         ts = now_iso()
         with self.connect() as c:
             c.execute(
-                "INSERT INTO projects(project_id,tenant_id,name,goal,gate,status,version,owner_policy,"
+                "INSERT INTO projects(project_id,tenant_id,name,goal,gate,status,version,owner_policy,"  # noqa: E501
                 "created_at,updated_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                (project_id, tenant_id, name, goal, "G0", "active", "0.1.0", owner_policy, ts, ts, 1))
+                (project_id, tenant_id, name, goal, "G0", "active", "0.1.0", owner_policy, ts, ts, 1))  # noqa: E501
 
     def get_project(self, tenant_id: str, project_id: str) -> dict[str, Any]:
         with self.connect() as c:
@@ -589,7 +589,7 @@ class AIPDStateDB:
 
     def delete_project(self, tenant_id: str, project_id: str) -> None:
         with self.connect() as c:
-            c.execute("DELETE FROM projects WHERE project_id=? AND tenant_id=?", (project_id, tenant_id))
+            c.execute("DELETE FROM projects WHERE project_id=? AND tenant_id=?", (project_id, tenant_id))  # noqa: E501
 
     # ---------------------------------------------------------------- facts
     def _next_id(self, c: sqlite3.Connection, table: str, column: str, prefix: str) -> str:
@@ -615,12 +615,12 @@ class AIPDStateDB:
         ts = now_iso()
         with self.connect() as c:
             fact_id = self.next_sequence("fact", "F")
-            c.execute("INSERT INTO facts(fact_id,project_id,tenant_id,key,value_json,unit,tolerance,"
-                      "conditions,status,confidence,source,version,created_at,updated_at,version_no) "
+            c.execute("INSERT INTO facts(fact_id,project_id,tenant_id,key,value_json,unit,tolerance,"  # noqa: E501
+                      "conditions,status,confidence,source,version,created_at,updated_at,version_no) "  # noqa: E501
                       "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                       (fact_id, project_id, tenant_id, key, self._store_value(key, value), unit,
                        tolerance, conditions, status, confidence, source, version, ts, ts, 1))
-            c.execute("INSERT INTO changes(project_id,tenant_id,object_type,object_id,action,after_json,"
+            c.execute("INSERT INTO changes(project_id,tenant_id,object_type,object_id,action,after_json,"  # noqa: E501
                       "reason,created_at) VALUES(?,?,?,?,?,?,?,?)",
                       (project_id, tenant_id, "fact", fact_id, "create",
                        _json({"key": key, "value": value, "status": status}), "add fact", ts))
@@ -628,7 +628,7 @@ class AIPDStateDB:
 
     def list_facts(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM facts WHERE tenant_id=? AND project_id=? ORDER BY created_at",
+            rows = c.execute("SELECT * FROM facts WHERE tenant_id=? AND project_id=? ORDER BY created_at",  # noqa: E501
                              (tenant_id, project_id)).fetchall()
         out = []
         for r in rows:
@@ -649,7 +649,7 @@ class AIPDStateDB:
 
     def update_fact(self, tenant_id: str, project_id: str, fact_id: str, expected_version: int,
                     **fields: Any) -> dict[str, Any]:
-        allow = {"value", "status", "confidence", "unit", "tolerance", "conditions", "source", "version"}
+        allow = {"value", "status", "confidence", "unit", "tolerance", "conditions", "source", "version"}  # noqa: E501
         set_cols = [k for k in fields if k in allow]
         if not set_cols:
             raise ValueError("no editable fields provided")
@@ -689,7 +689,7 @@ class AIPDStateDB:
         # （同 idea/claim/relation 一致；保留 E-001 display 格式）。
         eid = self.next_sequence("evidence", "E")
         with self.connect() as c:
-            c.execute("INSERT INTO evidence(evidence_id,project_id,tenant_id,kind,title,url,identifier,"
+            c.execute("INSERT INTO evidence(evidence_id,project_id,tenant_id,kind,title,url,identifier,"  # noqa: E501
                       "accessed_at,quality,summary,metadata_json,created_at,version_no) "
                       "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                       (eid, project_id, tenant_id, kind, title, url, identifier, accessed_at or ts,
@@ -844,17 +844,17 @@ class AIPDStateDB:
 
     def list_evidence(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM evidence WHERE tenant_id=? AND project_id=? ORDER BY created_at",
+            rows = c.execute("SELECT * FROM evidence WHERE tenant_id=? AND project_id=? ORDER BY created_at",  # noqa: E501
                              (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
     def link_evidence(self, tenant_id: str, project_id: str, fact_id: str,
                       evidence_id: str, relation: str = "supports") -> None:
         with self.connect() as c:
-            c.execute("INSERT OR IGNORE INTO fact_evidence(fact_id,project_id,tenant_id,evidence_id,relation) "
+            c.execute("INSERT OR IGNORE INTO fact_evidence(fact_id,project_id,tenant_id,evidence_id,relation) "  # noqa: E501
                       "VALUES(?,?,?,?,?)", (fact_id, project_id, tenant_id, evidence_id, relation))
 
-    def list_evidence_for_fact(self, tenant_id: str, project_id: str, fact_id: str) -> list[dict[str, Any]]:
+    def list_evidence_for_fact(self, tenant_id: str, project_id: str, fact_id: str) -> list[dict[str, Any]]:  # noqa: E501
         """返回关联到某事实的证据列表（含关系）。"""
         with self.connect() as c:
             rows = c.execute(
@@ -899,22 +899,22 @@ class AIPDStateDB:
                          choice: str, comment: str | None = None) -> None:
         ts = now_iso()
         with self.connect() as c:
-            row = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? AND decision_id=?",
+            row = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? AND decision_id=?",  # noqa: E501
                             (tenant_id, project_id, decision_id)).fetchone()
             if not row:
                 raise KeyError(decision_id)
             c.execute("UPDATE decisions SET status='resolved',choice=?,comment=?,resolved_at=?,"
-                      "version_no=version_no+1 WHERE tenant_id=? AND project_id=? AND decision_id=?",
+                      "version_no=version_no+1 WHERE tenant_id=? AND project_id=? AND decision_id=?",  # noqa: E501
                       (choice, comment, ts, tenant_id, project_id, decision_id))
-            open_count = c.execute("SELECT COUNT(*) FROM decisions WHERE tenant_id=? AND project_id=? "
+            open_count = c.execute("SELECT COUNT(*) FROM decisions WHERE tenant_id=? AND project_id=? "  # noqa: E501
                                    "AND status='proposed'", (tenant_id, project_id)).fetchone()[0]
             new_status = "awaiting_owner_decision" if open_count else "active"
-            c.execute("UPDATE projects SET status=?,updated_at=? WHERE tenant_id=? AND project_id=?",
+            c.execute("UPDATE projects SET status=?,updated_at=? WHERE tenant_id=? AND project_id=?",  # noqa: E501
                       (new_status, ts, tenant_id, project_id))
 
     def list_decisions(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? ORDER BY created_at",
+            rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? ORDER BY created_at",  # noqa: E501
                              (tenant_id, project_id)).fetchall()
         out = []
         for r in rows:
@@ -929,13 +929,13 @@ class AIPDStateDB:
 
     def list_open_decisions(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? AND status='proposed' "
+            rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? AND status='proposed' "  # noqa: E501
                              "ORDER BY created_at", (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
     def list_resolved_decisions(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? AND status='resolved' "
+            rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? AND status='resolved' "  # noqa: E501
                              "ORDER BY created_at", (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
@@ -947,7 +947,7 @@ class AIPDStateDB:
         ts = now_iso()
         with self.connect() as c:
             did = self.next_sequence("deliverable", "DEL")
-            c.execute("INSERT INTO deliverables(deliverable_id,project_id,tenant_id,type,path,status,version,"
+            c.execute("INSERT INTO deliverables(deliverable_id,project_id,tenant_id,type,path,status,version,"  # noqa: E501
                       "gate,metadata_json,updated_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                       (did, project_id, tenant_id, dtype, path, status, version, gate,
                        _json(metadata or {}), ts, 1))
@@ -955,7 +955,7 @@ class AIPDStateDB:
 
     def list_deliverables(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM deliverables WHERE tenant_id=? AND project_id=? ORDER BY updated_at",
+            rows = c.execute("SELECT * FROM deliverables WHERE tenant_id=? AND project_id=? ORDER BY updated_at",  # noqa: E501
                              (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
@@ -977,7 +977,7 @@ class AIPDStateDB:
                          ["tenant_id", "project_id", "deliverable_id"],
                          [tenant_id, project_id, deliverable_id], expected_version)
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM deliverables WHERE tenant_id=? AND project_id=? AND deliverable_id=?",
+            rows = c.execute("SELECT * FROM deliverables WHERE tenant_id=? AND project_id=? AND deliverable_id=?",  # noqa: E501
                              (tenant_id, project_id, deliverable_id)).fetchall()
         return dict(rows[0])
 
@@ -989,15 +989,15 @@ class AIPDStateDB:
         ts = now_iso()
         with self.connect() as c:
             rid = self.next_sequence("risk", "RISK")
-            c.execute("INSERT INTO risks(risk_id,project_id,tenant_id,title,probability,impact,mitigation,"
+            c.execute("INSERT INTO risks(risk_id,project_id,tenant_id,title,probability,impact,mitigation,"  # noqa: E501
                       "status,owner,trigger,updated_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-                      (rid, project_id, tenant_id, title, probability, impact, mitigation, status, "AI",
+                      (rid, project_id, tenant_id, title, probability, impact, mitigation, status, "AI",  # noqa: E501
                        trigger, ts, 1))
         return rid
 
     def list_risks(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM risks WHERE tenant_id=? AND project_id=? ORDER BY updated_at DESC",
+            rows = c.execute("SELECT * FROM risks WHERE tenant_id=? AND project_id=? ORDER BY updated_at DESC",  # noqa: E501
                              (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
@@ -1021,9 +1021,9 @@ class AIPDStateDB:
     def add_dependency(self, tenant_id: str, project_id: str, source_type: str, source_id: str,
                        target_type: str, target_id: str, relation: str = "affects") -> None:
         with self.connect() as c:
-            c.execute("INSERT OR IGNORE INTO dependencies(project_id,tenant_id,source_type,source_id,"
+            c.execute("INSERT OR IGNORE INTO dependencies(project_id,tenant_id,source_type,source_id,"  # noqa: E501
                       "target_type,target_id,relation) VALUES(?,?,?,?,?,?,?)",
-                      (project_id, tenant_id, source_type, source_id, target_type, target_id, relation))
+                      (project_id, tenant_id, source_type, source_id, target_type, target_id, relation))  # noqa: E501
 
     def list_dependencies(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
@@ -1036,21 +1036,21 @@ class AIPDStateDB:
                  checks: dict[str, Any] = None, approved_by: str = "AI-internal") -> None:
         ts = now_iso()
         with self.connect() as c:
-            c.execute("INSERT INTO gates(project_id,tenant_id,gate,result,checks_json,approved_by,created_at) "
+            c.execute("INSERT INTO gates(project_id,tenant_id,gate,result,checks_json,approved_by,created_at) "  # noqa: E501
                       "VALUES(?,?,?,?,?,?,?)",
                       (project_id, tenant_id, gate, result, _json(checks or {}), approved_by, ts))
 
     def list_gates(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM gates WHERE tenant_id=? AND project_id=? ORDER BY created_at",
+            rows = c.execute("SELECT * FROM gates WHERE tenant_id=? AND project_id=? ORDER BY created_at",  # noqa: E501
                              (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
     # --------------------------------------------------------------- changes
     def add_change(self, tenant_id: str, project_id: str, object_type: str, object_id: str,
-                   action: str, before: Any = None, after: Any = None, reason: str | None = None) -> None:
+                   action: str, before: Any = None, after: Any = None, reason: str | None = None) -> None:  # noqa: E501
         with self.connect() as c:
-            c.execute("INSERT INTO changes(project_id,tenant_id,object_type,object_id,action,before_json,"
+            c.execute("INSERT INTO changes(project_id,tenant_id,object_type,object_id,action,before_json,"  # noqa: E501
                       "after_json,reason,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
                       (project_id, tenant_id, object_type, object_id, action,
                        _json(before) if before is not None else None,
@@ -1058,7 +1058,7 @@ class AIPDStateDB:
 
     def list_changes(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM changes WHERE tenant_id=? AND project_id=? ORDER BY created_at",
+            rows = c.execute("SELECT * FROM changes WHERE tenant_id=? AND project_id=? ORDER BY created_at",  # noqa: E501
                              (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
@@ -1066,7 +1066,7 @@ class AIPDStateDB:
     def add_audit(self, actor: str, action: str, project_id: str | None,
                   tenant_id: str | None, before: Any = None, after: Any = None) -> None:
         with self.connect() as c:
-            c.execute("INSERT INTO audit_log(actor,action,project_id,tenant_id,timestamp,before_json,after_json) "
+            c.execute("INSERT INTO audit_log(actor,action,project_id,tenant_id,timestamp,before_json,after_json) "  # noqa: E501
                       "VALUES(?,?,?,?,?,?,?)",
                       (actor, action, project_id, tenant_id, now_iso(),
                        _json(before) if before is not None else None,
@@ -1074,7 +1074,7 @@ class AIPDStateDB:
 
     def list_audit(self, limit: int = 100) -> list[dict[str, Any]]:
         with self.connect() as c:
-            rows = c.execute("SELECT * FROM audit_log ORDER BY entry_id DESC LIMIT ?", (limit,)).fetchall()
+            rows = c.execute("SELECT * FROM audit_log ORDER BY entry_id DESC LIMIT ?", (limit,)).fetchall()  # noqa: E501
         return [dict(r) for r in rows]
 
     # ---------------------------------------------------------- checkpoints
@@ -1082,7 +1082,7 @@ class AIPDStateDB:
                         summary: Any = None) -> int:
         ts = now_iso()
         with self.connect() as c:
-            cur = c.execute("INSERT INTO checkpoints(project_id,tenant_id,data_json,summary_json,created_at) "
+            cur = c.execute("INSERT INTO checkpoints(project_id,tenant_id,data_json,summary_json,created_at) "  # noqa: E501
                             "VALUES(?,?,?,?,?)",
                             (project_id, tenant_id, _json(data),
                              _json(summary) if summary is not None else None, ts))
@@ -1091,7 +1091,7 @@ class AIPDStateDB:
     def latest_checkpoint(self, tenant_id: str, project_id: str) -> dict[str, Any] | None:
         with self.connect() as c:
             row = c.execute("SELECT * FROM checkpoints WHERE tenant_id=? AND project_id=? "
-                            "ORDER BY checkpoint_id DESC LIMIT 1", (tenant_id, project_id)).fetchone()
+                            "ORDER BY checkpoint_id DESC LIMIT 1", (tenant_id, project_id)).fetchone()  # noqa: E501
         if not row:
             return None
         d = dict(row)
@@ -1115,7 +1115,7 @@ class AIPDStateDB:
         p = self.get_project(tenant_id, project_id)
         with self.connect() as c:
             fact_counts = {r["status"]: r["n"] for r in c.execute(
-                "SELECT status, COUNT(*) n FROM facts WHERE tenant_id=? AND project_id=? GROUP BY status",
+                "SELECT status, COUNT(*) n FROM facts WHERE tenant_id=? AND project_id=? GROUP BY status",  # noqa: E501
                 (tenant_id, project_id))}
             counts = {t: c.execute(f"SELECT COUNT(*) FROM {t} WHERE tenant_id=? AND project_id=?",
                                    (tenant_id, project_id)).fetchone()[0]
@@ -1125,7 +1125,7 @@ class AIPDStateDB:
                                        (tenant_id, project_id)).fetchall()
             top_risks = c.execute("SELECT risk_id,title,probability,impact FROM risks "
                                   "WHERE tenant_id=? AND project_id=? AND status='open' "
-                                  "ORDER BY updated_at DESC LIMIT 5", (tenant_id, project_id)).fetchall()
+                                  "ORDER BY updated_at DESC LIMIT 5", (tenant_id, project_id)).fetchall()  # noqa: E501
         return {"project": p, "counts": counts, "fact_statuses": fact_counts,
                 "open_decisions": [dict(r) for r in open_decisions],
                 "top_open_risks": [dict(r) for r in top_risks]}

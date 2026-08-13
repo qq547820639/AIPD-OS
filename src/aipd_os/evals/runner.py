@@ -300,7 +300,7 @@ def _call_once(cfg: ModelEvalConfig, caller: ClientFn, sample: str, sample_id: s
                     network_call=True,
                     retry_count=retries,
                     status=CALL_ERROR,
-                    trace=f"real_model_call error after {retries} retries: {type(exc).__name__}: {exc}",
+                    trace=f"real_model_call error after {retries} retries: {type(exc).__name__}: {exc}",  # noqa: E501
                     sample_id=sample_id,
                     prompt_hash=_prompt_hash(sample),
                     latency=latency,

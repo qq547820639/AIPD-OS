@@ -231,7 +231,7 @@ def test_golden_report_marks_fixture_and_side_effect(tmp_path):
     """黄金报告标注 provider_category 为夹具且验证真实副作用。"""
     from aipd_os.evals_runner.golden_projects import load_golden_project, run_golden_project
 
-    project = load_golden_project(str(ROOT / "evals" / "golden_projects" / "simple_mechanical_tool"))
+    project = load_golden_project(str(ROOT / "evals" / "golden_projects" / "simple_mechanical_tool"))  # noqa: E501
     report = run_golden_project(project, str(tmp_path / "golden_work"),
                                 minimum_pages=3)
     assert report["provider_category"] == "deterministic-fixture"

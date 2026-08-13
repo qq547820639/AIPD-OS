@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS supervisor_phase_runs(
  phase TEXT NOT NULL, status TEXT NOT NULL, entry_checks_json TEXT NOT NULL DEFAULT '{}',
  exit_checks_json TEXT NOT NULL DEFAULT '{}', started_at TEXT NOT NULL, completed_at TEXT);
 CREATE TABLE IF NOT EXISTS supervisor_capabilities(
- capability_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, tenant_id TEXT NOT NULL DEFAULT 'default',
+ capability_id TEXT PRIMARY KEY, project_id TEXT NOT NULL,
+ tenant_id TEXT NOT NULL DEFAULT 'default',
  name TEXT NOT NULL, provider TEXT, status TEXT NOT NULL, maturity_ceiling TEXT,
  metadata_json TEXT NOT NULL DEFAULT '{}', checked_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS supervisor_reviews(
@@ -66,7 +67,8 @@ CREATE TABLE IF NOT EXISTS supervisor_reviews(
  result TEXT NOT NULL, findings_json TEXT NOT NULL DEFAULT '[]', reviewer TEXT NOT NULL,
  created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS supervisor_lineage(
- lineage_id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, tenant_id TEXT NOT NULL DEFAULT 'default',
+ lineage_id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL,
+ tenant_id TEXT NOT NULL DEFAULT 'default',
  upstream_type TEXT NOT NULL, upstream_id TEXT NOT NULL,
  downstream_type TEXT NOT NULL, downstream_id TEXT NOT NULL,
  relation TEXT NOT NULL, version TEXT, created_at TEXT NOT NULL,

@@ -27,7 +27,7 @@ def test_mask_supplier_quote_value():
 
 
 def test_classify_sensitive_categories():
-    text = "contact: bob@corp.com, supplier quote 1200, raw experiment_data attached, +86-138-0000-1234"
+    text = "contact: bob@corp.com, supplier quote 1200, raw experiment_data attached, +86-138-0000-1234"  # noqa: E501
     cats = classify_sensitive(text)
     assert "email" in cats
     assert "phone" in cats

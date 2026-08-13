@@ -48,14 +48,14 @@ _CHOOSE_RE = re.compile(
     r"|方案\s*([A-Za-z])")
 
 # 纠错 / 撤回
-_REVERT_WORDS = ("撤回", "撤销", "取消上次", "回滚", "纠正", "重新做", "改回", "退了重来", "重置刚才")
+_REVERT_WORDS = ("撤回", "撤销", "取消上次", "回滚", "纠正", "重新做", "改回", "退了重来", "重置刚才")  # noqa: E501
 _REVERT_RE = re.compile("|".join(map(re.escape, _REVERT_WORDS)))
 
 # 代词 / 上下文指代
 _PRONOUN_RE = re.compile(r"它|这个方案|那个方案|这个|那个|上次讨论的|刚才说的|上一步")
 
 # 多条件连接词
-_CONJ_RE = re.compile(r"并且|同时|还要|以及|而且|并且同时|and|and also|，同时|且同时", re.IGNORECASE)
+_CONJ_RE = re.compile(r"并且|同时|还要|以及|而且|并且同时|and|and also|，同时|且同时", re.IGNORECASE)  # noqa: E501
 
 # 制品引用
 _ARTIFACT_RE = re.compile(r"@([\w\-\./\\]+)")
