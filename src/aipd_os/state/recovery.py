@@ -143,8 +143,10 @@ class UnifiedStateService:
 
     def list_objects(self, project_id: str,
                          tenant_id: str | None = None) -> list[dict[str, Any]]:
+        tenant = tenant_id or self.tenant_id
         return [dict(e)
-                for e in self._project_entries(project_id).values()]
+                for e in self._project_entries(project_id).values()
+                if e.get("tenant_id") == tenant]
 
     def attachment_chain(self, project_id: str) -> list[str]:
         """按 chain_prev 关系还原手工附件链（仅含 manual_batch / attachment 对象）。"""

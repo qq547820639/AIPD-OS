@@ -94,6 +94,22 @@ def test_unified_backup_restore_db_objects_index(tmp_path):
     assert res["index_entries"] == 2
 
 
+def test_list_objects_tenant_isolation(tmp_path):
+    """list_objects 必须按租户过滤（修复 tenant_id 参数被忽略的跨租户暴露缺陷）。"""
+    db = AIPDStateDB(str(tmp_path / "s.db"), encryption_key="k")
+    backend = LocalStateBackend(ObjectStore(str(tmp_path / "s_objects")))
+    svc = UnifiedStateService(db, tenant_id="A", backend=backend,
+                              index_path=str(tmp_path / "s_attachments.json"))
+    # 两个租户向同一 project 注册对象（A 隐式用本租户，B 显式跨租户）
+    svc.register_object("p1", "obj_a", b"a", "attachment")
+    svc.register_object("p1", "obj_b", b"b", "attachment", tenant_id="B")
+    # 默认只见本租户 A
+    assert {o["key"] for o in svc.list_objects("p1")} == {"obj_a"}
+    # 显式跨租户查询（tenant_id 参数语义保留）
+    assert {o["key"] for o in svc.list_objects("p1", tenant_id="B")} == {"obj_b"}
+    assert {o["key"] for o in svc.list_objects("p1", tenant_id="A")} == {"obj_a"}
+
+
 def test_unified_backup_checksum_protects_restore(tmp_path):
     db, svc = _make_service(tmp_path)
     db.ensure_default_tenant()
