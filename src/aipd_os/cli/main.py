@@ -1,6 +1,7 @@
 """AIPD-OS CLI 入口。
 
-提供 ``--version``、``usage`` 以及 10 个一键子命令。
+提供 ``--version``、``usage``、30+ 个 one-click 主线子命令，以及
+10 个向后兼容的 deprecated 别名命令。
 """
 
 from __future__ import annotations
@@ -35,17 +36,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--project-id", required=True)
     p.add_argument("--name", required=True)
     p.add_argument("--goal", required=True)
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["init-project"])
 
     p = sub.add_parser("restore-project", help="恢复/迁移旧版项目")
     p.add_argument("--db", required=True)
     p.add_argument("--backup")
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["restore-project"])
 
     p = sub.add_parser("run-supervisor", help="运行监督器直到需要决策或步骤耗尽")
     p.add_argument("--db", required=True)
     p.add_argument("--project", help="目标项目（多项目时必填；缺省时若单项目自动解析）")
     p.add_argument("--steps", type=int, default=1)
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["run-supervisor"])
 
     p = sub.add_parser("run", help="运行监督器直到真实决策或步骤耗尽")
@@ -59,6 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("project-summary", help="打印所有者视图项目摘要")
     p.add_argument("--db", required=True)
     p.add_argument("--markdown", action="store_true")
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["project-summary"])
 
     p = sub.add_parser("submit-decision", help="裁定一个决策")
@@ -66,6 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--decision-id", required=True)
     p.add_argument("--choice", required=True)
     p.add_argument("--comment")
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["submit-decision"])
 
     p = sub.add_parser("run-manual-chain", help="运行一个手工批次")
@@ -73,6 +79,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--batch-id", required=True)
     p.add_argument("--prompt", required=True)
     p.add_argument("--output-dir", required=True)
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["run-manual-chain"])
 
     p = sub.add_parser("run-cad-chain", help="运行 CAD 成熟度门禁")
@@ -80,10 +87,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--manifest", required=True)
     p.add_argument("--target", default="C2",
                    choices=["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7"])
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["run-cad-chain"])
 
-    sub.add_parser("run-tests", help="运行完整测试套件（pytest）") \
-        .set_defaults(func=COMMAND_FUNCS["run-tests"])
+    p = sub.add_parser("run-tests", help="运行完整测试套件（pytest）")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["run-tests"])
 
     p = sub.add_parser("run-evals", help="运行评估套件")
     p.add_argument("--evals", default="evals/evals.json")
@@ -94,12 +103,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out")
     p.add_argument("--threshold", type=float, default=0.1)
     p.add_argument("--baseline")
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["run-evals"])
 
     p = sub.add_parser("build-release", help="构建发布包")
     p.add_argument("--version", required=True)
     p.add_argument("--out")
     p.add_argument("--no-tests", action="store_true")
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["build-release"])
 
     # ---- v5.1 新增 16 个一键命令 ----
