@@ -20,7 +20,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 from urllib.parse import urlparse
 
 from .documents import sha256_of
@@ -41,7 +41,7 @@ TEXT_TYPES = (
     TEXT_TYPE_QUOTED_SNIPPET,
 )
 
-TEXT_TYPE_LABELS: Dict[str, str] = {
+TEXT_TYPE_LABELS: dict[str, str] = {
     TEXT_TYPE_METADATA: "metadata（题录元数据）",
     TEXT_TYPE_ABSTRACT: "abstract（摘要）",
     TEXT_TYPE_FULL_TEXT: "full_text（全文）",
@@ -72,7 +72,7 @@ def _utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _parse_iso(value: Optional[str]) -> Optional[datetime]:
+def _parse_iso(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
@@ -81,7 +81,7 @@ def _parse_iso(value: Optional[str]) -> Optional[datetime]:
         return None
 
 
-def classify_text(item: Optional[Dict[str, Any]]) -> str:
+def classify_text(item: dict[str, Any] | None) -> str:
     """根据字段区分文本类型并打标；无法判断时归为 metadata。
 
     优先级：显式 ``text_type`` > OCR 标志 > 全文 > 摘要 > 引用片段 > metadata。
@@ -101,7 +101,7 @@ def classify_text(item: Optional[Dict[str, Any]]) -> str:
     return TEXT_TYPE_METADATA
 
 
-def tag_text(item: Dict[str, Any]) -> Dict[str, Any]:
+def tag_text(item: dict[str, Any]) -> dict[str, Any]:
     """返回打上 ``text_type`` 标签的副本（不修改入参）。"""
     tagged = dict(item or {})
     tagged["text_type"] = classify_text(tagged)
@@ -128,7 +128,7 @@ class TextRecord:
         if not self.sha256 and self.text:
             self.sha256 = sha256_of(self.text.encode("utf-8"))
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "text_type": self.text_type,
             "text": self.text,
@@ -149,7 +149,7 @@ def is_open_access_url(url: str) -> bool:
     return any(host == d or host.endswith("." + d) for d in OPEN_ACCESS_DOMAINS)
 
 
-def classify_access(url: str, *, robots_disallowed: bool = False, license: Optional[str] = None) -> str:
+def classify_access(url: str, *, robots_disallowed: bool = False, license: str | None = None) -> str:
     """判定某全文是否允许获取。
 
     - robots 明确禁止 -> ``blocked``（不抓取）；
@@ -170,9 +170,9 @@ def classify_access(url: str, *, robots_disallowed: bool = False, license: Optio
 class FullTextCache:
     """按 URL 缓存已获取的全文；可选用目录做文件持久化（仅标准库）。"""
 
-    def __init__(self, cache_dir: Optional[str] = None) -> None:
+    def __init__(self, cache_dir: str | None = None) -> None:
         self._dir = Path(cache_dir) if cache_dir else None
-        self._mem: Dict[str, TextRecord] = {}
+        self._mem: dict[str, TextRecord] = {}
         if self._dir is not None:
             self._dir.mkdir(parents=True, exist_ok=True)
 
@@ -180,7 +180,7 @@ class FullTextCache:
         digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:24]
         return (self._dir / f"{digest}.json") if self._dir is not None else None
 
-    def get(self, url: str) -> Optional[TextRecord]:
+    def get(self, url: str) -> TextRecord | None:
         if url in self._mem:
             return self._mem[url]
         path = self._path_for(url)
@@ -204,10 +204,10 @@ class FullTextCache:
         return self.get(url) is not None
 
 
-def deduplicate_texts(records: List[TextRecord]) -> List[TextRecord]:
+def deduplicate_texts(records: list[TextRecord]) -> list[TextRecord]:
     """按内容 SHA-256 去重：保留每段内容首次出现的一条。"""
     seen: set = set()
-    out: List[TextRecord] = []
+    out: list[TextRecord] = []
     for r in records or []:
         key = r.sha256 or sha256_of((r.text or "").encode("utf-8"))
         if key in seen:
@@ -225,9 +225,9 @@ def fetch_fulltext(
     url: str,
     *,
     source: str = "",
-    cache: Optional[FullTextCache] = None,
-    getter: Optional[Getter] = None,
-    license: Optional[str] = None,
+    cache: FullTextCache | None = None,
+    getter: Getter | None = None,
+    license: str | None = None,
     robots_disallowed: bool = False,
     locator: str = "",
 ) -> TextRecord:
@@ -283,7 +283,7 @@ def default_expires_at(days: int = 180) -> str:
     return (_utc() + timedelta(days=days)).isoformat() + "Z"
 
 
-def refetch_strategy(expires_at: Optional[str], now: Optional[datetime] = None) -> str:
+def refetch_strategy(expires_at: str | None, now: datetime | None = None) -> str:
     """根据过期时间给出重取策略：none / async / sync。"""
     exp = _parse_iso(expires_at)
     if exp is None:
@@ -316,7 +316,7 @@ class Conclusion:
     paragraph: str = ""
     retrieved_at: str = field(default_factory=utc_now_iso)
     scope: str = TEXT_TYPE_FULL_TEXT
-    expires_at: Optional[str] = None
+    expires_at: str | None = None
     refetch_policy: str = "async"
     binding: str = ""  # 精确来源 URL/DOI
 
@@ -324,7 +324,7 @@ class Conclusion:
         if not self.refetch_policy:
             self.refetch_policy = refetch_strategy(self.expires_at)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "source": self.source,
             "locator": self.locator,
@@ -336,14 +336,14 @@ class Conclusion:
             "binding": self.binding,
         }
 
-    def is_expired(self, now: Optional[datetime] = None) -> bool:
+    def is_expired(self, now: datetime | None = None) -> bool:
         """是否已过期；无 expires_at 视为永不过期。"""
         exp = _parse_iso(self.expires_at)
         if exp is None:
             return False
         return (now or _utc()) >= exp
 
-    def refetch_due(self, grace_days: int = 7, now: Optional[datetime] = None) -> bool:
+    def refetch_due(self, grace_days: int = 7, now: datetime | None = None) -> bool:
         """是否应重取：已过期，或距过期不足 grace_days。"""
         exp = _parse_iso(self.expires_at)
         if exp is None:
@@ -367,7 +367,7 @@ class Provider(abc.ABC):
         """是否具备真实数据能力（False 表示 external_dependency）。"""
 
     @abc.abstractmethod
-    def provide(self, query: str) -> List[Dict[str, Any]]:
+    def provide(self, query: str) -> list[dict[str, Any]]:
         """返回该 query 的发现列表；不可用时返回空列表。"""
 
 
@@ -380,48 +380,48 @@ class ExternalProvider(Provider):
     def available(self) -> bool:
         return False
 
-    def provide(self, query: str) -> List[Dict[str, Any]]:
+    def provide(self, query: str) -> list[dict[str, Any]]:
         return []
 
 
 class DelegateProvider(Provider):
     """把可替换实现委托给注入的 object；未注入/不可用则诚实降级。"""
 
-    def __init__(self, kind: str, impl: Optional[Provider] = None) -> None:
+    def __init__(self, kind: str, impl: Provider | None = None) -> None:
         self.kind = kind
         self._impl = impl
 
     def available(self) -> bool:
         return self._impl is not None and getattr(self._impl, "available", lambda: False)()
 
-    def provide(self, query: str) -> List[Dict[str, Any]]:
+    def provide(self, query: str) -> list[dict[str, Any]]:
         if not self.available():
             return []
         return list(getattr(self._impl, "provide", lambda q: [])(query))
 
 
-def _provider_for(kind: str, impl: Optional[Provider]) -> Provider:
+def _provider_for(kind: str, impl: Provider | None) -> Provider:
     if impl is None:
         return ExternalProvider(kind)
     return DelegateProvider(kind, impl)
 
 
-def standard_provider(impl: Optional[Provider] = None) -> Provider:
+def standard_provider(impl: Provider | None = None) -> Provider:
     """标准数据提供器；未配置时返回 external_dependency。"""
     return _provider_for("standard", impl)
 
 
-def regulation_provider(impl: Optional[Provider] = None) -> Provider:
+def regulation_provider(impl: Provider | None = None) -> Provider:
     """法规数据提供器；未配置时返回 external_dependency。"""
     return _provider_for("regulation", impl)
 
 
-def patent_provider(impl: Optional[Provider] = None) -> Provider:
+def patent_provider(impl: Provider | None = None) -> Provider:
     """专利数据提供器；未配置时返回 external_dependency。"""
     return _provider_for("patent", impl)
 
 
-def competitor_provider(impl: Optional[Provider] = None) -> Provider:
+def competitor_provider(impl: Provider | None = None) -> Provider:
     """竞品数据提供器；未配置时返回 external_dependency。"""
     return _provider_for("competitor", impl)
 

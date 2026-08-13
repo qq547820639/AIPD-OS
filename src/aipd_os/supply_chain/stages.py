@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from aipd_os.supply_chain.analysis import analyze_stage, mark_regression
 from aipd_os.supply_chain.lab import import_lab_report
@@ -15,7 +15,7 @@ from aipd_os.supply_chain.lab import import_lab_report
 VALID_STAGES = ("evt", "dvt", "pvt")
 
 
-def import_stage_report(path: Union[str, Path], stage: str) -> Dict[str, Any]:
+def import_stage_report(path: str | Path, stage: str) -> dict[str, Any]:
     """导入某物理验证阶段（EVT/DVT/PVT）的报告。
 
     委托给 :func:`aipd_os.supply_chain.lab.import_lab_report`；PDF/DOCX 等
@@ -29,7 +29,7 @@ def import_stage_report(path: Union[str, Path], stage: str) -> Dict[str, Any]:
     return returned
 
 
-def extract_root_cause(records: List[Dict[str, Any]], test_item: str) -> Dict[str, Any]:
+def extract_root_cause(records: list[dict[str, Any]], test_item: str) -> dict[str, Any]:
     """提取某个失败测试项的根因。
 
     - 优先读取记录中的显式 ``root_cause`` 字段；
@@ -88,16 +88,16 @@ def extract_root_cause(records: List[Dict[str, Any]], test_item: str) -> Dict[st
 
 
 def propose_corrective_actions(
-    analysis: Dict[str, Any],
+    analysis: dict[str, Any],
     stage: str,
-    records: Optional[List[Dict[str, Any]]] = None,
-) -> List[Dict[str, Any]]:
+    records: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     """为每个失败项生成纠偏建议，并附带已识别的根因。
 
     根因缺失时 ``root_cause`` 保持 None，且不虚构纠偏有效性。
     """
     records = list(records or [])
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for i, item in enumerate(analysis.get("failing_items", [])):
         test_item = item["test_item"]
         rc = extract_root_cause(records, test_item)
@@ -115,10 +115,10 @@ def propose_corrective_actions(
 
 
 def verify_regression(
-    records: List[Dict[str, Any]],
-    prior_baseline: Optional[Dict[str, str]],
+    records: list[dict[str, Any]],
+    prior_baseline: dict[str, str] | None,
     stage: str = "pvt",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """回归验证：核对此前失败项在本轮是否已通过。
 
     - 未提供任何记录的调用属于"无数据"，不判定任何项通过；
@@ -130,9 +130,9 @@ def verify_regression(
     current = {it["test_item"]: it.get("status") for it in analysis.get("items", [])}
     prior = prior_baseline or {}
 
-    verified: List[str] = []
-    not_verified: List[str] = []
-    not_executed: List[str] = []
+    verified: list[str] = []
+    not_verified: list[str] = []
+    not_executed: list[str] = []
     for test_item, prior_status in prior.items():
         if prior_status != "fail":
             continue

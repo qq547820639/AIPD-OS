@@ -19,7 +19,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.config import get_settings
 
@@ -52,18 +52,18 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def safe_ref(internal_id: Optional[str]) -> Optional[str]:
+def safe_ref(internal_id: str | None) -> str | None:
     """把内部 ID 映射为安全展示编号（短哈希），默认不暴露原始内部代号。"""
     if not internal_id:
         return None
     return "id-" + hashlib.sha1(str(internal_id).encode("utf-8")).hexdigest()[:8]
 
 
-def _status_cn(status: Optional[str]) -> str:
+def _status_cn(status: str | None) -> str:
     return _STATUS_CN.get(str(status or "").lower(), str(status or ""))
 
 
-def _preview_kind(dtype: Optional[str]) -> str:
+def _preview_kind(dtype: str | None) -> str:
     """根据制品类型推断预览形态（image / pdf / table / text / cad / file）。"""
     t = (dtype or "").lower()
     if "cad" in t:
@@ -79,7 +79,7 @@ def _preview_kind(dtype: Optional[str]) -> str:
     return "file"
 
 
-def _metadata(d: Dict[str, Any]) -> Dict[str, Any]:
+def _metadata(d: dict[str, Any]) -> dict[str, Any]:
     raw = d.get("metadata_json") or d.get("metadata")
     if isinstance(raw, dict):
         return raw
@@ -104,17 +104,17 @@ class RunController:
 
     def reset(self) -> None:
         self.state: str = "idle"
-        self.events: List[Dict[str, Any]] = []
-        self.heartbeat_at: Optional[str] = None
-        self.started_at: Optional[str] = None
-        self.last_intent_text: Optional[str] = None
-        self.last_result: Optional[Dict[str, Any]] = None
-        self.failure_reason: Optional[str] = None
+        self.events: list[dict[str, Any]] = []
+        self.heartbeat_at: str | None = None
+        self.started_at: str | None = None
+        self.last_intent_text: str | None = None
+        self.last_result: dict[str, Any] | None = None
+        self.failure_reason: str | None = None
         self.attempts: int = 0
         self._cancel_requested = False
 
-    def start(self, intent_text: str, events: List[Dict[str, Any]],
-              result: Dict[str, Any]) -> None:
+    def start(self, intent_text: str, events: list[dict[str, Any]],
+              result: dict[str, Any]) -> None:
         self.started_at = _now_iso()
         self.heartbeat_at = _now_iso()
         self.events = list(events)
@@ -140,9 +140,9 @@ class RunController:
     def can(self, action: str) -> bool:
         return action in self.available_actions()
 
-    def available_actions(self) -> List[str]:
+    def available_actions(self) -> list[str]:
         s = self.state
-        actions: List[str] = []
+        actions: list[str] = []
         if s in ("running", "paused", "needs_approval", "needs_clarification"):
             actions.append("pause")
         if s == "paused":
@@ -176,7 +176,7 @@ class RunController:
     def _touch(self) -> None:
         self.heartbeat_at = _now_iso()
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         return {
             "state": self.state,
             "heartbeat_at": self.heartbeat_at,
@@ -193,11 +193,11 @@ class WebConsole:
     """Owner Web Console 共享应用服务（CLI / Web UI / JSON API 共用）。"""
 
     def __init__(self, db_path: str, tenant_id: str = DEFAULT_TENANT,
-                 default_project: Optional[str] = None):
+                 default_project: str | None = None):
         self.db_path = db_path
         self.tenant_id = tenant_id
         self._default_project = default_project
-        self._db: Optional[AIPDStateDB] = None
+        self._db: AIPDStateDB | None = None
         self.runs = RunController()
 
     # ------------------------------------------------------------- 基础
@@ -212,10 +212,10 @@ class WebConsole:
     def is_initialized(self) -> bool:
         return bool(self.projects())
 
-    def projects(self) -> List[Dict[str, Any]]:
+    def projects(self) -> list[dict[str, Any]]:
         return self.db.list_projects(self.tenant_id)
 
-    def active_project(self) -> Optional[str]:
+    def active_project(self) -> str | None:
         if self._default_project and self._project_exists(self._default_project):
             return self._default_project
         projects = self.projects()
@@ -231,9 +231,9 @@ class WebConsole:
         return pid
 
     # --------------------------------------------------------- 首次使用向导
-    def onboarding_center(self) -> Dict[str, Any]:
+    def onboarding_center(self) -> dict[str, Any]:
         """环境检测 + Provider 配置状态 + 可自动修复/需凭据项。"""
-        checks: List[Dict[str, Any]] = []
+        checks: list[dict[str, Any]] = []
 
         # Python 环境
         py_ok = sys.version_info >= (3, 9)
@@ -294,7 +294,7 @@ class WebConsole:
                          for p in self.projects()],
         }
 
-    def _providers(self) -> List[Dict[str, Any]]:
+    def _providers(self) -> list[dict[str, Any]]:
         s = get_settings()
         return [
             {"name": "Model 模型", "key": "model_provider", "env": "AIPD_MODEL_PROVIDER",
@@ -314,7 +314,7 @@ class WebConsole:
              "guide": "设置 AIPD_MAIL_PROVIDER 以启用 RFQ 收发；未配置时供应链保持 HOLD。"},
         ]
 
-    def fix_issue(self, name: str) -> Dict[str, Any]:
+    def fix_issue(self, name: str) -> dict[str, Any]:
         """一键修复可自动修复的问题（数据库初始化 / 目录创建 / 对象存储探针）。"""
         if name == "状态数据库":
             self.db.ensure_default_tenant(self.tenant_id)
@@ -333,7 +333,7 @@ class WebConsole:
         raise ValueError(f"当前问题无法自动修复或未识别：{name}")
 
     # ----------------------------------------------------------- 项目总览
-    def overview(self, project_id: Optional[str] = None) -> Dict[str, Any]:
+    def overview(self, project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         view = build_dashboard(self.db, pid, self.tenant_id)
         rs = build_resume_summary(self.db, pid, self.tenant_id)
@@ -367,7 +367,7 @@ class WebConsole:
             },
         }
 
-    def _time_estimate(self, ps: Dict[str, Any]) -> str:
+    def _time_estimate(self, ps: dict[str, Any]) -> str:
         counts = ps.get("details", {}).get("counts", {})
         pending = counts.get("open_decisions", 0)
         base = "按当前阶段计划推进"
@@ -376,7 +376,7 @@ class WebConsole:
         deliverables = counts.get("deliverables", 0)
         return f"{base}；当前 {deliverables} 项交付物"
 
-    def _next_action_cn(self, rs: Dict[str, Any]) -> str:
+    def _next_action_cn(self, rs: dict[str, Any]) -> str:
         na = rs.get("next_action", "") or ""
         if isinstance(na, str):
             if na.startswith("resolve proposed decisions: "):
@@ -386,7 +386,7 @@ class WebConsole:
         return str(na) if na else "无下一步待办"
 
     # ----------------------------------------------------------- 决策中心
-    def decision_center(self, project_id: Optional[str] = None) -> Dict[str, Any]:
+    def decision_center(self, project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         card = build_decision_card(self.db, pid, tenant_id=self.tenant_id)
         if card is None:
@@ -410,7 +410,7 @@ class WebConsole:
             "details": {"decision_id": card["decision_id"]},
         }
 
-    def approve_decision(self, ref: str, project_id: Optional[str] = None) -> Dict[str, Any]:
+    def approve_decision(self, ref: str, project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         target = self._decision_by_ref(pid, ref)
         self.db.resolve_decision(self.tenant_id, pid, target["decision_id"],
@@ -419,25 +419,25 @@ class WebConsole:
         return {"ok": True, "topic": target.get("topic")}
 
     def choose_decision(self, ref: str, choice: str,
-                        project_id: Optional[str] = None) -> Dict[str, Any]:
+                        project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         target = self._decision_by_ref(pid, ref)
         self.db.resolve_decision(self.tenant_id, pid, target["decision_id"],
                                  choice=choice, comment="已由产品所有者在 Owner Web Console 选择")
         return {"ok": True, "topic": target.get("topic"), "choice": choice}
 
-    def _decision_by_ref(self, pid: str, ref: str) -> Dict[str, Any]:
+    def _decision_by_ref(self, pid: str, ref: str) -> dict[str, Any]:
         for d in self.db.list_open_decisions(self.tenant_id, pid):
             if safe_ref(d["decision_id"]) == ref:
                 return d
         raise ValueError("未找到对应的待审事项")
 
     # ----------------------------------------------------------- 制品中心
-    def artifact_center(self, project_id: Optional[str] = None) -> Dict[str, Any]:
+    def artifact_center(self, project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         ap = artifact_preview(self.db, pid, self.tenant_id)
         deliverables = self.db.list_deliverables(self.tenant_id, pid)
-        artifacts: List[Dict[str, Any]] = []
+        artifacts: list[dict[str, Any]] = []
         for i, d in enumerate(deliverables, start=1):
             meta = _metadata(d)
             artifacts.append({
@@ -459,13 +459,13 @@ class WebConsole:
             "parameter_diffs": ap.get("parameter_diffs", []),
         }
 
-    def _deliverable_by_ref(self, pid: str, ref: str) -> Dict[str, Any]:
+    def _deliverable_by_ref(self, pid: str, ref: str) -> dict[str, Any]:
         for d in self.db.list_deliverables(self.tenant_id, pid):
             if safe_ref(d["deliverable_id"]) == ref:
                 return d
         raise ValueError("未找到对应的制品")
 
-    def approve_artifact(self, ref: str, project_id: Optional[str] = None) -> Dict[str, Any]:
+    def approve_artifact(self, ref: str, project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         d = self._deliverable_by_ref(pid, ref)
         self.db.update_deliverable(self.tenant_id, pid, d["deliverable_id"],
@@ -476,7 +476,7 @@ class WebConsole:
         return {"ok": True, "ref": ref, "display_id": self._display_for(pid, ref)}
 
     def reject_artifact(self, ref: str, reason: str = "",
-                        project_id: Optional[str] = None) -> Dict[str, Any]:
+                        project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         d = self._deliverable_by_ref(pid, ref)
         self.db.update_deliverable(self.tenant_id, pid, d["deliverable_id"],
@@ -487,7 +487,7 @@ class WebConsole:
         return {"ok": True, "ref": ref, "reason": reason or "制品中心退回"}
 
     def rework_artifact(self, ref: str, note: str = "",
-                        project_id: Optional[str] = None) -> Dict[str, Any]:
+                        project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         d = self._deliverable_by_ref(pid, ref)
         new_version = self._bump_version(d.get("version"))
@@ -502,7 +502,7 @@ class WebConsole:
         return {"ok": True, "ref": ref, "from_version": d.get("version"),
                 "to_version": new_version}
 
-    def download_artifact(self, ref: str, project_id: Optional[str] = None) -> Dict[str, Any]:
+    def download_artifact(self, ref: str, project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         d = self._deliverable_by_ref(pid, ref)
         path = d.get("path")
@@ -510,7 +510,7 @@ class WebConsole:
             raise ValueError("该制品尚未生成可下载文件")
         return {"ok": True, "ref": ref, "path": path, "available": Path(path).exists()}
 
-    def _bump_version(self, version: Optional[str]) -> str:
+    def _bump_version(self, version: str | None) -> str:
         v = str(version or "0.0")
         parts = v.split(".")
         try:
@@ -526,11 +526,11 @@ class WebConsole:
         return ref
 
     # ----------------------------------------------------------- 运行控制
-    def run_control(self, project_id: Optional[str] = None) -> Dict[str, Any]:
+    def run_control(self, project_id: str | None = None) -> dict[str, Any]:
         return self.runs.snapshot()
 
     def start_run(self, intent_text: str,
-                  project_id: Optional[str] = None) -> Dict[str, Any]:
+                  project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         intent = parse_intent(intent_text, self.db, pid, self.tenant_id)
         tracker = ProgressTracker()
@@ -550,30 +550,30 @@ class WebConsole:
         self.runs.start(intent_text, tracker.events(), result)
         return self.runs.snapshot()
 
-    def retry_run(self, project_id: Optional[str] = None) -> Dict[str, Any]:
+    def retry_run(self, project_id: str | None = None) -> dict[str, Any]:
         if not self.runs.last_intent_text:
             raise ValueError("没有可重试的运行")
         return self.start_run(self.runs.last_intent_text, project_id)
 
-    def pause_run(self) -> Dict[str, Any]:
+    def pause_run(self) -> dict[str, Any]:
         self.runs.pause()
         return self.runs.snapshot()
 
-    def resume_run(self) -> Dict[str, Any]:
+    def resume_run(self) -> dict[str, Any]:
         self.runs.resume()
         return self.runs.snapshot()
 
-    def cancel_run(self) -> Dict[str, Any]:
+    def cancel_run(self) -> dict[str, Any]:
         self.runs.cancel()
         return self.runs.snapshot()
 
     # ----------------------------------------------------------- 外部等待
-    def external_wait_center(self, project_id: Optional[str] = None) -> Dict[str, Any]:
+    def external_wait_center(self, project_id: str | None = None) -> dict[str, Any]:
         pid = project_id or self.require_project()
         waiting = (CheckpointManager(self.db)
                    .resume_summary(pid, self.tenant_id)["external_waiting"])
         ew = summarize_external_wait(waiting)
-        items: List[Dict[str, Any]] = []
+        items: list[dict[str, Any]] = []
         for i, it in enumerate(waiting, start=1):
             items.append({
                 "display_id": f"外部事项 {i}",
@@ -591,7 +591,7 @@ class WebConsole:
             "items": items,
         }
 
-    def _wait_what(self, it: Dict[str, Any]) -> str:
+    def _wait_what(self, it: dict[str, Any]) -> str:
         note = it.get("note")
         if note:
             return f"其他事项：{note}"
@@ -599,13 +599,13 @@ class WebConsole:
         tgt = it.get("target_type") or "交付物"
         return f"等待{src}完成{tgt}"
 
-    def _wait_who(self, it: Dict[str, Any]) -> str:
+    def _wait_who(self, it: dict[str, Any]) -> str:
         src = it.get("source_type")
         cn = {"supplier": "供应商", "lab": "测试实验室", "quote": "外部方",
               "rfq": "外部方", "vendor": "厂商", "test": "测试实验室"}
         return cn.get(str(src or "").lower(), src or "外部方")
 
-    def _wait_needs(self, it: Dict[str, Any]) -> str:
+    def _wait_needs(self, it: dict[str, Any]) -> str:
         note = it.get("note")
         if note:
             return str(note)
@@ -616,7 +616,7 @@ class WebConsole:
 
     # ----------------------------------------------------------- 项目创建
     def create_project(self, name: str, goal: str,
-                       project_id: Optional[str] = None) -> Dict[str, Any]:
+                       project_id: str | None = None) -> dict[str, Any]:
         name = (name or "").strip()
         goal = (goal or "").strip()
         if not name or not goal:
@@ -626,7 +626,7 @@ class WebConsole:
         return {"ok": True, "ref": safe_ref(pid), "name": name, "goal": goal,
                 "details": {"project_id": pid}}
 
-    def import_project_from_examples(self) -> Dict[str, Any]:
+    def import_project_from_examples(self) -> dict[str, Any]:
         """从内置示例导入一个示例项目（复用 onboarding 的示例列表，不虚构）。"""
         from aipd_os.experience.onboarding import list_examples
         examples = list_examples()

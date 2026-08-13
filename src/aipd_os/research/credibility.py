@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 # 已知来源类型 -> 基础得分
 SOURCE_CREDIBILITY = {
@@ -56,7 +56,7 @@ def assumption_factor(is_fact: bool) -> float:
     return FACT_FACTOR if bool(is_fact) else ASSUMPTION_FACTOR
 
 
-def score_evidence(source: str, days_old: float, is_fact: bool) -> Dict[str, Any]:
+def score_evidence(source: str, days_old: float, is_fact: bool) -> dict[str, Any]:
     """对单条证据评分。
 
     当必要输入缺失（如未提供来源）时返回 {"status": "not_verifiable"}，
@@ -88,7 +88,7 @@ def score_evidence(source: str, days_old: float, is_fact: bool) -> Dict[str, Any
     }
 
 
-def separate_facts_from_assumptions(evidence_list: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+def separate_facts_from_assumptions(evidence_list: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     """按每条证据的 is_fact 标志拆分为 事实 / 假设 两组。"""
     facts = []
     assumptions = []
@@ -102,7 +102,7 @@ def separate_facts_from_assumptions(evidence_list: List[Dict[str, Any]]) -> Dict
 
 # ------------------------------------------------------------------ 来源元数据
 # 来源类型 -> 元数据（名称、性质、是否官方/一手）
-SOURCE_METADATA: Dict[str, Dict[str, Any]] = {
+SOURCE_METADATA: dict[str, dict[str, Any]] = {
     "peer_reviewed": {"label": "同行评审文献", "official": False, "first_hand": True},
     "official_standard": {"label": "官方标准", "official": True, "first_hand": True},
     "patent": {"label": "专利文献", "official": True, "first_hand": True},
@@ -113,12 +113,12 @@ SOURCE_METADATA: Dict[str, Dict[str, Any]] = {
 }
 
 
-def source_metadata(source: str) -> Dict[str, Any]:
+def source_metadata(source: str) -> dict[str, Any]:
     """返回来源元数据；未知来源返回 unknown 元数据。"""
     return SOURCE_METADATA.get(source or "", SOURCE_METADATA["unknown"])
 
 
-def timeliness(days_old: float) -> Dict[str, Any]:
+def timeliness(days_old: float) -> dict[str, Any]:
     """时效评级：新鲜 / 一般 / 陈旧。"""
     if days_old < 0:
         return {"freshness": "unknown"}
@@ -139,7 +139,7 @@ def confidence_tag(confidence: float) -> str:
 
 
 # ------------------------------------------------------------------ 冲突解析
-def resolve_conflicts(findings: List[Dict[str, Any]]) -> Dict[str, Any]:
+def resolve_conflicts(findings: list[dict[str, Any]]) -> dict[str, Any]:
     """解析同一 key 的多条证据冲突。
 
     不静默选择某一方：当存在事实性冲突时，返回 ``conflict=True`` 并列出冲突项，
@@ -148,7 +148,7 @@ def resolve_conflicts(findings: List[Dict[str, Any]]) -> Dict[str, Any]:
     if not findings:
         return {"conflict": False, "groups": [], "resolved": True}
 
-    groups: Dict[str, List[Dict[str, Any]]] = {}
+    groups: dict[str, list[dict[str, Any]]] = {}
     for item in findings:
         key = item.get("key") or "unknown"
         groups.setdefault(key, []).append(item)

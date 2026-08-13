@@ -12,16 +12,16 @@ import json
 import os
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Union
 
-Size = Union[Tuple[int, int], Sequence[int], str]
+Size = Union[tuple[int, int], Sequence[int], str]
 
 
 class ImageGenUnavailable(RuntimeError):
     """图像生成后端不可用（未配置后端或 API Key）。"""
 
 
-def _normalize_size(size: Size) -> Tuple[int, int]:
+def _normalize_size(size: Size) -> tuple[int, int]:
     if isinstance(size, str):
         w, h = size.lower().split("x")
         return int(w), int(h)
@@ -31,7 +31,7 @@ def _normalize_size(size: Size) -> Tuple[int, int]:
 class ImageGenAdapter:
     """把一次配图生成请求路由到真实后端，或诚实降级为外部任务包。"""
 
-    def __init__(self, backend: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(self, backend: str | None = None, api_key: str | None = None):
         self.backend = backend or os.environ.get("AIPD_IMGGEN_BACKEND")
         self.api_key = api_key or os.environ.get("AIPD_IMGGEN_API_KEY")
 
@@ -39,7 +39,7 @@ class ImageGenAdapter:
         """后端与密钥都配置好才算可用。"""
         return bool(self.backend and self.api_key)
 
-    def generate(self, prompt: str, size: Size, out_path: str, seed: Optional[int] = None) -> str:
+    def generate(self, prompt: str, size: Size, out_path: str, seed: int | None = None) -> str:
         """调用真实后端生成一张图并写入 out_path，返回写入路径。
 
         后端不可用时抛出 ImageGenUnavailable，绝不伪造图片文件。

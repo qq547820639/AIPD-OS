@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # facts 表既有状态位：见 aipd_os.state.db 的 FACT_STATUSES
 # ⚠️ 警示：FACT_STATUSES 中的 "S" 本义是 Simulation（模拟/仿真值）；本模块沿用
@@ -23,15 +23,15 @@ _EXPIRY_META_KEY = "expired_at"
 _EXPIRY_REASON_KEY = "expiry_reason"
 
 
-def _iso(dt: Optional[datetime]) -> str:
+def _iso(dt: datetime | None) -> str:
     if dt is None:
         return datetime.utcnow().isoformat()
     return dt.isoformat()
 
 
 def mark_evidence_expired(db: Any, tenant_id: str, project_id: str,
-                          evidence_id: str, expired_at: Optional[datetime] = None,
-                          reason: str = "source superseded") -> Dict[str, Any]:
+                          evidence_id: str, expired_at: datetime | None = None,
+                          reason: str = "source superseded") -> dict[str, Any]:
     """把单条证据标记为过期，并传播到其关联事实。
 
     返回 {"evidence_id", "stale_fact_ids", "expired_at"}。
@@ -51,7 +51,7 @@ def mark_evidence_expired(db: Any, tenant_id: str, project_id: str,
 
 
 def expire_evidence_list(db: Any, tenant_id: str, project_id: str,
-                         expiries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+                         expiries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """批量过期：输入 [{"evidence_id": ..., "expires_at": <iso|None>, "reason": ...}]。"""
     results = []
     for e in expiries:
@@ -71,7 +71,7 @@ def expire_evidence_list(db: Any, tenant_id: str, project_id: str,
     return results
 
 
-def _find_evidence(db: Any, tenant_id: str, project_id: str, evidence_id: str) -> Dict[str, Any]:
+def _find_evidence(db: Any, tenant_id: str, project_id: str, evidence_id: str) -> dict[str, Any]:
     for ev in db.list_evidence(tenant_id, project_id):
         if ev.get("evidence_id") == evidence_id:
             raw = ev.get("metadata_json")
@@ -84,7 +84,7 @@ def _find_evidence(db: Any, tenant_id: str, project_id: str, evidence_id: str) -
     raise KeyError(evidence_id)
 
 
-def _stale_linked_facts(db: Any, tenant_id: str, project_id: str, evidence_id: str) -> List[str]:
+def _stale_linked_facts(db: Any, tenant_id: str, project_id: str, evidence_id: str) -> list[str]:
     """把关联该证据的事实标记为 stale，返回受影响 fact_id 列表。"""
     stale = []
     for fact in db.list_facts(tenant_id, project_id):

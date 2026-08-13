@@ -6,11 +6,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 # 家庭成员 -> 尺寸 -> 百分位(mm)
 # 数值为真实常见取值（如成年男性身高 1750mm）。
-ANTHROPOMETRY_TABLE: Dict[str, Dict[str, Dict[int, float]]] = {
+ANTHROPOMETRY_TABLE: dict[str, dict[str, dict[int, float]]] = {
     "adult_male": {
         "stature_mm": {5: 1630.0, 50: 1750.0, 95: 1870.0},
         "shoulder_width_mm": {5: 420.0, 50: 470.0, 95: 520.0},
@@ -42,12 +42,12 @@ ANTHROPOMETRY_TABLE: Dict[str, Dict[str, Dict[int, float]]] = {
 }
 
 
-def available_families() -> List[str]:
+def available_families() -> list[str]:
     """返回所有可用家庭成员名。"""
     return sorted(ANTHROPOMETRY_TABLE.keys())
 
 
-def list_dimensions(family: str) -> List[str]:
+def list_dimensions(family: str) -> list[str]:
     """返回指定家庭成员的全部尺寸名；家庭不存在时抛 ValueError。"""
     if family not in ANTHROPOMETRY_TABLE:
         raise ValueError(f"unknown anthropometry family: {family!r}")
@@ -75,7 +75,7 @@ def validate_dimension(
     dimension: str,
     value_mm: float,
     tolerance_mm: float = 5.0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """校验给定尺寸是否在公差范围内符合人体数据表。"""
     expected = get_dimension(family, percentile, dimension)
     within_tolerance = abs(value_mm - expected) <= tolerance_mm

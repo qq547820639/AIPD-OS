@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
 from PIL import Image, ImageDraw
 
@@ -28,9 +28,9 @@ def _load_font(path: str, size: int) -> Any:
     return load_font(size, path)
 
 
-def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> List[str]:
+def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> list[str]:
     """中文字符级换行（同时兼容英文单词尽量不断开）。"""
-    lines: List[str] = []
+    lines: list[str] = []
     for raw in text.split("\n"):
         buf = ""
         for ch in raw:
@@ -54,7 +54,7 @@ def _wrap(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> List[st
     return lines or [""]
 
 
-def _draw_body(draw, lines: List[str], x, y, font, fill, line_gap) -> float:
+def _draw_body(draw, lines: list[str], x, y, font, fill, line_gap) -> float:
     for line in lines:
         draw.text((x, y), line, font=font, fill=fill)
         y += line_gap
@@ -64,7 +64,7 @@ def _draw_body(draw, lines: List[str], x, y, font, fill, line_gap) -> float:
 def _draw_curve(draw, curve, x, y, w, h, font, label_fill, line_fill, grid_fill):
     """在 (x,y,w,h) 区域内绘制简单折线图。"""
     max_pts = 0
-    all_vals: List[float] = []
+    all_vals: list[float] = []
     for series in curve:
         pts = series.get("points", [])
         max_pts = max(max_pts, len(pts))

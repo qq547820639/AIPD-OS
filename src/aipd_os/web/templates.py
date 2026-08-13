@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import html
-from typing import Any, List
+from typing import Any
 
 from .views import WebConsole
 
@@ -105,7 +105,7 @@ def render_page(title: str, active: str, body: str) -> str:
 # ---------------------------------------------------------------- 首次使用向导
 def render_onboarding(console: WebConsole) -> str:
     data = console.onboarding_center()
-    parts: List[str] = ['<h1>首次使用向导</h1>']
+    parts: list[str] = ['<h1>首次使用向导</h1>']
 
     if not data["has_project"]:
         parts.append('<section class="card" aria-label="创建或导入项目">'

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterable
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # 凭据类别的常见环境变量名后缀集合（用于判定一个变量是否疑似敏感）
 SENSITIVE_SUFFIXES = (
@@ -82,7 +82,7 @@ class SecretStore:
 
     def __init__(self) -> None:
         #: 已登记的环境变量名 -> 用途说明
-        self._registry: Dict[str, str] = {}
+        self._registry: dict[str, str] = {}
 
     def register(self, env_name: str, purpose: str = "") -> None:
         """登记一个环境变量名（不读取、不落盘其值）。"""
@@ -93,13 +93,13 @@ class SecretStore:
     def unregister(self, env_name: str) -> None:
         self._registry.pop(env_name, None)
 
-    def registered(self) -> List[str]:
+    def registered(self) -> list[str]:
         return list(self._registry.keys())
 
     def is_registered(self, env_name: str) -> bool:
         return env_name in self._registry
 
-    def read(self, env_name: str) -> Optional[str]:
+    def read(self, env_name: str) -> str | None:
         """从环境变量读取凭据明文（运行期按需读取，不缓存不落盘）。"""
         return os.environ.get(env_name)
 
@@ -107,19 +107,19 @@ class SecretStore:
         """该环境变量当前是否已设置（存在凭据）。"""
         return env_name in os.environ
 
-    def masked(self, env_name: str) -> Optional[str]:
+    def masked(self, env_name: str) -> str | None:
         """读取并脱敏后的值；未设置返回 None。"""
         value = self.read(env_name)
         if value is None:
             return None
         return mask_secret(value)
 
-    def status(self) -> List[Dict[str, Any]]:
+    def status(self) -> list[dict[str, Any]]:
         """返回医生体检用的状态列表。
 
         每项：``{"env": name, "registered": bool, "set": bool, "purpose": str}``。
         """
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         for name in sorted(self._registry):
             out.append({
                 "env": name,
@@ -130,13 +130,13 @@ class SecretStore:
             })
         return out
 
-    def masked_samples(self) -> Dict[str, str]:
+    def masked_samples(self) -> dict[str, str]:
         """返回 ``env -> masked value``，供审计展示（绝不含明文）。"""
         return {name: (self.masked(name) or ("" if not self.exposed(name) else "***"))
                 for name in self._registry}
 
 
-def mask_secret_deep(data: Any, secret_names: Optional[Iterable[str]] = None) -> Any:
+def mask_secret_deep(data: Any, secret_names: Iterable[str] | None = None) -> Any:
     """对数据结构中的敏感字段脱敏（递归遍历 dict/list）。
 
     对 dict 中值非 None 的字段，若字段名满足 :func:`is_sensitive_var`，
@@ -145,7 +145,7 @@ def mask_secret_deep(data: Any, secret_names: Optional[Iterable[str]] = None) ->
     """
     if isinstance(data, dict):
         names = set(secret_names or ())
-        out: Dict[str, Any] = {}
+        out: dict[str, Any] = {}
         for k, v in data.items():
             if isinstance(v, (str, int, float)) and v is not None:
                 if k in names or is_sensitive_var(str(k)):

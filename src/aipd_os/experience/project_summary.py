@@ -6,13 +6,13 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..state.checkpoint import CheckpointManager
 from ..state.db import AIPDStateDB
 
 # gate 代号 → 人类可读里程碑名称（仅用于 details 之后的展示，不暴露给顶层字段）
-GATE_NAMES: Dict[str, str] = {
+GATE_NAMES: dict[str, str] = {
     "G0": "项目启动与概念验证",
     "G1": "需求与规格冻结",
     "G2": "方案选型与架构定稿",
@@ -39,20 +39,20 @@ _TYPE_CN = {
 _SEVERITY_CN = {"critical": "严重", "high": "高", "medium": "中", "low": "低"}
 
 
-def _type_cn(t: Optional[str]) -> str:
+def _type_cn(t: str | None) -> str:
     return _TYPE_CN.get((t or "").lower(), t or "")
 
 
-def _severity_cn(s: Optional[str]) -> str:
+def _severity_cn(s: str | None) -> str:
     return _SEVERITY_CN.get(str(s or "").lower(), s or "")
 
 
-def _milestone(gate: Optional[str]) -> str:
+def _milestone(gate: str | None) -> str:
     return GATE_NAMES.get(gate or "", "后续阶段")
 
 
-def _current_work(project: Dict[str, Any], deliverables: List[Dict[str, Any]],
-                  open_decisions: List[Dict[str, Any]], resume: Dict[str, Any]) -> str:
+def _current_work(project: dict[str, Any], deliverables: list[dict[str, Any]],
+                  open_decisions: list[dict[str, Any]], resume: dict[str, Any]) -> str:
     if open_decisions:
         topic = open_decisions[0]["topic"]
         return f"正在等待您的决策：{topic}。批准后系统会自动继续推进。"
@@ -63,9 +63,9 @@ def _current_work(project: Dict[str, Any], deliverables: List[Dict[str, Any]],
     return f"按当前计划推进下一阶段：{_milestone(project.get('gate'))}。"
 
 
-def _completed(decisions: List[Dict[str, Any]], deliverables: List[Dict[str, Any]],
-               facts: List[Dict[str, Any]]) -> str:
-    parts: List[str] = []
+def _completed(decisions: list[dict[str, Any]], deliverables: list[dict[str, Any]],
+               facts: list[dict[str, Any]]) -> str:
+    parts: list[str] = []
     done = [d for d in deliverables if d.get("status") in _DONE_STATUSES]
     if done:
         parts.append("已完成交付：" + "、".join(_type_cn(d["type"]) for d in done[:5]))
@@ -78,8 +78,8 @@ def _completed(decisions: List[Dict[str, Any]], deliverables: List[Dict[str, Any
     return "；".join(parts) if parts else "暂无已完成的里程碑。"
 
 
-def _gaps(deliverables: List[Dict[str, Any]], resume: Dict[str, Any]) -> str:
-    parts: List[str] = []
+def _gaps(deliverables: list[dict[str, Any]], resume: dict[str, Any]) -> str:
+    parts: list[str] = []
     pending = [d for d in deliverables if d.get("status") in _WORK_STATUSES]
     if pending:
         parts.append("待完成：" + "、".join(_type_cn(d["type"]) for d in pending[:5]))
@@ -93,7 +93,7 @@ def _gaps(deliverables: List[Dict[str, Any]], resume: Dict[str, Any]) -> str:
     return "；".join(parts) if parts else "没有明显的缺口，可继续推进。"
 
 
-def _top_risk(risks: List[Dict[str, Any]]) -> str:
+def _top_risk(risks: list[dict[str, Any]]) -> str:
     if not risks:
         return "暂无显著风险。"
     order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -107,7 +107,7 @@ def _top_risk(risks: List[Dict[str, Any]]) -> str:
     return base
 
 
-def _next_milestone(project: Dict[str, Any]) -> str:
+def _next_milestone(project: dict[str, Any]) -> str:
     if project.get("status") == "released":
         return "已正式发布，进入量产与运维阶段。"
     gate = project.get("gate")
@@ -115,7 +115,7 @@ def _next_milestone(project: Dict[str, Any]) -> str:
 
 
 def build_project_summary(db: AIPDStateDB, project_id: str,
-                          tenant_id: str = "default") -> Dict[str, Any]:
+                          tenant_id: str = "default") -> dict[str, Any]:
     """返回纯自然语言的项目摘要。
 
     - current_work / completed / gaps / top_risk / next_milestone 均为中文自然语言；

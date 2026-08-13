@@ -10,7 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..state.backup import BackupManager
 from ..state.db import AIPDStateDB
@@ -30,17 +30,17 @@ EXTERNAL_PROVIDERS = [
 ]
 
 
-def _project_id_for(idea: str, project_id: Optional[str]) -> str:
+def _project_id_for(idea: str, project_id: str | None) -> str:
     if project_id:
         return project_id
     return "p_" + hashlib.sha1(idea.encode("utf-8")).hexdigest()[:8]
 
 
 def _first_result(db: AIPDStateDB, project_id: str, idea: str,
-                  tenant_id: str) -> List[Dict[str, Any]]:
+                  tenant_id: str) -> list[dict[str, Any]]:
     """立即产出第一份有价值的结果：写入目标事实、初始风险、首个待审决策与
     一份需求规格交付物。返回产出的条目列表。"""
-    produced: List[Dict[str, Any]] = []
+    produced: list[dict[str, Any]] = []
 
     # 1) 项目目标写入 Product Truth
     db.add_fact(tenant_id, project_id, "product_goal", idea, "C",
@@ -77,9 +77,9 @@ def _first_result(db: AIPDStateDB, project_id: str, idea: str,
     return produced
 
 
-def provider_config_status() -> List[Dict[str, Any]]:
+def provider_config_status() -> list[dict[str, Any]]:
     """返回各 Provider 的配置状态（configured / external_dependency）。"""
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for p in EXTERNAL_PROVIDERS:
         val = os.environ.get(p["env"], "").strip()
         out.append({
@@ -91,9 +91,9 @@ def provider_config_status() -> List[Dict[str, Any]]:
     return out
 
 
-def list_examples(repo_root: Optional[Path] = None) -> List[Dict[str, Any]]:
+def list_examples(repo_root: Path | None = None) -> list[dict[str, Any]]:
     """列出内置示例项目（来自 evals/golden_projects 与 assets/examples）。"""
-    examples: List[Dict[str, Any]] = []
+    examples: list[dict[str, Any]] = []
     root = repo_root or Path(__file__).resolve().parents[3]
     golden = root / "evals" / "golden_projects"
     if golden.is_dir():
@@ -114,8 +114,8 @@ def list_examples(repo_root: Optional[Path] = None) -> List[Dict[str, Any]]:
     return examples
 
 
-def onboard(db: AIPDStateDB, idea: str, project_id: Optional[str] = None,
-            tenant_id: str = "default") -> Dict[str, Any]:
+def onboard(db: AIPDStateDB, idea: str, project_id: str | None = None,
+            tenant_id: str = "default") -> dict[str, Any]:
     """首次使用引导主流程，返回引导结果（含第一份结果、能力、外部配置、示例、恢复信息）。"""
     idea = (idea or "").strip()
     if not idea:
@@ -147,7 +147,7 @@ def onboard(db: AIPDStateDB, idea: str, project_id: Optional[str] = None,
 
 
 def reset_project(db: AIPDStateDB, project_id: str,
-                  tenant_id: str = "default") -> Dict[str, Any]:
+                  tenant_id: str = "default") -> dict[str, Any]:
     """重置项目：先备份再删除，返回重置结果。"""
     backup_path = str(Path(db.path).parent / "backups")
     backup_dir = BackupManager(db.path, backup_dir=backup_path).create_backup(
@@ -158,8 +158,8 @@ def reset_project(db: AIPDStateDB, project_id: str,
             "note": "已重置该项目；如需恢复请使用 `aipd recover` / `aipd resume --backup`."}
 
 
-def recover_project(db_path: str, project_id: Optional[str] = None,
-                    backup: Optional[str] = None) -> Dict[str, Any]:
+def recover_project(db_path: str, project_id: str | None = None,
+                    backup: str | None = None) -> dict[str, Any]:
     """恢复：从备份恢复数据库，或返回最近备份列表。"""
     db_path_obj = Path(db_path)
     manager = BackupManager(db_path_obj)

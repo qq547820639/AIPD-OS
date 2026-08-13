@@ -19,7 +19,7 @@ import hmac
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .templates import RENDERERS
@@ -46,7 +46,7 @@ def _is_localhost(host: str) -> bool:
     return host in _LOCALHOST_HOSTS
 
 
-def _resolve_web_token(web_token: Optional[str]) -> str:
+def _resolve_web_token(web_token: str | None) -> str:
     """令牌优先取显式参数，其次取环境变量 AIPD_WEB_TOKEN。"""
     if web_token is not None:
         return web_token
@@ -90,7 +90,7 @@ class OwnerHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_json(self, payload: Dict[str, Any], status: int = 200) -> None:
+    def _send_json(self, payload: dict[str, Any], status: int = 200) -> None:
         safe = _strip_details(payload)
         body = json.dumps(safe, ensure_ascii=False, default=_json_default).encode("utf-8")
         self._send_bytes(body, status, "application/json; charset=utf-8")
@@ -115,7 +115,7 @@ class OwnerHandler(BaseHTTPRequestHandler):
             supplied = (parse_qs(query).get("token") or [None])[0] or ""
         return hmac.compare_digest(supplied, expected)
 
-    def _form(self) -> Dict[str, str]:
+    def _form(self) -> dict[str, str]:
         length = int(self.headers.get("Content-Length") or 0)
         if length > MAX_FORM_BYTES:
             raise ValueError("request body too large (limit 1MB)")
@@ -220,7 +220,7 @@ class OwnerHTTPServer(ThreadingHTTPServer):
 
     daemon_threads = True
 
-    def __init__(self, addr: Tuple[str, int], console: WebConsole,
+    def __init__(self, addr: tuple[str, int], console: WebConsole,
                  web_token: str = "") -> None:
         self.console = console
         self.web_token = web_token
@@ -229,7 +229,7 @@ class OwnerHTTPServer(ThreadingHTTPServer):
 
 def serve(console: WebConsole, host: str = "127.0.0.1",
           port: int = 8080, print_url: bool = True,
-          web_token: Optional[str] = None) -> None:
+          web_token: str | None = None) -> None:
     """在前台运行服务（阻塞）。Ctrl+C 或 KeyboardInterrupt 时优雅退出。
 
     绑定非 localhost 时必须配置 ``AIPD_WEB_TOKEN``（显式参数或环境变量），
@@ -255,7 +255,7 @@ def serve(console: WebConsole, host: str = "127.0.0.1",
 
 
 def start_server(console: WebConsole, host: str = "127.0.0.1",
-                 port: int = 0, web_token: Optional[str] = None) -> OwnerHTTPServer:
+                 port: int = 0, web_token: str | None = None) -> OwnerHTTPServer:
     """创建一个已完成绑定并激活的服务器（供测试或后台线程使用）。
 
     注：:class:`ThreadingHTTPServer` 构造器即完成 ``server_bind`` 与

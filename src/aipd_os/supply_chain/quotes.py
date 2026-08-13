@@ -12,7 +12,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 # 规范 CSV 表头
 CANONICAL_CSV_HEADER = [
@@ -45,7 +45,7 @@ def _to_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
-def normalize_quote(record: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_quote(record: dict[str, Any]) -> dict[str, Any]:
     """将一条原始报价记录规范化为确定的数值字段。
 
     - moq/lead_time_days 规范为非负 int
@@ -67,7 +67,7 @@ def normalize_quote(record: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _records_from_rows(rows: List[Dict[str, Any]], source: str) -> Dict[str, Any]:
+def _records_from_rows(rows: list[dict[str, Any]], source: str) -> dict[str, Any]:
     records = [normalize_quote(r) for r in rows]
     return {
         "source": source,
@@ -78,7 +78,7 @@ def _records_from_rows(rows: List[Dict[str, Any]], source: str) -> Dict[str, Any
     }
 
 
-def _records_result(rows: List[Dict[str, Any]], source: str, fmt: str) -> Dict[str, Any]:
+def _records_result(rows: list[dict[str, Any]], source: str, fmt: str) -> dict[str, Any]:
     records = [normalize_quote(r) for r in rows]
     return {
         "source": source,
@@ -89,7 +89,7 @@ def _records_result(rows: List[Dict[str, Any]], source: str, fmt: str) -> Dict[s
     }
 
 
-def _not_verified_result(source: str, fmt: str, error: str) -> Dict[str, Any]:
+def _not_verified_result(source: str, fmt: str, error: str) -> dict[str, Any]:
     """无法解析时返回空记录 + 错误，数据保持 not_verified（绝不虚构）。"""
     return {
         "source": source,
@@ -100,20 +100,20 @@ def _not_verified_result(source: str, fmt: str, error: str) -> Dict[str, Any]:
     }
 
 
-def _parse_rows_from_xlsx(rows: List[tuple]) -> List[Dict[str, Any]]:
+def _parse_rows_from_xlsx(rows: list[tuple]) -> list[dict[str, Any]]:
     if not rows:
         return []
     header = [str(h).strip().lower() if h is not None else "" for h in rows[0]]
-    parsed: List[Dict[str, Any]] = []
+    parsed: list[dict[str, Any]] = []
     for line in rows[1:]:
-        rec: Dict[str, Any] = {}
+        rec: dict[str, Any] = {}
         for i, col in enumerate(header):
             rec[col] = line[i] if i < len(line) else None
         parsed.append(rec)
     return parsed
 
 
-def _parse_quote_xlsx(p: Path) -> Dict[str, Any]:
+def _parse_quote_xlsx(p: Path) -> dict[str, Any]:
     """解析 .xlsx 报价；需要 openpyxl，缺失时返回 not_verified 结构。"""
     try:
         import openpyxl  # noqa: WPS433
@@ -131,7 +131,7 @@ def _parse_quote_xlsx(p: Path) -> Dict[str, Any]:
     return _records_result(_parse_rows_from_xlsx(rows), str(p), "xlsx")
 
 
-def _rows_from_pdf_text(text: str) -> Dict[str, Any]:
+def _rows_from_pdf_text(text: str) -> dict[str, Any]:
     """从 PDF 提取的纯文本中尝试结构化报价。
 
     仅做确定性启发式：先尝试 CSV 行解析，再尝试 JSON。无法提取时返回
@@ -167,7 +167,7 @@ def _rows_from_pdf_text(text: str) -> Dict[str, Any]:
     return {"records": [], "errors": ["无法从 PDF 文本提取结构化报价（数据保持 not_verified）"]}
 
 
-def _parse_quote_pdf(p: Path) -> Dict[str, Any]:
+def _parse_quote_pdf(p: Path) -> dict[str, Any]:
     """解析 .pdf 报价；通过简单的文本提取器（pypdf/PyPDF2，可选）。
 
     缺少解析库或无法提取结构化报价时，返回 not_verified 结构（不虚构）。
@@ -193,7 +193,7 @@ def _parse_quote_pdf(p: Path) -> Dict[str, Any]:
     return _records_result(extracted["records"], str(p), "pdf")
 
 
-def parse_quote_file(path: Union[str, Path, List[Dict[str, Any]]]) -> Dict[str, Any]:
+def parse_quote_file(path: str | Path | list[dict[str, Any]]) -> dict[str, Any]:
     """解析报价文件（CSV/JSON），或一组行字典列表。
 
     支持规范 CSV 表头：supplier,part,moq,tooling_fee,unit_price,lead_time_days。
@@ -259,7 +259,7 @@ class QuoteVersion:
     supplier: str
     part: str
     version: int
-    data: Dict[str, Any]
+    data: dict[str, Any]
     received_at: str = field(default_factory=_now)
     source_file: str = ""
     status: str = "official"  # draft / official / superseded
@@ -272,16 +272,16 @@ class QuoteRegistry:
     """报价登记表：同一供应商+零件多次登记会递增版本并把旧版本标记 superseded。"""
 
     def __init__(self) -> None:
-        self._quotes: Dict[tuple, List[QuoteVersion]] = {}
+        self._quotes: dict[tuple, list[QuoteVersion]] = {}
 
     def add_quote(
         self,
         *,
         supplier: str,
         part: str,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         source_file: str = "",
-        received_at: Optional[str] = None,
+        received_at: str | None = None,
         status: str = "official",
     ) -> QuoteVersion:
         """登记一条报价；同 supplier+part 已存在则版本 +1 并把前者标记 superseded。"""
@@ -316,7 +316,7 @@ class QuoteRegistry:
                 return q
         raise KeyError(f"未接收到 {supplier}/{part} 的 official 报价，无法返回")
 
-    def all_versions(self, supplier: str, part: str) -> List[QuoteVersion]:
+    def all_versions(self, supplier: str, part: str) -> list[QuoteVersion]:
         key = (supplier.lower(), part.lower())
         return list(self._quotes.get(key, []))
 

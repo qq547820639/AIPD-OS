@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
-from typing import List, Optional, Set
 
 from aipd_os.state.crypto import encrypt_secret
 
@@ -47,9 +46,9 @@ class PermissionError(Exception):
     """缺少敏感数据访问权限。"""
 
 
-def _scan_categories(text: str) -> List[str]:
+def _scan_categories(text: str) -> list[str]:
     """基于正则 + 上下文关键词返回检测到的敏感类别。"""
-    cats: Set[str] = set()
+    cats: set[str] = set()
     if _EMAIL_RE.search(text):
         cats.add("email")
     if _PHONE_RE.search(text):
@@ -63,7 +62,7 @@ def _scan_categories(text: str) -> List[str]:
     return sorted(cats)
 
 
-def classify_sensitive(text: str) -> List[str]:
+def classify_sensitive(text: str) -> list[str]:
     """返回文本中检测到的敏感类别列表（排序、去重）。"""
     if not text:
         return []
@@ -72,8 +71,8 @@ def classify_sensitive(text: str) -> List[str]:
 
 def mask_sensitive(
     text: str,
-    sensitive_values: Optional[Iterable[str]] = None,
-    patterns: Optional[Iterable[re.Pattern]] = None,
+    sensitive_values: Iterable[str] | None = None,
+    patterns: Iterable[re.Pattern] | None = None,
 ) -> str:
     """对文本中的敏感信息打码为 ``***``。
 
@@ -102,10 +101,10 @@ def mask_sensitive(
 
 
 def can_access(
-    user: Optional[str],
+    user: str | None,
     scope: str,
-    resource: Optional[str] = None,
-    granted: Optional[Iterable[str]] = None,
+    resource: str | None = None,
+    granted: Iterable[str] | None = None,
 ) -> bool:
     """判定用户是否有权访问指定作用域的资源。
 
@@ -128,7 +127,7 @@ def can_access(
     return scope in set(granted) or "wildcard" in set(granted)
 
 
-def require_mask(user: Optional[str], scope: str) -> bool:
+def require_mask(user: str | None, scope: str) -> bool:
     """判断给定的敏感作用域是否需要掩码。
 
     对敏感作用域，若用户未被显式授权则返回 True（需要掩码）。

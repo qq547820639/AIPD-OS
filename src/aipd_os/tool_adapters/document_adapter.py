@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter, output_dir
 from aipd_os.tool_adapters._common import meta, token_meta
@@ -18,16 +18,16 @@ class DocumentGenAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "doc.generate"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         return meta(self.capability_id(), "Document Generator", self.provider, self.version)
 
-    def validate_input(self, input: Dict[str, Any]) -> list:
+    def validate_input(self, input: dict[str, Any]) -> list:
         errors = []
         if not input.get("title"):
             errors.append("'title' 必填")
         return errors
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         title = input.get("title", "Untitled")
         sections = input.get("sections", [])
         lines = [f"# {title}", ""]
@@ -54,7 +54,7 @@ class DocumentGenAdapter(ToolAdapter):
         }
         return result
 
-    def normalize(self, result: Any) -> Dict[str, Any]:
+    def normalize(self, result: Any) -> dict[str, Any]:
         return result if isinstance(result, dict) else {"result": result}
 
     def collect_artifacts(self, result: Any) -> list:

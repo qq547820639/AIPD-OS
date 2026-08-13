@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 from aipd_os.execution.adapter import ToolAdapter
 
 
@@ -11,7 +9,7 @@ class AdapterRegistry:
     """按能力标识注册与查询适配器。"""
 
     def __init__(self) -> None:
-        self._adapters: Dict[str, ToolAdapter] = {}
+        self._adapters: dict[str, ToolAdapter] = {}
 
     def register(self, adapter: ToolAdapter) -> None:
         cid = adapter.capability_id()
@@ -19,13 +17,13 @@ class AdapterRegistry:
             raise ValueError(f"capability already registered: {cid}")
         self._adapters[cid] = adapter
 
-    def get(self, capability_id: str) -> Optional[ToolAdapter]:
+    def get(self, capability_id: str) -> ToolAdapter | None:
         return self._adapters.get(capability_id)
 
-    def all(self) -> List[ToolAdapter]:
+    def all(self) -> list[ToolAdapter]:
         return list(self._adapters.values())
 
-    def discover_all(self) -> List[dict]:
+    def discover_all(self) -> list[dict]:
         return [a.discover() for a in self._adapters.values()]
 
     def __contains__(self, capability_id: str) -> bool:

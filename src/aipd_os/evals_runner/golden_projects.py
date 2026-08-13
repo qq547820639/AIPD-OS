@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
 from aipd_os.execution.execution_router import ExecutionRouter
@@ -44,7 +44,7 @@ class FakeImageAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "manual.imggen.eval-fake"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         return {
             "id": self.capability_id(),
             "name": "Eval Fake ImageGen",
@@ -54,12 +54,12 @@ class FakeImageAdapter(ToolAdapter):
             "available": False,  # 诚实：外部成图能力不可用，走 blocked_external
         }
 
-    def validate_input(self, input: Dict[str, Any]) -> List[str]:
+    def validate_input(self, input: dict[str, Any]) -> list[str]:
         if not input.get("prompt"):
             return ["'prompt' 必填"]
         return []
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         raise external_blocked_error(
             self.capability_id(),
             "黄金夹具：图像需外部文生图后端生成。请人工/外部按提示词成图并回填。\n"
@@ -76,10 +76,10 @@ class GoldenProject:
     name: str
     goal: str
     brief: str
-    facts: Dict[str, Any] = field(default_factory=dict)
+    facts: dict[str, Any] = field(default_factory=dict)
     minimum_pages: int = 10
-    roles: List[str] = field(default_factory=lambda: list(DEFAULT_ROLES))
-    expected: List[str] = field(
+    roles: list[str] = field(default_factory=lambda: list(DEFAULT_ROLES))
+    expected: list[str] = field(
         default_factory=lambda: [
             "manual_pages_produced",
             "batch_continuity_holds",
@@ -88,7 +88,7 @@ class GoldenProject:
         ]
     )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -117,22 +117,22 @@ def load_golden_project(project_dir: str) -> GoldenProject:
     )
 
 
-def _param_table(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _param_table(facts: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     for key, val in (facts.get("params", {}) or {}).items():
         rows.append({"param": key, "label": key, "value": val, "unit": ""})
     return rows
 
 
-def build_manual_pages(project: GoldenProject, minimum_pages: int) -> List[Dict[str, Any]]:
+def build_manual_pages(project: GoldenProject, minimum_pages: int) -> list[dict[str, Any]]:
     """生成 >= minimum_pages 页的手册页面定义。"""
-    pages: List[Dict[str, Any]] = []
+    pages: list[dict[str, Any]] = []
     idx = 0
     while len(pages) < minimum_pages:
         role = project.roles[idx % len(project.roles)]
         num = len(pages) + 1
         pid = f"gp_{role}_{num:03d}"
-        defn: Dict[str, Any] = {
+        defn: dict[str, Any] = {
             "page_id": pid,
             "role": role,
             "title": f"{project.name} - {role}",
@@ -159,8 +159,8 @@ def build_manual_pages(project: GoldenProject, minimum_pages: int) -> List[Dict[
     return pages
 
 
-def _split_batches(pages: List[Dict[str, Any]], per_batch: int = 5) -> List[Dict[str, Any]]:
-    batches: List[Dict[str, Any]] = []
+def _split_batches(pages: list[dict[str, Any]], per_batch: int = 5) -> list[dict[str, Any]]:
+    batches: list[dict[str, Any]] = []
     for i in range(0, len(pages), per_batch):
         chunk = pages[i : i + per_batch]
         batches.append(
@@ -185,14 +185,14 @@ def _sha256(path: str) -> str:
 def run_golden_project(
     project: GoldenProject,
     workdir: str,
-    minimum_pages: Optional[int] = None,
-) -> Dict[str, Any]:
+    minimum_pages: int | None = None,
+) -> dict[str, Any]:
     """运行一个黄金项目，返回黄金报告。"""
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     min_pages = minimum_pages or project.minimum_pages
     wall_start = time.monotonic()
-    trajectory: List[Dict[str, Any]] = []
+    trajectory: list[dict[str, Any]] = []
 
     # 1) 临时 DB + 项目
     db = AIPDStateDB(str(workdir / "state.sqlite"))
@@ -203,7 +203,7 @@ def run_golden_project(
     pages = build_manual_pages(project, min_pages)
     pages_dir = workdir / "pages"
     pages_dir.mkdir(parents=True, exist_ok=True)
-    rendered: List[str] = []
+    rendered: list[str] = []
     for defn in pages:
         png = render_page(defn, str(pages_dir / f"{defn['page_id']}.png"))
         rendered.append(png)
@@ -271,7 +271,7 @@ def run_golden_project(
     trajectory.append({"tool": "manual.compose_zip", "artifact": zipf, "ok": True})
 
     # 实际可观测的误差/修复记录
-    errors_and_fixes: List[Dict[str, Any]] = []
+    errors_and_fixes: list[dict[str, Any]] = []
     for rec in run_records:
         if rec.error_classification or rec.status in {
             "failed", "blocked_external", "retried", "fallback",
@@ -289,7 +289,7 @@ def run_golden_project(
         errors_and_fixes.append({"audit_failing_pages": audit.get("failing_pages")})
 
     # 每份产物的 SHA-256
-    artifact_hashes: Dict[str, str] = {}
+    artifact_hashes: dict[str, str] = {}
     for png in rendered:
         artifact_hashes[Path(png).name] = _sha256(png)
     artifact_hashes["manual.pdf"] = _sha256(pdf)
@@ -306,7 +306,7 @@ def run_golden_project(
     rendered_exist = all(Path(png).exists() and Path(png).stat().st_size > 0 for png in rendered)
     run_records_written = len(run_records) > 0
     project_init_db = bool(db.list_projects("default"))
-    artifact_checks: List[Dict[str, Any]] = [
+    artifact_checks: list[dict[str, Any]] = [
         {
             "name": f"artifact:{Path(png).name}",
             "ok": Path(png).exists() and Path(png).stat().st_size > 0,
@@ -315,12 +315,12 @@ def run_golden_project(
     ]
     artifact_checks.append({"name": "artifact:manual.pdf", "ok": Path(pdf).exists()})
     artifact_checks.append({"name": "artifact:manual.zip", "ok": Path(zipf).exists()})
-    db_checks: List[Dict[str, Any]] = [
+    db_checks: list[dict[str, Any]] = [
         {"name": "db:project_initialized", "ok": project_init_db},
         {"name": "db:run_records_written", "ok": run_records_written},
     ]
 
-    checks: List[Dict[str, Any]] = [
+    checks: list[dict[str, Any]] = [
         {"name": "manual_pages_produced", "ok": rendered_exist},
         {"name": "batch_continuity_holds", "ok": bool(audit.get("batch_continuity_ok"))},
         {
@@ -373,8 +373,8 @@ def run_golden_project(
 def run_golden_dir(
     project_dir: str,
     workdir: str,
-    minimum_pages: Optional[int] = None,
-) -> Dict[str, Any]:
+    minimum_pages: int | None = None,
+) -> dict[str, Any]:
     """便捷：从夹具目录运行黄金项目。"""
     project = load_golden_project(project_dir)
     return run_golden_project(project, workdir, minimum_pages=minimum_pages)

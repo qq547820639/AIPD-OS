@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 def sha256_file(path: Path) -> str:
@@ -31,11 +31,11 @@ def make_artifact_record(
     tool: str,
     tool_version: str,
     *,
-    for_level: Optional[str] = None,
-    note: Optional[str] = None,
-    extra: Optional[Dict[str, Any]] = None,
-    semantic_hash: Optional[str] = None,
-) -> Dict[str, Any]:
+    for_level: str | None = None,
+    note: str | None = None,
+    extra: dict[str, Any] | None = None,
+    semantic_hash: str | None = None,
+) -> dict[str, Any]:
     """为一个已经写入磁盘的产物构造证据记录。
 
     :param path: 产物文件路径（必须存在）。
@@ -51,7 +51,7 @@ def make_artifact_record(
     p = Path(path)
     if not p.is_file():
         raise FileNotFoundError(f"artifact not found: {p}")
-    record: Dict[str, Any] = {
+    record: dict[str, Any] = {
         'path': str(p),
         'sha256': sha256_file(p),
         'tool': tool,
@@ -68,7 +68,7 @@ def make_artifact_record(
     return record
 
 
-def verify_artifact(record: Dict[str, Any]) -> bool:
+def verify_artifact(record: dict[str, Any]) -> bool:
     """校验记录中的 sha256 与磁盘文件一致。"""
     path = record.get('path')
     sha = record.get('sha256')

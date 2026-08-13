@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from .models import utc_now_iso
 
@@ -59,25 +59,25 @@ def sha256_of(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _read_bytes(source: Union[str, Path, bytes]) -> bytes:
+def _read_bytes(source: str | Path | bytes) -> bytes:
     if isinstance(source, bytes):
         return source
     return Path(source).read_bytes()
 
 
-def _extension_of(source: Union[str, Path, bytes]) -> str:
+def _extension_of(source: str | Path | bytes) -> str:
     if isinstance(source, bytes):
         return ""
     return Path(source).suffix.lower()
 
 
 def ingest_attachment(
-    source: Union[str, Path, bytes],
+    source: str | Path | bytes,
     *,
     max_bytes: int = DEFAULT_MAX_BYTES,
-    allowed_extensions: Optional[set] = None,
-    original_name: Optional[str] = None,
-) -> Dict[str, Any]:
+    allowed_extensions: set | None = None,
+    original_name: str | None = None,
+) -> dict[str, Any]:
     """摄入并净化附件。
 
     返回摄入元数据：sha256、原始大小、净化大小、时间、来源名、扩展名。

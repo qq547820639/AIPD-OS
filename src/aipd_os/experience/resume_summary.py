@@ -6,14 +6,14 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from ..state.checkpoint import CheckpointManager
 from ..state.db import AIPDStateDB
 
 
 def build_resume_summary(db: AIPDStateDB, project_id: str,
-                         tenant_id: str = "default") -> Dict[str, Any]:
+                         tenant_id: str = "default") -> dict[str, Any]:
     """返回会话恢复摘要（中文自然语言 + 结构化数据）。"""
     rs = CheckpointManager(db).resume_summary(project_id, tenant_id)
     resolved_ids = set(rs.get("resolved_decision_ids", []))

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
-def analyze_stage(records: List[Dict[str, Any]], stage: str) -> Dict[str, Any]:
+def analyze_stage(records: list[dict[str, Any]], stage: str) -> dict[str, Any]:
     """对某阶段的实验室记录进行分组分析。
 
     返回 {stage, total, passed, failed, items, failing_items}。
@@ -13,7 +13,7 @@ def analyze_stage(records: List[Dict[str, Any]], stage: str) -> Dict[str, Any]:
     """
     records = list(records or [])
     action_map = {"rerun": "rerun", "redesign": "redesign"}
-    by_item: Dict[str, List[Dict[str, Any]]] = {}
+    by_item: dict[str, list[dict[str, Any]]] = {}
     for r in records:
         item = str(r.get("test_item", "")).strip()
         if not item:
@@ -23,8 +23,8 @@ def analyze_stage(records: List[Dict[str, Any]], stage: str) -> Dict[str, Any]:
     passed = sum(1 for r in records if str(r.get("pass_fail", "")).lower() == "pass")
     failed = sum(1 for r in records if str(r.get("pass_fail", "")).lower() == "fail")
 
-    items: List[Dict[str, Any]] = []
-    failing_items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
+    failing_items: list[dict[str, Any]] = []
     for item, recs in by_item.items():
         item_failed = sum(1 for r in recs if str(r.get("pass_fail", "")).lower() == "fail")
         status = "fail" if item_failed else "pass"
@@ -49,7 +49,7 @@ def analyze_stage(records: List[Dict[str, Any]], stage: str) -> Dict[str, Any]:
     }
 
 
-def create_correction_tasks(analysis: Dict[str, Any], stage: str) -> List[Dict[str, Any]]:
+def create_correction_tasks(analysis: dict[str, Any], stage: str) -> list[dict[str, Any]]:
     """为每个失败项生成纠偏工作描述。"""
     tasks = []
     for i, item in enumerate(analysis.get("failing_items", [])):
@@ -68,8 +68,8 @@ def create_correction_tasks(analysis: Dict[str, Any], stage: str) -> List[Dict[s
 
 
 def mark_regression(
-    analysis: Dict[str, Any], prior_baseline: Optional[Dict[str, str]]
-) -> Dict[str, Any]:
+    analysis: dict[str, Any], prior_baseline: dict[str, str] | None
+) -> dict[str, Any]:
     """与历史基线比较，找出回归与改进项。
 
     prior_baseline 形如 {test_item: "pass"/"fail"}。
@@ -86,8 +86,8 @@ def mark_regression(
 
 
 def update_facts(
-    facts: Dict[str, Any], analysis: Dict[str, Any], stage: str
-) -> Dict[str, Any]:
+    facts: dict[str, Any], analysis: dict[str, Any], stage: str
+) -> dict[str, Any]:
     """把某阶段通过/失败计数合并进 consultation facts 的 verification.<stage>。"""
     facts = dict(facts or {})
     verification = dict(facts.get("verification") or {})
@@ -106,13 +106,13 @@ def update_facts(
 
 
 def propagate_impact(
-    facts: Dict[str, Any],
-    bom: List[Dict[str, Any]],
-    affected_keys: List[str],
-) -> List[Dict[str, Any]]:
+    facts: dict[str, Any],
+    bom: list[dict[str, Any]],
+    affected_keys: list[str],
+) -> list[dict[str, Any]]:
     """对每个变更影响键，把受影响（part/param 命中）的 BOM 行/CAD 项标记为 stale。"""
     changed = set(affected_keys or [])
-    stale: List[Dict[str, Any]] = []
+    stale: list[dict[str, Any]] = []
     for line in bom or []:
         parts = {
             str(line.get("part", "")).strip(),

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter
 from aipd_os.supply_chain.quotes import QuoteRegistry, parse_quote_file
@@ -24,10 +24,10 @@ class SupplierAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "supply.supplier-files"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         return meta(self.capability_id(), "Supplier Files Registrar", self.provider, self.version)
 
-    def validate_input(self, input: Dict[str, Any]) -> list:
+    def validate_input(self, input: dict[str, Any]) -> list:
         errors = []
         files = input.get("files") or []
         if not files:
@@ -38,7 +38,7 @@ class SupplierAdapter(ToolAdapter):
         """登记供应商文件/报价会对外部供应商记录产生副作用：禁止自动重试。"""
         return "EXTERNAL_SIDE_EFFECT"
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         files = input.get("files", [])
         supplier_meta = input.get("supplier_meta") or {}
         registered = []
@@ -82,7 +82,7 @@ class SupplierAdapter(ToolAdapter):
         }
         return result
 
-    def normalize(self, result: Any) -> Dict[str, Any]:
+    def normalize(self, result: Any) -> dict[str, Any]:
         return result if isinstance(result, dict) else {"result": result}
 
     def collect_artifacts(self, result: Any) -> list:

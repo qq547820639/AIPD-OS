@@ -13,13 +13,13 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # 统一的成熟度层级（与 scripts/cad_maturity_gate.py 保持一致）。
-LEVELS: List[str] = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']
+LEVELS: list[str] = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']
 
 # 每级达到所需满足的需求键（累积阶梯：达到某级需满足该级及以下全部需求）。
-REQUIREMENTS: Dict[str, List[str]] = {
+REQUIREMENTS: dict[str, list[str]] = {
     'C0': ['design_intent', 'coordinate_system', 'overall_dimensions'],
     'C1': ['faceted_brep_mesh', 'step_assemblies'],
     'C2': ['native_parametric_brep', 'editable_feature_tree', 'real_part_features', 'step_parts'],
@@ -31,7 +31,7 @@ REQUIREMENTS: Dict[str, List[str]] = {
 }
 
 # 每种运行时几何类型能达到的成熟度上限。
-RUNTIME_MAX: Dict[str, str] = {
+RUNTIME_MAX: dict[str, str] = {
     'mesh': 'C0',
     'faceted_brep': 'C1',  # 面片级几何，上限必须为 C1
     'native_brep': 'C7',
@@ -54,7 +54,7 @@ def present(v: Any) -> bool:
     return v is True or v not in (None, '', [], {})
 
 
-def val(d: Dict[str, Any], key: str) -> Any:
+def val(d: dict[str, Any], key: str) -> Any:
     """从 manifest 顶层字段或 evidence 子对象解析需求值。"""
     if key in d:
         return d[key]
@@ -69,7 +69,7 @@ def faceted_ceiling() -> str:
     return 'C1'
 
 
-def honest_level_status(capability_status: str) -> Dict[str, str]:
+def honest_level_status(capability_status: str) -> dict[str, str]:
     """给定后端能力状态，返回每个层级的诚实状态映射。
 
     只有具备真实参数化内核（capability_status == FULL）时，C2 才可能为
@@ -96,7 +96,7 @@ def honest_level_status(capability_status: str) -> Dict[str, str]:
     }
 
 
-def assert_faceted_not_over_c1(manifest: Dict[str, Any]) -> None:
+def assert_faceted_not_over_c1(manifest: dict[str, Any]) -> None:
     """一致性断言：faceted 运行时给出的成熟度结果不得超过 C1。
 
     若违反（例如把面片级几何报告为达到 C2 及以上），直接抛 AssertionError。
@@ -113,10 +113,10 @@ def assert_faceted_not_over_c1(manifest: Dict[str, Any]) -> None:
 
 
 def evaluate_maturity(
-    manifest: Dict[str, Any],
+    manifest: dict[str, Any],
     has_real_kernel: bool = False,
-    capability_status: Optional[str] = None,
-) -> Dict[str, Any]:
+    capability_status: str | None = None,
+) -> dict[str, Any]:
     """评估 manifest 的成熟度，并施加诚实性约束。
 
     :param manifest: CAD 工程清单，含 ``runtime`` 与各需求键/evidence。
@@ -139,8 +139,8 @@ def evaluate_maturity(
 
     # 逐级评估（累积阶梯），受运行时上限与诚实性状态双重约束。
     reached = None
-    cumulative: List[str] = []
-    level_checks: Dict[str, Any] = {}
+    cumulative: list[str] = []
+    level_checks: dict[str, Any] = {}
     for level in LEVELS:
         lvl_idx = level_index(level)
         if lvl_idx > ceiling_idx:
@@ -169,9 +169,9 @@ def evaluate_maturity(
     }
 
 
-def summarize_levels(level_status: Dict[str, str]) -> Dict[str, List[str]]:
+def summarize_levels(level_status: dict[str, str]) -> dict[str, list[str]]:
     """把层级状态按状态值分组，方便报告 'full' / 'external_dependency' 清单。"""
-    grouped: Dict[str, List[str]] = {s: [] for s in CAPABILITY_STATUSES}
+    grouped: dict[str, list[str]] = {s: [] for s in CAPABILITY_STATUSES}
     for level, status in level_status.items():
         grouped.setdefault(status, []).append(level)
     return grouped

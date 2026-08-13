@@ -9,7 +9,7 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from aipd_os.execution.adapter import AdapterError
 
@@ -26,7 +26,7 @@ CANONICAL_LAB_CSV_HEADER = [
 REPORT_EXTENSIONS = (".pdf", ".docx")
 
 
-def _normalize_lab_record(record: Dict[str, Any], stage: str) -> Dict[str, Any]:
+def _normalize_lab_record(record: dict[str, Any], stage: str) -> dict[str, Any]:
     record = dict(record or {})
     normalized = {
         "stage": str(record.get("stage") or stage).strip().lower(),
@@ -43,7 +43,7 @@ def _normalize_lab_record(record: Dict[str, Any], stage: str) -> Dict[str, Any]:
     return normalized
 
 
-def _records_from_rows(rows: List[Dict[str, Any]], stage: str, source: str, fmt: str) -> Dict[str, Any]:
+def _records_from_rows(rows: list[dict[str, Any]], stage: str, source: str, fmt: str) -> dict[str, Any]:
     records = [_normalize_lab_record(r, stage) for r in rows]
     return {
         "source": source,
@@ -54,7 +54,7 @@ def _records_from_rows(rows: List[Dict[str, Any]], stage: str, source: str, fmt:
     }
 
 
-def import_lab_csv(path: Union[str, Path], stage: str) -> Dict[str, Any]:
+def import_lab_csv(path: str | Path, stage: str) -> dict[str, Any]:
     """解析含表头的实验室结果 CSV。规范表头需含 test_item/pass_fail 等字段。"""
     p = Path(path)
     with open(p, newline="", encoding="utf-8") as fh:
@@ -63,7 +63,7 @@ def import_lab_csv(path: Union[str, Path], stage: str) -> Dict[str, Any]:
     return _records_from_rows(rows, stage, str(p), "csv")
 
 
-def import_lab_json(path: Union[str, Path], stage: str) -> Dict[str, Any]:
+def import_lab_json(path: str | Path, stage: str) -> dict[str, Any]:
     """解析 JSON 实验室记录。"""
     p = Path(path)
     with open(p, encoding="utf-8") as fh:
@@ -77,7 +77,7 @@ def import_lab_json(path: Union[str, Path], stage: str) -> Dict[str, Any]:
     return _records_from_rows(rows, stage, str(p), "json")
 
 
-def import_lab_xlsx(path: Union[str, Path], stage: str) -> Dict[str, Any]:
+def import_lab_xlsx(path: str | Path, stage: str) -> dict[str, Any]:
     """解析 .xlsx 实验室数据。
 
     需要 openpyxl；未安装时抛 ``external_blocked``（诚实：不伪造解析）。
@@ -105,7 +105,7 @@ def import_lab_xlsx(path: Union[str, Path], stage: str) -> Dict[str, Any]:
     return _records_from_rows(parsed, stage, str(p), "xlsx")
 
 
-def import_lab_report(path: Union[str, Path], stage: str) -> Dict[str, Any]:
+def import_lab_report(path: str | Path, stage: str) -> dict[str, Any]:
     """导入实验室报告。
 
     - .json/.csv 委托给对应解析器

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 _CASE_TAG = re.compile(r"\[eval case:\s*([^\]]+)\]")
 
@@ -62,17 +62,17 @@ class CompletionProvider:
     def real_network_call(self) -> bool:
         return False
 
-    def complete(self, messages: List[Dict[str, Any]]) -> str:
+    def complete(self, messages: list[dict[str, Any]]) -> str:
         raise NotImplementedError
 
 
 class RecordedCompletionProvider(CompletionProvider):
     """脚本化假模型：从 system 消息提取 case_id 返回预设文本，并记录历史。"""
 
-    def __init__(self, script: Optional[Dict[str, str]] = None, model_version: str = "eval-fake-model") -> None:
-        self._script: Dict[str, str] = dict(script or {})
+    def __init__(self, script: dict[str, str] | None = None, model_version: str = "eval-fake-model") -> None:
+        self._script: dict[str, str] = dict(script or {})
         self._model_version = model_version
-        self.history: List[Dict[str, Any]] = []
+        self.history: list[dict[str, Any]] = []
 
     def model(self) -> str:
         return self._model_version
@@ -86,7 +86,7 @@ class RecordedCompletionProvider(CompletionProvider):
     def real_network_call(self) -> bool:
         return False
 
-    def complete(self, messages: List[Dict[str, Any]]) -> str:
+    def complete(self, messages: list[dict[str, Any]]) -> str:
         case_id = ""
         for m in messages:
             if m.get("role") == "system":
@@ -137,7 +137,7 @@ class EnvCompletionProvider(CompletionProvider):
     def real_network_call(self) -> bool:
         return True
 
-    def complete(self, messages: List[Dict[str, Any]]) -> str:
+    def complete(self, messages: list[dict[str, Any]]) -> str:
         if not self._endpoint or not self._key:
             raise ModelNotConfiguredError(
                 f"{self.endpoint_env}/{self.key_env} 未配置，无法真实调用模型；"
@@ -150,7 +150,7 @@ class EnvCompletionProvider(CompletionProvider):
                 "缺少 requests 依赖，无法真实调用模型端点"
             ) from exc
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "model": self._model_version,
             "messages": messages,
             "temperature": 0.2,

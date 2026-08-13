@@ -5,15 +5,15 @@ import shutil
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from . import migrations
 
 
-def health_check(db_path: str) -> Dict[str, Any]:
+def health_check(db_path: str) -> dict[str, Any]:
     """返回健康状态字典，``ok`` 表示整体健康。"""
     path = Path(db_path)
-    result: Dict[str, Any] = {"db_path": str(path), "ok": True, "checks": {}}
+    result: dict[str, Any] = {"db_path": str(path), "ok": True, "checks": {}}
 
     # 1) 数据库连通性
     try:

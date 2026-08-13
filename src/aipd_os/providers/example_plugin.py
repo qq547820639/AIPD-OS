@@ -12,7 +12,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from aipd_os.providers.sdk import ProbeResult, Provider, available
 
@@ -26,12 +26,12 @@ class ExamplePlugin(Provider):
     def __init__(self, prefix: str = "") -> None:
         self._prefix = prefix
 
-    def configure(self, config: Dict[str, Any]) -> None:
+    def configure(self, config: dict[str, Any]) -> None:
         """注入配置（示例：prefix）。"""
         if config.get("prefix"):
             self._prefix = str(config["prefix"])
 
-    def capabilities(self) -> List[Dict[str, Any]]:
+    def capabilities(self) -> list[dict[str, Any]]:
         return [{
             "id": "generic.echo",
             "name": "Echo 示例能力",
@@ -48,7 +48,7 @@ class ExamplePlugin(Provider):
         # 示例插件无需外部依赖，恒为可用
         return available()
 
-    def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def run(self, context: dict[str, Any]) -> dict[str, Any]:
         message = context.get("message", "")
         echo = f"{self._prefix}{message}" if self._prefix else message
         return {"ok": True, "echo": echo, "provider": self.name}

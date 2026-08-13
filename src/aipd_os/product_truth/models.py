@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # 记录类型（truth 分类）
 # v5.9：feature —— Product Definition Gate 批准后的 Feature 写入 Product Truth
@@ -47,13 +47,13 @@ def ensure_trust(trust_level: str) -> None:
 @dataclass
 class SourceRef:
     """来源：文件 + 段落 + 获取时间。"""
-    file: Optional[str] = None
-    section: Optional[str] = None
-    fetched_at: Optional[str] = None
-    note: Optional[str] = None
+    file: str | None = None
+    section: str | None = None
+    fetched_at: str | None = None
+    note: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {}
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {}
         if self.file is not None:
             d["file"] = self.file
         if self.section is not None:
@@ -85,16 +85,16 @@ class TruthRecord:
     """一条结构化 Product Truth 记录。"""
     record_type: str
     content: str
-    source: Optional[SourceRef] = None
+    source: SourceRef | None = None
     trust_level: str = "unverified"
-    effective_at: Optional[str] = None
-    expires_at: Optional[str] = None
-    record_id: Optional[str] = None
+    effective_at: str | None = None
+    expires_at: str | None = None
+    record_id: str | None = None
     version: int = 1
     status: str = "active"
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_at: str | None = None
+    updated_at: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         ensure_type(self.record_type)
@@ -103,7 +103,7 @@ class TruthRecord:
             raise ValueError(
                 f"invalid truth status {self.status!r}; expected one of {sorted(TRUTH_STATUS)}")
 
-    def is_expired(self, at: Optional[str] = None) -> bool:
+    def is_expired(self, at: str | None = None) -> bool:
         """按绝对时间判定是否过期。无 expires_at 视为永不过期。"""
         if not self.expires_at:
             return False
@@ -115,7 +115,7 @@ class TruthRecord:
             return False
         return r >= e
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.record_id,
             "type": self.record_type,
@@ -136,9 +136,9 @@ class TruthRecord:
 class TrustAssessment:
     """可信度评估结果：缺失证据/过期时给出确定性分级并说明原因。"""
     trust_level: str
-    reasons: List[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"trust_level": self.trust_level, "reasons": list(self.reasons)}
 
 
@@ -147,13 +147,13 @@ class ReworkTask:
     """针对单个受影响 truth 的、有次数上限的返工任务。"""
     truth_id: str
     reason: str
-    task_id: Optional[str] = None
+    task_id: str | None = None
     attempts: int = 0
     max_attempts: int = 3
     status: str = "pending"
-    backoff_until: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    backoff_until: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
     def __post_init__(self) -> None:
         if self.max_attempts < 1:
@@ -162,7 +162,7 @@ class ReworkTask:
             raise ValueError(
                 f"invalid rework status {self.status!r}; expected one of {sorted(REWORK_STATUS)}")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "task_id": self.task_id,
             "truth_id": self.truth_id,

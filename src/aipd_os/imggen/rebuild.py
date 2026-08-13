@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable
 
 
-def _sha_file(path: Path) -> Optional[str]:
+def _sha_file(path: Path) -> str | None:
     if not path.exists() or not path.is_file():
         return None
     h = hashlib.sha256()
@@ -22,7 +22,7 @@ def _sha_file(path: Path) -> Optional[str]:
 
 def rebuild_failed_pages(
     project: dict,
-    failed_page_ids: List[str],
+    failed_page_ids: list[str],
     pages_dir: str,
     rebuild_page: Callable[[str], bytes],
 ) -> dict:

@@ -17,7 +17,7 @@ from __future__ import annotations
 import threading
 import uuid
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 
 class LimitError(Exception):
@@ -34,7 +34,7 @@ class CancelledError(LimitError):
 class CancellationToken:
     """取消标志；子 token 与其父 token 的取消状态联动（取消传播）。"""
 
-    def __init__(self, parent: Optional[CancellationToken] = None) -> None:
+    def __init__(self, parent: CancellationToken | None = None) -> None:
         self._parent = parent
         self._cancelled = False
 
@@ -90,7 +90,7 @@ class ConcurrencyGate:
         self._active = 0
         self._lock = threading.Condition()
 
-    def acquire(self, timeout: Optional[float] = None) -> bool:
+    def acquire(self, timeout: float | None = None) -> bool:
         """尝试获取一个 slot；超时返回 False。"""
         with self._lock:
             if self._active >= self._limit:
@@ -184,8 +184,8 @@ class RetryPolicy:
 class TaskLimiter:
     """组合 并发门 + 时长预算 + 重试策略 + 取消传播 的任务执行器。"""
 
-    def __init__(self, limits: Optional[ResourceLimits] = None,
-                 token: Optional[CancellationToken] = None) -> None:
+    def __init__(self, limits: ResourceLimits | None = None,
+                 token: CancellationToken | None = None) -> None:
         self.limits = limits or ResourceLimits()
         self.token = token or CancellationToken()
         self.concurrency = ConcurrencyGate(self.limits.max_concurrency)
@@ -235,8 +235,8 @@ class TaskLimiter:
 class CheckpointStore:
     """断点存储：按名称保存 / 读取 / 列出 checkpoint。线程安全。"""
 
-    def __init__(self, storage: Optional[Dict[str, Dict[str, Any]]] = None) -> None:
-        self._storage: Dict[str, Dict[str, Any]] = storage if storage is not None else {}
+    def __init__(self, storage: dict[str, dict[str, Any]] | None = None) -> None:
+        self._storage: dict[str, dict[str, Any]] = storage if storage is not None else {}
         self._lock = threading.Lock()
 
     def save(self, name: str, state: Any) -> str:
@@ -246,22 +246,22 @@ class CheckpointStore:
             self._storage[name] = {"id": cid, "state": state}
         return cid
 
-    def load(self, name: str) -> Optional[Dict[str, Any]]:
+    def load(self, name: str) -> dict[str, Any] | None:
         with self._lock:
             entry = self._storage.get(name)
             if entry is None:
                 return None
             return {"id": entry["id"], "state": entry["state"]}
 
-    def latest(self, name: str) -> Optional[Any]:
+    def latest(self, name: str) -> Any | None:
         entry = self.load(name)
         return entry["state"] if entry else None
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         with self._lock:
             return list(self._storage.keys())
 
-    def clear(self, name: Optional[str] = None) -> None:
+    def clear(self, name: str | None = None) -> None:
         with self._lock:
             if name is None:
                 self._storage.clear()
@@ -277,17 +277,17 @@ class ResumableLimiter:
      过程中数据保持一致。
     """
 
-    def __init__(self, limiter: Optional[TaskLimiter] = None,
-                 store: Optional[CheckpointStore] = None) -> None:
+    def __init__(self, limiter: TaskLimiter | None = None,
+                 store: CheckpointStore | None = None) -> None:
         self.limiter = limiter or TaskLimiter()
         self.store = store or CheckpointStore()
 
-    def resume_latest(self, task_name: str) -> Optional[Any]:
+    def resume_latest(self, task_name: str) -> Any | None:
         """返回该任务上次保存的进度（无则 None）。"""
         return self.store.latest(task_name)
 
-    def run_steps(self, task_name: str, steps: List[Callable[[], Any]],
-                  checkpoint_every: int = 1) -> Dict[str, Any]:
+    def run_steps(self, task_name: str, steps: list[Callable[[], Any]],
+                  checkpoint_every: int = 1) -> dict[str, Any]:
         """恢复后按步骤执行，每步执行后保存 checkpoint。返回 {completed, checkpoint}。
 
         若该任务已有 checkpoint，则从上次 ``completed`` 计数继续（断点恢复语义），

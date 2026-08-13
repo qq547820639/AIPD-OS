@@ -17,7 +17,7 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any, Dict
+from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
 from aipd_os.tool_adapters._common import env, meta, token_meta
@@ -34,7 +34,7 @@ class ResearchAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "research.search_papers"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         return meta(
             self.capability_id(),
             "Research Paper Search",
@@ -52,7 +52,7 @@ class ResearchAdapter(ToolAdapter):
         """
         return bool(env(_API_KEY_ENV))
 
-    def validate_input(self, input: Dict[str, Any]) -> list:
+    def validate_input(self, input: dict[str, Any]) -> list:
         errors = []
         if not input.get("query"):
             errors.append("'query' 必填")
@@ -69,7 +69,7 @@ class ResearchAdapter(ToolAdapter):
             "limit": limit,
             "fields": "title,authors,year,url,abstract",
         })
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             "User-Agent": _USER_AGENT,
             "Accept": "application/json",
         }
@@ -97,7 +97,7 @@ class ResearchAdapter(ToolAdapter):
                 work_id=None,
             ) from exc
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         if not self._is_available():
             raise external_blocked_error(
                 self.capability_id(),
@@ -135,7 +135,7 @@ class ResearchAdapter(ToolAdapter):
         }
         return result
 
-    def normalize(self, result: Any) -> Dict[str, Any]:
+    def normalize(self, result: Any) -> dict[str, Any]:
         return result if isinstance(result, dict) else {"sources": result}
 
     def collect_artifacts(self, result: Any) -> list:

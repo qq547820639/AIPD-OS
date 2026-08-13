@@ -18,7 +18,7 @@ import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from aipd_os.cli.product_commands import cmd_product_gate, cmd_product_show
 from aipd_os.logging_utils import get_logger, log_event
@@ -288,7 +288,7 @@ def cmd_run_cad_chain(args: argparse.Namespace) -> int:
     ceiling_idx = cmg.idx(runtime_ceiling)
 
     reached: str | None = None
-    cumulative: List[str] = []
+    cumulative: list[str] = []
     for level in cmg.LEVELS:
         cumulative += cmg.REQUIREMENTS[level]
         checks = {k: bool(cmg.present(cmg.val(manifest, k))) for k in cumulative}
@@ -334,8 +334,8 @@ def cmd_run_evals(args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------
 # build-release
 # --------------------------------------------------------------------------
-def _release_include_roots(repo: Path) -> List[Path]:
-    roots: List[Path] = []
+def _release_include_roots(repo: Path) -> list[Path]:
+    roots: list[Path] = []
     for name in ["src", "scripts", "docs", "references", "evals"]:
         p = repo / name
         if p.exists():
@@ -365,8 +365,8 @@ def _is_release_excluded(rel: str) -> bool:
     return False
 
 
-def _collect_release_files(repo: Path) -> List[Path]:
-    files: List[Path] = []
+def _collect_release_files(repo: Path) -> list[Path]:
+    files: list[Path] = []
     for root in _release_include_roots(repo):
         for f in sorted(root.rglob("*")):
             if f.is_file() and not _is_release_excluded(f.relative_to(repo).as_posix()):
@@ -389,7 +389,7 @@ def _build_artifact_zip(repo: Path, artifact: Path, out_dir: Path) -> None:
         zf.write(manifest_placeholder, arcname="RELEASE_MANIFEST.json")
 
 
-def _sign_file(path: Path) -> Dict[str, Any]:
+def _sign_file(path: Path) -> dict[str, Any]:
     os.environ.setdefault("AIPD_RELEASE_SIGNING_KEY", "aipd-os-dev-signing-key")
     signer = _import_module("sign_release")
     return signer.sign_release(str(path))
@@ -480,7 +480,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     sup = _import_module("aipd_supervisor").Supervisor(
         args.db, tenant_id=DEFAULT_TENANT, project_id=args.project, state_db=db)
     max_steps = args.steps or (100 if args.until_decision else 1)
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     steps_run = 0
     stopped_reason: str | None = None
     for _ in range(max_steps):
@@ -1246,7 +1246,7 @@ def cmd_doctor(args):
     from aipd_os.config import get_settings
 
     repo = _repo_root()
-    checks: List[Dict[str, Any]] = []
+    checks: list[dict[str, Any]] = []
 
     # 1) 包版本
     _doctor_check(checks, "version", "ok", __version__)
@@ -1510,7 +1510,7 @@ def cmd_ui(args):
 # --------------------------------------------------------------------------
 # 命令分发表
 # --------------------------------------------------------------------------
-COMMAND_FUNCS: Dict[str, Any] = {
+COMMAND_FUNCS: dict[str, Any] = {
     # 既有 10 个一键命令（向后兼容）
     "init-project": cmd_init_project,
     "restore-project": cmd_restore_project,

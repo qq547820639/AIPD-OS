@@ -5,13 +5,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter, now, output_dir
 from aipd_os.tool_adapters._common import meta, token_meta
 
 
-def _cube_mesh(size: float = 10.0) -> Dict[str, Any]:
+def _cube_mesh(size: float = 10.0) -> dict[str, Any]:
     h = size / 2.0
     v = [
         (-h, -h, -h), (h, -h, -h), (h, h, -h), (-h, h, -h),
@@ -33,7 +33,7 @@ class FacetedAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "cad.faceted-fallback"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         return meta(
             self.capability_id(),
             "Faceted B-Rep Fallback",
@@ -42,10 +42,10 @@ class FacetedAdapter(ToolAdapter):
             maturity_ceiling=self.maturity_ceiling,
         )
 
-    def validate_input(self, input: Dict[str, Any]) -> list:
+    def validate_input(self, input: dict[str, Any]) -> list:
         return []
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         meshes = input.get("meshes") or [_cube_mesh(float(input.get("size", 10.0)))]
         # 生成真实的小平面 STEP 文件（复用 scripts/faceted_step.py 的写入逻辑）
         step_text, stats = self._write_step(meshes)

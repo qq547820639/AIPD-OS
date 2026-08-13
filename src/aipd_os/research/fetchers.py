@@ -12,12 +12,12 @@ PDF/TXT 解析通过可插拔解析器（``DOCUMENT_PARSERS``）完成；未注�
 from __future__ import annotations
 
 import abc
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .models import Citation, Document, FullText
 
 # 确定性本地夹具（线下/测试用，并非真实网络内容）
-_FIXTURES: Dict[str, str] = {
+_FIXTURES: dict[str, str] = {
     "ISO-9001:2015": (
         "ISO 9001:2015 Quality management systems — Requirements.\n"
         "This standard specifies requirements for a quality management system\n"
@@ -68,7 +68,7 @@ def _no_parser(raw: bytes, citation: Citation, fmt: str) -> FullText:
 
 
 # 可插拔解析器注册表：扩展名 -> 解析函数
-DOCUMENT_PARSERS: Dict[str, Any] = {
+DOCUMENT_PARSERS: dict[str, Any] = {
     ".txt": parse_txt,
     ".md": parse_txt,
     ".pdf": parse_pdf,
@@ -80,7 +80,7 @@ DOCUMENT_PARSERS: Dict[str, Any] = {
 class ContractFetcher(DocumentFetcher):
     """本地确定性夹具实现：返回固定全文，用于测试与离线验证。"""
 
-    def __init__(self, fixtures: Optional[Dict[str, str]] = None) -> None:
+    def __init__(self, fixtures: dict[str, str] | None = None) -> None:
         self._fixtures = dict(_FIXTURES if fixtures is None else fixtures)
 
     def available(self) -> bool:
@@ -110,7 +110,7 @@ class HttpDocumentFetcher(DocumentFetcher):
     在线能力为 ``external_dependency``：需要真实下载服务与凭据。
     """
 
-    def __init__(self, api_key: Optional[str] = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self._api_key = api_key
 
     def available(self) -> bool:

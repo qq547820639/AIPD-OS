@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from aipd_os.cad.backends import get_default_backend
 from aipd_os.execution.adapter import ToolAdapter, now, output_dir
@@ -29,7 +29,7 @@ class LocalBrepAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "cad.local-brep"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         # 能力上限随实际后端运行时推导：真实内核可用 -> C2，降级后端 -> C1。
         ceiling = self._backend.maturity_ceiling()
         return meta(
@@ -41,7 +41,7 @@ class LocalBrepAdapter(ToolAdapter):
             maturity_ceiling=ceiling,
         )
 
-    def validate_input(self, input: Dict[str, Any]) -> list:
+    def validate_input(self, input: dict[str, Any]) -> list:
         errors = []
         has_input = (input.get("features") or input.get("model_script")
                      or input.get("parameters"))
@@ -49,7 +49,7 @@ class LocalBrepAdapter(ToolAdapter):
             errors.append("'features'、'model_script' 或 'parameters' 至少提供一个")
         return errors
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         backend = self._backend
         params = input.get("parameters")
         if isinstance(params, dict) and params:
@@ -93,7 +93,7 @@ class LocalBrepAdapter(ToolAdapter):
         }
         return result
 
-    def normalize(self, result: Any) -> Dict[str, Any]:
+    def normalize(self, result: Any) -> dict[str, Any]:
         return result if isinstance(result, dict) else {"result": result}
 
     def collect_artifacts(self, result: Any) -> list:

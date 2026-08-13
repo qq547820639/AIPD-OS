@@ -20,7 +20,6 @@ v5.7 语义收敛（Commit 7D）：
 from __future__ import annotations
 
 import abc
-from typing import List, Optional
 
 from .models import Abstract, Document
 
@@ -29,7 +28,7 @@ class Retriever(abc.ABC):
     """检索接口统一契约。"""
 
     @abc.abstractmethod
-    def search(self, query: str, limit: int = 5) -> List[Document]:
+    def search(self, query: str, limit: int = 5) -> list[Document]:
         """按查询返回文档列表；失败/不可用时返回 status=not_verified 的空文档列表。"""
 
     @abc.abstractmethod
@@ -50,7 +49,7 @@ class TestRetriever(Retriever):
     def available(self) -> bool:
         return True
 
-    def search(self, query: str, limit: int = 5) -> List[Document]:
+    def search(self, query: str, limit: int = 5) -> list[Document]:
         hits = []
         for known, citations in self._data.items():
             if known.lower() in query.lower():
@@ -71,20 +70,20 @@ class _UnavailableRetriever(Retriever):
     def available(self) -> bool:
         return False
 
-    def search(self, query: str, limit: int = 5) -> List[Document]:
+    def search(self, query: str, limit: int = 5) -> list[Document]:
         return []
 
 
 class _NetworkRetriever(Retriever):
     """真实网络桩：未配置凭据时返回空结果，标明 not_verified。"""
 
-    def __init__(self, api_key: Optional[str] = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         self._api_key = api_key
 
     def available(self) -> bool:
         return bool(self._api_key)
 
-    def search(self, query: str, limit: int = 5) -> List[Document]:
+    def search(self, query: str, limit: int = 5) -> list[Document]:
         # 无凭据/网络不可达：诚实返回空列表（调用方保持 not_verified），不伪造结果。
         if not self.available():
             return []
@@ -96,52 +95,52 @@ class _NetworkRetriever(Retriever):
 class StandardsRetriever(Retriever):
     """标准检索：生产默认 external_dependency；可注入真实网络桩或测试夹具。"""
 
-    def __init__(self, backend: Optional[Retriever] = None) -> None:
+    def __init__(self, backend: Retriever | None = None) -> None:
         self._backend = backend or _UnavailableRetriever("standards")
 
     def available(self) -> bool:
         return self._backend.available()
 
-    def search(self, query: str, limit: int = 5) -> List[Document]:
+    def search(self, query: str, limit: int = 5) -> list[Document]:
         return self._backend.search(query, limit)
 
 
 class PatentRetriever(Retriever):
     """专利检索：生产默认 external_dependency。"""
 
-    def __init__(self, backend: Optional[Retriever] = None) -> None:
+    def __init__(self, backend: Retriever | None = None) -> None:
         self._backend = backend or _UnavailableRetriever("patents")
 
     def available(self) -> bool:
         return self._backend.available()
 
-    def search(self, query: str, limit: int = 5) -> List[Document]:
+    def search(self, query: str, limit: int = 5) -> list[Document]:
         return self._backend.search(query, limit)
 
 
 class CompetitorRetriever(Retriever):
     """竞品情报检索：生产默认 external_dependency。"""
 
-    def __init__(self, backend: Optional[Retriever] = None) -> None:
+    def __init__(self, backend: Retriever | None = None) -> None:
         self._backend = backend or _UnavailableRetriever("competitors")
 
     def available(self) -> bool:
         return self._backend.available()
 
-    def search(self, query: str, limit: int = 5) -> List[Document]:
+    def search(self, query: str, limit: int = 5) -> list[Document]:
         return self._backend.search(query, limit)
 
 
 # 网络桩工厂：未配置密钥时的诚实降级实现
-def network_standards(api_key: Optional[str] = None) -> StandardsRetriever:
+def network_standards(api_key: str | None = None) -> StandardsRetriever:
     return StandardsRetriever(backend=_NetworkRetriever(api_key))
 
 
-def network_patents(api_key: Optional[str] = None) -> PatentRetriever:
+def network_patents(api_key: str | None = None) -> PatentRetriever:
     return PatentRetriever(backend=_NetworkRetriever(api_key))
 
 
-def network_competitors(api_key: Optional[str] = None) -> CompetitorRetriever:
+def network_competitors(api_key: str | None = None) -> CompetitorRetriever:
     return CompetitorRetriever(backend=_NetworkRetriever(api_key))
 
 

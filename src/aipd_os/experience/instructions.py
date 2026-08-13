@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..state.db import AIPDStateDB
 
@@ -34,21 +34,21 @@ _HALT_PHYSICAL_RE = re.compile(r"暂不进入实体制造|不进入实体制造|
 class Instruction:
     """结构化指令。``propagated_impact`` 为采纳后预计影响的中文描述。"""
     kind: str
-    target: Optional[str] = None
-    params: Dict[str, Any] = field(default_factory=dict)
-    propagated_impact: List[str] = field(default_factory=list)
+    target: str | None = None
+    params: dict[str, Any] = field(default_factory=dict)
+    propagated_impact: list[str] = field(default_factory=list)
 
 
-def _prev_approved(decision: Dict[str, Any]) -> str:
+def _prev_approved(decision: dict[str, Any]) -> str:
     return decision.get("recommendation") or "推荐方案"
 
 
-def _next_open_decision(db: AIPDStateDB, project_id: str, tenant_id: str) -> Optional[Dict[str, Any]]:
+def _next_open_decision(db: AIPDStateDB, project_id: str, tenant_id: str) -> dict[str, Any] | None:
     open_ds = db.list_open_decisions(tenant_id, project_id)
     return open_ds[0] if open_ds else None
 
 
-def _options_of(decision: Optional[Dict[str, Any]]) -> List[str]:
+def _options_of(decision: dict[str, Any] | None) -> list[str]:
     """把 decision 的 options（list 或 'A/B/C' 字符串或 options_json）规整为字符串列表。"""
     if not decision:
         return []
@@ -163,7 +163,7 @@ def parse_instruction(text: str, db: AIPDStateDB, project_id: str,
 
 
 def _deliverable_version(db: AIPDStateDB, tenant_id: str, project_id: str,
-                         deliverable_id: str) -> Optional[Dict[str, Any]]:
+                         deliverable_id: str) -> dict[str, Any] | None:
     for d in db.list_deliverables(tenant_id, project_id):
         if d["deliverable_id"] == deliverable_id:
             return d
@@ -171,9 +171,9 @@ def _deliverable_version(db: AIPDStateDB, tenant_id: str, project_id: str,
 
 
 def _mark_stale(db: AIPDStateDB, tenant_id: str, project_id: str,
-                predicate=None) -> List[str]:
+                predicate=None) -> list[str]:
     """把符合条件的交付物标记为过期（stale），返回被标记的 deliverable_id 列表。"""
-    marked: List[str] = []
+    marked: list[str] = []
     for d in db.list_deliverables(tenant_id, project_id):
         if d.get("status") in ("released", "archived"):
             continue
@@ -189,10 +189,10 @@ def _mark_stale(db: AIPDStateDB, tenant_id: str, project_id: str,
 
 
 def apply_instruction(instruction: Instruction, db: AIPDStateDB, project_id: str,
-                      tenant_id: str = "default") -> Dict[str, Any]:
+                      tenant_id: str = "default") -> dict[str, Any]:
     """把指令传播到状态库：记录约束/决策，并标记依赖产物过期。不真正重生成制品。"""
     kind = instruction.kind
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "kind": kind,
         "target": instruction.target,
         "params": instruction.params,

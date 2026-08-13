@@ -21,7 +21,6 @@ import time
 import urllib.request
 import uuid
 from pathlib import Path
-from typing import Optional
 
 
 class VisionAuditUnavailable(RuntimeError):
@@ -35,9 +34,9 @@ class VisionAuditProvider:
 
     def __init__(
         self,
-        url: Optional[str] = None,
-        api_key: Optional[str] = None,
-        model: Optional[str] = None,
+        url: str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
         timeout: float = 60.0,
     ):
         self.url = url or os.environ.get("AIPD_VISION_PROVIDER_URL")
@@ -58,7 +57,7 @@ class VisionAuditProvider:
         self,
         image_path: str,
         question: str,
-        context: Optional[dict] = None,
+        context: dict | None = None,
     ) -> dict:
         """请求图片 + 问题，解析结构化评分/结论。
 

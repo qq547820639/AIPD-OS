@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from aipd_os.execution.adapter import ToolAdapter
 from aipd_os.execution.registry import AdapterRegistry
 from aipd_os.tool_adapters.cad_adapter import CadAdapter
@@ -21,7 +19,7 @@ from aipd_os.tool_adapters.research_adapter import ResearchAdapter
 from aipd_os.tool_adapters.supplier_adapter import SupplierAdapter
 
 
-def builtin_adapters() -> List[ToolAdapter]:
+def builtin_adapters() -> list[ToolAdapter]:
     """返回全部内置适配器实例列表。"""
     return [
         ResearchAdapter(),

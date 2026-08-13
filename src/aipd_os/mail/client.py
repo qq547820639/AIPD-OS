@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.message import EmailMessage
 from email.utils import format_datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.supply_chain.mail import (
     ExternalDependencyError,
@@ -71,10 +71,10 @@ def _coerce_body(body: Any) -> str:
 def _build_mime(
     message_id: str,
     from_addr: str,
-    to_addrs: List[str],
+    to_addrs: list[str],
     subject: str,
     body: str,
-    attachments: Optional[List[MailAttachment]],
+    attachments: list[MailAttachment] | None,
 ) -> EmailMessage:
     msg = EmailMessage()
     msg["Message-ID"] = message_id
@@ -101,13 +101,13 @@ def _build_mime(
 def send_email(
     host: str,
     port: int,
-    user: Optional[str],
-    password: Optional[str],
+    user: str | None,
+    password: str | None,
     from_addr: str,
-    to_addrs: List[str],
+    to_addrs: list[str],
     subject: str,
     body: str,
-    attachments: Optional[List[MailAttachment]] = None,
+    attachments: list[MailAttachment] | None = None,
     use_tls: bool = True,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> str:
@@ -154,16 +154,16 @@ class ReceivedMail:
 
     message_id: str
     sender: str
-    recipients: List[str]
+    recipients: list[str]
     subject: str
     body: str
     thread_id: str
     in_reply_to: str
     date: str
-    attachments: List[MailAttachment] = field(default_factory=list)
+    attachments: list[MailAttachment] = field(default_factory=list)
     sha256: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "message_id": self.message_id,
             "sender": self.sender,
@@ -206,7 +206,7 @@ def _normalize_subject(subject: str) -> str:
     return s
 
 
-def _parse_part(part: email.message.Message) -> Optional[bytes]:
+def _parse_part(part: email.message.Message) -> bytes | None:
     """提取一个 multipart 部分的原始字节（处理传输编码）。"""
     payload = part.get_payload(decode=True)
     if payload is None:
@@ -224,8 +224,8 @@ def _parse_message(raw: bytes) -> ReceivedMail:
     recipients = [r.strip() for r in to_header.split(",") if r.strip()]
     date = _decode_header(msg.get("Date"))
 
-    attachments: List[MailAttachment] = []
-    body_parts: List[str] = []
+    attachments: list[MailAttachment] = []
+    body_parts: list[str] = []
     if msg.is_multipart():
         for part in msg.walk():
             ctype = part.get_content_type()
@@ -267,9 +267,9 @@ def fetch_emails(
     user: str,
     password: str,
     folder: str = "INBOX",
-    since: Optional[str] = None,
+    since: str | None = None,
     timeout: float = DEFAULT_TIMEOUT,
-) -> List[ReceivedMail]:
+) -> list[ReceivedMail]:
     """真实连接 IMAP 读取收件箱，返回解析后的邮件列表。
 
     host 已配置时**必须**真正连接并读取；连接/认证失败时抛出底层
@@ -291,7 +291,7 @@ def fetch_emails(
         if typ != "OK":
             return []
 
-        results: List[ReceivedMail] = []
+        results: list[ReceivedMail] = []
         for num in data[0].split():
             typ2, msgdata = conn.fetch(num, "(BODY.PEEK[])")
             if typ2 != "OK" or not msgdata or msgdata[0] is None:
@@ -324,10 +324,10 @@ def download_attachment_from_bytes(raw: bytes, filename: str) -> bytes:
 
 @dataclass
 class SmtpConfig:
-    host: Optional[str] = None
+    host: str | None = None
     port: int = 587
-    user: Optional[str] = None
-    password: Optional[str] = None
+    user: str | None = None
+    password: str | None = None
     from_addr: str = "aipd@local.aipd-os.dev"
     use_tls: bool = True
     timeout: float = DEFAULT_TIMEOUT
@@ -335,10 +335,10 @@ class SmtpConfig:
 
 @dataclass
 class ImapConfig:
-    host: Optional[str] = None
+    host: str | None = None
     port: int = 993
-    user: Optional[str] = None
-    password: Optional[str] = None
+    user: str | None = None
+    password: str | None = None
     folder: str = "INBOX"
     timeout: float = DEFAULT_TIMEOUT
 
@@ -352,8 +352,8 @@ class MailConfig:
 
     def __init__(
         self,
-        smtp: Optional[SmtpConfig] = None,
-        imap: Optional[ImapConfig] = None,
+        smtp: SmtpConfig | None = None,
+        imap: ImapConfig | None = None,
     ) -> None:
         self.smtp = smtp or SmtpConfig()
         self.imap = imap or ImapConfig()
@@ -394,7 +394,7 @@ class MailClient:
 
     def __init__(
         self,
-        config: Optional[MailConfig] = None,
+        config: MailConfig | None = None,
         db: Any = None,
         tenant_id: str = "default",
         project_id: str = "mail",
@@ -408,12 +408,12 @@ class MailClient:
         self.max_attachment_size = max_attachment_size
         self.max_retries = max_retries
         # 内存记录 message_id -> meta；db 存在时同时持久化以保证幂等去重
-        self._records: Dict[str, Dict[str, Any]] = {}
-        self._sent_ids: Dict[str, bool] = {}
-        self._received_ids: Dict[str, Any] = {}
+        self._records: dict[str, dict[str, Any]] = {}
+        self._sent_ids: dict[str, bool] = {}
+        self._received_ids: dict[str, Any] = {}
 
     # ------------------------------------------------------------ 状态持久化
-    def _persist(self, direction: str, message_id: str, meta: Dict[str, Any]) -> None:
+    def _persist(self, direction: str, message_id: str, meta: dict[str, Any]) -> None:
         self._records[message_id] = meta
         if direction == "inbox":
             self._received_ids[message_id] = meta
@@ -466,10 +466,10 @@ class MailClient:
     def draft(
         self,
         from_addr: str,
-        to_addrs: List[str],
+        to_addrs: list[str],
         subject: str,
         body: str,
-        attachments: Optional[List[MailAttachment]] = None,
+        attachments: list[MailAttachment] | None = None,
     ) -> str:
         """创建一封待审批草稿，返回 ``Message-ID``。状态为 draft。"""
         message_id = _new_message_id(from_addr)
@@ -491,7 +491,7 @@ class MailClient:
         self._records[message_id] = meta
         return message_id
 
-    def approve(self, message_id: str, approver: str = "owner", note: str = "") -> Dict[str, Any]:
+    def approve(self, message_id: str, approver: str = "owner", note: str = "") -> dict[str, Any]:
         """显式审批草稿：记录谁批准、何时批准（审计），状态置为 approved。"""
         meta = self._records.get(message_id)
         if meta is None:
@@ -508,9 +508,9 @@ class MailClient:
     def send(
         self,
         message_id: str,
-        approver: Optional[str] = None,
+        approver: str | None = None,
         approval_note: str = "",
-        max_retries: Optional[int] = None,
+        max_retries: int | None = None,
     ) -> SendResult:
         """发送一封已审批的邮件。
 
@@ -602,9 +602,9 @@ class MailClient:
     # ---------------------------------------------------------------- 收件
     def fetch_emails(
         self,
-        folder: Optional[str] = None,
-        since: Optional[str] = None,
-    ) -> List[ReceivedMail]:
+        folder: str | None = None,
+        since: str | None = None,
+    ) -> list[ReceivedMail]:
         """真实 IMAP 收件：线程关联 + 附件下载 + 幂等同步（Message-ID 去重）。
 
         已处理过的 Message-ID 不重复返回/重复写状态服务。
@@ -625,7 +625,7 @@ class MailClient:
         )
 
         # 线程关联：维护 subject -> thread_id 映射，复用已解析的线索
-        subject_map: Dict[str, str] = {}
+        subject_map: dict[str, str] = {}
 
         def resolve_thread(mail: ReceivedMail) -> str:
             if mail.in_reply_to:
@@ -636,7 +636,7 @@ class MailClient:
             subject_map[key] = mail.message_id
             return mail.message_id
 
-        out: List[ReceivedMail] = []
+        out: list[ReceivedMail] = []
         for mail in raw_list:
             if self._already_received(mail.message_id):
                 continue  # 幂等：已处理的不重复处理
@@ -666,7 +666,7 @@ class MailClient:
         raise MailError(f"邮件 {message_id} 中不存在附件 {filename!r}")
 
     # ---------------------------------------------------------------- 查询
-    def get(self, message_id: str) -> Dict[str, Any]:
+    def get(self, message_id: str) -> dict[str, Any]:
         if message_id in self._records:
             return self._records[message_id]
         if self.db is not None:
@@ -676,7 +676,7 @@ class MailClient:
                     return f.get("value", {})
         raise KeyError(f"未知 message_id: {message_id!r}")
 
-    def all_records(self) -> List[Dict[str, Any]]:
+    def all_records(self) -> list[dict[str, Any]]:
         return list(self._records.values())
 
 

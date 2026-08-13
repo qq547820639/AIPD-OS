@@ -13,7 +13,7 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.execution.models import ExecutionRecord
 
@@ -115,7 +115,7 @@ class RunStore:
         provider: str,
         version: str,
         input_hash: str,
-        retry_lineage: Optional[List[str]] = None,
+        retry_lineage: list[str] | None = None,
         project_id: str = "",
         tenant_id: str = "default",
         adapter_id: str = "",
@@ -254,7 +254,7 @@ class RunStore:
             raise KeyError(run_id)
         return ExecutionRecord.from_db_row(dict(row))
 
-    def list_runs(self, work_id: Optional[str] = None) -> List[ExecutionRecord]:
+    def list_runs(self, work_id: str | None = None) -> list[ExecutionRecord]:
         with self.connect() as c:
             if work_id is not None:
                 rows = c.execute(
@@ -268,9 +268,9 @@ class RunStore:
         return [ExecutionRecord.from_db_row(dict(r)) for r in rows]
 
     # ------------------------------------------------------------ 幂等查询
-    def find_by_idempotency_key(self, key: str, tenant_id: Optional[str] = None,
-                                project_id: Optional[str] = None,
-                                capability: Optional[str] = None) -> Optional[ExecutionRecord]:
+    def find_by_idempotency_key(self, key: str, tenant_id: str | None = None,
+                                project_id: str | None = None,
+                                capability: str | None = None) -> ExecutionRecord | None:
         """按幂等键取最新一条执行记录（无则 None）。
 
         提供 ``tenant_id`` / ``project_id`` / ``capability`` 时按
@@ -295,7 +295,7 @@ class RunStore:
         return ExecutionRecord.from_db_row(dict(row))
 
     def find_by_idempotency_scope(self, key: str, tenant_id: str,
-                                  project_id: str, capability: str) -> Optional[ExecutionRecord]:
+                                  project_id: str, capability: str) -> ExecutionRecord | None:
         """按 (tenant_id, project_id, capability, idempotency_key) scope 查幂等记录。
 
         Idempotency Scope = (tenant_id, project_id, capability, idempotency_key)。
@@ -303,7 +303,7 @@ class RunStore:
         return self.find_by_idempotency_key(
             key, tenant_id=tenant_id, project_id=project_id, capability=capability)
 
-    def list_by_idempotency_key(self, key: str) -> List[ExecutionRecord]:
+    def list_by_idempotency_key(self, key: str) -> list[ExecutionRecord]:
         """按幂等键列出全部执行记录（按开始时间升序）。"""
         with self.connect() as c:
             rows = c.execute(
@@ -311,7 +311,7 @@ class RunStore:
                 (key,)).fetchall()
         return [ExecutionRecord.from_db_row(dict(r)) for r in rows]
 
-    def get_result(self, run_id: str) -> Dict[str, Any]:
+    def get_result(self, run_id: str) -> dict[str, Any]:
         """读取运行记录持久化的 result_json；未存储/解析失败返回空 dict。"""
         with self.connect() as c:
             row = c.execute(

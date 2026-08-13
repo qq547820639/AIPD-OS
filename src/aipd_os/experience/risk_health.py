@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # 影响级别优先级（数值越小越优先）
 _IMPACT_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -16,20 +16,20 @@ _BLOCKER_STATUSES = {"blocked_external", "internal_rework", "awaiting_owner_deci
 _LABELS = {"green": "良好", "yellow": "需关注", "red": "高风险"}
 
 
-def _open_risks(risks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _open_risks(risks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [r for r in risks if r.get("status") == "open"]
 
 
-def _top_open_risk(risks: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def _top_open_risk(risks: list[dict[str, Any]]) -> dict[str, Any] | None:
     opens = _open_risks(risks)
     if not opens:
         return None
     return sorted(opens, key=lambda r: _IMPACT_ORDER.get(str(r.get("impact")).lower(), 4))[0]
 
 
-def traffic_light_status(risks: List[Dict[str, Any]],
-                         external_waiting: List[Dict[str, Any]],
-                         project_status: Optional[str] = None) -> str:
+def traffic_light_status(risks: list[dict[str, Any]],
+                         external_waiting: list[dict[str, Any]],
+                         project_status: str | None = None) -> str:
     """返回 "red" / "yellow" / "green" 三态健康灯。"""
     opens = _open_risks(risks)
     if project_status == "blocked_external" or any(
@@ -42,9 +42,9 @@ def traffic_light_status(risks: List[Dict[str, Any]],
     return "green"
 
 
-def compute_risk_health(risks: List[Dict[str, Any]],
-                        external_waiting: List[Dict[str, Any]],
-                        project_status: Optional[str] = None) -> Dict[str, Any]:
+def compute_risk_health(risks: list[dict[str, Any]],
+                        external_waiting: list[dict[str, Any]],
+                        project_status: str | None = None) -> dict[str, Any]:
     """返回确定性的风险健康视图。
 
     规则：

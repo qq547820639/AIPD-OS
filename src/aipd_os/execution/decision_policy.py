@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # 触发决策的类别
 ASK_CATEGORIES = {
@@ -36,15 +36,15 @@ ASK_CATEGORIES = {
 NO_ASK_CATEGORIES = {"rework", "search", "batching", "ordinary", "iteration"}
 
 
-def _flag(work_item: Dict[str, Any], key: str, default: Any = None) -> Any:
+def _flag(work_item: dict[str, Any], key: str, default: Any = None) -> Any:
     if work_item is None:
         return default
     return work_item.get(key, default)
 
 
 def should_ask_decision(
-    work_item: Optional[Dict[str, Any]],
-    context: Optional[Dict[str, Any]] = None,
+    work_item: dict[str, Any] | None,
+    context: dict[str, Any] | None = None,
 ) -> bool:
     """判断当前工作项是否需要征询决策。
 
@@ -85,11 +85,11 @@ def _now() -> str:
 
 
 def build_decision_package(
-    work_item: Dict[str, Any],
-    recommendation: Optional[str] = None,
-    options: Optional[List[str]] = None,
-    impact: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    work_item: dict[str, Any],
+    recommendation: str | None = None,
+    options: list[str] | None = None,
+    impact: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """构建单一最高优先级决策包。
 
     包含：一个最高优先级决策、AI 建议、2-4 个选项、成本/性能/时间/安全影响，

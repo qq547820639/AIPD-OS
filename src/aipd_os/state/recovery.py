@@ -18,7 +18,7 @@ import shutil
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .db import AIPDStateDB, ProjectNotFoundError, now_iso
 from .state_backend import (
@@ -35,7 +35,7 @@ OBJECT_TYPES = {"attachment", "manual_batch", "visual_bible", "generation_task",
 
 # 需显式审批的类别及其触发关键词（不可逆 / 安全 / 成本 / 发布）
 APPROVAL_CATEGORIES = ("irreversible", "safety", "cost", "release")
-APPROVAL_KEYWORDS: Dict[str, List[str]] = {
+APPROVAL_KEYWORDS: dict[str, list[str]] = {
     "irreversible": ["delete", "destroy", "drop", "replace", "overwrite",
                      "reset", "irreversible", "wipe"],
     "safety": ["safety", "critical", "human", "fail-safe", "regulatory",
@@ -71,9 +71,9 @@ class UnifiedStateService:
     """统一状态服务：数据库 + 对象存储 + 附件索引一站式管理。"""
 
     def __init__(self, db: AIPDStateDB, tenant_id: str = DEFAULT_TENANT,
-                 backend: Optional[StateBackend] = None,
-                 index_path: Optional[str] = None,
-                 object_dir: Optional[str] = None):
+                 backend: StateBackend | None = None,
+                 index_path: str | None = None,
+                 object_dir: str | None = None):
         self.db = db
         self.tenant_id = tenant_id
         if backend is None:
@@ -86,7 +86,7 @@ class UnifiedStateService:
         self._index = self._load_index()
 
     # ------------------------------------------------------------------ index
-    def _load_index(self) -> Dict[str, Any]:
+    def _load_index(self) -> dict[str, Any]:
         if self._index_path.exists():
             try:
                 return json.loads(self._index_path.read_text(encoding="utf-8"))
@@ -99,14 +99,14 @@ class UnifiedStateService:
         self._index_path.write_text(
             json.dumps(self._index, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def _project_entries(self, project_id: str) -> Dict[str, Any]:
+    def _project_entries(self, project_id: str) -> dict[str, Any]:
         return self._index.setdefault("entries", {}).setdefault(project_id, {})
 
     # --------------------------------------------------------------- objects
     def register_object(self, project_id: str, logical_key: str, data: bytes,
-                        object_type: str, tenant_id: Optional[str] = None,
-                        path: Optional[str] = None,
-                        chain_prev: Optional[str] = None) -> Dict[str, Any]:
+                        object_type: str, tenant_id: str | None = None,
+                        path: str | None = None,
+                        chain_prev: str | None = None) -> dict[str, Any]:
         """注册一个对象到统一对象存储 + 附件索引。"""
         if object_type not in OBJECT_TYPES:
             raise ValueError(
@@ -130,36 +130,36 @@ class UnifiedStateService:
         return entry
 
     def get_object(self, project_id: str, logical_key: str,
-                   tenant_id: Optional[str] = None) -> bytes:
+                   tenant_id: str | None = None) -> bytes:
         tenant = tenant_id or self.tenant_id
         return self.backend.get(project_id, logical_key, tenant)
 
     def delete_object(self, project_id: str, logical_key: str,
-                      tenant_id: Optional[str] = None) -> None:
+                      tenant_id: str | None = None) -> None:
         tenant = tenant_id or self.tenant_id
         self.backend.delete(project_id, logical_key, tenant)
         self._project_entries(project_id).pop(logical_key, None)
         self._persist_index()
 
     def list_objects(self, project_id: str,
-                         tenant_id: Optional[str] = None) -> List[Dict[str, Any]]:
+                         tenant_id: str | None = None) -> list[dict[str, Any]]:
         tenant = tenant_id or self.tenant_id
         return [dict(e)
                 for e in self._project_entries(project_id).values()]
 
-    def attachment_chain(self, project_id: str) -> List[str]:
+    def attachment_chain(self, project_id: str) -> list[str]:
         """按 chain_prev 关系还原手工附件链（仅含 manual_batch / attachment 对象）。"""
         entries = [e for e in self._project_entries(project_id).values()
                    if e.get("object_type") in ("manual_batch", "attachment")]
         if not entries:
             return []
-        by_prev: Dict[str, List[Dict[str, Any]]] = {}
+        by_prev: dict[str, list[dict[str, Any]]] = {}
         for e in entries:
             by_prev.setdefault(e.get("chain_prev"), []).append(e)
         for lst in by_prev.values():
             lst.sort(key=lambda e: e.get("registered_at", ""))
         roots = sorted(by_prev.get(None, []), key=lambda e: e.get("registered_at", ""))
-        chain: List[str] = []
+        chain: list[str] = []
         seen = set()
         for root in roots:
             cur = root
@@ -178,8 +178,8 @@ class UnifiedStateService:
         return chain
 
     # ------------------------------------------------------------ unified backup
-    def backup(self, out_dir: Optional[str] = None,
-               tenant_id: Optional[str] = None) -> Dict[str, Any]:
+    def backup(self, out_dir: str | None = None,
+               tenant_id: str | None = None) -> dict[str, Any]:
         """把数据库 + 对象 + 附件索引作为一个单元备份。返回备份目录。"""
         tenant = tenant_id or self.tenant_id
         base = Path(out_dir) if out_dir else Path(self.db.path).parent / "backups"
@@ -236,7 +236,7 @@ class UnifiedStateService:
             count += len(list(pdir.glob("*"))) if pdir.is_dir() else 0
         return count
 
-    def restore(self, backup_dir: str, tenant_id: Optional[str] = None) -> Dict[str, Any]:
+    def restore(self, backup_dir: str, tenant_id: str | None = None) -> dict[str, Any]:
         """从统一备份恢复数据库 + 对象 + 附件索引（校验校验和）。"""
         tenant = tenant_id or self.tenant_id
         bundle = Path(backup_dir)
@@ -279,7 +279,7 @@ class UnifiedStateService:
                 count += self.backend.restore(str(pdir), pdir.name, tenant)
         return count
 
-    def list_backups(self, base_dir: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_backups(self, base_dir: str | None = None) -> list[dict[str, Any]]:
         base = Path(base_dir) if base_dir else Path(self.db.path).parent / "backups"
         backups = []
         if base.is_dir():
@@ -299,7 +299,7 @@ class UnifiedStateService:
     def _count_index_entries(self) -> int:
         return sum(len(v) for v in self._index.get("entries", {}).values())
 
-    def external_dependencies(self) -> List[str]:
+    def external_dependencies(self) -> list[str]:
         """诚实声明当前依赖的外部系统（未配置即为 pending 项）。"""
         deps = []
         if isinstance(self.backend, RemoteStateBackend):
@@ -307,9 +307,9 @@ class UnifiedStateService:
         return deps
 
     # -------------------------------------------------------- multi-project id
-    def identify_project(self, project_id: Optional[str] = None,
-                         context: Optional[str] = None,
-                         projects: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    def identify_project(self, project_id: str | None = None,
+                         context: str | None = None,
+                         projects: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         """识别项目：显式 project_id > 上下文匹配 > 最近活动（绝不默认取第一条）。
 
         当仍有多个候选且无法消歧时抛 :class:`AmbiguousProjectError`，交由用户选择。
@@ -343,7 +343,7 @@ class UnifiedStateService:
             raise AmbiguousProjectError("multiple projects; cannot disambiguate by activity")
         return top
 
-    def _most_recent(self, projects: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def _most_recent(self, projects: list[dict[str, Any]]) -> dict[str, Any] | None:
         ranked = sorted(projects, key=lambda p: self._activity_time(p["project_id"]),
                         reverse=True)
         return ranked[0] if ranked else None
@@ -367,7 +367,7 @@ class UnifiedStateService:
 
     # ------------------------------------------------------- recovery summary
     def recovery_summary(self, project_id: str,
-                         tenant_id: Optional[str] = None) -> Dict[str, Any]:
+                         tenant_id: str | None = None) -> dict[str, Any]:
         """恢复摘要：Product Truth / Evidence / 决策 / CAD·BOM / 附件链 / 外部 / 失败 / 下一步。
 
         已解决决策绝不重复出现于待追问列表。
@@ -399,7 +399,7 @@ class UnifiedStateService:
             "recovered_at": now_iso(),
         }
 
-    def _cad_bom_revisions(self, project_id: str, tenant: str) -> List[Dict[str, Any]]:
+    def _cad_bom_revisions(self, project_id: str, tenant: str) -> list[dict[str, Any]]:
         revisions = []
         for d in self.db.list_deliverables(tenant, project_id):
             if any(k in (d.get("type") or "").lower() for k in CAD_BOM_TYPES):
@@ -413,7 +413,7 @@ class UnifiedStateService:
                                   "created_at": ch.get("created_at")})
         return revisions
 
-    def _external_waits(self, project_id: str, tenant: str) -> List[Dict[str, Any]]:
+    def _external_waits(self, project_id: str, tenant: str) -> list[dict[str, Any]]:
         waits = []
         for dep in self.db.list_dependencies(tenant, project_id):
             if dep["relation"] in ("needs_external", "blocked_by_external"):
@@ -423,7 +423,7 @@ class UnifiedStateService:
             waits.append({"note": "project status is blocked_external"})
         return waits
 
-    def _failed_tasks(self, project_id: str, tenant: str) -> List[Dict[str, Any]]:
+    def _failed_tasks(self, project_id: str, tenant: str) -> list[dict[str, Any]]:
         rows = self._read_raw(SUPERVISOR_WORK_TABLE,
                               " WHERE project_id=?", (project_id,))
         failed = []
@@ -434,7 +434,7 @@ class UnifiedStateService:
                                "status": r.get("status"), "reason": r.get("blocked_reason")})
         return failed
 
-    def _blockers(self, project, unresolved) -> List[Any]:
+    def _blockers(self, project, unresolved) -> list[Any]:
         blockers = []
         if unresolved:
             blockers.append("awaiting_owner_decision")
@@ -444,7 +444,7 @@ class UnifiedStateService:
         return blockers
 
     def next_actions(self, project_id: str,
-                     tenant_id: Optional[str] = None) -> List[Dict[str, Any]]:
+                     tenant_id: str | None = None) -> list[dict[str, Any]]:
         tenant = tenant_id or self.tenant_id
         unresolved = self.db.list_open_decisions(tenant, project_id)
         if unresolved:
@@ -460,7 +460,7 @@ class UnifiedStateService:
 
     # ---------------------------------------------------------- safe auto-continue
     def auto_continue(self, project_id: str,
-                      tenant_id: Optional[str] = None) -> Dict[str, Any]:
+                      tenant_id: str | None = None) -> dict[str, Any]:
         """恢复后自动续作无需审批的安全工作；需审批/不可逆的留在门后。"""
         tenant = tenant_id or self.tenant_id
         items = self._read_raw(SUPERVISOR_WORK_TABLE,
@@ -481,7 +481,7 @@ class UnifiedStateService:
                               "new_status": "ready"})
         return {"continued": continued, "requires_approval": requires_approval}
 
-    def _classify_approval(self, work: Dict[str, Any]):
+    def _classify_approval(self, work: dict[str, Any]):
         if work.get("owner_required"):
             return True, "owner_required"
         blob = " ".join(str(work.get(k) or "") for k in
@@ -502,7 +502,7 @@ class UnifiedStateService:
         return True
 
     # ------------------------------------------------------------ raw helpers
-    def _read_raw(self, table: str, where: str = "", params: tuple = ()) -> List[Dict[str, Any]]:
+    def _read_raw(self, table: str, where: str = "", params: tuple = ()) -> list[dict[str, Any]]:
         if not self._table_exists(table):
             return []
         with sqlite3.connect(str(self.db.path)) as c:

@@ -16,7 +16,7 @@ import hashlib
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
 
 # v1 初始 schema（多租户多项目）—— **冻结的历史 SQL 文本**（Commit 8）。
 # 不可 import db.SCHEMA（活常量会随代码演进而改变 v1 语义）。
@@ -557,7 +557,7 @@ def _unseed_legacy_sequences(conn: sqlite3.Connection) -> None:
 
 
 # v1 初始 schema（多租户多项目）
-MIGRATIONS: List[Dict[str, Any]] = [
+MIGRATIONS: list[dict[str, Any]] = [
     {
         "version": 1,
         "name": "multi_tenant_initial_schema",
@@ -891,14 +891,14 @@ def _ensure_schema_migrations(conn: sqlite3.Connection) -> None:
     )
 
 
-def applied_versions(db_path: str) -> List[int]:
+def applied_versions(db_path: str) -> list[int]:
     with _conn(db_path) as c:
         _ensure_schema_migrations(c)
         rows = c.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall()
     return [r[0] for r in rows]
 
 
-def _run_steps(conn: sqlite3.Connection, steps: List[Any]) -> None:
+def _run_steps(conn: sqlite3.Connection, steps: list[Any]) -> None:
     for step in steps:
         if callable(step):
             step(conn)
@@ -906,7 +906,7 @@ def _run_steps(conn: sqlite3.Connection, steps: List[Any]) -> None:
             conn.executescript(step)
 
 
-def migrate(db_path: str) -> List[int]:
+def migrate(db_path: str) -> list[int]:
     """应用所有未执行的迁移，返回本次应用到的版本列表。"""
     applied = []
     with _conn(db_path) as c:
@@ -922,7 +922,7 @@ def migrate(db_path: str) -> List[int]:
     return applied
 
 
-def rollback(db_path: str, target: int) -> List[int]:
+def rollback(db_path: str, target: int) -> list[int]:
     """回滚到指定目标版本（不含 target），返回被回滚的版本列表。"""
     rolled_back = []
     with _conn(db_path) as c:

@@ -14,7 +14,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 def now() -> str:
@@ -35,8 +35,8 @@ def output_dir() -> Path:
 def write_external_task(
     capability_id: str,
     instructions: str,
-    work_id: Optional[str] = None,
-    output_dir_path: Optional[Path] = None,
+    work_id: str | None = None,
+    output_dir_path: Path | None = None,
 ) -> str:
     """写出一份“外部任务包” JSON 文件，供人工或外部工具执行。
 
@@ -72,7 +72,7 @@ class AdapterError(Exception):
         self,
         message: str,
         classification: str = "tool_error",
-        task_package: Optional[str] = None,
+        task_package: str | None = None,
     ) -> None:
         self.message = message
         self.classification = classification
@@ -86,7 +86,7 @@ class AdapterError(Exception):
 def external_blocked_error(
     capability_id: str,
     instructions: str,
-    work_id: Optional[str] = None,
+    work_id: str | None = None,
 ) -> AdapterError:
     """构造 external_blocked 错误并写出外部任务包。"""
     pkg = write_external_task(capability_id, instructions, work_id=work_id)
@@ -105,7 +105,7 @@ class ToolAdapter(ABC):
     def capability_id(self) -> str:
         """返回本适配器对应的能力标识，如 'research.search_papers'。"""
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         """返回能力元信息。"""
         return {
             "id": self.capability_id(),
@@ -117,25 +117,25 @@ class ToolAdapter(ABC):
         }
 
     # ---- 输入校验 ----
-    def validate_input(self, input: Dict[str, Any]) -> List[str]:
+    def validate_input(self, input: dict[str, Any]) -> list[str]:
         """返回输入校验错误列表；为空表示输入合法。"""
         return []
 
     # ---- 执行 ----
     @abstractmethod
-    def execute(self, input: Dict[str, Any]) -> Any:
+    def execute(self, input: dict[str, Any]) -> Any:
         """执行工具并返回原始结果。失败时抛出 :class:`AdapterError`。"""
 
     # ---- 结果处理 ----
-    def normalize(self, result: Any) -> Dict[str, Any]:
+    def normalize(self, result: Any) -> dict[str, Any]:
         """将原始结果规范化为结构化 dict。"""
         return result if isinstance(result, dict) else {"result": result}
 
-    def collect_artifacts(self, result: Any) -> List[str]:
+    def collect_artifacts(self, result: Any) -> list[str]:
         """从结果中收集产物文件路径。"""
         return []
 
-    def persist_evidence(self, result: Any, run_id: str) -> List[str]:
+    def persist_evidence(self, result: Any, run_id: str) -> list[str]:
         """持久化证据，返回证据引用列表。默认返回空。"""
         return []
 
@@ -151,7 +151,7 @@ class ToolAdapter(ABC):
         """返回最大尝试次数（含首次）。"""
         return 1
 
-    def fallback_chain(self) -> List[str]:
+    def fallback_chain(self) -> list[str]:
         """返回降级链（按顺序尝试的能力标识）。"""
         return []
 

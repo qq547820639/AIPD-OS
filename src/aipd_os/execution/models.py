@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 # 状态取值
 STATUS_CHOICES = {
@@ -65,10 +65,10 @@ class ExecutionRecord:
     tokens_out: int
     status: str
     error_classification: str
-    retry_lineage: List[str] = field(default_factory=list)
-    evidence_references: List[str] = field(default_factory=list)
+    retry_lineage: list[str] = field(default_factory=list)
+    evidence_references: list[str] = field(default_factory=list)
     error_message: str = ""
-    artifacts: List[str] = field(default_factory=list)
+    artifacts: list[str] = field(default_factory=list)
     project_id: str = ""
     tenant_id: str = "default"
     capability: str = ""
@@ -109,7 +109,7 @@ class ExecutionRecord:
         return self.version
 
     @property
-    def token_usage(self) -> Dict[str, int]:
+    def token_usage(self) -> dict[str, int]:
         """token 用量（{input, output}）。"""
         return {"input": self.tokens_in, "output": self.tokens_out}
 
@@ -119,16 +119,16 @@ class ExecutionRecord:
         return self.error_classification
 
     @property
-    def evidence_ids(self) -> List[str]:
+    def evidence_ids(self) -> list[str]:
         """证据引用（evidence_references 的别名）。"""
         return self.evidence_references
 
     @property
-    def artifact_ids(self) -> List[str]:
+    def artifact_ids(self) -> list[str]:
         """产物路径列表（artifacts 的别名）。"""
         return self.artifacts
 
-    def unified_record(self) -> Dict[str, Any]:
+    def unified_record(self) -> dict[str, Any]:
         """返回包含全部统一运行记录字段的 dict（向后追加，不删旧字段）。"""
         return {
             "run_id": self.run_id,
@@ -156,11 +156,11 @@ class ExecutionRecord:
             "remote_operation_id": self.remote_operation_id,
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_db_row(cls, row: Dict[str, Any]) -> ExecutionRecord:
+    def from_db_row(cls, row: dict[str, Any]) -> ExecutionRecord:
         import json
 
         def _loads(raw: Any, default: Any) -> Any:
@@ -209,16 +209,16 @@ class ToolResult:
     """规范化后的执行结果封装。"""
 
     ok: bool
-    data: Dict[str, Any] = field(default_factory=dict)  # 规范化输出
-    artifacts: List[str] = field(default_factory=list)
-    evidence_references: List[str] = field(default_factory=list)
+    data: dict[str, Any] = field(default_factory=dict)  # 规范化输出
+    artifacts: list[str] = field(default_factory=list)
+    evidence_references: list[str] = field(default_factory=list)
     cost: float = 0.0
     tokens_in: int = 0
     tokens_out: int = 0
     error_message: str = ""
     error_classification: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 

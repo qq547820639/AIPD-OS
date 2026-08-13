@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
 from aipd_os.tool_adapters._common import env, meta, token_meta
@@ -20,10 +20,10 @@ class MailRfqAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "supply.rfq"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         return meta(self.capability_id(), "RFQ Draft Composer", self.provider, self.version)
 
-    def validate_input(self, input: Dict[str, Any]) -> list:
+    def validate_input(self, input: dict[str, Any]) -> list:
         errors = []
         if not input.get("supplier"):
             errors.append("'supplier' 必填")
@@ -33,7 +33,7 @@ class MailRfqAdapter(ToolAdapter):
         """RFQ 涉及外部邮件/询价副作用：自动重试可能重复对外发送 → 禁止重试。"""
         return "EXTERNAL_SIDE_EFFECT"
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         supplier = input.get("supplier")
         if not supplier:
             raise external_blocked_error(
@@ -75,7 +75,7 @@ class MailRfqAdapter(ToolAdapter):
         }
         return result
 
-    def normalize(self, result: Any) -> Dict[str, Any]:
+    def normalize(self, result: Any) -> dict[str, Any]:
         return result if isinstance(result, dict) else {"result": result}
 
 

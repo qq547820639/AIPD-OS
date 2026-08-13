@@ -11,7 +11,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.mail.client import fetch_emails, send_email
 from aipd_os.supply_chain.mail import (
@@ -39,11 +39,11 @@ class GmailOAuthClient:
 
     def __init__(
         self,
-        user: Optional[str] = None,
-        access_token: Optional[str] = None,
-        refresh_token: Optional[str] = None,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
+        user: str | None = None,
+        access_token: str | None = None,
+        refresh_token: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
         smtp_port: int = 587,
         imap_port: int = 993,
     ) -> None:
@@ -65,12 +65,12 @@ class GmailOAuthClient:
 
     def send(
         self,
-        to_addrs: List[str],
+        to_addrs: list[str],
         subject: str,
         body: str,
-        from_addr: Optional[str] = None,
-        attachments: Optional[List[MailAttachment]] = None,
-    ) -> Dict[str, Any]:
+        from_addr: str | None = None,
+        attachments: list[MailAttachment] | None = None,
+    ) -> dict[str, Any]:
         """以 Gmail OAuth2 身份真实发送。无凭据时抛外部依赖错误。"""
         self._require_credentials()
         sender = from_addr or self.user or ""

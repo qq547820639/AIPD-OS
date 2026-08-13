@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter
 from aipd_os.supply_chain.analysis import (
@@ -33,10 +33,10 @@ class ValidationDataAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "validation.import-evt-dvt-pvt"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         return meta(self.capability_id(), "Validation Data Importer", self.provider, self.version)
 
-    def validate_input(self, input: Dict[str, Any]) -> list:
+    def validate_input(self, input: dict[str, Any]) -> list:
         errors = []
         stage = str(input.get("stage", "")).lower()
         if stage and stage not in VALID_STAGES:
@@ -49,7 +49,7 @@ class ValidationDataAdapter(ToolAdapter):
         """导入验证数据会写入实验室记录并传播影响：禁止自动重试。"""
         return "EXTERNAL_SIDE_EFFECT"
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         stage = str(input.get("stage", "evt")).lower()
         files = input.get("files", [])
         all_records = []
@@ -87,7 +87,7 @@ class ValidationDataAdapter(ToolAdapter):
         }
         return result
 
-    def normalize(self, result: Any) -> Dict[str, Any]:
+    def normalize(self, result: Any) -> dict[str, Any]:
         return result if isinstance(result, dict) else {"result": result}
 
     def collect_artifacts(self, result: Any) -> list:

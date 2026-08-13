@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..state.db import AIPDStateDB
 
@@ -76,15 +76,15 @@ class Intent:
     ``ambiguous`` / ``clarifying_question`` 用于"无法确定只问一个问题"。
     """
     kind: str
-    params: Dict[str, Any] = field(default_factory=dict)
-    target: Optional[str] = None
-    propagated_impact: List[str] = field(default_factory=list)
+    params: dict[str, Any] = field(default_factory=dict)
+    target: str | None = None
+    propagated_impact: list[str] = field(default_factory=list)
     ambiguous: bool = False
-    clarifying_question: Optional[str] = None
-    constraints: List[Dict[str, Any]] = field(default_factory=list)
+    clarifying_question: str | None = None
+    constraints: list[dict[str, Any]] = field(default_factory=list)
     correction: bool = False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """可 JSON 序列化的意图表示。"""
         return {
             "kind": self.kind,
@@ -109,7 +109,7 @@ def build_clarifying_question(kind: str) -> str:
     return "您的指令不够明确，能否用一句话说明想要的效果？"
 
 
-def _options_of(decision: Optional[Dict[str, Any]]) -> List[str]:
+def _options_of(decision: dict[str, Any] | None) -> list[str]:
     """复用既有 instructions 的选项规整逻辑，把 options 规整为字符串列表。"""
     if not decision:
         return []
@@ -133,14 +133,14 @@ def _options_of(decision: Optional[Dict[str, Any]]) -> List[str]:
 
 
 def _next_open_decision(db: AIPDStateDB, project_id: str,
-                        tenant_id: str) -> Optional[Dict[str, Any]]:
+                        tenant_id: str) -> dict[str, Any] | None:
     open_ds = db.list_open_decisions(tenant_id, project_id)
     return open_ds[0] if open_ds else None
 
 
-def _resolve_context_target(text: str, context: Optional[Dict[str, Any]]) -> Optional[str]:
+def _resolve_context_target(text: str, context: dict[str, Any] | None) -> str | None:
     """若文本含代词且上下文提供最近决策/制品，则把 target 解析到它。"""
-    resolved: Optional[str] = None
+    resolved: str | None = None
     if not context:
         return None
     if _PRONOUN_RE.search(text):
@@ -148,7 +148,7 @@ def _resolve_context_target(text: str, context: Optional[Dict[str, Any]]) -> Opt
     return resolved
 
 
-def _record_constraint_for(kind: str, params: Dict[str, Any]) -> str:
+def _record_constraint_for(kind: str, params: dict[str, Any]) -> str:
     """为每一项约束生成人类可读的影响描述。"""
     if kind == "cost_reduction":
         pct = params.get("percentage", 0)
@@ -170,7 +170,7 @@ def _record_constraint_for(kind: str, params: Dict[str, Any]) -> str:
     return "调整当前方案"
 
 
-def _parse_single(text: str, ambiguous_cost: Dict[str, bool]) -> Optional[Intent]:
+def _parse_single(text: str, ambiguous_cost: dict[str, bool]) -> Intent | None:
     """解析单条指令为一个 Intent；无法确定时返回 ambiguous 的 Intent。"""
     artifact = _ARTIFACT_RE.search(text)
     artifact_target = artifact.group(1) if artifact else None
@@ -245,10 +245,10 @@ def _parse_single(text: str, ambiguous_cost: Dict[str, bool]) -> Optional[Intent
     return None
 
 
-def parse_intent(text: str, db: Optional[AIPDStateDB] = None,
-                 project_id: Optional[str] = None,
+def parse_intent(text: str, db: AIPDStateDB | None = None,
+                 project_id: str | None = None,
                  tenant_id: str = "default",
-                 context: Optional[Dict[str, Any]] = None) -> Intent:
+                 context: dict[str, Any] | None = None) -> Intent:
     """把一句自然语言解析为结构化 :class:`Intent`。
 
     - 支持多条件（``并且/同时/还要``）合并为 ``constraints``；
@@ -271,7 +271,7 @@ def parse_intent(text: str, db: Optional[AIPDStateDB] = None,
     # 多条件拆分
     segments = [s.strip() for s in _CONJ_RE.split(text) if s.strip()]
     if len(segments) > 1:
-        ambiguous_cost: Dict[str, bool] = {}
+        ambiguous_cost: dict[str, bool] = {}
         parsed_segments = []
         for seg in segments:
             one = _parse_single(seg, ambiguous_cost)

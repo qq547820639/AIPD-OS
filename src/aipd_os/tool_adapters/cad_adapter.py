@@ -6,7 +6,7 @@ external_blocked，绝不伪造 CAD 结果。
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
 from aipd_os.tool_adapters._common import env, meta, token_meta
@@ -18,7 +18,7 @@ class CadAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "cad.text-to-cad"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         return meta(
             self.capability_id(),
             "Text-to-CAD",
@@ -30,13 +30,13 @@ class CadAdapter(ToolAdapter):
     def _is_available(self) -> bool:
         return bool(env(_PROVIDER_ENV))
 
-    def validate_input(self, input: Dict[str, Any]) -> list:
+    def validate_input(self, input: dict[str, Any]) -> list:
         errors = []
         if not input.get("description"):
             errors.append("'description' 必填")
         return errors
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         if not self._is_available():
             raise external_blocked_error(
                 self.capability_id(),
@@ -55,7 +55,7 @@ class CadAdapter(ToolAdapter):
         result = {"cad_contract": contract, "_meta": token_meta(desc)}
         return result
 
-    def normalize(self, result: Any) -> Dict[str, Any]:
+    def normalize(self, result: Any) -> dict[str, Any]:
         return result if isinstance(result, dict) else {"result": result}
 
 

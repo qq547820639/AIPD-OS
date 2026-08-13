@@ -13,9 +13,9 @@
 """
 from __future__ import annotations
 
+import builtins
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Optional, Union
 
 from .objects import ObjectStore
 
@@ -44,7 +44,7 @@ class StateBackend(ABC):
         """读取对象；不存在抛 KeyError。"""
 
     @abstractmethod
-    def list(self, project_id: str, tenant_id: str = DEFAULT_TENANT) -> List[dict]:
+    def list(self, project_id: str, tenant_id: str = DEFAULT_TENANT) -> builtins.list[dict]:
         """列出项目中全部对象元数据。"""
 
     @abstractmethod
@@ -64,8 +64,8 @@ class StateBackend(ABC):
 class LocalStateBackend(StateBackend):
     """文件系统对象存储适配器（真实实现，复用 :class:`ObjectStore`）。"""
 
-    def __init__(self, store: Optional[ObjectStore] = None,
-                 base_dir: Optional[Union[str, Path]] = None,
+    def __init__(self, store: ObjectStore | None = None,
+                 base_dir: str | Path | None = None,
                  retention_days: int = 90):
         if store is None:
             if base_dir is None:
@@ -84,7 +84,7 @@ class LocalStateBackend(StateBackend):
     def get(self, project_id: str, key: str, tenant_id: str = DEFAULT_TENANT) -> bytes:
         return self._store.get(project_id, key, tenant_id)
 
-    def list(self, project_id: str, tenant_id: str = DEFAULT_TENANT) -> List[dict]:
+    def list(self, project_id: str, tenant_id: str = DEFAULT_TENANT) -> builtins.list[dict]:
         return self._store.list(project_id, tenant_id)
 
     def delete(self, project_id: str, key: str, tenant_id: str = DEFAULT_TENANT) -> None:
@@ -120,7 +120,7 @@ class RemoteStateBackend(StateBackend):
 
     EXTERNAL_DEPENDENCY = "remote object storage"
 
-    def __init__(self, endpoint: Optional[str] = None, credentials: bool = False):
+    def __init__(self, endpoint: str | None = None, credentials: bool = False):
         self.endpoint = endpoint
         self._configured = bool(endpoint and credentials)
 
@@ -141,7 +141,7 @@ class RemoteStateBackend(StateBackend):
     def get(self, project_id: str, key: str, tenant_id: str = DEFAULT_TENANT) -> bytes:
         self._raise()
 
-    def list(self, project_id: str, tenant_id: str = DEFAULT_TENANT) -> List[dict]:
+    def list(self, project_id: str, tenant_id: str = DEFAULT_TENANT) -> builtins.list[dict]:
         self._raise()
 
     def delete(self, project_id: str, key: str, tenant_id: str = DEFAULT_TENANT) -> None:

@@ -8,21 +8,21 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .db import AIPDStateDB
 
 
 class AuditLogger:
-    def __init__(self, db: AIPDStateDB, log_path: Optional[str] = None):
+    def __init__(self, db: AIPDStateDB, log_path: str | None = None):
         self._db = db
         if log_path is None:
             log_path = str(Path(db.path).parent / "audit.log")
         self._path = Path(log_path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
 
-    def log(self, actor: str, action: str, project_id: Optional[str] = None,
-            tenant_id: Optional[str] = None, before: Any = None, after: Any = None) -> None:
+    def log(self, actor: str, action: str, project_id: str | None = None,
+            tenant_id: str | None = None, before: Any = None, after: Any = None) -> None:
         record = {
             "actor": actor,
             "action": action,

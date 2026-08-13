@@ -18,7 +18,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 DOMAIN = "local.aipd-os.dev"
 
@@ -59,12 +59,12 @@ class MailMessage:
 
     message_id: str
     sender: str
-    recipients: List[str]
+    recipients: list[str]
     subject: str
     body: str
     thread_id: str = ""
     in_reply_to: str = ""
-    attachments: List[MailAttachment] = field(default_factory=list)
+    attachments: list[MailAttachment] = field(default_factory=list)
     status: str = "draft"  # draft / approved / sent / failed
     direction: str = "outbox"  # outbox / inbox
     created_at: str = field(default_factory=_now)
@@ -72,7 +72,7 @@ class MailMessage:
     retries: int = 0
     error: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "message_id": self.message_id,
             "sender": self.sender,
@@ -114,7 +114,7 @@ class MailConnector(ABC):
     def send(self, message: MailMessage, **kwargs: Any) -> SendResult:
         """发送一封已就绪的邮件，返回 :class:`SendResult`。"""
 
-    def read_inbox(self, **kwargs: Any) -> List[MailMessage]:
+    def read_inbox(self, **kwargs: Any) -> list[MailMessage]:
         """读取收件箱；真实 IMAP 未配置时抛外部依赖错误。"""
         raise ExternalDependencyError("真实 IMAP 未配置，无法读取收件箱（外部依赖）")
 
@@ -134,10 +134,10 @@ class SmtpConnector(MailConnector):
 
     def __init__(
         self,
-        host: Optional[str] = None,
+        host: str | None = None,
         port: int = 25,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str | None = None,
+        password: str | None = None,
         use_tls: bool = True,
     ) -> None:
         self.host = host
@@ -170,10 +170,10 @@ class ImapConnector(MailConnector):
 
     def __init__(
         self,
-        host: Optional[str] = None,
+        host: str | None = None,
         port: int = 993,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str | None = None,
+        password: str | None = None,
     ) -> None:
         self.host = host
         self.port = port
@@ -184,7 +184,7 @@ class ImapConnector(MailConnector):
         # IMAP 连接器只负责读取，不负责发送。
         raise ExternalDependencyError("IMAP 连接器不执行发送；发送请使用 SMTP 或 LocalMailService。")
 
-    def read_inbox(self, **kwargs: Any) -> List[MailMessage]:
+    def read_inbox(self, **kwargs: Any) -> list[MailMessage]:
         if not self.host:
             raise ExternalDependencyError(
                 "未配置真实 IMAP 服务器（host 为空），无法读取收件箱；"
@@ -203,7 +203,7 @@ def retry_with_backoff(
     fn: Callable[[int], Any],
     attempts: int = 3,
     base_delay: float = 0.1,
-    on_error: Optional[Callable[[int, Exception], None]] = None,
+    on_error: Callable[[int, Exception], None] | None = None,
 ) -> Any:
     """带指数退避的重试执行器。
 
@@ -213,7 +213,7 @@ def retry_with_backoff(
     :param on_error: 每次失败回调 ``(attempt, exception)``。
     :raises MailError: 所有尝试均失败时抛出最后一次异常。
     """
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
     for attempt in range(1, attempts + 1):
         try:
             return fn(attempt)
@@ -241,8 +241,8 @@ class LocalMailService(MailConnector):
 
     def __init__(self, local_address: str = f"rfq@{DOMAIN}") -> None:
         self._local_address = local_address
-        self._messages: List[MailMessage] = []
-        self._by_id: Dict[str, MailMessage] = {}
+        self._messages: list[MailMessage] = []
+        self._by_id: dict[str, MailMessage] = {}
         self._sent_message_ids: set = set()
         self._seq = 0
 
@@ -261,7 +261,7 @@ class LocalMailService(MailConnector):
             raise KeyError(f"未知 message_id: {message_id!r}")
         return self._by_id[message_id]
 
-    def all_messages(self) -> List[MailMessage]:
+    def all_messages(self) -> list[MailMessage]:
         return list(self._messages)
 
     # ---------------------------------------------------------- RFQ 草稿
@@ -271,8 +271,8 @@ class LocalMailService(MailConnector):
         part: str,
         quantity: int = 1,
         due_date: str = "待定",
-        subject: Optional[str] = None,
-        sender: Optional[str] = None,
+        subject: str | None = None,
+        sender: str | None = None,
     ) -> MailMessage:
         """创建一封 RFQ 询价草稿（默认状态 draft，未发送）。"""
         message_id = self._new_message_id()
@@ -308,7 +308,7 @@ class LocalMailService(MailConnector):
         message: Any,
         max_retries: int = 3,
         base_delay: float = 0.0,
-        should_fail: Optional[Callable[[int], bool]] = None,
+        should_fail: Callable[[int], bool] | None = None,
     ) -> SendResult:
         """发送一封已审批的邮件。
 
@@ -363,18 +363,18 @@ class LocalMailService(MailConnector):
         return SendResult(ok=False, message_id=message_id, error=failure, retries_used=retries_used)
 
     # ---------------------------------------------------------- 收件箱
-    def read_inbox(self, **kwargs: Any) -> List[MailMessage]:
+    def read_inbox(self, **kwargs: Any) -> list[MailMessage]:
         """读取收件箱（本地模拟：direction=inbox 的消息）。"""
         return [m for m in self._messages if m.direction == "inbox"]
 
     def receive(
         self,
         sender: str,
-        recipients: Optional[List[str]] = None,
+        recipients: list[str] | None = None,
         subject: str = "",
         body: str = "",
-        in_reply_to: Optional[str] = None,
-        attachments: Optional[List[MailAttachment]] = None,
+        in_reply_to: str | None = None,
+        attachments: list[MailAttachment] | None = None,
     ) -> MailMessage:
         """模拟一封供应商/外部回信进入收件箱。
 
@@ -412,7 +412,7 @@ class LocalMailService(MailConnector):
             f"{', '.join(a.filename for a in msg.attachments) or '无'}。"
         )
 
-    def messages_for_thread(self, thread_id: str) -> List[MailMessage]:
+    def messages_for_thread(self, thread_id: str) -> list[MailMessage]:
         return [m for m in self._messages if m.thread_id == thread_id]
 
 

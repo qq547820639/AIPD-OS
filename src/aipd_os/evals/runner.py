@@ -21,7 +21,7 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 # 任务状态
 STATUS_HOLD = "HOLD"           # 无凭据/预算受限：不发起真实调用
@@ -41,7 +41,7 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _parse_float_env(name: str, default: Optional[float]) -> Optional[float]:
+def _parse_float_env(name: str, default: float | None) -> float | None:
     raw = os.environ.get(name)
     if raw is None or raw == "":
         return default
@@ -51,7 +51,7 @@ def _parse_float_env(name: str, default: Optional[float]) -> Optional[float]:
         raise ValueError(f"{name} 必须是非负浮点数，got {raw!r}")
 
 
-def _parse_int_env(name: str, default: Optional[int]) -> Optional[int]:
+def _parse_int_env(name: str, default: int | None) -> int | None:
     raw = os.environ.get(name)
     if raw is None or raw == "":
         return default
@@ -69,8 +69,8 @@ class ModelEvalConfig:
     api_key: str = ""
     base_url: str = ""
     model_version: str = "aipd-eval-model"
-    budget_usd: Optional[float] = None
-    max_calls: Optional[int] = None
+    budget_usd: float | None = None
+    max_calls: int | None = None
     max_retries: int = DEFAULT_MAX_RETRIES
     timeout: float = DEFAULT_TIMEOUT_SECONDS
     rate_usd_per_1k: float = DEFAULT_USD_PER_1K_TOKENS
@@ -123,7 +123,7 @@ class ModelCall:
     sample_id: str = ""
     prompt_hash: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "sample_id": self.sample_id,
             "provider": self.provider,
@@ -141,7 +141,7 @@ class ModelCall:
         }
 
 
-def estimate_cost(token_count: int, usd_per_1k: Optional[float] = None) -> float:
+def estimate_cost(token_count: int, usd_per_1k: float | None = None) -> float:
     """按 token 估算成本（美元）。无真实计费信息时使用默认单价。"""
     rate = usd_per_1k if usd_per_1k is not None else DEFAULT_USD_PER_1K_TOKENS
     return round((token_count / 1000.0) * rate, 6)
@@ -154,7 +154,7 @@ def _prompt_hash(text: str) -> str:
 # ---------------------------------------------------------------------------
 # 真实 HTTP 客户端（OpenAI 兼容 /chat/completions）
 # ---------------------------------------------------------------------------
-ClientFn = Callable[[str, ModelEvalConfig], Dict[str, Any]]
+ClientFn = Callable[[str, ModelEvalConfig], dict[str, Any]]
 
 
 def _default_http_client(cfg: ModelEvalConfig) -> ClientFn:
@@ -164,13 +164,13 @@ def _default_http_client(cfg: ModelEvalConfig) -> ClientFn:
     凭据只用于请求头，绝不写入 trace/报告。
     """
 
-    def caller(sample: str, cfg_: ModelEvalConfig) -> Dict[str, Any]:
+    def caller(sample: str, cfg_: ModelEvalConfig) -> dict[str, Any]:
         import requests
 
         url = cfg_.base_url.rstrip("/")
         if not url.endswith("/chat/completions"):
             url = url.rstrip("/") + "/chat/completions"
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "model": cfg_.model_version,
             "messages": [{"role": "user", "content": sample}],
             "stream": False,
@@ -193,7 +193,7 @@ def _rate(passed: int, total: int) -> float:
     return round(passed / total, 4) if total else 0.0
 
 
-def model_behavior_block(calls: List[ModelCall]) -> Dict[str, Any]:
+def model_behavior_block(calls: list[ModelCall]) -> dict[str, Any]:
     """真实模型行为：只统计真实网络调用（network_call=True）。"""
     real = [c for c in calls if c.network_call]
     total = len(real)
@@ -207,7 +207,7 @@ def model_behavior_block(calls: List[ModelCall]) -> Dict[str, Any]:
     }
 
 
-def fixture_behavior_block(fixture_results: Optional[List[Any]] = None) -> Dict[str, Any]:
+def fixture_behavior_block(fixture_results: list[Any] | None = None) -> dict[str, Any]:
     """fixture/contract 结果：单独标注为 fixture，绝不进入 model_behavior。"""
     results = list(fixture_results or [])
     total = len(results)
@@ -222,13 +222,13 @@ def fixture_behavior_block(fixture_results: Optional[List[Any]] = None) -> Dict[
 
 
 def build_eval_report(
-    calls: List[ModelCall],
+    calls: list[ModelCall],
     *,
     status: str = STATUS_COMPLETED,
     reason: str = "",
-    fixture_results: Optional[List[Any]] = None,
-    budget_usd: Optional[float] = None,
-) -> Dict[str, Any]:
+    fixture_results: list[Any] | None = None,
+    budget_usd: float | None = None,
+) -> dict[str, Any]:
     """组装真实模型评测报告。
 
     - ``samples`` = 真实网络调用数；
@@ -309,14 +309,14 @@ def _call_once(cfg: ModelEvalConfig, caller: ClientFn, sample: str, sample_id: s
 
 
 def run_model_eval(
-    samples: List[str],
+    samples: list[str],
     *,
-    client: Optional[ClientFn] = None,
-    config: Optional[ModelEvalConfig] = None,
-    budget_usd: Optional[float] = None,
-    max_calls: Optional[int] = None,
-    fixture_results: Optional[List[Any]] = None,
-) -> Dict[str, Any]:
+    client: ClientFn | None = None,
+    config: ModelEvalConfig | None = None,
+    budget_usd: float | None = None,
+    max_calls: int | None = None,
+    fixture_results: list[Any] | None = None,
+) -> dict[str, Any]:
     """手动/定时真实评测 job。
 
     - 无凭据（``AIPD_MODEL_API_KEY``/``AIPD_MODEL_BASE_URL`` 缺失）-> HOLD，
@@ -341,7 +341,7 @@ def run_model_eval(
         )
 
     caller = client or _default_http_client(cfg)
-    calls: List[ModelCall] = []
+    calls: list[ModelCall] = []
     total_cost = 0.0
     for idx, sample in enumerate(samples):
         if cfg.max_calls is not None and len(calls) >= cfg.max_calls:
@@ -366,18 +366,18 @@ class ModelEvalJob:
 
     def __init__(
         self,
-        config: Optional[ModelEvalConfig] = None,
-        budget_usd: Optional[float] = None,
-        max_calls: Optional[int] = None,
-        client: Optional[ClientFn] = None,
+        config: ModelEvalConfig | None = None,
+        budget_usd: float | None = None,
+        max_calls: int | None = None,
+        client: ClientFn | None = None,
     ) -> None:
         self.config = config or load_model_eval_config()
         self.budget_usd = budget_usd
         self.max_calls = max_calls
         self.client = client
-        self.last_result: Dict[str, Any] = {}
+        self.last_result: dict[str, Any] = {}
 
-    def run(self, samples: List[str], fixture_results: Optional[List[Any]] = None) -> Dict[str, Any]:
+    def run(self, samples: list[str], fixture_results: list[Any] | None = None) -> dict[str, Any]:
         """执行本 job；返回报告并保存到 ``last_result``。"""
         self.last_result = run_model_eval(
             samples,

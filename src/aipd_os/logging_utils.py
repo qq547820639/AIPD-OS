@@ -11,7 +11,6 @@ import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 _JSON_FORMAT = "%(json)s"
 _configured_loggers: set = set()
@@ -43,7 +42,7 @@ def _file_handler(path: Path) -> logging.Handler:
     return fh
 
 
-def _attach_handlers(logger: logging.Logger, log_file: Optional[Path]) -> None:
+def _attach_handlers(logger: logging.Logger, log_file: Path | None) -> None:
     """给 logger 装配标准 handler（清空旧 handler 后重建）。
 
     装配内容：stdout StreamHandler(JsonFormatter)、可选 FileHandler（自动
@@ -66,7 +65,7 @@ def _attach_handlers(logger: logging.Logger, log_file: Optional[Path]) -> None:
 def setup_logging(
     name: str = "aipd",
     level: str = "INFO",
-    log_file: Optional[Path] = None,
+    log_file: Path | None = None,
     force: bool = False,
 ) -> None:
     """配置日志器。

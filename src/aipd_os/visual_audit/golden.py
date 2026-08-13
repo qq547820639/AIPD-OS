@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.visual_audit.auditor import (
     A4_PX,
@@ -43,7 +43,7 @@ GOLDEN_DEP_FIELDS = {
     "no_fabricated_params": "params",
 }
 
-DIMENSIONS: List[str] = [
+DIMENSIONS: list[str] = [
     "structural_consistency",
     "character_consistency",
     "module_consistency",
@@ -62,13 +62,13 @@ DIMENSIONS: List[str] = [
 ]
 
 
-def _dim(score: float, passed: Optional[bool], note: str = "", **extra: Any) -> Dict[str, Any]:
-    d: Dict[str, Any] = {"score": round(float(score), 4), "passed": passed, "note": note}
+def _dim(score: float, passed: bool | None, note: str = "", **extra: Any) -> dict[str, Any]:
+    d: dict[str, Any] = {"score": round(float(score), 4), "passed": passed, "note": note}
     d.update(extra)
     return d
 
 
-def _golden_missing(field: str) -> Dict[str, Any]:
+def _golden_missing(field: str) -> dict[str, Any]:
     return _dim(
         0.5,
         None,
@@ -85,7 +85,7 @@ class GoldenGapEvaluator:
 
     DIMENSIONS = DIMENSIONS
 
-    def __init__(self, vision_backend: Optional[str] = None) -> None:
+    def __init__(self, vision_backend: str | None = None) -> None:
         self.auditor = VisualAuditor(vision_backend=vision_backend)
 
     # -- 内部辅助 -----------------------------------------------------------
@@ -100,7 +100,7 @@ class GoldenGapEvaluator:
         return hashes
 
     @staticmethod
-    def _golden_facts(golden: dict) -> Optional[dict]:
+    def _golden_facts(golden: dict) -> dict | None:
         """从 golden 提取事实参数（兼容 facts / params 两种形态）。"""
         if not golden:
             return None
@@ -110,7 +110,7 @@ class GoldenGapEvaluator:
             return {"params": golden["params"]}
         return None
 
-    def _vision_dim(self, d: dict) -> Dict[str, Any]:
+    def _vision_dim(self, d: dict) -> dict[str, Any]:
         """人物/CMF 等需要真实视觉模型的维度：无后端时诚实标记未验证。"""
         if d.get("requiring_vision") and not self.auditor._vision():
             return _dim(
@@ -123,7 +123,7 @@ class GoldenGapEvaluator:
         return _dim(_bool_score(ok), ok, note=d.get("note") or "")
 
     @staticmethod
-    def _params_mismatches(defn: dict, golden_facts: dict) -> List[str]:
+    def _params_mismatches(defn: dict, golden_facts: dict) -> list[str]:
         mism = []
         facts_params = (golden_facts or {}).get("params", {}) if golden_facts else {}
         for row in defn.get("param_table", []) or []:
@@ -136,7 +136,7 @@ class GoldenGapEvaluator:
 
     def evaluate(self, batch_state: dict, pages_dir: str, golden: dict) -> dict:
         """对整批页面做黄金差距评测，返回 ``{'pages', 'overall', 'passed'}``。"""
-        defns: Dict[str, dict] = {}
+        defns: dict[str, dict] = {}
         for br in batch_state.get("batch_runs", []):
             for op in br.get("output_pages", []) or []:
                 if op.get("page_id"):
@@ -151,7 +151,7 @@ class GoldenGapEvaluator:
             copy_text = (golden or {}).get("theory")
         factory_kw = (golden or {}).get("factory_scene_keywords") or DEFAULT_FACTORY_KEYWORDS
 
-        pages: List[Dict[str, Any]] = []
+        pages: list[dict[str, Any]] = []
         for pid, defn in defns.items():
             png = pages_dir / f"{pid}.png"
             if not png.exists():
@@ -176,10 +176,10 @@ class GoldenGapEvaluator:
         defn: dict,
         png: str,
         prior: set,
-        golden_facts: Optional[dict],
+        golden_facts: dict | None,
         module_set: Any,
         copy_text: Any,
-        factory_kw: List[str],
+        factory_kw: list[str],
     ) -> tuple:
         aud = self.auditor.audit_page(
             defn, png, facts={"params": (golden_facts or {}).get("params", {})} if golden_facts else None
@@ -187,7 +187,7 @@ class GoldenGapEvaluator:
         ad = aud["dimensions"]
         role = defn.get("role")
         text = _text_of(defn)
-        dims: Dict[str, Dict[str, Any]] = {}
+        dims: dict[str, dict[str, Any]] = {}
 
         # 1) 结构一致性（复用 audit_page）
         d = ad.get("structural_consistency", {})

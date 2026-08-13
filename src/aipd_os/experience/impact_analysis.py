@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from ..state.db import AIPDStateDB
 from .intent_engine import Intent
@@ -39,12 +39,12 @@ def milestone_cn(gate: Any) -> str:
     return _MILESTONE_CN.get(str(gate or ""), "后续阶段")
 
 
-def _in_scope(d: Dict[str, Any]) -> bool:
+def _in_scope(d: dict[str, Any]) -> bool:
     return d.get("status") not in ("released", "archived")
 
 
 def _affected_for_kind(db: AIPDStateDB, project_id: str, intent: Intent,
-                       tenant_id: str) -> List[Dict[str, Any]]:
+                       tenant_id: str) -> list[dict[str, Any]]:
     """根据意图类型确定受影响制品（未发布未归档的交付物）。"""
     deliverables = db.list_deliverables(tenant_id, project_id)
     kind = intent.kind
@@ -87,7 +87,7 @@ def _why_need_decide(intent: Intent) -> str:
 
 
 def estimate_cost_time(intent: Intent,
-                       affected: List[Dict[str, Any]]) -> Dict[str, Any]:
+                       affected: list[dict[str, Any]]) -> dict[str, Any]:
     """确定性估算影响范围、耗时与成本。"""
     n = len(affected)
     if intent.kind in ("approve", "choose"):
@@ -108,10 +108,10 @@ def estimate_cost_time(intent: Intent,
 
 
 def build_preview(db: AIPDStateDB, project_id: str,
-                  affected: List[Dict[str, Any]],
-                  tenant_id: str) -> Dict[str, Any]:
+                  affected: list[dict[str, Any]],
+                  tenant_id: str) -> dict[str, Any]:
     """生成受影响制品的 before/after 可撤销预览。"""
-    before: List[Dict[str, Any]] = []
+    before: list[dict[str, Any]] = []
     for d in affected:
         before.append({
             "deliverable_id": d.get("deliverable_id"),
@@ -128,14 +128,14 @@ def build_preview(db: AIPDStateDB, project_id: str,
 
 
 def analyze_impact(db: AIPDStateDB, project_id: str, intent: Intent,
-                   tenant_id: str = "default") -> Dict[str, Any]:
+                   tenant_id: str = "default") -> dict[str, Any]:
     """返回完整的确定性影响分析报告。"""
     affected = _affected_for_kind(db, project_id, intent, tenant_id)
     estimate = estimate_cost_time(intent, affected)
     reversible = _is_reversible(intent)
     requires_approval = _requires_approval(intent)
 
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "kind": intent.kind,
         "affected_artifacts": affected,
         "affected_count": estimate["affected_count"],

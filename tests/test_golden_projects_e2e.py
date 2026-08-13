@@ -30,7 +30,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 
@@ -80,8 +80,8 @@ def _head_sha() -> str:
     return r.stdout.strip() if r.returncode == 0 else "n/a"
 
 
-def _write_release(project_id: str, report: Dict[str, Any],
-                   artifacts: List[Path], out_dir: Optional[Path] = None) -> Path:
+def _write_release(project_id: str, report: dict[str, Any],
+                   artifacts: list[Path], out_dir: Path | None = None) -> Path:
     """把黄金项目真实运行产物写入输出目录。
 
     默认写调用方提供的临时目录（``out_dir``）；pin 模式
@@ -162,7 +162,7 @@ def test_golden_project_A_manual_chain(tmp_path) -> None:
     # ---- 2) 真实批次执行（外部文生图不可用 → 诚实写外部任务包，不假成功）----
     pages_dir = cwd / "pages"
     pages_dir.mkdir(exist_ok=True)
-    rendered: List[Path] = []
+    rendered: list[Path] = []
     for i, bid in enumerate(batches):
         bid_pages = [e["page_id"] for e in plan if e["batch_id"] == bid]
         cmd = [

@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 # ---------------------------------------------------------------------------
 # 常量
@@ -67,7 +67,7 @@ def sha256_file(path: str) -> str:
     return h.hexdigest()
 
 
-def maturity_index(level: Optional[str]) -> int:
+def maturity_index(level: str | None) -> int:
     """将成熟度层级映射为可比较的整数；未知返回 -1。"""
     if not level:
         return -1
@@ -90,9 +90,9 @@ class ProgressEvent:
     timestamp: str = field(default_factory=_now)
     step: str = ""
     message: str = ""
-    progress: Optional[float] = None
+    progress: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -139,7 +139,7 @@ class CostLedger:
         self.real_model = self.real_model or bool(real_model)
         self.duration_ms += int(duration_ms or 0)
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         return {
             "tokens_in": self.tokens_in,
             "tokens_out": self.tokens_out,
@@ -153,7 +153,7 @@ class CostLedger:
 # ---------------------------------------------------------------------------
 # 产物校验
 # ---------------------------------------------------------------------------
-def _fmt_exts(fmt: Optional[str]) -> List[str]:
+def _fmt_exts(fmt: str | None) -> list[str]:
     if not fmt:
         return []
     if fmt in ("markdown", "md"):
@@ -189,9 +189,9 @@ def _check_format(path: str, fmt: str) -> bool:
     return True
 
 
-def verify_file(path: str, fmt: Optional[str] = None,
-                expected_sha256: Optional[str] = None,
-                non_empty: bool = True) -> Dict[str, Any]:
+def verify_file(path: str, fmt: str | None = None,
+                expected_sha256: str | None = None,
+                non_empty: bool = True) -> dict[str, Any]:
     """校验单个产物文件：存在性 / 非空 / 格式 / SHA-256。"""
     p = Path(path)
     exists = p.exists()
@@ -217,9 +217,9 @@ def verify_file(path: str, fmt: Optional[str] = None,
 class ArtifactVerifier:
     """产物集合校验入口：存在性 / 格式 / SHA-256 / 语义。"""
 
-    def verify(self, step: ClosureStep, produced: List[str],
-               result: Dict[str, Any]) -> List[Dict[str, Any]]:
-        checks: List[Dict[str, Any]] = []
+    def verify(self, step: ClosureStep, produced: list[str],
+               result: dict[str, Any]) -> list[dict[str, Any]]:
+        checks: list[dict[str, Any]] = []
         for p in produced:
             checks.append(verify_file(p, non_empty=True))
         for spec in (step.expected_artifacts or []):
@@ -246,7 +246,7 @@ class ArtifactVerifier:
         return checks
 
     @staticmethod
-    def all_ok(checks: List[Dict[str, Any]]) -> bool:
+    def all_ok(checks: list[dict[str, Any]]) -> bool:
         return all(c.get("ok", False) for c in checks)
 
 
@@ -266,7 +266,7 @@ class ReworkMachine:
         self.max_attempts = max_attempts
         self.attempts = 0
         self.state = REWORK_WORKING
-        self.last_classification: Optional[str] = None
+        self.last_classification: str | None = None
         self.last_message = ""
 
     def record_success(self) -> str:
@@ -286,7 +286,7 @@ class ReworkMachine:
     def can_retry(self) -> bool:
         return self.attempts <= self.max_attempts
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         return {"state": self.state, "attempts": self.attempts,
                 "max_attempts": self.max_attempts,
                 "last_classification": self.last_classification,
@@ -302,12 +302,12 @@ class ClosureStep:
 
     step_id: str
     capability_id: str
-    inputs: Dict[str, Any]
-    context: Optional[Dict[str, Any]] = None
-    expected_artifacts: Optional[List[Dict[str, Any]]] = None
-    semantic_check: Optional[Callable[[Dict[str, Any], List[str]], tuple]] = None
-    write_back: Optional[Dict[str, Any]] = None
-    depends_on: Optional[List[str]] = None
+    inputs: dict[str, Any]
+    context: dict[str, Any] | None = None
+    expected_artifacts: list[dict[str, Any]] | None = None
+    semantic_check: Callable[[dict[str, Any], list[str]], tuple] | None = None
+    write_back: dict[str, Any] | None = None
+    depends_on: list[str] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -316,8 +316,8 @@ class ClosureStep:
 class MaturityFloorError(Exception):
     """成熟度门槛不满足。"""
 
-    def __init__(self, capability_id: str, required: Optional[str],
-                 actual: Optional[str], reason: str) -> None:
+    def __init__(self, capability_id: str, required: str | None,
+                 actual: str | None, reason: str) -> None:
         self.capability_id = capability_id
         self.required = required
         self.actual = actual
@@ -326,7 +326,7 @@ class MaturityFloorError(Exception):
 
 
 def check_maturity_floor(registry: Any, capability_id: str,
-                         required_floor: Optional[str]) -> Dict[str, Any]:
+                         required_floor: str | None) -> dict[str, Any]:
     """校验能力是否满足成熟度门槛（校验真实成熟度上限，而非仅适配器存在）。"""
     adapter = registry.get(capability_id)
     if adapter is None:
@@ -352,7 +352,7 @@ def check_maturity_floor(registry: Any, capability_id: str,
 # ---------------------------------------------------------------------------
 # 面向非技术用户的失败消息
 # ---------------------------------------------------------------------------
-def build_failure_message(failure: Dict[str, Any]) -> Dict[str, str]:
+def build_failure_message(failure: dict[str, Any]) -> dict[str, str]:
     """为失败构建面向非技术用户的可读消息。"""
     stage = failure.get("step") or "执行过程"
     reason = failure.get("reason") or "未知原因"
@@ -461,7 +461,7 @@ class ClosureStore:
                 (run_id, work_id, project_id, "started", ts, ts))
         return run_id
 
-    def update_run(self, run_id: str, **fields: Any) -> Dict[str, Any]:
+    def update_run(self, run_id: str, **fields: Any) -> dict[str, Any]:
         allowed = {"status", "current_step", "updated_at", "heartbeat_at", "reason"}
         sets, params = [], []
         for k, v in fields.items():
@@ -476,7 +476,7 @@ class ClosureStore:
             c.execute(f"UPDATE closure_runs SET {', '.join(sets)} WHERE run_id=?", params)
         return self.get_run(run_id)
 
-    def get_run(self, run_id: str) -> Dict[str, Any]:
+    def get_run(self, run_id: str) -> dict[str, Any]:
         with self.connect() as c:
             row = c.execute("SELECT * FROM closure_runs WHERE run_id=?", (run_id,)).fetchone()
         if row is None:
@@ -491,7 +491,7 @@ class ClosureStore:
         return int(row["m"]) + 1
 
     def emit_event(self, run_id: str, kind: str, step: str = "",
-                   message: str = "", progress: Optional[float] = None) -> ProgressEvent:
+                   message: str = "", progress: float | None = None) -> ProgressEvent:
         with self.connect() as c:
             seq = self._next_seq(c, run_id)
             ts = _now()
@@ -502,7 +502,7 @@ class ClosureStore:
         return ProgressEvent(run_id=run_id, seq=seq, kind=kind, timestamp=ts,
                              step=step, message=message, progress=progress)
 
-    def list_events(self, run_id: str) -> List[ProgressEvent]:
+    def list_events(self, run_id: str) -> list[ProgressEvent]:
         with self.connect() as c:
             rows = c.execute(
                 "SELECT * FROM closure_events WHERE run_id=? ORDER BY seq", (run_id,)).fetchall()
@@ -520,7 +520,7 @@ class ClosureStore:
                 (run_id, step_id, json.dumps(data, ensure_ascii=False, default=str), _now()))
             return int(cur.lastrowid)
 
-    def latest_checkpoint(self, run_id: str) -> Optional[Dict[str, Any]]:
+    def latest_checkpoint(self, run_id: str) -> dict[str, Any] | None:
         with self.connect() as c:
             row = c.execute(
                 "SELECT * FROM closure_checkpoints WHERE run_id=? "
@@ -544,7 +544,7 @@ class ClosureStore:
                  cost, 1 if real_model else 0, _now()))
             return int(cur.lastrowid)
 
-    def list_tool_calls(self, run_id: str) -> List[Dict[str, Any]]:
+    def list_tool_calls(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute(
                 "SELECT * FROM closure_tool_calls WHERE run_id=? ORDER BY seq", (run_id,)).fetchall()
@@ -559,7 +559,7 @@ class ClosureStore:
                 "downstream_step,input_hash,relation) VALUES(?,?,?,?,?)",
                 (run_id, upstream, downstream, input_hash, "derives"))
 
-    def list_dependencies(self, run_id: str) -> List[Dict[str, Any]]:
+    def list_dependencies(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute(
                 "SELECT * FROM closure_dependencies WHERE run_id=? "
@@ -574,7 +574,7 @@ class ClosureStore:
                 " VALUES(?,?,?,?,?)",
                 (run_id, step_id, artifact_path, reason, _now()))
 
-    def list_stale(self, run_id: str) -> List[Dict[str, Any]]:
+    def list_stale(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute(
                 "SELECT * FROM closure_stale WHERE run_id=? ORDER BY stale_id", (run_id,)).fetchall()

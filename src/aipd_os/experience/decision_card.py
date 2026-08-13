@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..execution.decision_policy import build_decision_package
 from ..state.db import AIPDStateDB
@@ -24,7 +24,7 @@ _DEFAULT_IMPACT_LEVELS = (
 )
 
 
-def _normalize_options(raw: Any) -> List[str]:
+def _normalize_options(raw: Any) -> list[str]:
     """把 options（可能是 list 或 str）规整为 2-4 个字符串选项。"""
     if raw is None:
         return ["按 AI 推荐路径继续并冻结该决策点",
@@ -40,7 +40,7 @@ def _normalize_options(raw: Any) -> List[str]:
     return candidates
 
 
-def _clip_options(opts: List[str]) -> List[str]:
+def _clip_options(opts: list[str]) -> list[str]:
     if len(opts) >= 2 and len(opts) <= 4:
         return opts
     if len(opts) < 2:
@@ -51,16 +51,16 @@ def _clip_options(opts: List[str]) -> List[str]:
     return opts
 
 
-def _per_option_impacts(options: List[str]) -> Dict[str, Dict[str, str]]:
+def _per_option_impacts(options: list[str]) -> dict[str, dict[str, str]]:
     """为每个选项生成成本/性能/时间/安全影响。"""
-    impacts: Dict[str, Dict[str, str]] = {}
+    impacts: dict[str, dict[str, str]] = {}
     for i, option in enumerate(options):
         level = _DEFAULT_IMPACT_LEVELS[i % len(_DEFAULT_IMPACT_LEVELS)]
         impacts[option] = dict(level)
     return impacts
 
 
-def _after_approval(decision: Dict[str, Any]) -> str:
+def _after_approval(decision: dict[str, Any]) -> str:
     meta = decision.get("options_meta") or {}
     override = meta.get("after_approval")
     if override:
@@ -69,8 +69,8 @@ def _after_approval(decision: Dict[str, Any]) -> str:
 
 
 def build_decision_card(db: AIPDStateDB, project_id: str,
-                        decision_id: Optional[str] = None,
-                        tenant_id: str = "default") -> Optional[Dict[str, Any]]:
+                        decision_id: str | None = None,
+                        tenant_id: str = "default") -> dict[str, Any] | None:
     """返回单一最高优先级待审决策卡片；若无待审决策返回 None。"""
     open_decisions = db.list_open_decisions(tenant_id, project_id)
     if not open_decisions:

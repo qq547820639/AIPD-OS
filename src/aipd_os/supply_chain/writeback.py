@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from aipd_os.state.db import AIPDStateDB
 
@@ -26,19 +26,19 @@ class PhysicalWriteback:
         self,
         project_id: str,
         stage: str,
-        analysis: Optional[Dict[str, Any]],
-        evidence_files: Optional[List[Union[str, Path]]] = None,
-        gate: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        analysis: dict[str, Any] | None,
+        evidence_files: list[str | Path] | None = None,
+        gate: str | None = None,
+    ) -> dict[str, Any]:
         """把某物理验证阶段的结果写回。
 
         :param analysis: ``analyze_stage`` 的输出；为 None 或 total==0 表示
             无物理数据，结果保持 HOLD。
         :returns: ``{"written": [...], "hold": [...], "risk_id": ..., "gate_result": ...}``
         """
-        written: List[Any] = []
-        hold: List[Any] = []
-        risk_id: Optional[str] = None
+        written: list[Any] = []
+        hold: list[Any] = []
+        risk_id: str | None = None
         analysis = analysis or {}
         total = int(analysis.get("total", 0) or 0)
 
@@ -120,7 +120,7 @@ class PhysicalWriteback:
             )
             written.append(risk_id)
 
-        gate_result: Optional[str] = None
+        gate_result: str | None = None
         if gate:
             gate_result = "PASS" if passed else "FAIL"
             self.db.add_gate(
@@ -141,7 +141,7 @@ class PhysicalWriteback:
         gate: str,
         physical_ok: bool,
         note: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """写回发布门禁的物理验证判定。
 
         :param physical_ok: 是否有充分的已通过物理证据；False/缺失 -> HOLD。

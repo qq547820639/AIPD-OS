@@ -13,7 +13,7 @@ import os
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 try:  # pyyaml 为可选依赖
     import yaml  # type: ignore
@@ -63,15 +63,15 @@ class Settings:
     model_api_key: str = ""
     model_base_url: str = ""
     model_name: str = ""
-    config_files: List[Path] = field(default_factory=list)
-    extra: Dict[str, Any] = field(default_factory=dict)
+    config_files: list[Path] = field(default_factory=list)
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> Settings:
+    def from_dict(cls, data: dict[str, Any]) -> Settings:
         """从字典构造 Settings，忽略未知字段，未知字段放入 ``extra``。"""
         known = {f for f in cls.__dataclass_fields__}
-        values: Dict[str, Any] = {}
-        extra: Dict[str, Any] = {}
+        values: dict[str, Any] = {}
+        extra: dict[str, Any] = {}
         for key, val in data.items():
             if key in known:
                 values[key] = val
@@ -129,7 +129,7 @@ class Settings:
             self.model_name = str(_env("MODEL_NAME"))
 
 
-def _load_json(path: Path) -> Dict[str, Any]:
+def _load_json(path: Path) -> dict[str, Any]:
     with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
     if not isinstance(data, dict):
@@ -137,7 +137,7 @@ def _load_json(path: Path) -> Dict[str, Any]:
     return data
 
 
-def _load_yaml(path: Path) -> Dict[str, Any]:
+def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(open(path, encoding="utf-8"))
     if data is None:
         return {}
@@ -146,7 +146,7 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
     return data
 
 
-def _load_file(path: Path) -> Dict[str, Any]:
+def _load_file(path: Path) -> dict[str, Any]:
     suffix = path.suffix.lower()
     if suffix in {".yaml", ".yml"}:
         if not _HAS_YAML:
@@ -166,12 +166,12 @@ def _load_file(path: Path) -> Dict[str, Any]:
         raise
 
 
-def _resolve_config_files() -> List[Path]:
+def _resolve_config_files() -> list[Path]:
     """解析配置文件路径：优先 ``AIPD_CONFIG`` 环境变量，否则扫描默认路径。"""
     explicit = _env("CONFIG")
     if explicit:
         return [Path(explicit)]
-    found: List[Path] = []
+    found: list[Path] = []
     for rel in DEFAULT_CONFIG_FILES:
         p = Path(rel)
         if p.is_file():

@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from PIL import Image
 
@@ -47,7 +46,7 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def _intrinsic_size(path: str) -> Optional[tuple]:
+def _intrinsic_size(path: str) -> tuple | None:
     try:
         with Image.open(path) as im:
             return im.size
@@ -65,23 +64,23 @@ def _text_of(defn: dict) -> str:
 class VisualAuditor:
     """语义级手册视觉审计器（无真实视觉模型时诚实降级）。"""
 
-    def __init__(self, vision_backend: Optional[str] = None):
+    def __init__(self, vision_backend: str | None = None):
         self.vision_backend = vision_backend
-        self.prior_hashes: List[str] = []
+        self.prior_hashes: list[str] = []
 
     def _vision(self) -> bool:
         return bool(self.vision_backend)
 
     def reconcile(self, page_defn: dict, page_png: str,
-                  golden_path: Optional[str] = None,
-                  facts: Optional[dict] = None) -> dict:
+                  golden_path: str | None = None,
+                  facts: dict | None = None) -> dict:
         """别名：与 audit_page 等价，保持接口友善。"""
         return self.audit_page(page_defn, page_png, golden_path=golden_path, facts=facts)
 
     def audit_page(self, page_defn: dict, page_png: str,
-                   golden_path: Optional[str] = None,
-                   facts: Optional[dict] = None) -> dict:
-        dims: Dict[str, dict] = {}
+                   golden_path: str | None = None,
+                   facts: dict | None = None) -> dict:
+        dims: dict[str, dict] = {}
 
         # 1) 结构一致性
         size = _intrinsic_size(page_png)
@@ -192,14 +191,14 @@ class VisualAuditor:
         }
 
     def audit_batch(self, batch_state: dict, pages_dir: str,
-                    facts: Optional[dict] = None,
-                    prior_hashes: Optional[List[str]] = None) -> dict:
+                    facts: dict | None = None,
+                    prior_hashes: list[str] | None = None) -> dict:
         """审计整批，定位失败页面与维度，产出仅重建责任页的 rebuild_plan。"""
         self.prior_hashes = list(prior_hashes or [])
         pages_dir = Path(pages_dir)
 
         # 从 batch_runs 汇总各页 defn
-        defns: Dict[str, dict] = {}
+        defns: dict[str, dict] = {}
         for br in batch_state.get("batch_runs", []):
             for op in br.get("output_pages", []) or []:
                 if op.get("page_id"):
@@ -271,7 +270,7 @@ class VisualAuditor:
         }
 
 
-def audit_batch(batch_state: dict, pages_dir: str, facts: Optional[dict] = None,
-                prior_hashes: Optional[List[str]] = None) -> dict:
+def audit_batch(batch_state: dict, pages_dir: str, facts: dict | None = None,
+                prior_hashes: list[str] | None = None) -> dict:
     """便捷函数：构造默认审计器并对整批审计。"""
     return VisualAuditor().audit_batch(batch_state, pages_dir, facts=facts, prior_hashes=prior_hashes)

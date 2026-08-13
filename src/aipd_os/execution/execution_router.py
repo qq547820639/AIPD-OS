@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.execution.adapter import AdapterError, ToolAdapter
 from aipd_os.execution.models import (
@@ -29,7 +29,7 @@ BACKOFF_BASE_S = 0.05
 class InputValidationError(Exception):
     """输入校验失败。"""
 
-    def __init__(self, capability_id: str, errors: List[str]) -> None:
+    def __init__(self, capability_id: str, errors: list[str]) -> None:
         self.capability_id = capability_id
         self.errors = errors
         super().__init__(
@@ -44,7 +44,7 @@ class ExecutionRouter:
         self,
         store: RunStore,
         registry: AdapterRegistry,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger | None = None,
         max_retries: int = DEFAULT_MAX_RETRIES,
     ) -> None:
         self.store = store
@@ -66,11 +66,11 @@ class ExecutionRouter:
         self,
         work_id: str,
         capability_id: str,
-        input: Dict[str, Any],
-        context: Optional[Dict[str, Any]] = None,
+        input: dict[str, Any],
+        context: dict[str, Any] | None = None,
         project_id: str = "",
         idempotency_key: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """执行一次路由，返回 ``{'record': ExecutionRecord, 'result': dict|None}``。
 
         输入非法时抛出 :class:`InputValidationError`。
@@ -130,7 +130,7 @@ class ExecutionRouter:
             idempotency_key=idempotency_key,
             side_effect_mode=adapter.side_effect_mode(),
         )
-        lineage: List[str] = []
+        lineage: list[str] = []
 
         side_effect_mode = adapter.side_effect_mode()
         retry_allowed = side_effect_mode in ("PURE", "IDEMPOTENT")
@@ -215,13 +215,13 @@ class ExecutionRouter:
     def _finalize_success(
         self,
         run_id: str,
-        lineage: List[str],
+        lineage: list[str],
         work_id: str,
         adapter: ToolAdapter,
-        input: Dict[str, Any],
+        input: dict[str, Any],
         status: str,
         idempotency_key: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         raw = adapter.execute(input)
         result = adapter.normalize(raw)
         meta = result.pop("_meta", {}) if isinstance(result, dict) else {}
@@ -279,13 +279,13 @@ class ExecutionRouter:
     def _try_fallback(
         self,
         run_id: str,
-        lineage: List[str],
+        lineage: list[str],
         work_id: str,
-        input: Dict[str, Any],
+        input: dict[str, Any],
         adapter: ToolAdapter,
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
         idempotency_key: str = "",
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         context = context or {}
         for cid in adapter.fallback_chain():
             fb = self.registry.get(cid)
@@ -332,8 +332,8 @@ class ExecutionRouter:
         self,
         work_id: str,
         adapter: ToolAdapter,
-        input: Dict[str, Any],
-        context: Dict[str, Any],
+        input: dict[str, Any],
+        context: dict[str, Any],
         idempotency_key: str = "",
     ) -> ExecutionRecord:
         meta = adapter.discover()
@@ -369,9 +369,9 @@ class ExecutionRouter:
     # ---- 批量处理 ----
     def run_work_items(
         self,
-        work_items: List[Dict[str, Any]],
+        work_items: list[dict[str, Any]],
         capability_selector=None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """批量处理工作项。
 
         :param capability_selector: 从 work_item 中解析能力标识的可调用对象，

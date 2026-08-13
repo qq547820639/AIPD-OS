@@ -25,7 +25,6 @@ import sys
 from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger("aipd.supervisor")
 PHASES = [
@@ -168,7 +167,7 @@ class Supervisor:
         raise ValueError(
             "project context required: multiple projects exist, specify project_id")
 
-    def _resolve_project_id(self, project_id: Optional[str]) -> str:
+    def _resolve_project_id(self, project_id: str | None) -> str:
         if project_id is not None:
             return project_id
         return self.project_id()
@@ -188,7 +187,7 @@ class Supervisor:
             "SELECT decision_id FROM decisions WHERE project_id=? AND status='proposed' "
             "ORDER BY created_at LIMIT 1", (pid,)).fetchone()
 
-    def _decision_status(self, c, did: str, pid: str) -> Optional[str]:
+    def _decision_status(self, c, did: str, pid: str) -> str | None:
         if self._decisions_has_tenant(c):
             row = c.execute(
                 "SELECT status FROM decisions WHERE decision_id=? AND project_id=? "

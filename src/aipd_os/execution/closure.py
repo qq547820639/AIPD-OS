@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.execution.closure_core import (
     EVENT_CANCELLED,
@@ -54,15 +54,15 @@ class ClosureRun:
 
     def __init__(
         self,
-        control: Optional[RunControl] = None,
-        logger: Optional[logging.Logger] = None,
+        control: RunControl | None = None,
+        logger: logging.Logger | None = None,
     ) -> None:
         self.control = control or RunControl()
         self.logger = logger or logging.getLogger("aipd.closure")
         # 每次 execute/resume 时由 _bind 注入
-        self.store: Optional[ClosureStore] = None
-        self.router: Optional[ExecutionRouter] = None
-        self.registry: Optional[AdapterRegistry] = None
+        self.store: ClosureStore | None = None
+        self.router: ExecutionRouter | None = None
+        self.registry: AdapterRegistry | None = None
         self.state_db: Any = None
         self.tenant_id = "default"
         self.max_duration_s = 300.0
@@ -76,8 +76,8 @@ class ClosureRun:
         self.ledger = CostLedger()
         self._start_mono = 0.0
         self._last_heartbeat = 0.0
-        self._generated: Dict[str, str] = {}
-        self._completed_steps: List[str] = []
+        self._generated: dict[str, str] = {}
+        self._completed_steps: list[str] = []
 
     # ---- 绑定运行环境 ----
     def bind(
@@ -133,7 +133,7 @@ class ClosureRun:
         self.store.emit_event(self.run_id, EVENT_PROGRESS, step=step,
                               message=message, progress=max(0.0, min(1.0, progress)))
 
-    def checkpoint(self, step_id: str, extra: Optional[Dict[str, Any]] = None) -> int:
+    def checkpoint(self, step_id: str, extra: dict[str, Any] | None = None) -> int:
         assert self.store is not None
         data = {
             "work_id": self.work_id,
@@ -149,8 +149,8 @@ class ClosureRun:
         return cid
 
     # ---- 主循环 ----
-    def execute(self, work_id: str, steps: List[ClosureStep], project_id: str = "",
-                required_floors: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    def execute(self, work_id: str, steps: list[ClosureStep], project_id: str = "",
+                required_floors: dict[str, str] | None = None) -> dict[str, Any]:
         self.start(work_id, project_id)
         try:
             return self._run_steps(steps, required_floors or {}, base_steps=steps)
@@ -159,8 +159,8 @@ class ClosureRun:
             self._emit_fail(str(exc))
             return self._finalize("failed", str(exc))
 
-    def resume(self, run_id: str, steps: List[ClosureStep],
-               required_floors: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    def resume(self, run_id: str, steps: list[ClosureStep],
+               required_floors: dict[str, str] | None = None) -> dict[str, Any]:
         """从上次检查点续跑（崩溃-重启-续跑）。"""
         assert self.store is not None
         run = self.store.get_run(run_id)
@@ -193,8 +193,8 @@ class ClosureRun:
             return self._finalize("failed", str(exc))
 
     # ---- 内部：步骤循环 ----
-    def _run_steps(self, steps: List[ClosureStep], required_floors: Dict[str, str],
-                   base_steps: List[ClosureStep]) -> Dict[str, Any]:
+    def _run_steps(self, steps: list[ClosureStep], required_floors: dict[str, str],
+                   base_steps: list[ClosureStep]) -> dict[str, Any]:
         total = len(base_steps)
         for idx, step in enumerate(steps):
             if self.control.is_cancelled():
@@ -309,11 +309,11 @@ class ClosureRun:
         assert self.store is not None
         self.store.emit_event(self.run_id, EVENT_FAIL, message=message)
 
-    def _invoke_router(self, step: ClosureStep, context: Dict[str, Any]
-                       ) -> Optional[Dict[str, Any]]:
+    def _invoke_router(self, step: ClosureStep, context: dict[str, Any]
+                       ) -> dict[str, Any] | None:
         """在独立线程中调用 router.run，支持超时/取消中断在途工作。"""
         assert self.store is not None and self.router is not None
-        holder: Dict[str, Any] = {}
+        holder: dict[str, Any] = {}
         step_start = _now_monotonic()
 
         def _worker() -> None:
@@ -355,7 +355,7 @@ class ClosureRun:
                                  tokens_out=tokens_out, cost=cost, real_model=real_model)
         self.ledger.record_call(tokens_in, tokens_out, cost, real_model, duration_ms)
 
-    def _write_back(self, step: ClosureStep, record: Any, result: Dict[str, Any]) -> None:
+    def _write_back(self, step: ClosureStep, record: Any, result: dict[str, Any]) -> None:
         """成功步骤后写回 Product Truth（事实）与 Evidence Register（证据）。"""
         if self.state_db is None or not self.project_id:
             return
@@ -388,10 +388,10 @@ class ClosureRun:
 
     # ---- stale 影响传播 ----
     def propagate_stale(self, changed_step_id: str, run_id: str = "",
-                        reason: str = "upstream input changed") -> List[Dict[str, Any]]:
+                        reason: str = "upstream input changed") -> list[dict[str, Any]]:
         assert self.store is not None
         rid = run_id or self.run_id
-        stale: List[Dict[str, Any]] = []
+        stale: list[dict[str, Any]] = []
         for dep in self.store.list_dependencies(rid):
             if dep["upstream_step"] == changed_step_id:
                 self.store.add_stale(rid, dep["downstream_step"],
@@ -400,7 +400,7 @@ class ClosureRun:
         return stale
 
     def _finalize(self, status: str, reason: str = "", step: str = ""
-                  ) -> Dict[str, Any]:
+                  ) -> dict[str, Any]:
         assert self.store is not None
         self.store.update_run(self.run_id, status=status, reason=reason or None)
         elapsed_ms = _monotonic_ms() - int(self._start_mono * 1000)

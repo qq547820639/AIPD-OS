@@ -10,7 +10,7 @@ quote / sample / test），可能带 ``note`` 键。本模块确定性地把它�
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 # 类型 → 人类可读中文
 _TYPE_CN = {
@@ -25,7 +25,7 @@ _LAB_TOKENS = ("lab", "test", "pvt", "evt", "dvt", "sample")
 _BUCKET_CN = {"supplier": "供应商", "lab": "测试实验室", "other": "其他"}
 
 
-def _bucket_for(item: Dict[str, Any]) -> str:
+def _bucket_for(item: dict[str, Any]) -> str:
     """确定性归类：note → other；否则 supplier 优先，其次 lab，最后 other。"""
     if "note" in item:
         return "other"
@@ -38,7 +38,7 @@ def _bucket_for(item: Dict[str, Any]) -> str:
     return "other"
 
 
-def _human_line(item: Dict[str, Any], bucket: str) -> str:
+def _human_line(item: dict[str, Any], bucket: str) -> str:
     """把一条外部等待项转成自然语言，不暴露内部代号。"""
     if "note" in item:
         note = str(item.get("note", ""))
@@ -52,9 +52,9 @@ def _human_line(item: Dict[str, Any], bucket: str) -> str:
     return f"等待{src}完成{tgt}"
 
 
-def summarize_external_wait(external_waiting: List[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize_external_wait(external_waiting: list[dict[str, Any]]) -> dict[str, Any]:
     """把外部等待列表分组为 supplier / lab / other 桶并返回中文摘要。"""
-    buckets: Dict[str, List[str]] = {"supplier": [], "lab": [], "other": []}
+    buckets: dict[str, list[str]] = {"supplier": [], "lab": [], "other": []}
     for item in external_waiting:
         bucket = _bucket_for(item)
         buckets[bucket].append(_human_line(item, bucket))

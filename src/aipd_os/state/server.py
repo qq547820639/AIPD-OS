@@ -18,7 +18,7 @@ import os
 import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from . import migrations
 from .audit import AuditLogger
@@ -50,12 +50,12 @@ class StateService:
 
     def __init__(self, db_path: str, encryption_key: str = "",
                  secret: str | None = None, object_dir: str | None = None,
-                 backup_dir: Optional[str] = None, retention_days: int = 90,
+                 backup_dir: str | None = None, retention_days: int = 90,
                  default_tenant: str = DEFAULT_TENANT,
                  insecure_dev_mode: bool = False,
                  require_strong_secret: bool = False,
                  require_strong_encryption_key: bool = False,
-                 allow_plaintext_sensitive: Optional[bool] = None):
+                 allow_plaintext_sensitive: bool | None = None):
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         migrations.migrate(db_path)
         self.db_path = str(db_path)
@@ -161,18 +161,18 @@ class StateService:
             raise AttributeError(f"unknown method {method!r}")
         return handler(**params)
 
-    def _authorize(self, actor: Optional[str], tenant_id: str, project_id: str) -> None:
+    def _authorize(self, actor: str | None, tenant_id: str, project_id: str) -> None:
         if actor is None:
             return  # 内部/系统调用，跳过授权
         self.auth.require_project_access(actor, tenant_id, project_id)
 
-    def _audit(self, actor: Optional[str], action: str, tenant_id: str,
+    def _audit(self, actor: str | None, action: str, tenant_id: str,
                project_id: str, before: Any = None, after: Any = None) -> None:
         self._audit_logger.log(actor or "system", action, project_id, tenant_id, before, after)
 
     # ------------------------------------------------------------- auth
     def auth_register(self, user_id: str, tenant_id: str, username: str, password: str,
-                      project_id: Optional[str] = None) -> str:
+                      project_id: str | None = None) -> str:
         # 外部注册路径：禁止匿名创建新租户后自授访问。租户必须已存在
         # （由引导流程/系统创建）；`ensure_default_tenant` 的隐式建租户
         # 行为仅保留给系统内部路径（如 StateService.__init__）。
@@ -213,7 +213,7 @@ class StateService:
     # ----------------------------------------------------------- projects
     def init_project(self, tenant_id: str, project_id: str, name: str, goal: str,
                      owner_policy: str = "AI executes; owner reviews decisions only",
-                     actor: Optional[str] = None) -> Dict[str, Any]:
+                     actor: str | None = None) -> dict[str, Any]:
         # 外部 actor 只能在自己所属租户创建项目（actor=None 为内部/系统路径）。
         if actor is not None:
             self.auth.require_tenant_membership(actor, tenant_id)
@@ -227,11 +227,11 @@ class StateService:
         return after
 
     def project_summary(self, tenant_id: str, project_id: str,
-                        actor: Optional[str] = None) -> Dict[str, Any]:
+                        actor: str | None = None) -> dict[str, Any]:
         self._authorize(actor, tenant_id, project_id)
         return self.db.summary(tenant_id, project_id)
 
-    def list_projects(self, tenant_id: str, actor: Optional[str] = None) -> Dict[str, Any]:
+    def list_projects(self, tenant_id: str, actor: str | None = None) -> dict[str, Any]:
         if actor is not None:
             # 普通用户只能读取自己所属租户范围的项目列表。
             self.auth.require_tenant_membership(actor, tenant_id)
@@ -249,7 +249,7 @@ class StateService:
         return self.db.get_project(tenant_id, project_id)
 
     def update_project(self, tenant_id: str, project_id: str, expected_version: int,
-                       actor: Optional[str] = None, **fields: Any) -> Dict[str, Any]:
+                       actor: str | None = None, **fields: Any) -> dict[str, Any]:
         self._authorize(actor, tenant_id, project_id)
         before = self.db.get_project(tenant_id, project_id)
         after = self.db.update_project(tenant_id, project_id, expected_version, **fields)
@@ -258,8 +258,8 @@ class StateService:
 
     # ---------------------------------------------------------------- facts
     def add_fact(self, tenant_id: str, project_id: str, key: str, value: Any, status: str,
-                 unit: Optional[str] = "", source: Optional[str] = "", confidence: float = 0.5,
-                 actor: Optional[str] = None) -> str:
+                 unit: str | None = "", source: str | None = "", confidence: float = 0.5,
+                 actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
         fid = self.db.add_fact(tenant_id, project_id, key, value, status, unit or None,
                                confidence=confidence, source=source or None)
@@ -273,15 +273,15 @@ class StateService:
 
     # ------------------------------------------------------------ decisions
     def propose_decision(self, tenant_id: str, project_id: str, topic: str,
-                         recommendation: str, options: Any, trigger: Optional[str] = "",
-                         actor: Optional[str] = None) -> str:
+                         recommendation: str, options: Any, trigger: str | None = "",
+                         actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
         did = self.db.propose_decision(tenant_id, project_id, topic, recommendation, options, trigger or None)
         self._audit(actor, "propose_decision", tenant_id, project_id, after={"decision_id": did, "topic": topic})
         return did
 
     def resolve_decision(self, tenant_id: str, project_id: str, decision_id: str,
-                         choice: str, comment: Optional[str] = "", actor: Optional[str] = None) -> str:
+                         choice: str, comment: str | None = "", actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
         self.db.resolve_decision(tenant_id, project_id, decision_id, choice, comment or None)
         self._audit(actor, "resolve_decision", tenant_id, project_id,
@@ -295,10 +295,10 @@ class StateService:
 
     # ------------------------------------------------------------ evidence
     def add_evidence(self, tenant_id: str, project_id: str, kind: str, title: str,
-                     url: Optional[str] = None, identifier: Optional[str] = None,
-                     quality: Optional[str] = None, summary: Optional[str] = None,
-                     metadata: Optional[Dict[str, Any]] = None,
-                     actor: Optional[str] = None) -> str:
+                     url: str | None = None, identifier: str | None = None,
+                     quality: str | None = None, summary: str | None = None,
+                     metadata: dict[str, Any] | None = None,
+                     actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
         eid = self.db.add_evidence(tenant_id, project_id, kind, title, url, identifier,
                                    quality, summary, metadata)
@@ -307,9 +307,9 @@ class StateService:
 
     # ---------------------------------------------------------------- risks
     def add_risk(self, tenant_id: str, project_id: str, title: str,
-                 probability: Optional[str] = None, impact: Optional[str] = None,
-                 mitigation: Optional[str] = None, status: str = "open",
-                 actor: Optional[str] = None) -> str:
+                 probability: str | None = None, impact: str | None = None,
+                 mitigation: str | None = None, status: str = "open",
+                 actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
         rid = self.db.add_risk(tenant_id, project_id, title, probability, impact, mitigation, status)
         self._audit(actor, "add_risk", tenant_id, project_id, after={"risk_id": rid, "title": title})
@@ -317,16 +317,16 @@ class StateService:
 
     # ---------------------------------------------------------- deliverables
     def add_deliverable(self, tenant_id: str, project_id: str, dtype: str,
-                        path: Optional[str] = None, status: str = "planned",
-                        version: Optional[str] = None, gate: Optional[str] = None,
-                        metadata: Optional[Dict[str, Any]] = None,
-                        actor: Optional[str] = None) -> str:
+                        path: str | None = None, status: str = "planned",
+                        version: str | None = None, gate: str | None = None,
+                        metadata: dict[str, Any] | None = None,
+                        actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
         return self.db.add_deliverable(tenant_id, project_id, dtype, path, status, version, gate, metadata)
 
     # ------------------------------------------------------------ checkpoints
     def save_checkpoint(self, tenant_id: str, project_id: str, data: Any,
-                        summary: Any = None, actor: Optional[str] = None) -> int:
+                        summary: Any = None, actor: str | None = None) -> int:
         self._authorize(actor, tenant_id, project_id)
         cid = self.db.save_checkpoint(tenant_id, project_id, data, summary)
         self._audit(actor, "save_checkpoint", tenant_id, project_id, after={"checkpoint_id": cid})
@@ -338,12 +338,12 @@ class StateService:
         return self.checkpoints.restore_latest(project_id, tenant_id)
 
     def resume_summary(self, tenant_id: str, project_id: str,
-                       actor: Optional[str] = None) -> Dict[str, Any]:
+                       actor: str | None = None) -> dict[str, Any]:
         self._authorize(actor, tenant_id, project_id)
         return self.checkpoints.resume_summary(project_id, tenant_id)
 
     def export_checkpoint(self, tenant_id: str, project_id: str,
-                          actor: Optional[str] = None) -> Dict[str, Any]:
+                          actor: str | None = None) -> dict[str, Any]:
         self._authorize(actor, tenant_id, project_id)
         return self.db.export(tenant_id, project_id)
 
@@ -415,7 +415,7 @@ class StateService:
     list_audit_events = audit
 
     # --------------------------------------------------------------- health
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> dict[str, Any]:
         return health_check(self.db_path)
 
 
@@ -475,7 +475,7 @@ class _RpcHandler(BaseHTTPRequestHandler):
         except Exception as exc:  # noqa: BLE001 - 统一返回错误
             self._send_json(400, {"error": str(exc), "error_type": type(exc).__name__})
 
-    def _authenticate(self, req: Dict[str, Any]) -> str:
+    def _authenticate(self, req: dict[str, Any]) -> str:
         """校验请求中的 user/token；公共引导方法免令牌。失败抛 :class:`UnauthorizedError`。
 
         返回 user_id（公共方法返回空串，表示不注入 actor）。
@@ -491,7 +491,7 @@ class _RpcHandler(BaseHTTPRequestHandler):
             raise UnauthorizedError("invalid or expired auth token")
         return user
 
-    def _inject_actor(self, method: str, params: Dict[str, Any], actor: str) -> Dict[str, Any]:
+    def _inject_actor(self, method: str, params: dict[str, Any], actor: str) -> dict[str, Any]:
         """对支持 actor 的方法注入认证身份，使 :meth:`StateService._authorize` 生效。
 
         认证后的 actor 身份**必须覆盖**客户端在 params 中提供的任何 ``actor``
@@ -524,7 +524,7 @@ def run_http(service: StateService, host: str = "0.0.0.0", port: int = 8000) -> 
     httpd.serve_forever()
 
 
-def main(argv: Optional[list] = None) -> None:
+def main(argv: list | None = None) -> None:
     """CLI 入口：AIPD_DB_DIR / AIPD_MODE / AIPD_PORT / AIPD_ENCRYPTION_KEY / AIPD_RETENTION_DAYS。"""
     import argparse
 

@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .db import AIPDStateDB, now_iso
 
@@ -19,14 +19,14 @@ class CheckpointManager:
                         summary: Any = None) -> int:
         return self._db.save_checkpoint(tenant_id, project_id, data, summary)
 
-    def restore_latest(self, project_id: str, tenant_id: str = "default") -> Optional[Dict[str, Any]]:
+    def restore_latest(self, project_id: str, tenant_id: str = "default") -> dict[str, Any] | None:
         cp = self._db.latest_checkpoint(tenant_id, project_id)
         if cp is None:
             return None
         return {"checkpoint_id": cp["checkpoint_id"], "data": cp["data"],
                 "summary": cp["summary"], "created_at": cp["created_at"]}
 
-    def resume_summary(self, project_id: str, tenant_id: str = "default") -> Dict[str, Any]:
+    def resume_summary(self, project_id: str, tenant_id: str = "default") -> dict[str, Any]:
         db = self._db
         cp = db.latest_checkpoint(tenant_id, project_id)
         project = db.get_project(tenant_id, project_id)

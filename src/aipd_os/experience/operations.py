@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 from ..state.checkpoint import CheckpointManager
 from ..state.db import AIPDStateDB
@@ -26,17 +26,17 @@ class ProgressTracker:
     """进度事件收集器：每次操作按步骤记录 step/message/progress。"""
 
     def __init__(self) -> None:
-        self._events: List[Dict[str, Any]] = []
+        self._events: list[dict[str, Any]] = []
 
-    def emit(self, step: str, message: str = "", progress: Optional[float] = None) -> None:
+    def emit(self, step: str, message: str = "", progress: float | None = None) -> None:
         self._events.append({"step": step, "message": message,
                              "progress": progress, "seq": len(self._events) + 1})
 
-    def events(self) -> List[Dict[str, Any]]:
+    def events(self) -> list[dict[str, Any]]:
         return list(self._events)
 
 
-def _bump_version(version: Optional[str]) -> str:
+def _bump_version(version: str | None) -> str:
     v = str(version or "0.0")
     parts = v.split(".")
     try:
@@ -48,7 +48,7 @@ def _bump_version(version: Optional[str]) -> str:
 
 
 def _get_deliverable(db: AIPDStateDB, tenant: str, project_id: str,
-                     deliverable_id: str) -> Optional[Dict[str, Any]]:
+                     deliverable_id: str) -> dict[str, Any] | None:
     for d in db.list_deliverables(tenant, project_id):
         if d.get("deliverable_id") == deliverable_id:
             return d
@@ -56,7 +56,7 @@ def _get_deliverable(db: AIPDStateDB, tenant: str, project_id: str,
 
 
 def _record_constraint_fact(db: AIPDStateDB, project_id: str, intent: Intent,
-                            tenant_id: str) -> Optional[str]:
+                            tenant_id: str) -> str | None:
     """把约束类意图写入 Product Truth（事实）。"""
     kind = intent.kind
     if kind == "cost_reduction":
@@ -83,7 +83,7 @@ def _record_constraint_fact(db: AIPDStateDB, project_id: str, intent: Intent,
 
 
 def _apply_decision(db: AIPDStateDB, project_id: str, intent: Intent,
-                    tenant_id: str) -> Optional[Dict[str, Any]]:
+                    tenant_id: str) -> dict[str, Any] | None:
     """批准/选择：解析待审决策并写入决策事实。"""
     decision_id = intent.target or intent.params.get("decision_id")
     open_ds = db.list_open_decisions(tenant_id, project_id)
@@ -107,9 +107,9 @@ def _apply_decision(db: AIPDStateDB, project_id: str, intent: Intent,
 
 
 def auto_rework(db: AIPDStateDB, project_id: str, intent: Intent,
-                impact: Dict[str, Any], tenant_id: str = "default") -> Dict[str, Any]:
+                impact: dict[str, Any], tenant_id: str = "default") -> dict[str, Any]:
     """自动返工：记录约束/决策，并让受影响制品进入推进（版本递增）。"""
-    rework_records: List[Dict[str, Any]] = []
+    rework_records: list[dict[str, Any]] = []
     recorded_fact_id = _record_constraint_fact(db, project_id, intent, tenant_id)
     resolved_decision = _apply_decision(db, project_id, intent, tenant_id)
 
@@ -141,10 +141,10 @@ def auto_rework(db: AIPDStateDB, project_id: str, intent: Intent,
     }
 
 
-def auto_acceptance(db: AIPDStateDB, project_id: str, impact: Dict[str, Any],
-                    tenant_id: str = "default") -> Dict[str, Any]:
+def auto_acceptance(db: AIPDStateDB, project_id: str, impact: dict[str, Any],
+                    tenant_id: str = "default") -> dict[str, Any]:
     """自动验收：校验返工后的制品并标记为已完成，记录验收变更与证据。"""
-    accepted: List[Dict[str, Any]] = []
+    accepted: list[dict[str, Any]] = []
     for a in impact.get("affected_artifacts", []):
         cur = _get_deliverable(db, tenant_id, project_id, a["deliverable_id"])
         if cur is None:
@@ -169,8 +169,8 @@ def auto_acceptance(db: AIPDStateDB, project_id: str, impact: Dict[str, Any],
 
 
 def update_summary(db: AIPDStateDB, project_id: str, tenant_id: str,
-                   intent: Intent, impact: Dict[str, Any],
-                   rework: Dict[str, Any], acceptance: Dict[str, Any]) -> Dict[str, Any]:
+                   intent: Intent, impact: dict[str, Any],
+                   rework: dict[str, Any], acceptance: dict[str, Any]) -> dict[str, Any]:
     """更新摘要：保存检查点并写入审计日志（含可撤销操作标记）。"""
     summary = {
         "note": "产品所有者指令闭环完成",
@@ -193,7 +193,7 @@ def update_summary(db: AIPDStateDB, project_id: str, tenant_id: str,
 
 
 def revert_operation(db: AIPDStateDB, project_id: str, tenant_id: str = "default",
-                     target: Optional[str] = None) -> Dict[str, Any]:
+                     target: str | None = None) -> dict[str, Any]:
     """失败恢复：回滚最近一次可撤销操作（把受影响制品退回上一版本）。
 
     通过审计日志中 reversible=True 的操作记录定位受影响制品，无法回滚
@@ -214,7 +214,7 @@ def revert_operation(db: AIPDStateDB, project_id: str, tenant_id: str = "default
         return {"reverted": [], "note": "没有可回滚的可撤销操作"}
 
     # 找到最近一次仍处于 done 的制品，回退
-    reverted: List[str] = []
+    reverted: list[str] = []
     for d in db.list_deliverables(tenant_id, project_id):
         if d.get("status") == "done" and d.get("version"):
             parts = str(d.get("version")).split(".")
@@ -238,8 +238,8 @@ def revert_operation(db: AIPDStateDB, project_id: str, tenant_id: str = "default
 
 def run_operation_loop(db: AIPDStateDB, project_id: str, intent: Intent,
                        tenant_id: str = "default", approved: bool = False,
-                       progress: Optional[ProgressTracker] = None,
-                       should_cancel: Optional[Callable[[], bool]] = None) -> Dict[str, Any]:
+                       progress: ProgressTracker | None = None,
+                       should_cancel: Callable[[], bool] | None = None) -> dict[str, Any]:
     """执行完整闭环。返回结构与状态。
 
     - ``needs_approval``：需要批准但未批准，停在预览，不执行任何变更；
@@ -248,7 +248,7 @@ def run_operation_loop(db: AIPDStateDB, project_id: str, intent: Intent,
     """
     tracker = progress or ProgressTracker()
 
-    def emit(step: str, msg: str = "", p: Optional[float] = None) -> None:
+    def emit(step: str, msg: str = "", p: float | None = None) -> None:
         tracker.emit(step, msg, p)
 
     emit("intent", "已理解您的意图", 0.1)

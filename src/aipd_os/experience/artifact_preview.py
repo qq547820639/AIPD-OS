@@ -7,12 +7,12 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from ..state.db import AIPDStateDB
 
 
-def _metadata(d: Dict[str, Any]) -> Dict[str, Any]:
+def _metadata(d: dict[str, Any]) -> dict[str, Any]:
     """deliverables 表把 metadata 存为 metadata_json，需自行解码。"""
     raw = d.get("metadata_json") or d.get("metadata")
     if isinstance(raw, dict):
@@ -26,9 +26,9 @@ def _metadata(d: Dict[str, Any]) -> Dict[str, Any]:
     return {}
 
 
-def _entry(d: Dict[str, Any], extra: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def _entry(d: dict[str, Any], extra: dict[str, Any] | None = None) -> dict[str, Any]:
     meta = _metadata(d)
-    entry: Dict[str, Any] = {
+    entry: dict[str, Any] = {
         "deliverable_id": d.get("deliverable_id"),
         "type": d.get("type"),
         "path": d.get("path"),
@@ -42,15 +42,15 @@ def _entry(d: Dict[str, Any], extra: Dict[str, Any] | None = None) -> Dict[str, 
 
 
 def artifact_preview(db: AIPDStateDB, project_id: str,
-                     tenant_id: str = "default") -> Dict[str, Any]:
+                     tenant_id: str = "default") -> dict[str, Any]:
     """返回制品的预览结构：手册页 / CAD 版本 / BOM 差异 / 参数差异。"""
     deliverables = db.list_deliverables(tenant_id, project_id)
     changes = db.list_changes(tenant_id, project_id)
 
-    manual_pages: List[Dict[str, Any]] = []
-    cad_versions: List[Dict[str, Any]] = []
-    bom_diffs: List[Dict[str, Any]] = []
-    parameter_diffs: List[Dict[str, Any]] = []
+    manual_pages: list[dict[str, Any]] = []
+    cad_versions: list[dict[str, Any]] = []
+    bom_diffs: list[dict[str, Any]] = []
+    parameter_diffs: list[dict[str, Any]] = []
 
     for d in deliverables:
         dtype = (d.get("type") or "").lower()

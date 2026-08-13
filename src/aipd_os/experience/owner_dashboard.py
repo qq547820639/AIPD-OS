@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..state.checkpoint import CheckpointManager
 from ..state.db import AIPDStateDB
@@ -39,10 +39,10 @@ def _impact_cn(v: Any) -> str:
 
 
 def _recent_changes(db: AIPDStateDB, project_id: str, tenant_id: str,
-                    limit: int = 5) -> List[str]:
+                    limit: int = 5) -> list[str]:
     """把最近变更渲染成中文（不暴露内部 object_id / 代号）。"""
     changes = db.list_changes(tenant_id, project_id)
-    out: List[str] = []
+    out: list[str] = []
     for ch in reversed(changes[-limit:]):
         action = _ACTION_CN.get(ch.get("action", ""), ch.get("action", ""))
         obj = _OBJECT_CN.get(ch.get("object_type", ""), ch.get("object_type", ""))
@@ -55,9 +55,9 @@ def _recent_changes(db: AIPDStateDB, project_id: str, tenant_id: str,
 
 
 def _reversible_operations(db: AIPDStateDB, project_id: str,
-                           tenant_id: str) -> List[Dict[str, Any]]:
+                           tenant_id: str) -> list[dict[str, Any]]:
     """从审计日志识别可撤销操作（reversible=True 的 operation）。"""
-    ops: List[Dict[str, Any]] = []
+    ops: list[dict[str, Any]] = []
     for e in db.list_audit(limit=200):
         if e.get("action") != "operation" or e.get("project_id") != project_id:
             continue
@@ -77,7 +77,7 @@ def _reversible_operations(db: AIPDStateDB, project_id: str,
 
 
 def build_dashboard(db: AIPDStateDB, project_id: str,
-                    tenant_id: str = "default") -> Dict[str, Any]:
+                    tenant_id: str = "default") -> dict[str, Any]:
     """构建统一 Owner Dashboard（10 个所有者区块 + details 内部细节）。"""
     ps = build_project_summary(db, project_id, tenant_id)
     card = build_decision_card(db, project_id, tenant_id=tenant_id)
@@ -89,7 +89,7 @@ def build_dashboard(db: AIPDStateDB, project_id: str,
     project = db.get_project(tenant_id, project_id)
     ap = artifact_preview(db, project_id, tenant_id)
 
-    single_decision: Optional[Dict[str, Any]] = None
+    single_decision: dict[str, Any] | None = None
     if card is not None:
         single_decision = {
             "topic": card["topic"],
@@ -131,9 +131,9 @@ def build_dashboard(db: AIPDStateDB, project_id: str,
     }
 
 
-def _artifact_versions(ap: Dict[str, Any]) -> List[str]:
+def _artifact_versions(ap: dict[str, Any]) -> list[str]:
     """把 CAD 版本差异渲染成中文（before/after 差异）。"""
-    out: List[str] = []
+    out: list[str] = []
     for c in ap.get("cad_versions", []) or []:
         if "from_version" in c and "to_version" in c:
             line = f"CAD 版本 {c.get('from_version')} → {c.get('to_version')}"
@@ -146,10 +146,10 @@ def _artifact_versions(ap: Dict[str, Any]) -> List[str]:
     return out or ["暂无制品版本/参数差异。"]
 
 
-def render_dashboard_text(view: Dict[str, Any],
+def render_dashboard_text(view: dict[str, Any],
                           compact: bool = False) -> str:
     """把 Dashboard 渲染为人类可读文本。compact 为窄屏/移动端友好输出。"""
-    lines: List[str] = []
+    lines: list[str] = []
     if compact:
         # 紧凑模式：每区块一行，无装饰字符，窄终端友好
         dec = view.get("single_decision")
@@ -233,7 +233,7 @@ def render_dashboard_text(view: Dict[str, Any],
     return "\n".join(lines)
 
 
-def render_dashboard_json(view: Dict[str, Any]) -> str:
+def render_dashboard_json(view: dict[str, Any]) -> str:
     """--json 模式：返回纯 JSON，与人类可读模式完全分离（含内部细节）。"""
     return json.dumps(view, ensure_ascii=False, default=str)
 

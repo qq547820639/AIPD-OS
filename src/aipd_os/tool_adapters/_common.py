@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 
-def env(name: str, default: Optional[str] = None) -> Optional[str]:
+def env(name: str, default: str | None = None) -> str | None:
     """读取环境变量，空串视为未设置。"""
     v = os.environ.get(name)
     if v is None or v == "":
@@ -20,8 +20,8 @@ def meta(
     provider: str,
     version: str,
     available: bool = True,
-    maturity_ceiling: Optional[str] = None,
-) -> Dict[str, Any]:
+    maturity_ceiling: str | None = None,
+) -> dict[str, Any]:
     """构造 discover() 返回的能力元信息。"""
     return {
         "id": capability_id,
@@ -33,7 +33,7 @@ def meta(
     }
 
 
-def token_meta(text: str, cost_per_1k: float = 0.0) -> Dict[str, Any]:
+def token_meta(text: str, cost_per_1k: float = 0.0) -> dict[str, Any]:
     """根据文本长度估算 token 用量与成本，返回 _meta 字段。"""
     tokens = max(1, len(text) // 4)
     return {

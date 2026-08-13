@@ -14,7 +14,7 @@ import logging
 import os
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any
 
 from aipd_os.security.secrets import mask_secret_deep
 
@@ -36,7 +36,7 @@ class JsonTraceFormatter(logging.Formatter):
     """输出单行 JSON，含 trace_id 与附加字段（敏感字段自动脱敏）。"""
 
     def format(self, record: logging.LogRecord) -> str:
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
@@ -65,18 +65,18 @@ class TelemetryLogger:
             self._logger.addHandler(handler)
             self._logger.propagate = False
 
-    def info(self, event: str, trace_id: Optional[str] = None, **fields: object) -> None:
+    def info(self, event: str, trace_id: str | None = None, **fields: object) -> None:
         self._emit(logging.INFO, event, trace_id, fields)
 
-    def warning(self, event: str, trace_id: Optional[str] = None, **fields: object) -> None:
+    def warning(self, event: str, trace_id: str | None = None, **fields: object) -> None:
         self._emit(logging.WARNING, event, trace_id, fields)
 
-    def error(self, event: str, trace_id: Optional[str] = None, **fields: object) -> None:
+    def error(self, event: str, trace_id: str | None = None, **fields: object) -> None:
         self._emit(logging.ERROR, event, trace_id, fields)
 
-    def _emit(self, level: int, event: str, trace_id: Optional[str],
-              fields: Dict[str, object]) -> None:
-        extra: Dict[str, Any] = {"aipd_fields": dict(fields)}
+    def _emit(self, level: int, event: str, trace_id: str | None,
+              fields: dict[str, object]) -> None:
+        extra: dict[str, Any] = {"aipd_fields": dict(fields)}
         if trace_id:
             extra["trace_id"] = trace_id
         if telemetry_enabled():

@@ -11,10 +11,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # 10 个行为契约
-BEHAVIOR_CONTRACTS: List[str] = [
+BEHAVIOR_CONTRACTS: list[str] = [
     "no_long_questionnaire",       # 不发长问卷
     "only_ask_when_necessary",     # 只在必要决策询问
     "attachment_continuity",       # 连续附件继承
@@ -50,17 +50,17 @@ class Case:
 
     id: str
     prompt: str
-    must: List[str] = field(default_factory=list)
-    must_not: List[str] = field(default_factory=list)
-    contracts: List[str] = field(default_factory=list)
-    meta: Dict[str, Any] = field(default_factory=dict)
+    must: list[str] = field(default_factory=list)
+    must_not: list[str] = field(default_factory=list)
+    contracts: list[str] = field(default_factory=list)
+    meta: dict[str, Any] = field(default_factory=dict)
 
     @property
-    def contract(self) -> Optional[str]:
+    def contract(self) -> str | None:
         """主契约（取第一项）。"""
         return self.contracts[0] if self.contracts else None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "prompt": self.prompt,
@@ -70,11 +70,11 @@ class Case:
         }
 
 
-def load_cases(evals_json_path: str) -> List[Case]:
+def load_cases(evals_json_path: str) -> list[Case]:
     """读取 evals.json，转换为可运行的 Case 列表。"""
     path = Path(evals_json_path)
     data = json.loads(path.read_text(encoding="utf-8"))
-    cases: List[Case] = []
+    cases: list[Case] = []
     for item in data.get("cases", []):
         contracts = item.get("contracts") or ([] if item.get("contract") is None else [item["contract"]])
         cases.append(

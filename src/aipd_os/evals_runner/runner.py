@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.evals_runner.completion import (
@@ -33,7 +33,7 @@ from aipd_os.evals_runner.versioning import build_report, save_eval_report
 
 # 针对 evals.json 现有 case 的确定性脚本化响应（与 must 逐字匹配，且不含 must_not）。
 # 注意：这些是 contract-test 夹具输出，绝不代表真实模型行为。
-_DEFAULT_SCRIPT: Dict[str, str] = {
+_DEFAULT_SCRIPT: dict[str, str] = {
     "autonomous-intake": (
         "已读取附件并建立或恢复项目状态，开始整理和研究材料，不先发长问卷。"
     ),
@@ -101,11 +101,11 @@ class EvalResult:
     case_id: str
     prompt: str
     model_version: str
-    tool_trajectory: List[Dict[str, Any]] = field(default_factory=list)
+    tool_trajectory: list[dict[str, Any]] = field(default_factory=list)
     output: str = ""
     score: float = 0.0
     passed: bool = False
-    failure_type: List[str] = field(default_factory=list)
+    failure_type: list[str] = field(default_factory=list)
     cost: float = 0.0
     generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     # ---- v5 诚实字段 ----
@@ -120,10 +120,10 @@ class EvalResult:
     retry_count: int = 0
     grader: str = ""
     trace: str = ""
-    scoring_method: List[str] = field(default_factory=list)
-    checks: List[Dict[str, Any]] = field(default_factory=list)
+    scoring_method: list[str] = field(default_factory=list)
+    checks: list[dict[str, Any]] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "case_id": self.case_id,
             "input": self.prompt,
@@ -153,7 +153,7 @@ class EvalResult:
         }
 
 
-def _prompt_hash(messages: List[Dict[str, Any]]) -> str:
+def _prompt_hash(messages: list[dict[str, Any]]) -> str:
     """对请求消息计算稳定 SHA-256 摘要（prompt hash）。"""
     raw = json.dumps(messages, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -169,14 +169,14 @@ class EvalRunner:
 
     def __init__(
         self,
-        provider: Optional[CompletionProvider] = None,
-        workdir: Optional[str] = None,
-        script: Optional[Dict[str, str]] = None,
+        provider: CompletionProvider | None = None,
+        workdir: str | None = None,
+        script: dict[str, str] | None = None,
         version: str = _PKG_VERSION,
-        state: Optional[List[Dict[str, Any]]] = None,
-        artifacts: Optional[List[Dict[str, Any]]] = None,
-        db: Optional[List[Dict[str, Any]]] = None,
-        judge: Optional[Any] = None,
+        state: list[dict[str, Any]] | None = None,
+        artifacts: list[dict[str, Any]] | None = None,
+        db: list[dict[str, Any]] | None = None,
+        judge: Any | None = None,
     ) -> None:
         self.provider = provider or RecordedCompletionProvider(script or _DEFAULT_SCRIPT)
         merged = dict(_DEFAULT_SCRIPT)
@@ -204,7 +204,7 @@ class EvalRunner:
             },
             {"role": "user", "content": case.prompt},
         ]
-        trajectory: List[Dict[str, Any]] = []
+        trajectory: list[dict[str, Any]] = []
         p_hash = _prompt_hash(messages)
         provider_name = type(self.provider).__name__
         category = self.provider.category()
@@ -246,7 +246,7 @@ class EvalRunner:
                              db=self.db, judge=self.judge)
         scoring_method = ev["graders"]
         grader_label = "+".join(scoring_method) if scoring_method else "none"
-        failure: List[str] = list(ev["failure_type"])
+        failure: list[str] = list(ev["failure_type"])
         return EvalResult(
             case_id=case.id,
             prompt=case.prompt,
@@ -273,10 +273,10 @@ class EvalRunner:
 
     def run(
         self,
-        cases: List[Case],
-        out_dir: Optional[str] = None,
-        report_version: Optional[str] = None,
-    ) -> List[EvalResult]:
+        cases: list[Case],
+        out_dir: str | None = None,
+        report_version: str | None = None,
+    ) -> list[EvalResult]:
         """运行全部 case，可选保存版本化报告，返回结果列表。"""
         results = [self.run_case(case) for case in cases]
         if out_dir:
@@ -289,14 +289,14 @@ class EvalRunner:
 
 
 def run_real_model_smoke(
-    cases: List[Case],
-    out_dir: Optional[str] = None,
-    report_version: Optional[str] = None,
-    provider: Optional[CompletionProvider] = None,
+    cases: list[Case],
+    out_dir: str | None = None,
+    report_version: str | None = None,
+    provider: CompletionProvider | None = None,
     endpoint_env: str = "AIPD_EVAL_MODEL_ENDPOINT",
     key_env: str = "AIPD_EVAL_MODEL_KEY",
     model_version_env: str = "AIPD_EVAL_MODEL_VERSION",
-) -> List[EvalResult]:
+) -> list[EvalResult]:
     """真实模型冒烟/集成 job。
 
     仅在配置了真实端点凭据（AIPD_EVAL_MODEL_ENDPOINT/AIPD_EVAL_MODEL_KEY 一类）时

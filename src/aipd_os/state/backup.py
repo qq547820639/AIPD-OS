@@ -9,7 +9,7 @@ import json
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from .db import AIPDStateDB
 
@@ -23,12 +23,12 @@ def _checksum(path: Path) -> str:
 
 
 class BackupManager:
-    def __init__(self, db_path: Union[str, Path], backup_dir: Optional[Union[str, Path]] = None):
+    def __init__(self, db_path: str | Path, backup_dir: str | Path | None = None):
         self.db_path = Path(db_path)
         self.backup_dir = Path(backup_dir) if backup_dir else self.db_path.parent / "backups"
         self.backup_dir.mkdir(parents=True, exist_ok=True)
 
-    def create_backup(self, db: Union[str, Path, AIPDStateDB], out_dir: Optional[Union[str, Path]] = None) -> str:
+    def create_backup(self, db: str | Path | AIPDStateDB, out_dir: str | Path | None = None) -> str:
         """复制数据库文件并写入 manifest（含校验和）。返回备份目录路径。"""
         src = Path(db.path) if isinstance(db, AIPDStateDB) else Path(db)
         out = Path(out_dir) if out_dir else self.backup_dir
@@ -49,7 +49,7 @@ class BackupManager:
         (backup_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
         return str(backup_dir)
 
-    def list_backups(self, base_dir: Optional[Union[str, Path]] = None) -> List[Dict[str, Any]]:
+    def list_backups(self, base_dir: str | Path | None = None) -> list[dict[str, Any]]:
         base = Path(base_dir) if base_dir else self.backup_dir
         backups = []
         if base.is_dir():
@@ -66,7 +66,7 @@ class BackupManager:
         backups.sort(key=lambda b: b.get("backup_created_at", ""), reverse=True)
         return backups
 
-    def restore_backup(self, backup: Union[str, dict], db_path: Optional[Union[str, Path]] = None) -> str:
+    def restore_backup(self, backup: str | dict, db_path: str | Path | None = None) -> str:
         """把备份恢复到指定 db_path（校验 checksum）。返回恢复后的 db 路径。"""
         if isinstance(backup, dict):
             backup_dir = Path(backup["backup_dir"])
@@ -87,8 +87,8 @@ class BackupManager:
         shutil.copy2(src_file, target)
         return str(target)
 
-    def retention_prune(self, backups: Optional[List[Dict[str, Any]]] = None,
-                        retention_days: int = 90) -> List[str]:
+    def retention_prune(self, backups: list[dict[str, Any]] | None = None,
+                        retention_days: int = 90) -> list[str]:
         """按保留期删除过期备份，返回被删除的备份目录列表。"""
         if backups is None:
             backups = self.list_backups()

@@ -14,12 +14,12 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Sequence
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from jsonschema import Draft7Validator, ValidationError
 
 # 能力声明的 JSON Schema（id / name / domain / category / evidence 等字段）
-CAPABILITY_SCHEMA: Dict[str, Any] = {
+CAPABILITY_SCHEMA: dict[str, Any] = {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "https://aipd-os.dev/schemas/capability.schema.json",
     "title": "Provider 能力声明",
@@ -65,17 +65,17 @@ CAPABILITY_SCHEMA: Dict[str, Any] = {
 capability_schema = CAPABILITY_SCHEMA
 
 
-def validate_capabilities(capabilities: Sequence[Dict[str, Any]]) -> List[str]:
+def validate_capabilities(capabilities: Sequence[dict[str, Any]]) -> list[str]:
     """校验一组能力声明，返回错误消息列表（为空表示全部通过）。
 
     :raises ValidationError: 当传入的不是可迭代对象时
     """
     validator = Draft7Validator(CAPABILITY_SCHEMA)
-    errors: List[str] = []
+    errors: list[str] = []
     if not capabilities:
         return errors
     for idx, cap in enumerate(capabilities):
-        errs: List[Any] = []
+        errs: list[Any] = []
         for err in validator.iter_errors(cap):
             errs.append(err)
         if errs:
@@ -103,7 +103,7 @@ class ProbeResult:
     def available(self) -> bool:
         return self.ok
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {"ok": self.ok, "available": self.ok, "reason": self.reason}
 
     def __bool__(self) -> bool:
@@ -140,10 +140,10 @@ class Provider(abc.ABC):
     name: str = "unnamed"
 
     @abc.abstractmethod
-    def capabilities(self) -> List[Dict[str, Any]]:
+    def capabilities(self) -> list[dict[str, Any]]:
         """返回本 Provider 提供的能力声明列表。"""
 
-    def configure(self, config: Dict[str, Any]) -> None:
+    def configure(self, config: dict[str, Any]) -> None:
         """注入配置（可选）。默认实现为无操作。"""
 
     @abc.abstractmethod
@@ -151,10 +151,10 @@ class Provider(abc.ABC):
         """运行时探测：返回可用 / 不可用 + 原因。"""
 
     @abc.abstractmethod
-    def run(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def run(self, context: dict[str, Any]) -> dict[str, Any]:
         """执行一次调用，返回结果字典。"""
 
-    def validate_capabilities(self) -> List[str]:
+    def validate_capabilities(self) -> list[str]:
         """校验自身能力声明，返回错误列表（为空表示通过）。"""
         return validate_capabilities(self.capabilities())
 
@@ -163,8 +163,8 @@ class ProviderRegistry:
     """按 Provider 名称与能力 id 注册 / 发现 / 查询。"""
 
     def __init__(self) -> None:
-        self._providers: Dict[str, Provider] = {}
-        self._by_capability: Dict[str, str] = {}
+        self._providers: dict[str, Provider] = {}
+        self._by_capability: dict[str, str] = {}
 
     def register(self, provider: Provider) -> None:
         """注册一个 Provider；名称重复或能力 id 冲突时报错。"""
@@ -185,27 +185,27 @@ class ProviderRegistry:
         for cap in provider.capabilities():
             self._by_capability[cap["id"]] = provider.name
 
-    def get(self, name: str) -> Optional[Provider]:
+    def get(self, name: str) -> Provider | None:
         return self._providers.get(name)
 
-    def get_by_capability(self, capability_id: str) -> Optional[Provider]:
+    def get_by_capability(self, capability_id: str) -> Provider | None:
         owner = self._by_capability.get(capability_id)
         if owner is None:
             return None
         return self._providers.get(owner)
 
-    def all(self) -> List[Provider]:
+    def all(self) -> list[Provider]:
         return list(self._providers.values())
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         return list(self._providers.keys())
 
-    def capability_ids(self) -> List[str]:
+    def capability_ids(self) -> list[str]:
         return list(self._by_capability.keys())
 
-    def discover(self) -> List[Dict[str, Any]]:
+    def discover(self) -> list[dict[str, Any]]:
         """返回所有 Provider 的能力声明 + 探测结果（供能力矩阵/医生体检用）。"""
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         for provider in self._providers.values():
             probe = provider.probe()
             out.append({

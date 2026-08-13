@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.cad.evidence import utc_now_iso
 
@@ -25,14 +25,14 @@ _DOWNSTREAM_ALIASES = {
 }
 
 
-def _find_key(d: Dict[str, Any], candidates) -> Optional[str]:
+def _find_key(d: dict[str, Any], candidates) -> str | None:
     for k in candidates:
         if k in d:
             return k
     return None
 
 
-def _revision_of(record: Dict[str, Any]) -> str:
+def _revision_of(record: dict[str, Any]) -> str:
     for cand in ('revision', 'rev', 'version'):
         v = record.get(cand)
         if v:
@@ -49,12 +49,12 @@ def _bump_revision(rev: str) -> str:
 
 
 def propagate_cad_change(
-    manifest: Dict[str, Any],
-    edits: Dict[str, Any],
-    downstream: Optional[List[str]] = None,
+    manifest: dict[str, Any],
+    edits: dict[str, Any],
+    downstream: list[str] | None = None,
     *,
-    tool_version: Optional[str] = None,
-) -> Dict[str, Any]:
+    tool_version: str | None = None,
+) -> dict[str, Any]:
     """把一次 CAD 参数变更传播到下游产物，返回更新后的 manifest 深拷贝。
 
     :param manifest: 工程清单，含模型记录 ``model`` 与下游产物记录
@@ -67,7 +67,7 @@ def propagate_cad_change(
         ``regeneration_needed`` 与来源 CAD 修订号。
     """
     import json
-    out: Dict[str, Any] = json.loads(json.dumps(manifest))
+    out: dict[str, Any] = json.loads(json.dumps(manifest))
 
     model_key = _find_key(out, _MODEL_KEYS) or 'model'
     model = out.setdefault(model_key, {'revision': 'R1', 'parameters': {}})

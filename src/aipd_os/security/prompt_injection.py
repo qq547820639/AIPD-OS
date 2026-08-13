@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import List, Optional
 
 from aipd_os.logging_utils import log_event
 
@@ -23,7 +22,7 @@ from aipd_os.logging_utils import log_event
 ALLOWED_SOURCE_TYPES = frozenset({"attachment", "web_page", "paper_text", "document"})
 
 # 明确的可疑指令模式（正则，大小写不敏感）
-_SUSPICIOUS_PATTERNS: List[re.Pattern] = [
+_SUSPICIOUS_PATTERNS: list[re.Pattern] = [
     re.compile(r"ignore\s+(previous|prior|all)\s+instructions", re.IGNORECASE),
     re.compile(r"ignore\s+your\s+(system\s+)?prompt", re.IGNORECASE),
     re.compile(r"you\s+are\s+now\b", re.IGNORECASE),
@@ -79,14 +78,14 @@ def _category_for(pattern: re.Pattern) -> str:
     return "suspicious"
 
 
-def detect_suspicious_instructions(text: str) -> List[str]:
+def detect_suspicious_instructions(text: str) -> list[str]:
     """检测并返回可疑指令模式列表（每个元素为 ``category: matched_text``）。
 
     使用正则 + 关键词启发式。该函数只做检测，不修改文本。
     """
     if not text:
         return []
-    detected: List[str] = []
+    detected: list[str] = []
     lowered = text.lower()
 
     for pattern in _SUSPICIOUS_PATTERNS:
@@ -226,7 +225,7 @@ def requires_human_approval(action: str, text: str = "") -> bool:
 def sanitize_external_content(
     text: str,
     source_type: str = "document",
-    logger: Optional[logging.Logger] = None,
+    logger: logging.Logger | None = None,
 ) -> dict:
     """净化外部内容。
 
@@ -244,9 +243,9 @@ def sanitize_external_content(
         return {"sanitized_text": text or "", "detected_suspicious": [], "warnings": []}
 
     suspicious = detect_suspicious_instructions(text)
-    warnings: List[str] = []
+    warnings: list[str] = []
     lines = text.split("\n")
-    held_out: List[str] = []
+    held_out: list[str] = []
 
     # 剥离含可疑指令的行：外部内容永远不进入系统指令通道
     def _susp(line: str) -> bool:
@@ -290,7 +289,7 @@ def sanitize_external_content(
     }
 
 
-def log_suspect(logger: logging.Logger, kind: str, text: str, reasons: List[str]) -> None:
+def log_suspect(logger: logging.Logger, kind: str, text: str, reasons: list[str]) -> None:
     """把可疑外部内容写入结构化日志事件。"""
     log_event(
         logger,

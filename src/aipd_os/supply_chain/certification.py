@@ -6,11 +6,12 @@
 
 from __future__ import annotations
 
+import builtins
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 VALID_STATUSES = ("pending", "verified", "expired")
 
@@ -23,9 +24,9 @@ class Certification:
     subject: str
     standard: str
     status: str = "pending"
-    evidence_ref: Optional[str] = None
-    verified_at: Optional[str] = None
-    expires_at: Optional[str] = None
+    evidence_ref: str | None = None
+    verified_at: str | None = None
+    expires_at: str | None = None
 
 
 def verified(cert: Certification) -> bool:
@@ -37,25 +38,25 @@ class CertificationRegistry:
     """登记、查询与流转认证状态的注册表。"""
 
     def __init__(self) -> None:
-        self._certs: Dict[str, Certification] = {}
+        self._certs: dict[str, Certification] = {}
 
     def register(self, cert: Certification) -> Certification:
         """登记一条认证；使用其初始状态（默认 pending）。"""
         self._certs[cert.cert_id] = cert
         return cert
 
-    def list(self) -> List[Certification]:
+    def list(self) -> builtins.list[Certification]:
         return list(self._certs.values())
 
-    def get(self, cert_id: str) -> Optional[Certification]:
+    def get(self, cert_id: str) -> Certification | None:
         return self._certs.get(cert_id)
 
     def transition(
         self,
         cert_id: str,
         new_status: str,
-        evidence_ref: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        evidence_ref: str | None = None,
+    ) -> dict[str, Any]:
         """将指定认证流转到新状态，并返回结果字典。
 
         规则：
@@ -95,7 +96,7 @@ def _now_aware() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _parse_expiry(value: Optional[str]) -> Optional[datetime]:
+def _parse_expiry(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
@@ -112,9 +113,9 @@ def _parse_expiry(value: Optional[str]) -> Optional[datetime]:
 
 def import_certificate_file(
     path: Union[str, Path],
-    cert_id: Optional[str] = None,
-    registry: Optional[CertificationRegistry] = None,
-) -> Dict[str, Any]:
+    cert_id: str | None = None,
+    registry: CertificationRegistry | None = None,
+) -> dict[str, Any]:
     """导入证书文件并登记：支持 JSON / CSV / 文本。
 
     - JSON：含 ``cert_id``/``subject``/``standard``/``expires_at`` 等字段；
@@ -127,9 +128,9 @@ def import_certificate_file(
     ext = p.suffix.lower()
     subject = ""
     standard = ""
-    expires_at: Optional[str] = None
-    exp_source: Optional[str] = None
-    errors: List[Dict[str, Any]] = []
+    expires_at: str | None = None
+    exp_source: str | None = None
+    errors: list[dict[str, Any]] = []
 
     if ext == ".json":
         try:
@@ -195,15 +196,15 @@ def import_certificate_file(
 def expiring_certs(
     registry: CertificationRegistry,
     within_days: int = 30,
-    now: Optional[datetime] = None,
-) -> List[Dict[str, Any]]:
+    now: datetime | None = None,
+) -> list[dict[str, Any]]:
     """返回即将到期（within_days 内）或已经过期的证书。
 
     每条结果形如 ``{"cert": Certification, "status": "expired"|"expiring",
     "days_left": int}``。未设置到期日的证书不计入（不虚构）。
     """
     ref = now or _now_aware()
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for cert in registry.list():
         dt = _parse_expiry(cert.expires_at)
         if dt is None:

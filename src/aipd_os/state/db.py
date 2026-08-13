@@ -22,7 +22,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .crypto import decrypt_secret, encrypt_secret
 
@@ -447,8 +447,8 @@ class AIPDStateDB:
             n = int(row["next_val"])
         return f"{prefix}-{n:0{digits}d}"
 
-    def _update(self, c: sqlite3.Connection, table: str, set_cols: List[str],
-                set_values: List[Any], where_cols: List[str], where_values: List[Any],
+    def _update(self, c: sqlite3.Connection, table: str, set_cols: list[str],
+                set_values: list[Any], where_cols: list[str], where_values: list[Any],
                 expected_version: int) -> int:
         """乐观更新：``SET <set_cols..., version_no=version_no+1>``，WHERE 拼版本条件。"""
         set_sql = ", ".join([f"{col}=?" for col in set_cols] + ["version_no = version_no + 1"])
@@ -484,12 +484,12 @@ class AIPDStateDB:
         return d
 
     # -------------------------------------------------------------- tenants
-    def create_tenant(self, tenant_id: str, name: Optional[str] = None) -> None:
+    def create_tenant(self, tenant_id: str, name: str | None = None) -> None:
         with self.connect() as c:
             c.execute("INSERT OR IGNORE INTO tenants(tenant_id,name,created_at) VALUES(?,?,?)",
                       (tenant_id, name or tenant_id, now_iso()))
 
-    def get_tenant(self, tenant_id: str) -> Optional[Dict[str, Any]]:
+    def get_tenant(self, tenant_id: str) -> dict[str, Any] | None:
         with self.connect() as c:
             row = c.execute("SELECT * FROM tenants WHERE tenant_id=?", (tenant_id,)).fetchone()
         return dict(row) if row else None
@@ -505,24 +505,24 @@ class AIPDStateDB:
                       "VALUES(?,?,?,?,?,?)",
                       (user_id, tenant_id, username, password_hash, salt, now_iso()))
 
-    def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+    def get_user_by_username(self, username: str) -> dict[str, Any] | None:
         with self.connect() as c:
             row = c.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
         return dict(row) if row else None
 
-    def get_user(self, user_id: str) -> Optional[Dict[str, Any]]:
+    def get_user(self, user_id: str) -> dict[str, Any] | None:
         with self.connect() as c:
             row = c.execute("SELECT * FROM users WHERE user_id=?", (user_id,)).fetchone()
         return dict(row) if row else None
 
-    def grant_access(self, user_id: str, tenant_id: str, project_id: Optional[str] = None) -> None:
+    def grant_access(self, user_id: str, tenant_id: str, project_id: str | None = None) -> None:
         # project_id 为 None 时写入 '*'（规范化租户通配），不再写 NULL 行。
         effective = project_id if project_id is not None else "*"
         with self.connect() as c:
             c.execute("INSERT OR IGNORE INTO user_access(user_id,tenant_id,project_id) VALUES(?,?,?)",
                       (user_id, tenant_id, effective))
 
-    def has_access(self, user_id: str, tenant_id: str, project_id: Optional[str] = None) -> bool:
+    def has_access(self, user_id: str, tenant_id: str, project_id: str | None = None) -> bool:
         with self.connect() as c:
             row = c.execute(
                 "SELECT 1 FROM user_access WHERE user_id=? AND tenant_id=? "
@@ -556,7 +556,7 @@ class AIPDStateDB:
                 "created_at,updated_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                 (project_id, tenant_id, name, goal, "G0", "active", "0.1.0", owner_policy, ts, ts, 1))
 
-    def get_project(self, tenant_id: str, project_id: str) -> Dict[str, Any]:
+    def get_project(self, tenant_id: str, project_id: str) -> dict[str, Any]:
         with self.connect() as c:
             row = c.execute("SELECT * FROM projects WHERE project_id=? AND tenant_id=?",
                             (project_id, tenant_id)).fetchone()
@@ -564,14 +564,14 @@ class AIPDStateDB:
             raise ProjectNotFoundError(f"project {project_id!r} not found in tenant {tenant_id!r}")
         return dict(row)
 
-    def list_projects(self, tenant_id: str) -> List[Dict[str, Any]]:
+    def list_projects(self, tenant_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM projects WHERE tenant_id=? ORDER BY created_at",
                              (tenant_id,)).fetchall()
         return [dict(r) for r in rows]
 
     def update_project(self, tenant_id: str, project_id: str, expected_version: int,
-                       **fields: Any) -> Dict[str, Any]:
+                       **fields: Any) -> dict[str, Any]:
         allow = {"name", "goal", "gate", "status", "version", "owner_policy"}
         set_cols = [k for k in fields if k in allow]
         if not set_cols:
@@ -605,9 +605,9 @@ class AIPDStateDB:
         return f"{prefix}-{max(nums, default=0) + 1:03d}"
 
     def add_fact(self, tenant_id: str, project_id: str, key: str, value: Any, status: str,
-                 unit: Optional[str] = None, tolerance: Optional[str] = None,
-                 conditions: Optional[str] = None, confidence: float = 0.5,
-                 source: Optional[str] = None, version: Optional[str] = None) -> str:
+                 unit: str | None = None, tolerance: str | None = None,
+                 conditions: str | None = None, confidence: float = 0.5,
+                 source: str | None = None, version: str | None = None) -> str:
         if status not in FACT_STATUSES:
             raise ValueError(f"Invalid fact status: {status}")
         if not 0 <= confidence <= 1:
@@ -626,7 +626,7 @@ class AIPDStateDB:
                        _json({"key": key, "value": value, "status": status}), "add fact", ts))
         return fact_id
 
-    def list_facts(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_facts(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM facts WHERE tenant_id=? AND project_id=? ORDER BY created_at",
                              (tenant_id, project_id)).fetchall()
@@ -637,7 +637,7 @@ class AIPDStateDB:
             out.append(d)
         return out
 
-    def get_fact(self, tenant_id: str, project_id: str, fact_id: str) -> Dict[str, Any]:
+    def get_fact(self, tenant_id: str, project_id: str, fact_id: str) -> dict[str, Any]:
         with self.connect() as c:
             row = c.execute("SELECT * FROM facts WHERE tenant_id=? AND project_id=? AND fact_id=?",
                             (tenant_id, project_id, fact_id)).fetchone()
@@ -648,7 +648,7 @@ class AIPDStateDB:
         return d
 
     def update_fact(self, tenant_id: str, project_id: str, fact_id: str, expected_version: int,
-                    **fields: Any) -> Dict[str, Any]:
+                    **fields: Any) -> dict[str, Any]:
         allow = {"value", "status", "confidence", "unit", "tolerance", "conditions", "source", "version"}
         set_cols = [k for k in fields if k in allow]
         if not set_cols:
@@ -680,10 +680,10 @@ class AIPDStateDB:
 
     # ------------------------------------------------------------- evidence
     def add_evidence(self, tenant_id: str, project_id: str, kind: str, title: str,
-                     url: Optional[str] = None, identifier: Optional[str] = None,
-                     quality: Optional[str] = None, summary: Optional[str] = None,
-                     metadata: Optional[Dict[str, Any]] = None,
-                     accessed_at: Optional[str] = None) -> str:
+                     url: str | None = None, identifier: str | None = None,
+                     quality: str | None = None, summary: str | None = None,
+                     metadata: dict[str, Any] | None = None,
+                     accessed_at: str | None = None) -> str:
         ts = now_iso()
         # v5.8.1 Commit 15（QA）：evidence_id 走 id_sequences 原子分配
         # （同 idea/claim/relation 一致；保留 E-001 display 格式）。
@@ -842,7 +842,7 @@ class AIPDStateDB:
                 (_json(md), tenant_id, project_id, existing["evidence_id"]))
         return existing["evidence_id"]
 
-    def list_evidence(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_evidence(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM evidence WHERE tenant_id=? AND project_id=? ORDER BY created_at",
                              (tenant_id, project_id)).fetchall()
@@ -854,7 +854,7 @@ class AIPDStateDB:
             c.execute("INSERT OR IGNORE INTO fact_evidence(fact_id,project_id,tenant_id,evidence_id,relation) "
                       "VALUES(?,?,?,?,?)", (fact_id, project_id, tenant_id, evidence_id, relation))
 
-    def list_evidence_for_fact(self, tenant_id: str, project_id: str, fact_id: str) -> List[Dict[str, Any]]:
+    def list_evidence_for_fact(self, tenant_id: str, project_id: str, fact_id: str) -> list[dict[str, Any]]:
         """返回关联到某事实的证据列表（含关系）。"""
         with self.connect() as c:
             rows = c.execute(
@@ -866,7 +866,7 @@ class AIPDStateDB:
         return [dict(r) for r in rows]
 
     def update_evidence_metadata(self, tenant_id: str, project_id: str, evidence_id: str,
-                                 metadata: Dict[str, Any]) -> None:
+                                 metadata: dict[str, Any]) -> None:
         """整体替换单条证据的 metadata_json。"""
         with self.connect() as c:
             cur = c.execute("SELECT version_no FROM evidence WHERE tenant_id=? AND project_id=? "
@@ -896,7 +896,7 @@ class AIPDStateDB:
         return did
 
     def resolve_decision(self, tenant_id: str, project_id: str, decision_id: str,
-                         choice: str, comment: Optional[str] = None) -> None:
+                         choice: str, comment: str | None = None) -> None:
         ts = now_iso()
         with self.connect() as c:
             row = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? AND decision_id=?",
@@ -912,7 +912,7 @@ class AIPDStateDB:
             c.execute("UPDATE projects SET status=?,updated_at=? WHERE tenant_id=? AND project_id=?",
                       (new_status, ts, tenant_id, project_id))
 
-    def list_decisions(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_decisions(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? ORDER BY created_at",
                              (tenant_id, project_id)).fetchall()
@@ -927,13 +927,13 @@ class AIPDStateDB:
             out.append(d)
         return out
 
-    def list_open_decisions(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_open_decisions(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? AND status='proposed' "
                              "ORDER BY created_at", (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
-    def list_resolved_decisions(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_resolved_decisions(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM decisions WHERE tenant_id=? AND project_id=? AND status='resolved' "
                              "ORDER BY created_at", (tenant_id, project_id)).fetchall()
@@ -941,9 +941,9 @@ class AIPDStateDB:
 
     # ---------------------------------------------------------- deliverables
     def add_deliverable(self, tenant_id: str, project_id: str, dtype: str,
-                        path: Optional[str] = None, status: str = "planned",
-                        version: Optional[str] = None, gate: Optional[str] = None,
-                        metadata: Optional[Dict[str, Any]] = None) -> str:
+                        path: str | None = None, status: str = "planned",
+                        version: str | None = None, gate: str | None = None,
+                        metadata: dict[str, Any] | None = None) -> str:
         ts = now_iso()
         with self.connect() as c:
             did = self.next_sequence("deliverable", "DEL")
@@ -953,14 +953,14 @@ class AIPDStateDB:
                        _json(metadata or {}), ts, 1))
         return did
 
-    def list_deliverables(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_deliverables(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM deliverables WHERE tenant_id=? AND project_id=? ORDER BY updated_at",
                              (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
     def update_deliverable(self, tenant_id: str, project_id: str, deliverable_id: str,
-                           expected_version: int, **fields: Any) -> Dict[str, Any]:
+                           expected_version: int, **fields: Any) -> dict[str, Any]:
         allow = {"type", "path", "status", "version", "gate", "metadata"}
         set_cols = [k for k in fields if k in allow]
         if not set_cols:
@@ -983,9 +983,9 @@ class AIPDStateDB:
 
     # ----------------------------------------------------------------- risks
     def add_risk(self, tenant_id: str, project_id: str, title: str,
-                 probability: Optional[str] = None, impact: Optional[str] = None,
-                 mitigation: Optional[str] = None, status: str = "open",
-                 trigger: Optional[str] = None) -> str:
+                 probability: str | None = None, impact: str | None = None,
+                 mitigation: str | None = None, status: str = "open",
+                 trigger: str | None = None) -> str:
         ts = now_iso()
         with self.connect() as c:
             rid = self.next_sequence("risk", "RISK")
@@ -995,14 +995,14 @@ class AIPDStateDB:
                        trigger, ts, 1))
         return rid
 
-    def list_risks(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_risks(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM risks WHERE tenant_id=? AND project_id=? ORDER BY updated_at DESC",
                              (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
     def update_risk(self, tenant_id: str, project_id: str, risk_id: str,
-                    expected_version: int, **fields: Any) -> Dict[str, Any]:
+                    expected_version: int, **fields: Any) -> dict[str, Any]:
         allow = {"title", "probability", "impact", "mitigation", "status", "owner", "trigger"}
         set_cols = [k for k in fields if k in allow]
         if not set_cols:
@@ -1025,7 +1025,7 @@ class AIPDStateDB:
                       "target_type,target_id,relation) VALUES(?,?,?,?,?,?,?)",
                       (project_id, tenant_id, source_type, source_id, target_type, target_id, relation))
 
-    def list_dependencies(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_dependencies(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM dependencies WHERE tenant_id=? AND project_id=?",
                              (tenant_id, project_id)).fetchall()
@@ -1033,14 +1033,14 @@ class AIPDStateDB:
 
     # ---------------------------------------------------------------- gates
     def add_gate(self, tenant_id: str, project_id: str, gate: str, result: str,
-                 checks: Dict[str, Any] = None, approved_by: str = "AI-internal") -> None:
+                 checks: dict[str, Any] = None, approved_by: str = "AI-internal") -> None:
         ts = now_iso()
         with self.connect() as c:
             c.execute("INSERT INTO gates(project_id,tenant_id,gate,result,checks_json,approved_by,created_at) "
                       "VALUES(?,?,?,?,?,?,?)",
                       (project_id, tenant_id, gate, result, _json(checks or {}), approved_by, ts))
 
-    def list_gates(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_gates(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM gates WHERE tenant_id=? AND project_id=? ORDER BY created_at",
                              (tenant_id, project_id)).fetchall()
@@ -1048,7 +1048,7 @@ class AIPDStateDB:
 
     # --------------------------------------------------------------- changes
     def add_change(self, tenant_id: str, project_id: str, object_type: str, object_id: str,
-                   action: str, before: Any = None, after: Any = None, reason: Optional[str] = None) -> None:
+                   action: str, before: Any = None, after: Any = None, reason: str | None = None) -> None:
         with self.connect() as c:
             c.execute("INSERT INTO changes(project_id,tenant_id,object_type,object_id,action,before_json,"
                       "after_json,reason,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
@@ -1056,15 +1056,15 @@ class AIPDStateDB:
                        _json(before) if before is not None else None,
                        _json(after) if after is not None else None, reason, now_iso()))
 
-    def list_changes(self, tenant_id: str, project_id: str) -> List[Dict[str, Any]]:
+    def list_changes(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM changes WHERE tenant_id=? AND project_id=? ORDER BY created_at",
                              (tenant_id, project_id)).fetchall()
         return [dict(r) for r in rows]
 
     # ---------------------------------------------------------- audit log
-    def add_audit(self, actor: str, action: str, project_id: Optional[str],
-                  tenant_id: Optional[str], before: Any = None, after: Any = None) -> None:
+    def add_audit(self, actor: str, action: str, project_id: str | None,
+                  tenant_id: str | None, before: Any = None, after: Any = None) -> None:
         with self.connect() as c:
             c.execute("INSERT INTO audit_log(actor,action,project_id,tenant_id,timestamp,before_json,after_json) "
                       "VALUES(?,?,?,?,?,?,?)",
@@ -1072,7 +1072,7 @@ class AIPDStateDB:
                        _json(before) if before is not None else None,
                        _json(after) if after is not None else None))
 
-    def list_audit(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def list_audit(self, limit: int = 100) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM audit_log ORDER BY entry_id DESC LIMIT ?", (limit,)).fetchall()
         return [dict(r) for r in rows]
@@ -1088,7 +1088,7 @@ class AIPDStateDB:
                              _json(summary) if summary is not None else None, ts))
             return int(cur.lastrowid)
 
-    def latest_checkpoint(self, tenant_id: str, project_id: str) -> Optional[Dict[str, Any]]:
+    def latest_checkpoint(self, tenant_id: str, project_id: str) -> dict[str, Any] | None:
         with self.connect() as c:
             row = c.execute("SELECT * FROM checkpoints WHERE tenant_id=? AND project_id=? "
                             "ORDER BY checkpoint_id DESC LIMIT 1", (tenant_id, project_id)).fetchone()
@@ -1105,13 +1105,13 @@ class AIPDStateDB:
             c.execute("INSERT INTO backups(backup_path,checksum,size,created_at) VALUES(?,?,?,?)",
                       (backup_path, checksum, size, now_iso()))
 
-    def list_backups(self) -> List[Dict[str, Any]]:
+    def list_backups(self) -> list[dict[str, Any]]:
         with self.connect() as c:
             rows = c.execute("SELECT * FROM backups ORDER BY created_at DESC").fetchall()
         return [dict(r) for r in rows]
 
     # ----------------------------------------------------- summary / export
-    def summary(self, tenant_id: str, project_id: str) -> Dict[str, Any]:
+    def summary(self, tenant_id: str, project_id: str) -> dict[str, Any]:
         p = self.get_project(tenant_id, project_id)
         with self.connect() as c:
             fact_counts = {r["status"]: r["n"] for r in c.execute(
@@ -1130,7 +1130,7 @@ class AIPDStateDB:
                 "open_decisions": [dict(r) for r in open_decisions],
                 "top_open_risks": [dict(r) for r in top_risks]}
 
-    def export(self, tenant_id: str, project_id: str) -> Dict[str, Any]:
+    def export(self, tenant_id: str, project_id: str) -> dict[str, Any]:
         return {
             "project": self.get_project(tenant_id, project_id),
             "facts": self.list_facts(tenant_id, project_id),

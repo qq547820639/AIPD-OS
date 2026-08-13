@@ -13,7 +13,7 @@
 """
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional
+from typing import Callable
 
 from .lineage import LineageGraph
 from .models import ReworkTask, now_iso
@@ -33,7 +33,7 @@ class PropagationEngine:
     """驱动失效传播与有界返工。"""
 
     def __init__(self, store: ProductTruthStore,
-                 lineage: Optional[LineageGraph] = None,
+                 lineage: LineageGraph | None = None,
                  default_max_attempts: int = DEFAULT_MAX_ATTEMPTS):
         self._store = store
         self._lineage = lineage or LineageGraph(store)
@@ -41,8 +41,8 @@ class PropagationEngine:
 
     # ------------------------------------------------------------- 失效传播
     def on_upstream_changed(self, upstream_id: str,
-                            reason: Optional[str] = None,
-                            max_attempts: Optional[int] = None) -> Dict[str, object]:
+                            reason: str | None = None,
+                            max_attempts: int | None = None) -> dict[str, object]:
         """上游 truth 变化/过期时，计算下游受影响项，全部标 stale 并生成返工任务。
 
         返回 {affected, stale, tasks, explanation}。
@@ -100,11 +100,11 @@ class PropagationEngine:
                     pass
         return f"RW-{max(nums, default=0) + 1:03d}"
 
-    def list_tasks(self, status: Optional[str] = None) -> List[ReworkTask]:
+    def list_tasks(self, status: str | None = None) -> list[ReworkTask]:
         tenant = self._store.tenant_id
         project = self._store.project_id
         sql = "SELECT * FROM rework_tasks WHERE tenant_id=? AND project_id=?"
-        params: List[object] = [tenant, project]
+        params: list[object] = [tenant, project]
         if status is not None:
             sql += " AND status=?"
             params.append(status)
@@ -153,7 +153,7 @@ class PropagationEngine:
 
     # ------------------------------------------------------------- 有界返工
     def run_rework(self, task_id: str,
-                   rework_fn: Optional[Callable[[str], bool]] = None) -> Dict[str, object]:
+                   rework_fn: Callable[[str], bool] | None = None) -> dict[str, object]:
         """执行一次返工尝试。
 
         - 递增 attempts；若已达到上限 → blocked（抛 ReworkExhaustedError）。
@@ -229,8 +229,8 @@ class PropagationEngine:
         return (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
 
     # ----------------------------------------------------------- 变更说明
-    def explain_change(self, upstream_id: str, affected: List[str],
-                       stale: List[str], reason: Optional[str] = None) -> Dict[str, str]:
+    def explain_change(self, upstream_id: str, affected: list[str],
+                       stale: list[str], reason: str | None = None) -> dict[str, str]:
         """owner 可读的变更说明：改了什么 / 为何影响 / 计划怎么修 / 需批准什么。
 
         v5.9：upstream 可能是 Product Intelligence 对象（requirement 等，
@@ -254,7 +254,7 @@ class PropagationEngine:
             "reason": reason or "upstream truth changed",
         }
 
-    def pending_approval(self) -> List[Dict[str, object]]:
+    def pending_approval(self) -> list[dict[str, object]]:
         """汇总所有需要 owner 批准的解释（面向 blocked 或 pending 任务）。"""
         out = []
         for t in self.list_tasks():

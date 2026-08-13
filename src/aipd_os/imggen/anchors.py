@@ -13,7 +13,6 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 # 认知色 -> 可机器比较的 HEX（用于颜色锚点归一化，避免“工程橙/金属灰”等自然语言歧义）
 COLOR_HEX_MAP = {
@@ -30,7 +29,7 @@ COLOR_HEX_MAP = {
 }
 
 
-def extract_hex(text: str) -> List[str]:
+def extract_hex(text: str) -> list[str]:
     """从文本提取颜色 HEX：既识别 ``#RRGGBB`` 字面量，也把认知色映射为 HEX。"""
     found = re.findall(r"#[0-9a-fA-F]{3,8}", text or "")
     for name, hx in COLOR_HEX_MAP.items():
@@ -39,9 +38,9 @@ def extract_hex(text: str) -> List[str]:
     return found
 
 
-def cmf_tokens(cmf: Optional[dict]) -> List[str]:
+def cmf_tokens(cmf: dict | None) -> list[str]:
     """把 CMF（颜色/材质/表面）转成可比较 token 列表。"""
-    out: List[str] = []
+    out: list[str] = []
     for key in ("color", "material", "finish"):
         val = (cmf or {}).get(key)
         if val:
@@ -58,11 +57,11 @@ class AnchorFeature:
 
     kind: str
     name: str
-    color_hex: List[str] = field(default_factory=list)
-    key_points: List[dict] = field(default_factory=list)
-    cmf_tokens: List[str] = field(default_factory=list)
+    color_hex: list[str] = field(default_factory=list)
+    key_points: list[dict] = field(default_factory=list)
+    cmf_tokens: list[str] = field(default_factory=list)
 
-    def feature_vector(self) -> Tuple:
+    def feature_vector(self) -> tuple:
         """确定性有序特征向量，供哈希与一致度比较。"""
         return (
             self.kind,
@@ -97,10 +96,10 @@ class AnchorFeature:
         )
 
 
-def features_from_facts(facts: Optional[dict]) -> List[AnchorFeature]:
+def features_from_facts(facts: dict | None) -> list[AnchorFeature]:
     """从 Product Truth / 内容模型派生可比较锚点特征。"""
     facts = facts or {}
-    features: List[AnchorFeature] = []
+    features: list[AnchorFeature] = []
 
     cmf = facts.get("cmf") or {}
     features.append(
@@ -149,14 +148,14 @@ class VisualBible:
     """Visual Bible：把视觉圣经转成结构化约束，供批次与锚点比对。"""
 
     structure: str = ""
-    characters: List[dict] = field(default_factory=list)
-    modules: List[dict] = field(default_factory=list)
-    cmf: Dict[str, str] = field(default_factory=dict)
-    camera: Dict[str, str] = field(default_factory=dict)
-    lighting: Dict[str, str] = field(default_factory=dict)
+    characters: list[dict] = field(default_factory=list)
+    modules: list[dict] = field(default_factory=list)
+    cmf: dict[str, str] = field(default_factory=dict)
+    camera: dict[str, str] = field(default_factory=dict)
+    lighting: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_truth(cls, facts: Optional[dict]) -> VisualBible:
+    def from_truth(cls, facts: dict | None) -> VisualBible:
         facts = facts or {}
         return cls(
             structure=(facts.get("product") or {}).get("structure", ""),
@@ -203,11 +202,11 @@ class VisualBible:
 class AnchorRegistry:
     """锚点注册表：登记可机器比较的锚点特征 + 可选 Visual Bible。"""
 
-    features: List[AnchorFeature] = field(default_factory=list)
-    visual_bible: Optional[VisualBible] = None
+    features: list[AnchorFeature] = field(default_factory=list)
+    visual_bible: VisualBible | None = None
 
     @classmethod
-    def build(cls, facts: Optional[dict]) -> AnchorRegistry:
+    def build(cls, facts: dict | None) -> AnchorRegistry:
         return cls(features=features_from_facts(facts), visual_bible=VisualBible.from_truth(facts))
 
     def register(self, feature: AnchorFeature) -> None:
@@ -216,9 +215,9 @@ class AnchorRegistry:
         ]
         self.features.append(feature)
 
-    def fingerprint(self) -> Dict[str, Dict[str, str]]:
+    def fingerprint(self) -> dict[str, dict[str, str]]:
         """按 kind -> {name: digest} 输出可机器比较指纹。"""
-        out: Dict[str, Dict[str, str]] = {}
+        out: dict[str, dict[str, str]] = {}
         for f in self.features:
             out.setdefault(f.kind, {})[f.name] = f.digest()
         return out
@@ -228,7 +227,7 @@ class AnchorRegistry:
         a = self.fingerprint()
         b = other.fingerprint()
         kinds = set(a) | set(b)
-        per_kind: Dict[str, dict] = {}
+        per_kind: dict[str, dict] = {}
         total_match = total = 0
         for k in sorted(kinds):
             da, db = a.get(k, {}), b.get(k, {})
@@ -249,7 +248,7 @@ class AnchorRegistry:
             "per_kind": per_kind,
         }
 
-    def compare_page(self, page_features: List[AnchorFeature]) -> dict:
+    def compare_page(self, page_features: list[AnchorFeature]) -> dict:
         """比较页面锚点特征与注册表一致度（可机器比较）。"""
         reg = {(f.kind, f.name): f.digest() for f in self.features}
         items = []
@@ -288,7 +287,7 @@ class AnchorRegistry:
         }
 
     @classmethod
-    def from_dict(cls, d: Optional[dict]) -> AnchorRegistry:
+    def from_dict(cls, d: dict | None) -> AnchorRegistry:
         d = d or {}
         features = [AnchorFeature.from_dict(x) for x in (d.get("features") or [])]
         vb = None

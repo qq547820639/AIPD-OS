@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.evals_runner.completion import (
@@ -23,9 +23,9 @@ def _rate(passed: int, total: int) -> float:
     return round(passed / total, 4) if total else 0.0
 
 
-def _split_by_category(results: list) -> Dict[str, list]:
+def _split_by_category(results: list) -> dict[str, list]:
     """把结果按 provider_category 分组；外部/跳过计入对应类别但单独标记。"""
-    groups: Dict[str, list] = {}
+    groups: dict[str, list] = {}
     for r in results:
         cat = getattr(r, "provider_category", None) or PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE
         groups.setdefault(cat, []).append(r)
@@ -35,8 +35,8 @@ def _split_by_category(results: list) -> Dict[str, list]:
 def build_report(
     results: list,
     version: str = _PKG_VERSION,
-    model_version: Optional[str] = None,
-) -> Dict[str, Any]:
+    model_version: str | None = None,
+) -> dict[str, Any]:
     """把结果列表组装为报告 dict。
 
     诚实分离通过率：
@@ -55,7 +55,7 @@ def build_report(
         != PROVIDER_CATEGORY_DETERMINISTIC_FIXTURE
     ]
 
-    def _block(results_: list) -> Dict[str, Any]:
+    def _block(results_: list) -> dict[str, Any]:
         total = len(results_)
         passed = sum(1 for r in results_ if r.passed)
         external = sum(1 for r in results_ if "external" in r.failure_type)
@@ -90,9 +90,9 @@ def _now_ts() -> str:
 
 
 def save_eval_report(
-    report: Dict[str, Any],
+    report: dict[str, Any],
     out_dir: str,
-    version: Optional[str] = None,
+    version: str | None = None,
 ) -> str:
     """把报告写入 ``<out_dir>/eval_reports/<version>/report.json``，返回文件路径。"""
     version = version or report.get("version") or f"v{_now_ts()}"
@@ -106,7 +106,7 @@ def save_eval_report(
     return str(path)
 
 
-def load_baseline(report_dir: str, version: str) -> Dict[str, Any]:
+def load_baseline(report_dir: str, version: str) -> dict[str, Any]:
     """加载指定版本基线报告。"""
     path = Path(report_dir) / "eval_reports" / str(version) / "report.json"
     if not path.exists():
@@ -114,25 +114,25 @@ def load_baseline(report_dir: str, version: str) -> Dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _scores_by_case(report: Dict[str, Any]) -> Dict[str, float]:
-    out: Dict[str, float] = {}
+def _scores_by_case(report: dict[str, Any]) -> dict[str, float]:
+    out: dict[str, float] = {}
     for r in report.get("results", []):
         out[r["case_id"]] = float(r.get("score", 0.0))
     return out
 
 
 def should_block_release(
-    latest: Dict[str, Any],
-    baseline: Dict[str, Any],
+    latest: dict[str, Any],
+    baseline: dict[str, Any],
     threshold: float = 0.1,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """比较最新与基线，任一 case 分数下降超过 ``threshold`` 则阻止发布。
 
     返回 ``{'blocked': bool, 'drop': float, 'reason': str, 'drops': {...}}``。
     """
     latest_scores = _scores_by_case(latest)
     baseline_scores = _scores_by_case(baseline)
-    drops: Dict[str, float] = {}
+    drops: dict[str, float] = {}
     for cid, base in baseline_scores.items():
         if cid in latest_scores:
             diff = base - latest_scores[cid]

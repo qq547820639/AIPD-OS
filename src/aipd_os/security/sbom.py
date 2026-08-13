@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 CYCLONEDX_VERSION = "1.5"
 SPEC_URL = "https://cyclonedx.org/schema/bom-1.5.schema.json"
@@ -25,9 +25,9 @@ SPEC_URL = "https://cyclonedx.org/schema/bom-1.5.schema.json"
 _SECTION_RE = re.compile(r"^\[(.+?)\]\s*$", re.MULTILINE)
 
 
-def _parse_arrays(text: str, section_body: str) -> Dict[str, List[str]]:
+def _parse_arrays(text: str, section_body: str) -> dict[str, list[str]]:
     """解析某个 section 内的 ``key = ["a", "b"]`` 简单字符串数组。"""
-    result: Dict[str, List[str]] = {}
+    result: dict[str, list[str]] = {}
     for m in re.finditer(r"^(\w[\w\-]*)\s*=\s*\[([^\]]*)\]", section_body, re.MULTILINE):
         key = m.group(1)
         items = re.findall(r'"([^"]*)"', m.group(2))
@@ -35,10 +35,10 @@ def _parse_arrays(text: str, section_body: str) -> Dict[str, List[str]]:
     return result
 
 
-def _split_sections(text: str) -> Dict[str, str]:
+def _split_sections(text: str) -> dict[str, str]:
     """按 [[section]] / [section] 切分 TOML，返回 section 名 -> 正文。"""
     matches = list(_SECTION_RE.finditer(text))
-    sections: Dict[str, str] = {}
+    sections: dict[str, str] = {}
     for idx, m in enumerate(matches):
         start = m.end()
         end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
@@ -46,9 +46,9 @@ def _split_sections(text: str) -> Dict[str, str]:
     return sections
 
 
-def _read_project_meta(sections: Dict[str, str]) -> Dict[str, Any]:
+def _read_project_meta(sections: dict[str, str]) -> dict[str, Any]:
     """从 ``[project]`` 提取 name / version / description。"""
-    meta: Dict[str, Any] = {"name": "aipd-os", "version": "0.0.0", "description": ""}
+    meta: dict[str, Any] = {"name": "aipd-os", "version": "0.0.0", "description": ""}
     body = sections.get("project", "")
     for key in ("name", "version", "description"):
         m = re.search(rf"^{key}\s*=\s*\"([^\"]*)\"", body, re.MULTILINE)
@@ -57,9 +57,9 @@ def _read_project_meta(sections: Dict[str, str]) -> Dict[str, Any]:
     return meta
 
 
-def _project_modules(project_root: Path, pkg_name: str) -> List[str]:
+def _project_modules(project_root: Path, pkg_name: str) -> list[str]:
     """列出项目自身模块（src/pkg 下的入口模块与子包）。"""
-    modules: List[str] = []
+    modules: list[str] = []
     src = project_root / "src"
     pkg = src / pkg_name
     if pkg.is_dir():
@@ -74,9 +74,9 @@ def _project_modules(project_root: Path, pkg_name: str) -> List[str]:
     return sorted(set(modules))
 
 
-def _dependency_components(dependencies: List[str], optional: Dict[str, List[str]]) -> List[Dict[str, Any]]:
+def _dependency_components(dependencies: list[str], optional: dict[str, list[str]]) -> list[dict[str, Any]]:
     """把依赖声明转为 CycloneDX 组件。"""
-    comps: Dict[str, Dict[str, Any]] = {}
+    comps: dict[str, dict[str, Any]] = {}
     for item in dependencies:
         name = _dep_name(item)
         comps.setdefault(name, {"type": "library", "name": name, "purl": _purl(name, item)})
@@ -106,7 +106,7 @@ def _coerce_version(item: str) -> str:
     return m.group(1) if m else ""
 
 
-def generate_sbom(project_root: str, out_path: Optional[str] = None) -> Dict[str, Any]:
+def generate_sbom(project_root: str, out_path: str | None = None) -> dict[str, Any]:
     """生成 CycloneDX 风格 SBOM 并（可选）写入文件。
 
     :param project_root: 项目根目录（含 pyproject.toml）
@@ -120,7 +120,7 @@ def generate_sbom(project_root: str, out_path: Optional[str] = None) -> Dict[str
 
     arrays = _parse_arrays("", sections.get("project", ""))
     dependencies = arrays.get("dependencies", [])
-    optional: Dict[str, List[str]] = {}
+    optional: dict[str, list[str]] = {}
     for k in sorted(sections):
         if k.startswith("project.optional-dependencies"):
             parsed = _parse_arrays("", sections[k])
@@ -130,7 +130,7 @@ def generate_sbom(project_root: str, out_path: Optional[str] = None) -> Dict[str
     modules = _project_modules(root, meta["name"].replace("-", "_"))
     dep_components = _dependency_components(dependencies, optional)
 
-    bom: Dict[str, Any] = {
+    bom: dict[str, Any] = {
         "bomFormat": "CycloneDX",
         "specVersion": CYCLONEDX_VERSION,
         "serialNumber": f"urn:uuid:aipd-os-{meta['version']}-sbom",
@@ -161,7 +161,7 @@ def generate_sbom(project_root: str, out_path: Optional[str] = None) -> Dict[str
     return bom
 
 
-def verify_sbom(sbom: Dict[str, Any]) -> bool:
+def verify_sbom(sbom: dict[str, Any]) -> bool:
     """校验 SBOM 结构是否完整有效。"""
     if not isinstance(sbom, dict):
         return False

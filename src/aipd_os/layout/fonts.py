@@ -10,7 +10,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from PIL import ImageFont
 
@@ -33,7 +33,7 @@ _FONT_CANDIDATES: tuple[str, ...] = (
 )
 
 
-def resolve_font_path(priority: Optional[str] = None) -> Optional[str]:
+def resolve_font_path(priority: str | None = None) -> str | None:
     """返回第一个真实存在的字体路径；无任何候选时返回 None。"""
     candidates = (priority,) + _FONT_CANDIDATES if priority else _FONT_CANDIDATES
     for candidate in candidates:
@@ -47,7 +47,7 @@ def resolve_font_path(priority: Optional[str] = None) -> Optional[str]:
     return None
 
 
-def load_font(size: int, path: Optional[str] = None) -> Any:
+def load_font(size: int, path: str | None = None) -> Any:
     """加载一个可用字体；无任何可用字体时回退到 Pillow 内嵌默认字体（绝不抛 OSError）。
 
     Args:

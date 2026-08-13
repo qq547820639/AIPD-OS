@@ -21,7 +21,7 @@ import importlib.util
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 CLASSIFICATIONS = [
     "fully_implemented",
@@ -53,19 +53,19 @@ class Capability:
     domain: str
     classification: str = "not_verifiable"
     external_dependency: bool = False
-    declaration_file: Optional[str] = None
-    implementation_file: Optional[str] = None
-    entry_point: Optional[str] = None
-    run_command: Optional[str] = None
-    input_output: Optional[str] = None
-    unit_test: Optional[str] = None
-    integration_test: Optional[str] = None
-    e2e_evidence: Optional[str] = None
-    current_limitation: Optional[str] = None
+    declaration_file: str | None = None
+    implementation_file: str | None = None
+    entry_point: str | None = None
+    run_command: str | None = None
+    input_output: str | None = None
+    unit_test: str | None = None
+    integration_test: str | None = None
+    e2e_evidence: str | None = None
+    current_limitation: str | None = None
     # 运行时证据（由 probe 填充）
-    probe: Dict[str, Any] = field(default_factory=dict)
+    probe: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -89,29 +89,29 @@ class CapabilityRegistry:
     """能力的声明式登记与查询。"""
 
     def __init__(self) -> None:
-        self._caps: Dict[str, Capability] = {}
+        self._caps: dict[str, Capability] = {}
 
     def register(self, cap: Capability) -> None:
         if cap.id in self._caps:
             raise ValueError(f"duplicate capability id: {cap.id}")
         self._caps[cap.id] = cap
 
-    def get(self, cap_id: str) -> Optional[Capability]:
+    def get(self, cap_id: str) -> Capability | None:
         return self._caps.get(cap_id)
 
-    def all(self) -> List[Capability]:
+    def all(self) -> list[Capability]:
         return list(self._caps.values())
 
-    def domains(self) -> List[str]:
-        seen: List[str] = []
+    def domains(self) -> list[str]:
+        seen: list[str] = []
         for c in self._caps.values():
             if c.domain not in seen:
                 seen.append(c.domain)
         return seen
 
-    def validate(self, repo_root: Path) -> List[str]:
+    def validate(self, repo_root: Path) -> list[str]:
         """对登记表做基础 schema 校验，返回错误列表。"""
-        errors: List[str] = []
+        errors: list[str] = []
         for c in self._caps.values():
             if not c.id or not c.name or not c.domain:
                 errors.append(f"{c.id or '<unnamed>'}: id/name/domain 必填")
@@ -148,9 +148,9 @@ def _file_exists(repo_root: Path, rel: str) -> bool:
     return (repo_root / rel).exists()
 
 
-def _expand_braces(pattern: str) -> List[str]:
+def _expand_braces(pattern: str) -> list[str]:
     """对 ``{a,b,c}`` 做笛卡尔展开，返回所有候选路径。"""
-    results: List[str] = [""]
+    results: list[str] = [""]
     i = 0
     while i < len(pattern):
         ch = pattern[i]
@@ -187,7 +187,7 @@ def load_default_registry() -> CapabilityRegistry:
     return reg
 
 
-def probe_file_has_impl(repo_root: Path, impl_spec: Optional[str]) -> bool:
+def probe_file_has_impl(repo_root: Path, impl_spec: str | None) -> bool:
     """探测实现文件是否存在。"""
     if not impl_spec:
         return False
@@ -237,7 +237,7 @@ def _resolve_entry_candidate(spec: str) -> bool:
     return False
 
 
-def probe_entry_callable(entry_spec: Optional[str], repo_root=None) -> bool:
+def probe_entry_callable(entry_spec: str | None, repo_root=None) -> bool:
     """探测入口是否可调用（诚实优先，只认“能真正导入并取到可调用对象”）。
 
     ``entry_spec`` 形如 ``module:attr``、``module.attr``、``module.attr.attr``，

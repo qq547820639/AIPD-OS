@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter
 from aipd_os.tool_adapters._common import meta, token_meta
@@ -27,16 +27,16 @@ class LayoutAdapter(ToolAdapter):
     def capability_id(self) -> str:
         return "manual.layout"
 
-    def discover(self) -> Dict[str, Any]:
+    def discover(self) -> dict[str, Any]:
         return meta(self.capability_id(), "Layout Planner", self.provider, self.version)
 
-    def validate_input(self, input: Dict[str, Any]) -> list:
+    def validate_input(self, input: dict[str, Any]) -> list:
         errors = []
         if not input.get("assets") and not input.get("slots"):
             errors.append("'assets' 或 'slots' 至少提供一个")
         return errors
 
-    def execute(self, input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute(self, input: dict[str, Any]) -> dict[str, Any]:
         slots = input.get("slots") or [
             {
                 "id": f"slot_{i + 1}",
@@ -58,7 +58,7 @@ class LayoutAdapter(ToolAdapter):
         }
         return result
 
-    def normalize(self, result: Any) -> Dict[str, Any]:
+    def normalize(self, result: Any) -> dict[str, Any]:
         return result if isinstance(result, dict) else {"result": result}
 
 

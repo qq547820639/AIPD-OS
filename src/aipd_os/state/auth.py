@@ -15,7 +15,6 @@ import hmac
 import secrets
 import time
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .db import AIPDStateDB
 
@@ -43,14 +42,14 @@ class AuthenticatedPrincipal:
 
 
 class AuthManager:
-    def __init__(self, db: AIPDStateDB, secret: Optional[str] = None):
+    def __init__(self, db: AIPDStateDB, secret: str | None = None):
         if secret is None:
             raise ValueError("AuthManager requires a secret")
         self._db = db
         self._secret = secret.encode("utf-8")
 
     # ------------------------------------------------------------- password
-    def _hash_password(self, password: str, salt: Optional[str] = None) -> str:
+    def _hash_password(self, password: str, salt: str | None = None) -> str:
         iterations = PBKDF2_ITERATIONS
         if salt is None:
             salt = secrets.token_hex(16)
@@ -78,7 +77,7 @@ class AuthManager:
         self._db.create_user(user_id, tenant_id, username,
                              self._hash_password(password, salt), salt)
 
-    def verify_password(self, username: str, password: str) -> Optional[str]:
+    def verify_password(self, username: str, password: str) -> str | None:
         """校验用户名密码，成功返回 user_id，失败返回 None。"""
         user = self._db.get_user_by_username(username)
         if not user:
@@ -126,7 +125,7 @@ class AuthManager:
                 f"user {user!r} does not belong to tenant {tenant_id!r} "
                 f"(user tenant: {row['tenant_id']!r})")
 
-    def grant_access(self, user_id: str, tenant_id: str, project_id: Optional[str] = None) -> None:
+    def grant_access(self, user_id: str, tenant_id: str, project_id: str | None = None) -> None:
         """授予用户项目访问权；被授权用户必须属于该租户（防跨租户授权行）。"""
         self.require_tenant_membership(user_id, tenant_id)
         self._db.grant_access(user_id, tenant_id, project_id)

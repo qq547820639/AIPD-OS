@@ -25,7 +25,7 @@ import json
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from aipd_os.cad.evidence import make_artifact_record, sha256_file
 from aipd_os.cad.maturity import (
@@ -69,11 +69,11 @@ class CadBackend(ABC):
 
     # ---- 模型加载 / 参数 ----
     @abstractmethod
-    def load_native_model(self, path: Optional[Path]) -> Any:
+    def load_native_model(self, path: Path | None) -> Any:
         """加载原生模型；无真实内核时可加载参数化契约表示。"""
 
     @abstractmethod
-    def list_parameters(self, model: Any) -> List[Dict[str, Any]]:
+    def list_parameters(self, model: Any) -> list[dict[str, Any]]:
         """列出可编辑参数，每项含 name / value / unit。"""
 
     @abstractmethod
@@ -86,23 +86,23 @@ class CadBackend(ABC):
 
     # ---- 导出 ----
     @abstractmethod
-    def export_step(self, model: Any, path: Path) -> Dict[str, Any]:
+    def export_step(self, model: Any, path: Path) -> dict[str, Any]:
         """导出 STEP 文件，返回产物证据记录。"""
 
     @abstractmethod
-    def export_native(self, model: Any, path: Path) -> Dict[str, Any]:
+    def export_native(self, model: Any, path: Path) -> dict[str, Any]:
         """导出原生格式文件，返回产物证据记录。"""
 
     # ---- 几何与校验 ----
     @abstractmethod
-    def geometry_validity_check(self, model: Any) -> Dict[str, Any]:
+    def geometry_validity_check(self, model: Any) -> dict[str, Any]:
         """执行几何有效性检查，返回 {valid, errors, checks}。"""
 
     def artifact_hash(self, path: Path) -> str:
         """产物 sha256 哈希。"""
         return sha256_file(path)
 
-    def describe(self) -> Dict[str, Any]:
+    def describe(self) -> dict[str, Any]:
         """返回后端能力描述（诚实性契约的核心）。"""
         return {
             'backend': self.name,
@@ -117,7 +117,7 @@ class CadBackend(ABC):
 # 小平面临时 STEP 写入（仅用于无真实内核的临时产物，成熟度上限 C1）
 # ---------------------------------------------------------------------------
 
-def _cube_mesh(size: float) -> Dict[str, Any]:
+def _cube_mesh(size: float) -> dict[str, Any]:
     h = size / 2.0
     v = [
         (-h, -h, -h), (h, -h, -h), (h, h, -h), (-h, h, -h),
@@ -131,16 +131,16 @@ def _cube_mesh(size: float) -> Dict[str, Any]:
     return {'name': 'plate', 'vertices': v, 'faces': f}
 
 
-def _write_faceted_step(mesh: Dict[str, Any], path: Path) -> Dict[str, Any]:
+def _write_faceted_step(mesh: dict[str, Any], path: Path) -> dict[str, Any]:
     """写一个最小的小平面 STEP 文件（C1 顶）。"""
-    entities: List[str] = []
+    entities: list[str] = []
     name = str(mesh['name']).replace("'", "")
-    vrefs: List[int] = []
+    vrefs: list[int] = []
     for v in mesh['vertices']:
         vrefs.append(len(entities) + 1)
         entities.append('CARTESIAN_POINT(\'\',(' + ','.join(
             f'{float(x):.6f}' for x in v) + '))')
-    frefs: List[int] = []
+    frefs: list[int] = []
     for tri in mesh['faces']:
         entities.append('POLY_LOOP(\'\',(' + ','.join(
             f'#{vrefs[int(i)]}' for i in tri) + '))')
@@ -173,7 +173,7 @@ def _write_faceted_step(mesh: Dict[str, Any], path: Path) -> Dict[str, Any]:
 # 黄金参数化模型（CadQuery 原生可编辑 B-Rep）的参数规格。
 # 多参数 + 多特征（孔/圆角/倒角），支撑 “改参 -> 重生成 -> STEP/原生源导出
 # -> 重载 -> 几何校验 -> 哈希/版本 -> 差异 -> Product Truth 写回” 的完整闭环。
-GOLDEN_PARAM_SPEC: Dict[str, Dict[str, Any]] = {
+GOLDEN_PARAM_SPEC: dict[str, dict[str, Any]] = {
     'length': {'default': 100.0, 'min': 10.0, 'unit': 'mm'},
     'width': {'default': 50.0, 'min': 10.0, 'unit': 'mm'},
     'thickness': {'default': 10.0, 'min': 2.0, 'unit': 'mm'},
@@ -226,7 +226,7 @@ def validate_geometry_params(params: dict[str, Any]) -> list[str]:
     return errors
 
 
-def _default_golden_params() -> Dict[str, float]:
+def _default_golden_params() -> dict[str, float]:
     return {k: float(spec['default']) for k, spec in GOLDEN_PARAM_SPEC.items()}
 
 
@@ -245,7 +245,7 @@ def _normalize_step_timestamp(path: Path) -> None:
     Path(path).write_text(normalized, encoding='ascii')
 
 
-def _render_native_source(model_name: str, params: Dict[str, Any]) -> str:
+def _render_native_source(model_name: str, params: dict[str, Any]) -> str:
     """把参数化黄金模型渲染为独立、可执行的 CadQuery 源脚本（.py）。
 
     生成的源文件可被独立执行（``python model.py``）重建同一模型，并可通过
@@ -293,11 +293,11 @@ def _render_native_source(model_name: str, params: Dict[str, Any]) -> str:
     return src
 
 
-def _parse_source_model(source: str) -> Dict[str, Any]:
+def _parse_source_model(source: str) -> dict[str, Any]:
     """用 AST 从原生源脚本中恢复 {name, parameters}，不执行任何副作用代码。"""
     tree = ast.parse(source)
     name = 'golden_bracket'
-    params: Dict[str, Any] = {}
+    params: dict[str, Any] = {}
     for node in tree.body:
         if not isinstance(node, ast.Assign):
             continue
@@ -342,15 +342,15 @@ class CadQueryBackend(CadBackend):
     def is_available(self) -> bool:
         return self._cq is not None
 
-    def _default_params(self) -> Dict[str, float]:
+    def _default_params(self) -> dict[str, float]:
         return _default_golden_params()
 
-    def _make_model(self, name: str, params: Dict[str, Any],
-                    source_path: Optional[Path] = None) -> Dict[str, Any]:
+    def _make_model(self, name: str, params: dict[str, Any],
+                    source_path: Path | None = None) -> dict[str, Any]:
         return {'name': name, 'parameters': dict(params),
                 'source_path': str(source_path) if source_path else None}
 
-    def load_native_model(self, path: Optional[Path]) -> Any:
+    def load_native_model(self, path: Path | None) -> Any:
         """加载并恢复可编辑原生表示。
 
         - ``.py`` 原生源文件：用 AST 无副作用解析出模型名与参数，恢复特征/参数。
@@ -378,7 +378,7 @@ class CadQueryBackend(CadBackend):
         params.update(data.get('parameters', {}))
         return self._make_model(data.get('name', 'golden_bracket'), params)
 
-    def list_parameters(self, model: Any) -> List[Dict[str, Any]]:
+    def list_parameters(self, model: Any) -> list[dict[str, Any]]:
         params = model['parameters']
         return [{'name': k, 'value': float(v), 'unit': spec['unit']}
                 for k, v in params.items()
@@ -415,7 +415,7 @@ class CadQueryBackend(CadBackend):
             plate = plate.faces('>Z').workplane().center(cx, 0).hole(HD)
         return plate
 
-    def _measure(self, shape: Any) -> Dict[str, Any]:
+    def _measure(self, shape: Any) -> dict[str, Any]:
         """对真实几何做测量：体积、包围盒、实体数、面数、有效性。"""
         solid = shape.val()
         bb = solid.BoundingBox()
@@ -456,7 +456,7 @@ class CadQueryBackend(CadBackend):
         out['derived'] = self._measure(shape)
         return out
 
-    def export_step(self, model: Any, path: Path) -> Dict[str, Any]:
+    def export_step(self, model: Any, path: Path) -> dict[str, Any]:
         """导出 STEP 并记录 artifact 记录（sha256 + semantic_geometry_hash）。
 
         **Byte reproducibility profile（Commit 8A）**：``sha256`` 标识磁盘字节，
@@ -480,7 +480,7 @@ class CadQueryBackend(CadBackend):
         rec['extra'] = self._measure(shape)
         return rec
 
-    def export_native(self, model: Any, path: Path) -> Dict[str, Any]:
+    def export_native(self, model: Any, path: Path) -> dict[str, Any]:
         if self._cq is None:
             raise RuntimeError('CadQuery is not available')
         src = _render_native_source(model['name'], model['parameters'])
@@ -488,11 +488,11 @@ class CadQueryBackend(CadBackend):
         return make_artifact_record(
             path, tool=self.name, tool_version=self.tool_version(), for_level='C2')
 
-    def geometry_validity_check(self, model: Any) -> Dict[str, Any]:
+    def geometry_validity_check(self, model: Any) -> dict[str, Any]:
         """几何有效性检查：GOLDEN_PARAM_SPEC 单源校验 + 真实内核 isValid。"""
         p = model['parameters']
         errors = validate_geometry_params(p)
-        checks: Dict[str, Any] = {'parameter_constraints': not errors}
+        checks: dict[str, Any] = {'parameter_constraints': not errors}
 
         if self._cq is not None and not errors:
             try:
@@ -545,7 +545,7 @@ class ContractBackend(CadBackend):
         # 契约/临时适配器始终可选（用于数字样机与测试），但能力上限为 C1。
         return True
 
-    def load_native_model(self, path: Optional[Path]) -> Any:
+    def load_native_model(self, path: Path | None) -> Any:
         default = {'name': 'contract_plate', 'parameters': dict(DEFAULT_PARAMETERS)}
         if path is None or not Path(path).is_file():
             return default
@@ -557,7 +557,7 @@ class ContractBackend(CadBackend):
         params.update(data.get('parameters', {}))
         return {'name': data.get('name', 'contract_plate'), 'parameters': params}
 
-    def list_parameters(self, model: Any) -> List[Dict[str, Any]]:
+    def list_parameters(self, model: Any) -> list[dict[str, Any]]:
         return [{'name': k, 'value': float(v),
                  'unit': GOLDEN_PARAM_SPEC.get(k, {}).get('unit', 'mm')}
                 for k, v in model['parameters'].items()]
@@ -580,7 +580,7 @@ class ContractBackend(CadBackend):
         }
         return {'name': model['name'], 'parameters': dict(p), 'derived': derived}
 
-    def export_step(self, model: Any, path: Path) -> Dict[str, Any]:
+    def export_step(self, model: Any, path: Path) -> dict[str, Any]:
         # 无真实内核：只能写小平面临时 STEP，明确标注上限 C1。
         size = sum(float(model['parameters'].get(k, 0)) for k in ('length', 'width', 'thickness'))
         _write_faceted_step(_cube_mesh(max(size, 10.0) / 10.0), Path(path))
@@ -590,7 +590,7 @@ class ContractBackend(CadBackend):
             note='temporary faceted artifact; native parametric B-Rep cannot '
                  'reach C2 without a real kernel (external_dependency)')
 
-    def export_native(self, model: Any, path: Path) -> Dict[str, Any]:
+    def export_native(self, model: Any, path: Path) -> dict[str, Any]:
         # 无真实内核时的"原生"表示：参数化契约清单，而非真实原生 CAD 文件。
         Path(path).write_text(
             json.dumps({'name': model['name'], 'parameters': model['parameters']},
@@ -601,7 +601,7 @@ class ContractBackend(CadBackend):
             for_level='C1',
             note='contract/NATIVE placeholder only; not a real native CAD file')
 
-    def geometry_validity_check(self, model: Any) -> Dict[str, Any]:
+    def geometry_validity_check(self, model: Any) -> dict[str, Any]:
         """几何有效性检查：与 CadQueryBackend 共用 GOLDEN_PARAM_SPEC 单源校验。"""
         p = model['parameters']
         errors = validate_geometry_params(p)

@@ -14,7 +14,7 @@ v5.7 语义收敛（Commit 7A）：**retrieval verified ≠ 命题 verified**。
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .fetchers import DocumentFetcher
 from .models import (
@@ -37,7 +37,7 @@ class ResearchBackend:
 
     # ---------------------------------------------------------- Evidence Register
     def register_evidence(self, citation: Citation, scope: str = "abstract",
-                          extra_meta: Optional[Dict[str, Any]] = None) -> str:
+                          extra_meta: dict[str, Any] | None = None) -> str:
         """把一条引用写入 Evidence Register，返回 evidence_id。"""
         meta = citation.to_dict()
         meta["scope"] = scope  # abstract / full_text
@@ -58,7 +58,7 @@ class ResearchBackend:
 
     # ------------------------------------------------------------ Product Truth
     def write_finding(self, finding: ResearchFinding,
-                      status: Optional[str] = None) -> Optional[str]:
+                      status: str | None = None) -> str | None:
         """把已获取的 finding 写入 Product Truth（facts），保守认知状态。
 
         - 仅 ``verified``（检索状态）才写事实；``not_verified`` 返回 None；
@@ -97,7 +97,7 @@ class ResearchBackend:
             self._db.link_evidence(self._tenant, self._project, fact_id, eid, relation="supports")
         return fact_id
 
-    def write_evidence_only(self, finding: ResearchFinding) -> List[str]:
+    def write_evidence_only(self, finding: ResearchFinding) -> list[str]:
         """仅登记证据（用于 not_verified / 摘要级发现 / 非事实结论），不写 Product Truth。"""
         return [self.register_evidence(c, scope="abstract") for c in finding.citations]
 
@@ -107,9 +107,9 @@ def run_research_chain(
     tenant_id: str,
     project_id: str,
     finding: ResearchFinding,
-    retriever: Optional[Retriever] = None,
-    fetcher: Optional[DocumentFetcher] = None,
-) -> Dict[str, Any]:
+    retriever: Retriever | None = None,
+    fetcher: DocumentFetcher | None = None,
+) -> dict[str, Any]:
     """（可选编排）检索 -> 取全文 -> 写出 Product Truth / Evidence Register。
 
     - 检索失败 / 无法获取全文时，finding 状态保持 not_verified；

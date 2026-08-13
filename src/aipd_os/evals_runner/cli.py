@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Dict, Optional
 
 from aipd_os import __version__ as _PKG_VERSION
 from aipd_os.evals_runner.completion import EnvCompletionProvider
@@ -39,7 +38,7 @@ def _make_provider(provider: str):
     )
 
 
-def _print_report(report: Dict) -> None:
+def _print_report(report: dict) -> None:
     summary = report.get("summary", {})
     mb = summary.get("model_behavior", {})
     fb = summary.get("fixture_behavior", {})
@@ -103,7 +102,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[list] = None) -> int:
+def main(argv: list | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)

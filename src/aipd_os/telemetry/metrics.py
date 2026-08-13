@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class BudgetState:
@@ -35,7 +35,7 @@ class BudgetExceededError(Exception):
 class Histogram:
     """按桶统计观测值；桶边界为升序数值列表。"""
 
-    def __init__(self, buckets: List[float]) -> None:
+    def __init__(self, buckets: list[float]) -> None:
         self._buckets = sorted(b for b in buckets if b >= 0)
         self._counts = [0] * (len(self._buckets) + 1)
         self._sum = 0.0
@@ -53,7 +53,7 @@ class Histogram:
                 break
         self._counts[idx] += 1
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         return {
             "count": self._n,
             "sum": round(self._sum, 6),
@@ -67,8 +67,8 @@ class Metrics:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._counters: Dict[str, float] = {}
-        self._histograms: Dict[str, Histogram] = {}
+        self._counters: dict[str, float] = {}
+        self._histograms: dict[str, Histogram] = {}
 
     def inc(self, name: str, by: float = 1.0) -> None:
         with self._lock:
@@ -78,16 +78,16 @@ class Metrics:
         with self._lock:
             return self._counters.get(name, 0.0)
 
-    def histogram(self, name: str, buckets: Optional[List[float]] = None) -> Histogram:
+    def histogram(self, name: str, buckets: list[float] | None = None) -> Histogram:
         with self._lock:
             if name not in self._histograms:
                 self._histograms[name] = Histogram(buckets if buckets is not None else [0.1, 0.5, 1.0, 5.0])
             return self._histograms[name]
 
-    def observe(self, name: str, value: float, buckets: Optional[List[float]] = None) -> None:
+    def observe(self, name: str, value: float, buckets: list[float] | None = None) -> None:
         self.histogram(name, buckets).observe(value)
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         with self._lock:
             return {
                 "counters": dict(self._counters),
@@ -106,7 +106,7 @@ class CostBudget:
     - ``stop_on_exceed``：为 True 时 ``track()`` 在超限后抛异常（停止执行）。
     """
 
-    def __init__(self, limit: float, warn_after: Optional[float] = None,
+    def __init__(self, limit: float, warn_after: float | None = None,
                  stop_on_exceed: bool = True, name: str = "budget") -> None:
         if limit < 0:
             raise ValueError("limit must be >= 0")
@@ -138,7 +138,7 @@ class CostBudget:
                 return BudgetState.WARNING
             return BudgetState.OK
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         with self._lock:
             return {
                 "name": self.name,
@@ -152,15 +152,15 @@ class CostBudget:
 class Telemetry:
     """组合入口：合并 metrics 与 budget。"""
 
-    def __init__(self, budget_limit: Optional[float] = None,
-                 budget_warn_after: Optional[float] = None,
+    def __init__(self, budget_limit: float | None = None,
+                 budget_warn_after: float | None = None,
                  stop_on_exceed: bool = True) -> None:
         self.metrics = Metrics()
         self.budget = CostBudget(
             limit=budget_limit if budget_limit is not None else 0.0,
             warn_after=budget_warn_after, stop_on_exceed=stop_on_exceed)
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         return {"metrics": self.metrics.snapshot(), "budget": self.budget.snapshot()}
 
 

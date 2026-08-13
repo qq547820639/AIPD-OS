@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 # 锚点页角色：封面、原理、参数表、模块主图（产品身份/安装结构语言）
 ANCHOR_PAGE_ROLES = ["cover", "principle", "parameter_table", "module_main"]
@@ -17,11 +16,11 @@ class VisualBible:
     """Visual Bible：锁定人物、产品结构、模块、CMF、相机、光线的一致性基准。"""
 
     structure: str = ""
-    characters: List[dict] = field(default_factory=list)
-    modules: List[dict] = field(default_factory=list)
-    cmf: Dict[str, str] = field(default_factory=dict)
-    camera: Dict[str, str] = field(default_factory=dict)
-    lighting: Dict[str, str] = field(default_factory=dict)
+    characters: list[dict] = field(default_factory=list)
+    modules: list[dict] = field(default_factory=list)
+    cmf: dict[str, str] = field(default_factory=dict)
+    camera: dict[str, str] = field(default_factory=dict)
+    lighting: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_truth(cls, facts: dict) -> VisualBible:
@@ -46,7 +45,7 @@ class VisualBible:
         }
 
     @classmethod
-    def from_dict(cls, d: Optional[dict]) -> VisualBible:
+    def from_dict(cls, d: dict | None) -> VisualBible:
         d = d or {}
         return cls(
             structure=d.get("structure", ""),
@@ -73,13 +72,13 @@ class VisualBible:
 class AnchorRegistry:
     """锚点注册表：记录产品结构、锚点页、人物、模块、CMF、相机、光线约束。"""
 
-    anchors: List[dict] = field(default_factory=list)  # [{page_id, role}]
-    product_structure: Dict[str, str] = field(default_factory=dict)
-    characters: List[dict] = field(default_factory=list)
-    modules: List[dict] = field(default_factory=list)
-    cmf: Dict[str, str] = field(default_factory=dict)
-    camera: Dict[str, str] = field(default_factory=dict)
-    lighting: Dict[str, str] = field(default_factory=dict)
+    anchors: list[dict] = field(default_factory=list)  # [{page_id, role}]
+    product_structure: dict[str, str] = field(default_factory=dict)
+    characters: list[dict] = field(default_factory=list)
+    modules: list[dict] = field(default_factory=list)
+    cmf: dict[str, str] = field(default_factory=dict)
+    camera: dict[str, str] = field(default_factory=dict)
+    lighting: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def build(cls, plan: list, facts: dict) -> AnchorRegistry:
@@ -112,7 +111,7 @@ class AnchorRegistry:
         }
 
     @classmethod
-    def from_dict(cls, d: Optional[dict]) -> AnchorRegistry:
+    def from_dict(cls, d: dict | None) -> AnchorRegistry:
         d = d or {}
         return cls(
             anchors=list(d.get("anchors") or []),

@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from aipd_os.state.db import AIPDStateDB
 
@@ -25,7 +25,7 @@ class SupplyChainStore:
     def __init__(self, db: AIPDStateDB, tenant_id: str = DEFAULT_TENANT) -> None:
         self.db = db
         self.tenant_id = tenant_id
-        self._supplier_fact_ids: Dict[str, str] = {}
+        self._supplier_fact_ids: dict[str, str] = {}
 
     # ------------------------------------------------------------- 供应商
     def persist_supplier(
@@ -34,7 +34,7 @@ class SupplyChainStore:
         *,
         supplier_id: str,
         name: str,
-        certificates: Optional[List[str]] = None,
+        certificates: list[str] | None = None,
         qualification: str = "unqualified",
     ) -> str:
         certs = list(certificates or [])
@@ -56,7 +56,7 @@ class SupplyChainStore:
         self._supplier_fact_ids[supplier_id] = fact_id
         return fact_id
 
-    def load_suppliers(self, project_id: str) -> List[Dict[str, Any]]:
+    def load_suppliers(self, project_id: str) -> list[dict[str, Any]]:
         return [
             f for f in self.db.list_facts(self.tenant_id, project_id)
             if str(f.get("key", "")).startswith("supplier.")
@@ -71,7 +71,7 @@ class SupplyChainStore:
         supplier: str,
         part: str,
         version: int,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         status: str = "official",
     ) -> str:
         normalized = dict(data or {})
@@ -92,7 +92,7 @@ class SupplyChainStore:
             version=str(version),
         )
 
-    def load_quotes(self, project_id: str) -> List[Dict[str, Any]]:
+    def load_quotes(self, project_id: str) -> list[dict[str, Any]]:
         return [
             f for f in self.db.list_facts(self.tenant_id, project_id)
             if str(f.get("key", "")).startswith("quote.")
@@ -107,8 +107,8 @@ class SupplyChainStore:
         subject: str,
         standard: str,
         status: str = "pending",
-        expires_at: Optional[str] = None,
-        evidence_ref: Optional[str] = None,
+        expires_at: str | None = None,
+        evidence_ref: str | None = None,
     ) -> str:
         fact_status = _CERT_FACT_STATUS.get(status, "P")
         return self.db.add_fact(
@@ -128,7 +128,7 @@ class SupplyChainStore:
             version="1",
         )
 
-    def load_certifications(self, project_id: str) -> List[Dict[str, Any]]:
+    def load_certifications(self, project_id: str) -> list[dict[str, Any]]:
         return [
             f for f in self.db.list_facts(self.tenant_id, project_id)
             if str(f.get("key", "")).startswith("cert.")
@@ -138,7 +138,7 @@ class SupplyChainStore:
     def persist_evidence_file(
         self,
         project_id: str,
-        path: Union[str, Path],
+        path: str | Path,
         kind: str = "supply_chain_file",
         summary: str = "",
     ) -> str:

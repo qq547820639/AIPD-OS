@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 SemCheck = Callable[[str], bool]
 
@@ -28,10 +28,10 @@ GRADER_LABELS = {
     GRADER_JUDGE: "independent judge rubric",
 }
 
-JudgeFn = Callable[[str], Dict[str, Any]]
+JudgeFn = Callable[[str], dict[str, Any]]
 
 
-def score_response(text: str, must: List[str], must_not: List[str]) -> Dict:
+def score_response(text: str, must: list[str], must_not: list[str]) -> dict:
     """对监督者输出按 must/must_not 打分。
 
     每个命中的 must 加 1，每个命中的 must_not 减 1；score 归一化到 [0,1]。
@@ -145,7 +145,7 @@ def _natural_language_review_parsed(text: str) -> bool:
     return bool(re.search(r"(解析|已理解您的意见|翻译为|采纳|落实为用户意图)", text))
 
 
-semantic_checks: Dict[str, SemCheck] = {
+semantic_checks: dict[str, SemCheck] = {
     "no_long_questionnaire": _no_long_questionnaire,
     "only_ask_when_necessary": _only_ask_when_necessary,
     "attachment_continuity": _attachment_continuity,
@@ -177,11 +177,11 @@ def evaluate_output(
     case_gen,
     output: str,
     *,
-    state: Optional[Dict[str, Any]] = None,
-    artifacts: Optional[List[Dict[str, Any]]] = None,
-    db: Optional[Dict[str, Any]] = None,
-    judge: Optional[JudgeFn] = None,
-) -> Dict[str, Any]:
+    state: dict[str, Any] | None = None,
+    artifacts: list[dict[str, Any]] | None = None,
+    db: dict[str, Any] | None = None,
+    judge: JudgeFn | None = None,
+) -> dict[str, Any]:
     """对单个 case 的输出做组合评分，并如实记录实际使用的评分维度。
 
     维度（按可用性启用）：
@@ -194,8 +194,8 @@ def evaluate_output(
 
     返回 ``{'score', 'passed', 'graders', 'checks', 'failure_type'}``。
     """
-    checks: List[Dict[str, Any]] = []
-    graders: List[str] = []
+    checks: list[dict[str, Any]] = []
+    graders: list[str] = []
     output = output or ""
 
     must = list(getattr(case_gen, "must", []) or [])

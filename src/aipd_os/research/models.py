@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # 发现状态：verified=已获取并解析；not_verified=未能获取/未验证；external_pending=等外部回填
 STATUS_VERIFIED = "verified"
@@ -60,13 +60,13 @@ class Citation:
 
     source: str
     title: str
-    published_at: Optional[str] = None
-    url: Optional[str] = None
+    published_at: str | None = None
+    url: str | None = None
     confidence: float = 0.5
-    authors: List[str] = field(default_factory=list)
-    identifier: Optional[str] = None
+    authors: list[str] = field(default_factory=list)
+    identifier: str | None = None
     kind: str = "unknown"  # standard / patent / competitor / paper / attachment
-    accessed_at: Optional[str] = None
+    accessed_at: str | None = None
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.confidence <= 1.0:
@@ -76,7 +76,7 @@ class Citation:
         if not self.title:
             raise ValueError("title is required")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "source": self.source,
             "title": self.title,
@@ -95,8 +95,8 @@ class Abstract:
     """摘要：仅包含标题/摘要元数据，不含可解析的全文。"""
 
     title: str
-    snippet: Optional[str] = None
-    citation: Optional[Citation] = None
+    snippet: str | None = None
+    citation: Citation | None = None
 
     @property
     def obtainable(self) -> bool:
@@ -109,7 +109,7 @@ class FullText:
 
     title: str
     text: str
-    citation: Optional[Citation] = None
+    citation: Citation | None = None
     format: str = "txt"  # pdf / txt / ...
 
     @property
@@ -128,9 +128,9 @@ class Document:
     """
 
     citation: Citation
-    abstract: Optional[Abstract] = None
-    full_text: Optional[FullText] = None
-    sha256: Optional[str] = None
+    abstract: Abstract | None = None
+    full_text: FullText | None = None
+    sha256: str | None = None
 
     @property
     def has_full_text(self) -> bool:
@@ -171,10 +171,10 @@ class ResearchFinding:
     status: str = STATUS_NOT_VERIFIED
     is_fact: bool = True
     confidence: float = 0.5
-    citations: List[Citation] = field(default_factory=list)
-    notes: Optional[str] = None
-    retrieval_status: Optional[str] = None
-    epistemic_status: Optional[str] = None
+    citations: list[Citation] = field(default_factory=list)
+    notes: str | None = None
+    retrieval_status: str | None = None
+    epistemic_status: str | None = None
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.confidence <= 1.0:
@@ -183,7 +183,7 @@ class ResearchFinding:
     def add_citation(self, citation: Citation) -> None:
         self.citations.append(citation)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = {
             "key": self.key,
             "value": self.value,

@@ -24,7 +24,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from PIL import Image, ImageDraw
 
@@ -55,7 +55,7 @@ class GeneratedImage:
     width: int
     height: int
     sha256: str
-    meta: Dict[str, Any] = field(default_factory=dict)
+    meta: dict[str, Any] = field(default_factory=dict)
     external_pending: bool = False
 
 
@@ -63,19 +63,19 @@ class GeneratedImage:
 class BatchRequest:
     """一次批量配图生成的请求。"""
 
-    pages: List[dict]
+    pages: list[dict]
     model_version: str
     prompt_template: str
-    generation_params: Dict[str, Any]
-    seed: Optional[int] = None
-    request_id: Optional[str] = None
+    generation_params: dict[str, Any]
+    seed: int | None = None
+    request_id: str | None = None
 
 
 @dataclass
 class PriorBatchContent:
     """前一批真实图像字节内容（不是路径字符串）。"""
 
-    images: List[dict]  # each {page_id, data(bytes), sha256}
+    images: list[dict]  # each {page_id, data(bytes), sha256}
 
     def attachment_hash(self) -> str:
         h = hashlib.sha256()
@@ -101,12 +101,12 @@ class ImageGenProvider(ABC):
     def generate_batch(
         self,
         request: BatchRequest,
-        prior_batch: Optional[PriorBatchContent] = None,
-    ) -> List[GeneratedImage]:
+        prior_batch: PriorBatchContent | None = None,
+    ) -> list[GeneratedImage]:
         """为一批页面生成真实配图字节，并消费前一批的真实图像字节。"""
 
 
-def _montage(prior_images: List[dict], thumb: int = 96, gap: int = 8, max_count: int = 8) -> Optional[Image.Image]:
+def _montage(prior_images: list[dict], thumb: int = 96, gap: int = 8, max_count: int = 8) -> Image.Image | None:
     """把前一批真实图像字节合成为底部蒙太奇条带（证明字节被消费）。"""
     if not prior_images:
         return None
@@ -150,8 +150,8 @@ class PILImageGenProvider(ImageGenProvider):
     def generate_batch(
         self,
         request: BatchRequest,
-        prior_batch: Optional[PriorBatchContent] = None,
-    ) -> List[GeneratedImage]:
+        prior_batch: PriorBatchContent | None = None,
+    ) -> list[GeneratedImage]:
         seed = request.seed if request.seed is not None else 1
         rng = random.Random(seed)
         req_id = request.request_id or f"req-{uuid.uuid4().hex[:12]}"
@@ -159,7 +159,7 @@ class PILImageGenProvider(ImageGenProvider):
         prior_data = [im.get("data") or b"" for im in prior_images]
         att_hash = prior_batch.attachment_hash() if prior_batch else None
 
-        results: List[GeneratedImage] = []
+        results: list[GeneratedImage] = []
         for page in request.pages:
             t0 = time.monotonic()
             prompt = f"{request.prompt_template} {page.get('title', '')} / {page.get('page_id', '')}"
@@ -230,7 +230,7 @@ class ExternalImageGenProvider(ImageGenProvider):
     id = "external"
     external_dependency = True
 
-    def __init__(self, backend: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(self, backend: str | None = None, api_key: str | None = None):
         self.backend = backend or os.environ.get("AIPD_IMGGEN_BACKEND")
         self.api_key = api_key or os.environ.get("AIPD_IMGGEN_API_KEY")
 
@@ -240,8 +240,8 @@ class ExternalImageGenProvider(ImageGenProvider):
     def generate_batch(
         self,
         request: BatchRequest,
-        prior_batch: Optional[PriorBatchContent] = None,
-    ) -> List[GeneratedImage]:
+        prior_batch: PriorBatchContent | None = None,
+    ) -> list[GeneratedImage]:
         if not self.available():
             raise ImageGenUnavailable(
                 "no image generation backend configured; chain stays HOLD and emits external task package"
@@ -274,9 +274,9 @@ class RealImageGenProvider(ImageGenProvider):
 
     def __init__(
         self,
-        url: Optional[str] = None,
-        api_key: Optional[str] = None,
-        model: Optional[str] = None,
+        url: str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
         output_format: str = "png",
         timeout: float = 60.0,
     ):
@@ -339,8 +339,8 @@ class RealImageGenProvider(ImageGenProvider):
     def generate_batch(
         self,
         request: BatchRequest,
-        prior_batch: Optional[PriorBatchContent] = None,
-    ) -> List[GeneratedImage]:
+        prior_batch: PriorBatchContent | None = None,
+    ) -> list[GeneratedImage]:
         if not self.available():
             raise ImageGenUnavailable(
                 "real image provider not configured (missing AIPD_IMAGE_PROVIDER_URL / "
@@ -355,7 +355,7 @@ class RealImageGenProvider(ImageGenProvider):
                 "data:image/png;base64," + base64.b64encode(data).decode("ascii")
             )
         req_id = request.request_id or f"req-{uuid.uuid4().hex[:12]}"
-        results: List[GeneratedImage] = []
+        results: list[GeneratedImage] = []
         for page in request.pages:
             size = request.generation_params.get("size") or [1024, 1024]
             if isinstance(size, str):

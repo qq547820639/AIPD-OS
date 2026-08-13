@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..state.checkpoint import CheckpointManager
 from ..state.db import AIPDStateDB
@@ -30,7 +30,7 @@ def _impact_cn(v: Any) -> str:
     return _IMPACT_CN.get(str(v).lower(), str(v))
 
 
-def _where_left_off_cn(rs: Dict[str, Any]) -> str:
+def _where_left_off_cn(rs: dict[str, Any]) -> str:
     """把“上次进行到哪”渲染成干净中文，避免泄漏 Python dict 的 repr。"""
     wlo = rs.get("where_left_off", "")
     if isinstance(wlo, dict):
@@ -46,7 +46,7 @@ def _where_left_off_cn(rs: Dict[str, Any]) -> str:
     return str(wlo) if wlo else "没有历史检查点，从当前阶段开始"
 
 
-def _next_action_cn(rs: Dict[str, Any]) -> str:
+def _next_action_cn(rs: dict[str, Any]) -> str:
     """把英文内部动作描述（如 resolve proposed decisions）翻成中文。"""
     na = rs.get("next_action", "") or ""
     if isinstance(na, str):
@@ -57,9 +57,9 @@ def _next_action_cn(rs: Dict[str, Any]) -> str:
     return str(na)
 
 
-def _artifact_diff_section(ap: Dict[str, Any]) -> str:
+def _artifact_diff_section(ap: dict[str, Any]) -> str:
     """把制品版本/参数差异渲染成中文正文（数据存在才展示）。"""
-    lines: List[str] = []
+    lines: list[str] = []
     cad = ap.get("cad_versions") or []
     if cad:
         lines.append("CAD 版本差异：")
@@ -82,7 +82,7 @@ def _artifact_diff_section(ap: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _build_risk_and_wait(db, tenant: str, project_id: str) -> Dict[str, Any]:
+def _build_risk_and_wait(db, tenant: str, project_id: str) -> dict[str, Any]:
     """读取风险、外部等待项与项目状态，构建风险健康 + 外部等待视图。"""
     risks = db.list_risks(tenant, project_id)
     external_waiting = CheckpointManager(db).resume_summary(project_id, tenant)["external_waiting"]
@@ -93,7 +93,7 @@ def _build_risk_and_wait(db, tenant: str, project_id: str) -> Dict[str, Any]:
     }
 
 
-def _health_section(rh: Dict[str, Any]) -> str:
+def _health_section(rh: dict[str, Any]) -> str:
     """渲染风险健康状态的 Markdown 段落（不暴露内部代号）。"""
     light = rh.get("traffic_light", "green")
     label = _HEALTH_LABEL.get(light, "🟢 良好")
@@ -101,7 +101,7 @@ def _health_section(rh: Dict[str, Any]) -> str:
     return f"{label}" + (f" — {reason}" if reason else "")
 
 
-def _wait_section(ew: Dict[str, Any]) -> str:
+def _wait_section(ew: dict[str, Any]) -> str:
     """渲染外部等待事项的 Markdown 段落（不暴露内部代号）。"""
     if not ew.get("count", 0):
         return "项目当前无外部等待事项。"
@@ -116,7 +116,7 @@ def _wait_section(ew: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def render_markdown(view: Dict[str, Any]) -> str:
+def render_markdown(view: dict[str, Any]) -> str:
     """把一个 owner_update 视图渲染成人类友好的 Markdown。"""
     ps = view.get("project_summary", {})
     name = (ps.get("details") or {}).get("name") or "项目"
@@ -200,7 +200,7 @@ class OwnerView:
     def tenant_id(self) -> str:
         return self._tenant
 
-    def owner_update(self, project_id: str) -> Dict[str, Any]:
+    def owner_update(self, project_id: str) -> dict[str, Any]:
         """返回所有者的完整更新视图（自然语言优先）。"""
         view = {
             "project_summary": build_project_summary(self._db, project_id, self._tenant),
@@ -211,8 +211,8 @@ class OwnerView:
         view.update(_build_risk_and_wait(self._db, self._tenant, project_id))
         return view
 
-    def to_markdown(self, view: Optional[Dict[str, Any]] = None,
-                    project_id: Optional[str] = None) -> str:
+    def to_markdown(self, view: dict[str, Any] | None = None,
+                    project_id: str | None = None) -> str:
         """把 owner_update 的结果渲染成 Markdown。未传 view 时自动构建。"""
         if view is None:
             pid = project_id or self._latest_project_id()
@@ -226,7 +226,7 @@ class OwnerView:
         return projects[0]["project_id"]
 
 
-def to_markdown(view: Dict[str, Any]) -> str:
+def to_markdown(view: dict[str, Any]) -> str:
     """纯函数：渲染一个已构建好的 owner_update 视图为 Markdown。"""
     return render_markdown(view)
 
