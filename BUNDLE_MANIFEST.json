@@ -2,7 +2,7 @@
   "name": "AIPD-OS bundle manifest",
   "bundle": "aipd-os-5.6.0.zip",
   "bundle_path": "releases/aipd-os-5.6.0.zip",
-  "bundle_sha256": "ea900271d491a82cf877b832b26234959bcff588784b3407dcb82a81637ae6cb",
+  "bundle_sha256": "1ed38135d72b983c99d5770ed63327c4f4749f6a270f948ef59fe96fdad1b2bc",
   "bundle_size": 2345950,
   "entry_count": 346,
   "entries": [

@@ -1,8 +1,8 @@
 {
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
-  "source_commit": "22c84478fb2194831a52a310395079948b49befb",
-  "generated_at": "2026-08-13T19:44:07+00:00",
+  "source_commit": "e896f67ec6270c057d08aea650d655f6651c51cb",
+  "generated_at": "2026-08-13T19:54:26+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -1872,8 +1872,8 @@
     },
     {
       "path": "tests/conftest.py",
-      "size": 1785,
-      "sha256": "5765663727354661a24ced008b28d90420af2d061cb55028b97f74223fc5d959"
+      "size": 2008,
+      "sha256": "52256cd24e902770bae298bcca08d8c4ac47a1c8fde34f7fc40015c19a991641"
     },
     {
       "path": "tests/fixtures/__init__.py",

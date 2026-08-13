@@ -1872,8 +1872,8 @@
     },
     {
       "path": "tests/conftest.py",
-      "size": 1785,
-      "sha256": "5765663727354661a24ced008b28d90420af2d061cb55028b97f74223fc5d959"
+      "size": 2008,
+      "sha256": "52256cd24e902770bae298bcca08d8c4ac47a1c8fde34f7fc40015c19a991641"
     },
     {
       "path": "tests/fixtures/__init__.py",
