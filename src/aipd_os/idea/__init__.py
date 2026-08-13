@@ -82,9 +82,7 @@ from .research_provider import (
     RESEARCH_CAPABILITIES,
     EvidenceRequest,
     ResearchCapabilityUnavailable,
-    ResearchIntegration,
     ResearchProvider,
-    ResearchToolAdapter,
     UnavailableResearchProvider,
     research_capability_declaration,
 )
@@ -142,10 +140,8 @@ __all__ = [
     "ResearchProvider",
     "UnavailableResearchProvider",
     "ResearchCapabilityUnavailable",
-    "ResearchToolAdapter",
     "research_capability_declaration",
     "EvidenceRequest",
-    "ResearchIntegration",
     # claims
     "Claim",
     "ClaimService",

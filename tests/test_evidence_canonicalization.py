@@ -17,6 +17,10 @@ import pytest
 
 from aipd_os.execution.execution_router import ExecutionRouter
 from aipd_os.execution.registry import AdapterRegistry
+from aipd_os.execution.research_integration import (
+    ResearchIntegration,
+    ResearchToolAdapter,
+)
 from aipd_os.execution.runs import RunStore
 from aipd_os.idea import (
     Claim,
@@ -26,8 +30,6 @@ from aipd_os.idea import (
     EvidenceRequest,
     Idea,
     IdeaService,
-    ResearchIntegration,
-    ResearchToolAdapter,
 )
 from aipd_os.state.db import AIPDStateDB
 from tests.fixtures.idea.research_fixtures import FakeResearchProvider

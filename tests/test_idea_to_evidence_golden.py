@@ -23,6 +23,10 @@ from pathlib import Path
 import pytest
 
 from aipd_os.execution.execution_router import ExecutionRouter
+from aipd_os.execution.research_integration import (
+    ResearchIntegration,
+    ResearchToolAdapter,
+)
 from aipd_os.execution.runs import RunStore
 from aipd_os.idea import (
     ClaimService,
@@ -33,8 +37,6 @@ from aipd_os.idea import (
     IdeaMaturity,
     IdeaService,
     IdeaTruthProjection,
-    ResearchIntegration,
-    ResearchToolAdapter,
 )
 from aipd_os.state.db import AIPDStateDB
 from aipd_os.supervisor import Supervisor

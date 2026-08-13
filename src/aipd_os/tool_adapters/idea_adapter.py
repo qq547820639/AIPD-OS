@@ -16,13 +16,13 @@ from __future__ import annotations
 from typing import Any
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
+from aipd_os.execution.research_integration import ResearchIntegration
 from aipd_os.idea.decomposer import IdeaDecomposer, IdeaDecompositionUnavailable
 from aipd_os.idea.evidence_relations import EvidenceRelationService
 from aipd_os.idea.projections import IdeaTruthProjection
 from aipd_os.idea.research_provider import (
     EvidenceRequest,
     ResearchCapabilityUnavailable,
-    ResearchIntegration,
 )
 from aipd_os.state.db import AIPDStateDB
 from aipd_os.supervisor.idea_capabilities import (

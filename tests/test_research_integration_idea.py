@@ -17,6 +17,10 @@ import pytest
 
 from aipd_os.execution.execution_router import ExecutionRouter
 from aipd_os.execution.registry import AdapterRegistry
+from aipd_os.execution.research_integration import (
+    ResearchIntegration,
+    ResearchToolAdapter,
+)
 from aipd_os.execution.runs import RunStore
 from aipd_os.idea import (
     EVIDENCE_ASSESS_RELATION_CAPABILITY,
@@ -29,8 +33,6 @@ from aipd_os.idea import (
     Idea,
     IdeaService,
     ResearchCapabilityUnavailable,
-    ResearchIntegration,
-    ResearchToolAdapter,
     UnavailableResearchProvider,
     research_capability_declaration,
 )

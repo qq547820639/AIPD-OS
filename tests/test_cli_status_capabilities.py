@@ -12,7 +12,8 @@ import json
 from types import SimpleNamespace
 
 from aipd_os.cli.commands import cmd_status, probe_research_capabilities
-from aipd_os.idea import Idea, IdeaService, ResearchToolAdapter
+from aipd_os.execution.research_integration import ResearchToolAdapter
+from aipd_os.idea import Idea, IdeaService
 from aipd_os.state.db import AIPDStateDB
 from aipd_os.tool_adapters.builtin import build_registry
 from tests.fixtures.idea.research_fixtures import FakeResearchProvider

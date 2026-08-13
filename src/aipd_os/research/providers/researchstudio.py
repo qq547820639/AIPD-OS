@@ -347,7 +347,7 @@ def register_researchstudio(registry: Any, **kwargs: Any) -> ResearchStudioPaper
 
     返回 provider 实例（便于调用方持有）。
     """
-    from aipd_os.idea.research_provider import ResearchToolAdapter
+    from aipd_os.execution.research_integration import ResearchToolAdapter
     provider = ResearchStudioPaperSearchProvider(**kwargs)
     registry.register(ResearchToolAdapter(provider))
     return provider
