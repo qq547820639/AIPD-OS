@@ -22,12 +22,16 @@ def _manual_state(args):
 
 
 def _silent(fn):
-    """运行 fn 并吞掉其 stdout（供 manual_chain 等内部命令使用）。"""
+    """运行 fn：stdout 捕获后转发到 stderr（不丢失进度，也不污染 stdout；
+    供 manual_chain 等内部命令使用，保证 --json 模式下 stdout 纯净）。"""
     import contextlib
     import io
+    import sys
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         fn()
+    if buf.getvalue().strip():
+        print(buf.getvalue().rstrip(), file=sys.stderr)
 
 
 def _manual_ensure_state(args, state):

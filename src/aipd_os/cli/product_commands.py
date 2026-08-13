@@ -66,8 +66,10 @@ def _resolve_project(db: AIPDStateDB, tenant: str,
 
 
 def _emit(payload: dict[str, Any] | None, args, human: str) -> int:
+    # 与 _helpers._emit 同契约：--json 单行紧凑 + default=str（防 dataclass
+    # 等非原生对象 TypeError），人类分支输出文本。
     if getattr(args, "json", False):
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        print(json.dumps(payload, ensure_ascii=False, default=str))
     else:
         print(human)
     return 0

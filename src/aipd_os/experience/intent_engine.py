@@ -110,26 +110,9 @@ def build_clarifying_question(kind: str) -> str:
 
 
 def _options_of(decision: dict[str, Any] | None) -> list[str]:
-    """复用既有 instructions 的选项规整逻辑，把 options 规整为字符串列表。"""
-    if not decision:
-        return []
-    raw = decision.get("options") or decision.get("options_json")
-    if isinstance(raw, str):
-        try:
-            import json
-            parsed = json.loads(raw)
-        except Exception:  # noqa: BLE001
-            parsed = None
-        if isinstance(parsed, list):
-            return [str(o) for o in parsed if str(o).strip()]
-        if isinstance(parsed, str):
-            raw = parsed
-        elif parsed is not None:
-            return []
-        return [o.strip() for o in re.split(r"[/、,，|]", raw) if o.strip()]
-    if isinstance(raw, list):
-        return [str(o) for o in raw if str(o).strip()]
-    return []
+    """选项规整（共享实现：experience.common，与 instructions 同口径）。"""
+    from .common import options_of
+    return options_of(decision)
 
 
 def _next_open_decision(db: AIPDStateDB, project_id: str,

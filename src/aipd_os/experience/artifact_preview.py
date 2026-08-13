@@ -6,24 +6,15 @@
 """
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from ..state.db import AIPDStateDB
 
 
 def _metadata(d: dict[str, Any]) -> dict[str, Any]:
-    """deliverables 表把 metadata 存为 metadata_json，需自行解码。"""
-    raw = d.get("metadata_json") or d.get("metadata")
-    if isinstance(raw, dict):
-        return raw
-    if isinstance(raw, str):
-        try:
-            parsed = json.loads(raw)
-            return parsed if isinstance(parsed, dict) else {}
-        except json.JSONDecodeError:
-            return {}
-    return {}
+    """deliverables 表把 metadata 存为 metadata_json（共享实现：common）。"""
+    from .common import metadata_of
+    return metadata_of(d)
 
 
 def _entry(d: dict[str, Any], extra: dict[str, Any] | None = None) -> dict[str, Any]:

@@ -125,8 +125,21 @@ def build_preview(db: AIPDStateDB, project_id: str,
 
 def analyze_impact(db: AIPDStateDB, project_id: str, intent: Intent,
                    tenant_id: str = "default") -> dict[str, Any]:
-    """返回完整的确定性影响分析报告。"""
+    """返回完整的确定性影响分析报告。
+
+    多条件意图逐条展开：主条件与每一条 constraints 的受影响制品取并集
+    （此前只按主条件计算，其余条件既不影响返工范围也不写事实）。
+    """
     affected = _affected_for_kind(db, project_id, intent, tenant_id)
+    seen_ids = {a.get("deliverable_id") for a in affected}
+    for c in intent.constraints:
+        if c.get("kind") == intent.kind and c.get("params", {}) == dict(intent.params):
+            continue  # parse_intent 会把主条件放进 constraints[0]
+        sub = Intent(kind=c.get("kind", ""), params=c.get("params") or {})
+        for a in _affected_for_kind(db, project_id, sub, tenant_id):
+            if a.get("deliverable_id") not in seen_ids:
+                seen_ids.add(a.get("deliverable_id"))
+                affected.append(a)
     estimate = estimate_cost_time(intent, affected)
     reversible = _is_reversible(intent)
     requires_approval = _requires_approval(intent)

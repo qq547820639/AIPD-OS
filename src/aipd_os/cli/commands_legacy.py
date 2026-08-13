@@ -254,25 +254,13 @@ def cmd_run_cad_chain(args: argparse.Namespace) -> int:
     warnings.warn("'aipd run-cad-chain' 已废弃，请使用 'aipd cad build'", DeprecationWarning, stacklevel=2)  # noqa: E501
     cmg = _helpers._import_module("cad_maturity_gate")
     manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-    runtime = manifest.get("runtime", "mesh")
-    runtime_ceiling = cmg.RUNTIME_MAX.get(runtime, "C0")
-    ceiling_idx = cmg.idx(runtime_ceiling)
-
-    reached: str | None = None
-    cumulative: list[str] = []
-    for level in cmg.LEVELS:
-        cumulative += cmg.REQUIREMENTS[level]
-        checks = {k: bool(cmg.present(cmg.val(manifest, k))) for k in cumulative}
-        runtime_allowed = cmg.idx(level) <= ceiling_idx
-        passed = all(checks.values()) and runtime_allowed
-        if passed:
-            reached = level
-        else:
-            break
-
-    faceted_capped = runtime == "faceted_brep"
-    target_idx = cmg.idx(args.target)
-    target_passed = reached is not None and cmg.idx(reached) >= target_idx
+    # 复用 _cad_gate_summary（与 cad preflight/build 同源），不再内联复制
+    # 累计成熟度计算（此前两处实现漂移）。
+    s = _helpers._cad_gate_summary(cmg, manifest, args.target)
+    reached = s["reached_level"]
+    runtime_ceiling = s["runtime_ceiling"]
+    faceted_capped = s["faceted_brep_capped"]
+    target_passed = s["target_passed"]
 
     result = {"command": "run-cad-chain", "ok": target_passed,
               "reached_level": reached, "runtime_ceiling": runtime_ceiling,

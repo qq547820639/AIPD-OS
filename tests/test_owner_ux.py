@@ -360,3 +360,58 @@ def test_onboarding_examples(db):
     assert isinstance(examples, list)
     for e in examples:
         assert "name" in e and "goal" in e
+
+
+# -------------------------------------------------- 多条件意图：逐条落实（回归）
+def test_multi_condition_loop_records_all_constraints(project, db):
+    """回归：'成本降低20% 并且 外观更工业化' 必须把两条约束都写入 Product Truth
+    （此前只落实主条件，第二条被静默丢弃）。"""
+    intent = parse_intent("成本降低20%并且外观更工业化", db, "p1")
+    result = run_operation_loop(db, "p1", intent, approved=True)
+    assert result["status"] == "done"
+    facts = db.list_facts("default", "p1")
+    keys = {f["key"] for f in facts}
+    assert "cost_target" in keys, "主条件 cost_reduction 必须落库"
+    assert "design_intent" in keys, "约束 style_constraint 必须落库"
+    # recorded_fact_ids 包含两条事实
+    assert len(result["rework"]["recorded_fact_ids"]) == 2
+
+
+def test_multi_condition_impact_merges_affected_artifacts(project, db):
+    """回归：多条件意图的受影响制品必须是各条件影响集的并集。"""
+    intent = parse_intent("成本降低20%并且外观更工业化", db, "p1")
+    impact = analyze_impact(db, "p1", intent)
+    ids = {a["deliverable_id"] for a in impact["affected_artifacts"]}
+    # cost 影响全部（manual/cad/bom），style 只影响 manual → 并集仍为全部
+    assert project["manual"] in ids
+    assert project["cad"] in ids
+    assert project["bom"] in ids
+
+
+# -------------------------------------------------- 精确回滚（回归）
+def test_revert_operation_only_reverts_latest_affected_ids(project, db):
+    """回归：回滚只作用于最近一次可撤销操作记录的 affected_ids，
+    而不是把库内所有 done 制品都退回。"""
+    run_operation_loop(db, "p1", parse_intent("成本降低20%", db, "p1"), approved=True)
+    # 第二笔操作：只影响手册类（style_constraint）
+    run_operation_loop(db, "p1", parse_intent("外观更工业化", db, "p1"), approved=True)
+    r = revert_operation(db, "p1")
+    # 最近一次是 style_constraint → 只回滚 manual
+    assert r["reverted"] == [project["manual"]]
+    by_id = {d["deliverable_id"]: d for d in db.list_deliverables("default", "p1")}
+    assert by_id[project["manual"]]["status"] == "in_progress"
+    # cad/bom 不受影响（仍 done）
+    assert by_id[project["cad"]]["status"] == "done"
+
+
+def test_revert_operation_legacy_record_without_ids_is_honest(project, db):
+    """历史审计记录未保存 affected_ids 时：如实报告，不做猜测性回滚。"""
+    db.add_audit("owner", "operation", "p1", "default",
+                 before={"kind": "cost_reduction"},
+                 after={"kind": "cost_reduction", "reversible": True,
+                        "affected_count": 2})  # 无 affected_ids
+    r = revert_operation(db, "p1")
+    assert r["reverted"] == []
+    assert "未记录受影响制品清单" in r["note"]
+    by_id = {d["deliverable_id"]: d for d in db.list_deliverables("default", "p1")}
+    assert by_id[project["cad"]]["status"] == "done"  # 未被误回滚

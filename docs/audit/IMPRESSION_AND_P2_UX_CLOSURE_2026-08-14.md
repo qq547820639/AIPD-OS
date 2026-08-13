@@ -130,3 +130,26 @@ total=1054，source_commit=24227f6）· `signature_verifiable` ✅（Ed25519）�
   - 加密 KDF 加盐（PBKDF2/scrypt）、`_check_secrets` ACK 逐条化 + 非 .py 后缀扫描；
   - schema_check 名不副实（未做真实 jsonschema.validate）扩展；
   - web POST 无 CSRF（localhost-only 场景下的纵深防御）。
+
+---
+
+## 附：第二轮（CLI/体验审计报告消化，2026-08-14）
+
+依据 CLI/体验模块簇审计报告（subagent 15601d1b）核对后，上一轮已覆盖
+impacts 渲染、provider env 对齐、--json 纯净、eval --baseline、_emit
+default=str、SystemExit 保护、onboarding 去重/缓存。本轮补齐剩余项：
+
+| 项 | 落地 |
+|---|---|
+| _options_of / _bump_version / _metadata 三组双实现 | 收敛为 `experience/common.py` 唯一实现（instructions/intent_engine/operations/artifact_preview/web 全部 import 复用）|
+| CAD gate 累计成熟度内联复制（_helpers vs legacy） | `cmd_run_cad_chain` 复用 `_cad_gate_summary` |
+| 多条件意图只落实第一条 | `auto_rework` 逐条展开主条件 + constraints 写事实（`recorded_fact_ids`）；`analyze_impact` 受影响制品取各条件并集 |
+| revert_operation 回滚过宽 | 审计记录写入 `affected_ids`；回滚只作用于最近一次可撤销操作记录的制品；历史无清单记录如实报告不猜测 |
+| `failure_type == ["external"]` 列表全等 | `"external" in (...)` 成员判断 |
+| `_run_script_main` 只捕获 stdout | 同时捕获 stderr 并转发（信息不丢、stdout 不被污染）|
+| `_silent` 吞掉 manual_chain 全部输出 | 捕获后转发 stderr |
+| product_commands `_emit` indent 漂移 | 与 `_helpers._emit` 同契约（单行 + default=str）|
+
+新增回归测试 6 个（多条件事实/影响并集、精确回滚、历史记录诚实降级、
+共享助手同源、_silent 转发），全量回归与发布收口结果见下：
+（收口完成后补最终数字）

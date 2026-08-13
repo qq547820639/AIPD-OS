@@ -314,7 +314,7 @@ def run_real_model_smoke(
     results = []
     for case in cases:
         result = runner.run_case(case)
-        if result.failure_type == ["external"]:
+        if "external" in (result.failure_type or []):
             # 诚实：无凭据时不运行假实现替代，标记为外部跳过。
             result.trace = "real_model_smoke: no credentials -> external/skipped," \
                            " no fake substitution"

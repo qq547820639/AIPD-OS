@@ -248,3 +248,40 @@ def test_apply_approve_propagates_decision_fact(seeded, db):
     assert result["recorded_fact_id"] is not None
     keys = [f["key"] for f in db.list_facts("default", "p1")]
     assert "decision_outcome" in keys
+
+
+# -------------------------------------------------- 共享助手收敛（回归）
+def test_shared_experience_helpers_single_source():
+    """回归：instructions / intent_engine 的选项规整必须同一实现（无漂移）。"""
+    from aipd_os.experience.common import bump_version, metadata_of, options_of
+    from aipd_os.experience.instructions import _options_of as ins_opts
+    from aipd_os.experience.intent_engine import _options_of as eng_opts
+
+    cases = [
+        {"options": ["A", "B"]},
+        {"options": "A/B/C"},
+        {"options": "A、B，C"},
+        {"options_json": '["X", "Y"]'},
+        {"options_json": "X/Y"},
+        None,
+        {},
+    ]
+    for c in cases:
+        assert ins_opts(c) == options_of(c)
+        assert eng_opts(c) == options_of(c)
+
+    assert bump_version(None) == "0.1"
+    assert bump_version("1.2") == "1.3"
+    assert bump_version("weird") == "weird.1"
+    assert metadata_of({"metadata_json": '{"a": 1}'}) == {"a": 1}
+    assert metadata_of({"metadata_json": "broken"}) == {}
+
+
+def test_silent_forwards_captured_stdout_to_stderr(capsys):
+    """回归：_silent 不得吞掉 manual_chain 输出（转发 stderr，stdout 保持纯净）。"""
+    from aipd_os.cli.commands_manual import _silent
+
+    _silent(lambda: print("manual chain progress"))
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "manual chain progress" in captured.err

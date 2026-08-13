@@ -126,11 +126,15 @@ def _run_script_main(mod, argv):
     old = sys.argv
     sys.argv = ["prog"] + list(argv)
     buf = io.StringIO()
+    err_buf = io.StringIO()
     try:
-        with contextlib.redirect_stdout(buf):
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(err_buf):
             rc = int(mod.main() or 0)
     finally:
         sys.argv = old
+    # 被调脚本的 stderr 转发到真实 stderr（不丢失错误信息，也不污染 stdout）
+    if err_buf.getvalue():
+        print(err_buf.getvalue().rstrip(), file=sys.stderr)
     return rc, buf.getvalue()
 
 

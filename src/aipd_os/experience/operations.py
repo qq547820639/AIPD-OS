@@ -37,14 +37,9 @@ class ProgressTracker:
 
 
 def _bump_version(version: str | None) -> str:
-    v = str(version or "0.0")
-    parts = v.split(".")
-    try:
-        last = int(parts[-1])
-        parts[-1] = str(last + 1)
-        return ".".join(parts)
-    except ValueError:
-        return f"{v}.1"
+    """版本号最后一段 +1（共享实现：experience.common）。"""
+    from .common import bump_version
+    return bump_version(version)
 
 
 def _get_deliverable(db: AIPDStateDB, tenant: str, project_id: str,
@@ -55,18 +50,18 @@ def _get_deliverable(db: AIPDStateDB, tenant: str, project_id: str,
     return None
 
 
-def _record_constraint_fact(db: AIPDStateDB, project_id: str, intent: Intent,
-                            tenant_id: str) -> str | None:
-    """把约束类意图写入 Product Truth（事实）。"""
-    kind = intent.kind
+def _record_constraint_fact(db: AIPDStateDB, project_id: str, kind: str,
+                            params: dict[str, Any], tenant_id: str) -> str | None:
+    """把约束类意图写入 Product Truth（事实）。kind/params 独立传入，
+    支持多条件意图逐条落实（主条件 + 每一条 constraints）。"""
     if kind == "cost_reduction":
-        pct = intent.params.get("percentage") or 0
+        pct = params.get("percentage") or 0
         return db.add_fact(tenant_id, project_id, "cost_target",
                            f"降低成本 {pct:.0f}%", "C", source="owner-instruction",
                            conditions="产品所有者指定的成本约束")
     if kind == "style_constraint":
-        style = intent.params.get("style")
-        avoid = intent.params.get("avoid")
+        style = params.get("style")
+        avoid = params.get("avoid")
         desc = style or ("避免" + (avoid or "医疗风"))
         return db.add_fact(tenant_id, project_id, "design_intent",
                            f"外观风格：{desc}", "C", source="owner-instruction",
@@ -80,6 +75,17 @@ def _record_constraint_fact(db: AIPDStateDB, project_id: str, intent: Intent,
                            "暂不进入实体制造", "C", source="owner-instruction",
                            conditions="产品所有者要求暂不进入实体制造")
     return None
+
+
+def _constraint_entries(intent: Intent) -> list[tuple[str, dict[str, Any]]]:
+    """展开多条件意图：主条件 + 除主条件外的每一条 constraints
+    （parse_intent 会把主条件也放进 constraints[0]，需按 kind+params 去重）。"""
+    entries: list[tuple[str, dict[str, Any]]] = [(intent.kind, dict(intent.params))]
+    for c in intent.constraints:
+        if c.get("kind") == intent.kind and c.get("params", {}) == dict(intent.params):
+            continue
+        entries.append((c.get("kind", ""), c.get("params") or {}))
+    return entries
 
 
 def _apply_decision(db: AIPDStateDB, project_id: str, intent: Intent,
@@ -108,9 +114,17 @@ def _apply_decision(db: AIPDStateDB, project_id: str, intent: Intent,
 
 def auto_rework(db: AIPDStateDB, project_id: str, intent: Intent,
                 impact: dict[str, Any], tenant_id: str = "default") -> dict[str, Any]:
-    """自动返工：记录约束/决策，并让受影响制品进入推进（版本递增）。"""
+    """自动返工：记录约束/决策，并让受影响制品进入推进（版本递增）。
+
+    多条件意图（``成本降低20% 并且 外观更工业化``）逐条落实：每一条约束
+    都写入 Product Truth（此前只落实主条件，其余条件被静默丢弃）。
+    """
     rework_records: list[dict[str, Any]] = []
-    recorded_fact_id = _record_constraint_fact(db, project_id, intent, tenant_id)
+    recorded_fact_ids: list[str] = []
+    for kind, params in _constraint_entries(intent):
+        fid = _record_constraint_fact(db, project_id, kind, params, tenant_id)
+        if fid:
+            recorded_fact_ids.append(fid)
     resolved_decision = _apply_decision(db, project_id, intent, tenant_id)
 
     for a in impact.get("affected_artifacts", []):
@@ -136,7 +150,8 @@ def auto_rework(db: AIPDStateDB, project_id: str, intent: Intent,
     return {
         "reworked": rework_records,
         "count": len(rework_records),
-        "recorded_fact_id": recorded_fact_id,
+        "recorded_fact_id": recorded_fact_ids[0] if recorded_fact_ids else None,
+        "recorded_fact_ids": recorded_fact_ids,
         "resolved_decision": resolved_decision,
     }
 
@@ -188,20 +203,29 @@ def update_summary(db: AIPDStateDB, project_id: str, tenant_id: str,
                  before={"kind": intent.kind},
                  after={"kind": intent.kind,
                         "reversible": impact.get("reversible", False),
-                        "affected_count": impact.get("affected_count", 0)})
+                        "affected_count": impact.get("affected_count", 0),
+                        # 精确回滚依据：本操作实际影响的制品 ID 清单
+                        "affected_ids": [
+                            a["deliverable_id"]
+                            for a in impact.get("affected_artifacts", [])
+                            if a.get("deliverable_id")]})
     return {"summary": summary, "recorded": True}
 
 
 def revert_operation(db: AIPDStateDB, project_id: str, tenant_id: str = "default",
                      target: str | None = None) -> dict[str, Any]:
-    """失败恢复：回滚最近一次可撤销操作（把受影响制品退回上一版本）。
+    """失败恢复：回滚最近一次可撤销操作（只回滚该操作记录的受影响制品）。
 
-    通过审计日志中 reversible=True 的操作记录定位受影响制品，无法回滚
-    （不可逆操作）时如实报告，绝不伪造。
+    通过审计日志中 reversible=True 的操作记录定位**该操作实际影响**的
+    制品（after.affected_ids），精确回滚而不是把库内所有 done 制品都退回
+    （此前遍历全部 done 制品，回滚范围过宽且不可预测）。历史记录未保存
+    制品清单时如实报告、不做猜测性回滚。
     """
     audit = db.list_audit(limit=200)
     reversible_ops = []
     for e in audit:
+        if e.get("project_id") != project_id:
+            continue  # 只回滚本项目自己的操作（多项目隔离）
         after = e.get("after_json") or {}
         if isinstance(after, str):
             try:
@@ -209,28 +233,41 @@ def revert_operation(db: AIPDStateDB, project_id: str, tenant_id: str = "default
             except Exception:  # noqa: BLE001
                 after = {}
         if e.get("action") == "operation" and after.get("reversible") is True:
-            reversible_ops.append(e)
+            reversible_ops.append(after)
     if not reversible_ops:
         return {"reverted": [], "note": "没有可回滚的可撤销操作"}
 
-    # 找到最近一次仍处于 done 的制品，回退
+    # 最近一次可撤销操作（list_audit 按时间倒序，取第一个）
+    latest = reversible_ops[0]
+    affected_ids = latest.get("affected_ids") or []
+    if not affected_ids:
+        return {"reverted": [], "note": (
+            "最近一次可撤销操作未记录受影响制品清单（历史记录），"
+            "不做猜测性回滚；请使用 `aipd recover --backup` 从备份恢复")}
+
     reverted: list[str] = []
-    for d in db.list_deliverables(tenant_id, project_id):
-        if d.get("status") == "done" and d.get("version"):
-            parts = str(d.get("version")).split(".")
-            try:
-                prev = str(int(parts[-1]) - 1) if parts else None
-            except ValueError:
-                prev = None
-            new_version = ".".join(parts[:-1] + [prev]) if prev else str(d.get("version"))
-            db.update_deliverable(tenant_id, project_id, d["deliverable_id"],
-                                  expected_version=d["version_no"],
-                                  status="in_progress", version=new_version)
-            db.add_change(tenant_id, project_id, "deliverable", d["deliverable_id"],
-                          "revert", before={"status": "done"},
-                          after={"status": "in_progress", "version": new_version},
-                          reason="用户要求回滚最近一次可撤销操作")
-            reverted.append(d["deliverable_id"])
+    for did in affected_ids:
+        d = _get_deliverable(db, tenant_id, project_id, did)
+        if d is None:
+            continue
+        if d.get("status") != "done":
+            continue
+        version = str(d.get("version") or "")
+        parts = version.split(".")
+        try:
+            prev_num = max(0, int(parts[-1]) - 1) if parts and parts[-1].isdigit() else None
+        except ValueError:
+            prev_num = None
+        new_version = (".".join(parts[:-1] + [str(prev_num)])
+                       if prev_num is not None else version)
+        db.update_deliverable(tenant_id, project_id, d["deliverable_id"],
+                              expected_version=d["version_no"],
+                              status="in_progress", version=new_version)
+        db.add_change(tenant_id, project_id, "deliverable", d["deliverable_id"],
+                      "revert", before={"status": "done", "version": version},
+                      after={"status": "in_progress", "version": new_version},
+                      reason="用户要求回滚最近一次可撤销操作")
+        reverted.append(d["deliverable_id"])
     db.add_audit("owner", "revert", project_id, tenant_id,
                  after={"deliverables": reverted})
     return {"reverted": reverted, "note": f"已回滚 {len(reverted)} 项受影响制品"}

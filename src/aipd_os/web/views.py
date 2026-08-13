@@ -13,7 +13,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import platform
 import sys
@@ -81,16 +80,9 @@ def _preview_kind(dtype: str | None) -> str:
 
 
 def _metadata(d: dict[str, Any]) -> dict[str, Any]:
-    raw = d.get("metadata_json") or d.get("metadata")
-    if isinstance(raw, dict):
-        return raw
-    if isinstance(raw, str):
-        try:
-            parsed = json.loads(raw)
-            return parsed if isinstance(parsed, dict) else {}
-        except json.JSONDecodeError:
-            return {}
-    return {}
+    """deliverables metadata_json 解码（共享实现：experience.common）。"""
+    from aipd_os.experience.common import metadata_of
+    return metadata_of(d)
 
 
 class RunController:
@@ -539,13 +531,9 @@ class WebConsole:
         return {"ok": True, "ref": ref, "path": path, "available": Path(path).exists()}
 
     def _bump_version(self, version: str | None) -> str:
-        v = str(version or "0.0")
-        parts = v.split(".")
-        try:
-            parts[-1] = str(int(parts[-1]) + 1)
-            return ".".join(parts)
-        except ValueError:
-            return f"{v}.1"
+        """版本号最后一段 +1（共享实现：experience.common）。"""
+        from aipd_os.experience.common import bump_version
+        return bump_version(version)
 
     def _display_for(self, pid: str, ref: str) -> str:
         for i, d in enumerate(self.db.list_deliverables(self.tenant_id, pid), start=1):

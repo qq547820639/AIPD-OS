@@ -13,7 +13,6 @@
 """
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, cast
@@ -49,28 +48,9 @@ def _next_open_decision(db: AIPDStateDB, project_id: str, tenant_id: str) -> dic
 
 
 def _options_of(decision: dict[str, Any] | None) -> list[str]:
-    """把 decision 的 options（list 或 'A/B/C' 字符串或 options_json）规整为字符串列表。"""
-    if not decision:
-        return []
-    raw = decision.get("options")
-    if raw is None:
-        raw = decision.get("options_json")
-    # DB 把 options 存为 options_json 字符串，先尝试 JSON 解码
-    if isinstance(raw, str):
-        try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError:
-            parsed = None
-        if isinstance(parsed, list):
-            return [str(o) for o in parsed if str(o).strip()]
-        if isinstance(parsed, str):
-            raw = parsed
-        elif parsed is not None:
-            return []
-        return [o.strip() for o in re.split(r"[/、,，|]", raw) if o.strip()]
-    if isinstance(raw, list):
-        return [str(o) for o in raw if str(o).strip()]
-    return []
+    """把 decision 的 options 规整为字符串列表（共享实现：experience.common）。"""
+    from .common import options_of
+    return options_of(decision)
 
 
 def parse_instruction(text: str, db: AIPDStateDB, project_id: str,
