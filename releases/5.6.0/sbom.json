@@ -153,6 +153,7 @@
       "aipd_os.execution.runs",
       "aipd_os.experience",
       "aipd_os.experience.artifact_preview",
+      "aipd_os.experience.common",
       "aipd_os.experience.decision_card",
       "aipd_os.experience.external_wait",
       "aipd_os.experience.impact_analysis",
