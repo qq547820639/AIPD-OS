@@ -53,8 +53,12 @@ class LlmIdeaDecompositionProvider(IdeaDecompositionProvider):
 
     name = "llm-openai-compatible"
 
-    def __init__(self, client: LlmClient) -> None:
+    def __init__(self, client: LlmClient,
+                 experience: Any | None = None) -> None:
         self._client = client
+        # 成功经验回灌（v5.10 定位修正）：既有成功轨迹作为运行时提示资产；
+        # None = 不回灌（基线行为不变）。
+        self._experience = experience
 
     def available(self) -> bool:
         """已配置（endpoint + api_key 齐备）才具备真实分解能力。"""
@@ -85,6 +89,10 @@ class LlmIdeaDecompositionProvider(IdeaDecompositionProvider):
             "不要输出任何 JSON 以外的内容。"
         )
         system = _SYSTEM_BASE + "\n\n" + stage_prompt
+        if self._experience is not None:
+            supplement = self._experience.system_supplement()
+            if supplement:
+                system += "\n\n" + supplement
         user = json.dumps(
             {"raw_input": raw_input, "idea_context": idea_context or {}},
             ensure_ascii=False)

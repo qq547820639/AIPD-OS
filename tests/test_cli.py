@@ -470,3 +470,34 @@ def test_industrialize_invalid_stage_rejected(tmp_path, capsys):
     data = json.loads(capsys.readouterr().out)
     assert rc == 1
     assert data.get("ok") is False
+
+
+def test_bom_add_show_and_cost_calc(tmp_path, capsys):
+    """v5.10 制造就绪：bom add / bom show / cost calc 端到端（确定性）。"""
+    db_path = tmp_path / "state.db"
+    from aipd_os.state.db import AIPDStateDB
+    state = AIPDStateDB(str(db_path))
+    state.ensure_default_tenant()
+    state.init_project("default", "p1", "t", "g")
+
+    rc = cli_main.main([
+        "bom", "add", "--db", str(db_path), "--part", "外壳",
+        "--supplier", "Acme", "--unit-cost", "10", "--json"])
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 0 and data["ok"] is True
+    assert data["line"]["item"] == "外壳"
+
+    rc = cli_main.main(["bom", "show", "--db", str(db_path), "--json"])
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 0 and data["rollup"]["line_count"] == 1
+    assert data["checklist"]["checks"]["cost_complete"] is True
+
+    rc = cli_main.main([
+        "cost", "calc", "--db", str(db_path),
+        "--tooling", "50000", "--quantity", "1000", "--json"])
+    data = json.loads(capsys.readouterr().out)
+    assert rc == 0 and data["ok"] is True
+    assert data["cost"]["unit_cost"] == 60.0  # 10 + 50000/1000
+    assert data["fact_id"], "成本核算必须写回 Product Truth"
+    facts = state.list_facts("default", "p1")
+    assert any(f["key"] == "cost.total" and f["status"] == "C" for f in facts)

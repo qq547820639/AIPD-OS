@@ -210,3 +210,23 @@ aipd_store 自检切换、db._next_id 死代码、state_service README/requireme
 提交 `1a57427`（代码）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
 1a57427，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
 **8/8 PASS**；已推送 origin。
+
+---
+
+## 附：第五轮（v5.10 制造就绪首项 + 经验回灌定位修正，2026-08-14）
+
+对「想法 → 开模图纸/BOM/成本核算」路径差距的裁定执行：BOM 域与成本核算
+（确定性、高置信度）直接落地；经验回灌（把成功轨迹从评测资产升级为运行时
+提示资产）同步落地，回归「规则喂养 AI 而非替代 AI」的原初定位。
+
+| 项 | 落地 |
+|---|---|
+| BOM 域 | 新包 `src/aipd_os/bom/`：`BomHeader`/`BomLine` 模型（状态枚举、数量>0、成本>=0、非自父校验）、`BomStore`（tenant+project 作用域 sqlite、原子 ID、乐观锁、父链防循环、追加式审计 `bom_changes`） |
+| 成本核算 | `bom/cost.py` 确定性纯计算：材料小计 + 模具摊销 + NRE + 毛利 → 单件成本/售价与总成本；缺供应商/单位成本的行计入 missing、cost_complete=False——绝不按 0 元假装 |
+| 发布检查清单 | `bom/projection.py`：rollup（根件/供应商分布/孤儿父项）+ release_checklist（released/行数/成本完整/无孤儿/已核算 → release_ready）——「开模可用物料清单与成本」的确定性验收 |
+| CLI | `aipd bom show` / `aipd bom add` / `aipd cost calc`（30 个主线命令）；cost 结果写回 Product Truth（fact `cost.total`，status C，来源 bom-cost） |
+| 经验回灌 | 新模块 `llm/experience.py`：黄金项目经验蒸馏为内置条目 + 恒附加行为原则；`ExperienceFeedback` 提供 system_supplement/fingerprint；两个 LLM Provider 构造注入（None=基线不变）；runtime 生产装配默认开启（`AIPD_EXPERIENCE_FEEDBACK=0` 关闭） |
+| 文档 | SKILL.md（30 命令清单）、README（功能 9 + 场景 4b）、CHANGELOG（v5.10 条目） |
+
+新增测试 15 个（BOM 模型/存储/防循环/乐观锁/成本诚实性/检查清单 + 经验渲染/
+指纹/双 Provider 注入 + CLI 端到端含 Product Truth 写回）。（收口完成后补最终数字）

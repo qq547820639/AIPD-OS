@@ -71,20 +71,31 @@ class LlmProductIntelligenceProvider(ProductIntelligenceProvider):
     provider_name = "llm-openai-compatible"
     prompt_version = "pi-v1"
 
-    def __init__(self, client: LlmClient) -> None:
+    def __init__(self, client: LlmClient,
+                 experience: Any | None = None) -> None:
         super().__init__()
         self._client = client
         self.configured = True
         self.model_name = client.model
+        # 成功经验回灌（v5.10 定位修正）：把既有成功轨迹作为运行时提示资产
+        # 注入系统消息；None = 不回灌（基线行为不变）。
+        self._experience = experience
 
     # ------------------------------------------------------------------ helper
+    def _system(self, stage_prompt: str) -> str:
+        system = _SYSTEM_BASE + "\n\n" + stage_prompt
+        if self._experience is not None:
+            supplement = self._experience.system_supplement()
+            if supplement:
+                system += "\n\n" + supplement
+        return system
+
     def _complete_json(self, stage_prompt: str,
                        context: dict[str, Any]) -> list[dict[str, Any]]:
         """构造 system/user 消息并解析为对象列表（失败上抛，不吞错）。"""
-        system = _SYSTEM_BASE + "\n\n" + stage_prompt
         user = json.dumps(context, ensure_ascii=False)
         raw = self._client.complete([
-            {"role": "system", "content": system},
+            {"role": "system", "content": self._system(stage_prompt)},
             {"role": "user", "content": user},
         ])
         return _parse_json_list(raw)

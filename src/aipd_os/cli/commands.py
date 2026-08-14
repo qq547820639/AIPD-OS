@@ -63,6 +63,7 @@ from .commands_legacy import (
     cmd_submit_decision,
 )
 from .commands_manual import cmd_manual_generate, cmd_manual_plan
+from .commands_manufacturing import cmd_bom, cmd_cost
 from .commands_owner import (
     cmd_dashboard,
     cmd_onboard,
@@ -513,6 +514,10 @@ COMMAND_FUNCS: dict[str, Any] = {
     # v5.9 Product Intelligence（产品定义查看 / Gate 操作）
     "product show": cmd_product_show,
     "product gate": cmd_product_gate,
+    # v5.10 制造就绪（BOM 物料清单 / 成本核算）
+    "bom show": cmd_bom,
+    "bom add": cmd_bom,
+    "cost calc": cmd_cost,
 }
 
 PLANNED_COMMANDS = list(COMMAND_FUNCS.keys())

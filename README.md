@@ -75,6 +75,17 @@ AIPD 把这件事接了下来：
 ### 📊 6. 随时可见的项目状态
 一个命令查看：项目进行到哪个阶段、完成了什么、有哪些风险（红黄绿分级）、有哪些事等你拍板、产品定义整理到了什么程度。支持命令行文字版、JSON 格式（便于接入其他工具），也有图形化网页界面。
 
+### 🏭 9. 制造就绪：物料清单与成本核算（v5.10 新增）
+从图纸/产品定义出发维护结构化 BOM（层级、数量、材料、供应商、单位成本、关联图纸与报价），
+一键核算成本：材料小计 + 模具费摊销 + NRE + 毛利 → 单件成本/售价与总成本，结果写回
+Product Truth（状态 C=可复核计算，来源可追溯）。发布检查清单诚实判定「开模可用物料
+清单与成本核算是否就绪」：缺供应商/单位成本的行绝不按 0 元假装。
+```bash
+aipd bom add --db state.db --part 外壳 --material ABS --supplier Acme --unit-cost 10
+aipd bom show --db state.db --project p1          # 汇总 + 发布检查清单
+aipd cost calc --db state.db --tooling 50000 --quantity 1000 --nre 20000 --margin 20
+```
+
 ### 🛠️ 7. 专业子系统（按需使用）
 | 子系统 | 说明 |
 |---|---|
@@ -187,6 +198,16 @@ aipd run --project p1 --db state.db              # 继续推进
 ```
 
 ### 场景 4：生成产品手册 / 推进 CAD / 准备生产
+```bash
+aipd manual plan --db state.db                        # 规划手册批次
+aipd cad preflight --manifest cad_manifest.json      # CAD 发布前检查
+aipd industrialize --db state.db                      # 登记报价/供应商/验证数据
+aipd validate --manifest manifest.json --target C5    # 验证是否达到目标成熟度
+aipd bom add --db state.db --part 外壳 --supplier Acme --unit-cost 10   # 物料清单
+aipd cost calc --db state.db --tooling 50000 --quantity 1000 --margin 20  # 成本核算
+```
+
+### 场景 4b：准备开模物料清单与成本
 ```bash
 aipd manual plan --db state.db                        # 规划手册批次
 aipd cad preflight --manifest cad_manifest.json      # CAD 发布前检查

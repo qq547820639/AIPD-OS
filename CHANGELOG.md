@@ -24,6 +24,15 @@
   通用 `LlmClient`（OpenAI 兼容）与 LlmProductIntelligenceProvider /
   LlmIdeaDecompositionProvider 生产装配（`AIPD_MODEL_API_KEY` + `AIPD_MODEL_BASE_URL`），
   未配置时诚实 EXTERNAL_DEPENDENCY；
+- **v5.10 制造就绪（BOM/Cost，2026-08-14 首项落地）**：结构化 BOM 域
+  （层级/数量/材料/供应商/单位成本/关联图纸报价、乐观锁、父链防循环、审计），
+  确定性成本核算（材料小计 + 模具摊销 + NRE + 毛利，缺数据不按 0 元假装），
+  发布检查清单（开模可用物料清单与成本核算的确定性验收），CLI `aipd bom` /
+  `aipd cost`，成本结果写回 Product Truth（status C）；
+- **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
+  提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
+  消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归
+  「规则喂养 AI 而非替代 AI」的原初定位；
 - **收口迭代（2026-08-14+）**：P1×4 缺陷修复（视觉审核诚实降级 / 认证时区 /
   邮件附件 / 状态双重维护标注）+ 发布证据门禁全绿；随后一批代码质量与 UX 收口
   （详见 `docs/audit/IMPRESSION_*` 与本迭代的修复清单）：

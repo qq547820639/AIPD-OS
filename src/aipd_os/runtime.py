@@ -27,6 +27,7 @@ Honesty：probe 只报告真实注册/探测结果，不把「能 import」当�
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -329,11 +330,19 @@ def _register_external_providers(ctx: RuntimeContext) -> None:
             endpoint=base_url, api_key=api_key,
             model=model_name or DEFAULT_MODEL)
 
-        pi_provider = LlmProductIntelligenceProvider(client)
+        # 成功经验回灌（v5.10 定位修正）：既有黄金轨迹作为运行时提示资产，
+        # 默认注入两个 LLM Provider（可用 AIPD_EXPERIENCE_FEEDBACK=0 关闭）。
+        from aipd_os.llm.experience import ExperienceFeedback  # noqa: PLC0415
+        experience: Any | None = None
+        if os.environ.get("AIPD_EXPERIENCE_FEEDBACK", "1") not in ("0", "false", "False"):
+            experience = ExperienceFeedback()
+        ctx.external_providers["experience-feedback"] = experience
+
+        pi_provider = LlmProductIntelligenceProvider(client, experience=experience)
         register_product_adapters(ctx.adapters, ctx.db, provider=pi_provider)
         ctx.external_providers["llm-product-intelligence"] = pi_provider
 
-        dec_provider = LlmIdeaDecompositionProvider(client)
+        dec_provider = LlmIdeaDecompositionProvider(client, experience=experience)
         ctx.providers.register(IdeaDecompositionProviderAdapter(dec_provider))
         ctx.external_providers["llm-idea-decomposer"] = dec_provider
     else:

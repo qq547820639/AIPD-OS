@@ -364,6 +364,50 @@ def build_parser() -> argparse.ArgumentParser:
     pg.add_argument("--waiver-risks", help="approve_with_waiver：接受的已知风险")
     pg.set_defaults(func=COMMAND_FUNCS["product gate"])
 
+    # ---- v5.10 制造就绪（bom 物料清单 / cost 成本核算）----
+    p_bom = sub.add_parser(
+        "bom", help="物料清单（show 汇总+发布检查 / add 添加行）。"
+                    " Example: aipd bom add --db state.db --part 外壳 --quantity 1")
+    bom_sub = p_bom.add_subparsers(dest="bom_cmd", required=True)
+    bp = bom_sub.add_parser("show", help="BOM 汇总 + 开模可用物料清单发布检查清单。")
+    bp.add_argument("--db", required=True)
+    bp.add_argument("--project")
+    bp.add_argument("--json", action="store_true")
+    bp.set_defaults(func=COMMAND_FUNCS["bom show"])
+    bp = bom_sub.add_parser("add", help="给最新 BOM 添加一行（自动创建 BOM）。")
+    bp.add_argument("--db", required=True)
+    bp.add_argument("--project")
+    bp.add_argument("--part", required=True, help="零件/料号名称")
+    bp.add_argument("--parent", help="父项（层级）；缺省为根件")
+    bp.add_argument("--description", default="")
+    bp.add_argument("--quantity", type=float, default=1.0)
+    bp.add_argument("--unit", default="pcs")
+    bp.add_argument("--material")
+    bp.add_argument("--supplier")
+    bp.add_argument("--unit-cost", type=float, help="单位成本（缺省不填=未报价）")
+    bp.add_argument("--currency", default="CNY")
+    bp.add_argument("--deliverable", help="关联图纸/制品 deliverable_id")
+    bp.add_argument("--quote-ref", help="关联报价引用")
+    bp.add_argument("--status", default="planned",
+                    choices=["planned", "quoted", "released", "obsolete"])
+    bp.add_argument("--json", action="store_true")
+    bp.set_defaults(func=COMMAND_FUNCS["bom add"])
+
+    p_cost = sub.add_parser(
+        "cost", help="成本核算（BOM 材料 + 模具摊销 + NRE + 毛利，写回 Product Truth）。"
+                     " Example: aipd cost calc --db state.db --tooling 50000 --quantity 1000")
+    cost_sub = p_cost.add_subparsers(dest="cost_cmd", required=True)
+    cp = cost_sub.add_parser("calc", help="确定性成本核算。")
+    cp.add_argument("--db", required=True)
+    cp.add_argument("--project")
+    cp.add_argument("--tooling", type=float, default=0.0, help="模具费")
+    cp.add_argument("--quantity", type=int, default=1000, help="目标生产数量")
+    cp.add_argument("--amortize-over", type=int, help="模具/NRE 摊销数量（缺省=quantity）")
+    cp.add_argument("--nre", type=float, default=0.0, help="一次性工程费 NRE")
+    cp.add_argument("--margin", type=float, default=0.0, help="毛利百分比（如 20）")
+    cp.add_argument("--json", action="store_true")
+    cp.set_defaults(func=COMMAND_FUNCS["cost calc"])
+
     return parser
 
 
