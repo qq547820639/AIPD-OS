@@ -112,6 +112,11 @@
   "aipd": {
     "selfModules": [
       "aipd_os",
+      "aipd_os.bom",
+      "aipd_os.bom.cost",
+      "aipd_os.bom.models",
+      "aipd_os.bom.projection",
+      "aipd_os.bom.store",
       "aipd_os.cad",
       "aipd_os.cad.anthropometry",
       "aipd_os.cad.backends",
@@ -125,6 +130,7 @@
       "aipd_os.cli.commands_doctor",
       "aipd_os.cli.commands_legacy",
       "aipd_os.cli.commands_manual",
+      "aipd_os.cli.commands_manufacturing",
       "aipd_os.cli.commands_owner",
       "aipd_os.cli.commands_release",
       "aipd_os.cli.main",
@@ -191,6 +197,7 @@
       "aipd_os.layout.renderer",
       "aipd_os.llm",
       "aipd_os.llm.client",
+      "aipd_os.llm.experience",
       "aipd_os.llm.idea_decomposer_provider",
       "aipd_os.llm.json_helpers",
       "aipd_os.llm.product_intelligence_provider",

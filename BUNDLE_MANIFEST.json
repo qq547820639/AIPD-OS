@@ -2,14 +2,14 @@
   "name": "AIPD-OS bundle manifest",
   "bundle": "aipd-os-5.6.0.zip",
   "bundle_path": "releases/aipd-os-5.6.0.zip",
-  "bundle_sha256": "0293740ded488302eab2a570e70e9f86bfb59857486301b2902bd64784fe7025",
-  "bundle_size": 2393838,
-  "entry_count": 351,
+  "bundle_sha256": "547b9297cc0a94dc7653e11400c7d032ae979e098dd99cf79200c03f44f145d8",
+  "bundle_size": 2411778,
+  "entry_count": 358,
   "entries": [
     {
       "path": "RELEASE_MANIFEST.json",
       "size": 52272,
-      "sha256": "154382078653b582e08ace2d94d89fdba1c287044a533c0ed54a31c76ee092a4"
+      "sha256": "185e7120a9fa8392030e45f91c12adfe5824904dc676eabbffe3bd30f2ba9d63"
     },
     {
       "path": "assets/schemas/cad_contract.schema.json",
@@ -108,8 +108,8 @@
     },
     {
       "path": "docs/audit/IMPRESSION_AND_P2_UX_CLOSURE_2026-08-14.md",
-      "size": 17198,
-      "sha256": "3fed219cf4279c8a82da0565379ada3c7dd529d0c7be050a2b98bd551fdfe024"
+      "size": 19448,
+      "sha256": "15804520ee397162d22b4eb649efc1a3d2432821e08c36f914a7c125aa3e1e1d"
     },
     {
       "path": "docs/audit/IMPRESSION_POST_REFACTOR_2026-08-14.md",
@@ -283,8 +283,8 @@
     },
     {
       "path": "docs/audit/pytest-report.json",
-      "size": 891849,
-      "sha256": "93050041abb8476afd78e34e13b4030c2c1b9b9bcca88e43583652587d6cfbe6"
+      "size": 896623,
+      "sha256": "899c3b4c6cf971e5ba173514d1872c2ebf4dd1a674b7f7775e4d95567d7b4690"
     },
     {
       "path": "docs/audit/release_evidence_notes.md",
@@ -867,6 +867,31 @@
       "sha256": "e81f08e147c90129902f9b10811738ca947a6e5423346eaff75d942470a0363c"
     },
     {
+      "path": "src/aipd_os/bom/__init__.py",
+      "size": 906,
+      "sha256": "8559da031c8aa85ec9890bf220a7a9dd5cbad15eb2fc448d05236f6ec7ed1c0f"
+    },
+    {
+      "path": "src/aipd_os/bom/cost.py",
+      "size": 3845,
+      "sha256": "5114f8cf9dc07bb4ee61e6922ca2bb7a4b4d3a0f5a617361574ee5dfd25ce94c"
+    },
+    {
+      "path": "src/aipd_os/bom/models.py",
+      "size": 4115,
+      "sha256": "edb519551b5a5ac2f92e8fa9d38465e5e70fdea68d695972feed93ac0d9f79bb"
+    },
+    {
+      "path": "src/aipd_os/bom/projection.py",
+      "size": 3167,
+      "sha256": "d9ac556121d7ea9b5609650ff1f7228b6e1ac520672fa65dfe54f366f35065fe"
+    },
+    {
+      "path": "src/aipd_os/bom/store.py",
+      "size": 15640,
+      "sha256": "3ee623e00c10768cc4855d901096b44eba5930b5e4813389563a2ab752c7c65a"
+    },
+    {
       "path": "src/aipd_os/cad/__init__.py",
       "size": 1139,
       "sha256": "87fc0193cb63ec6d09bfc19b6fe5b1fc9d71384dfd586ddb10c747b2c6e70357"
@@ -908,8 +933,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands.py",
-      "size": 21655,
-      "sha256": "b36fdac185956fddf42cd7027b2ee72e687f8d3768ca8f401b6e50cbdd72d1b5"
+      "size": 21847,
+      "sha256": "2b833851ffd84bda11512b23d75337f56fb3eb97ccd04797b980ee817e79ba89"
     },
     {
       "path": "src/aipd_os/cli/commands_cad.py",
@@ -932,6 +957,11 @@
       "sha256": "2a0263953aa01f20b46d97cb0d12f2fa3bda10cf1f4389defdf87d6f570ad873"
     },
     {
+      "path": "src/aipd_os/cli/commands_manufacturing.py",
+      "size": 7493,
+      "sha256": "0e131150623e99a58acb9b7ecb59677060a126575c6c5e228847396336af9a72"
+    },
+    {
       "path": "src/aipd_os/cli/commands_owner.py",
       "size": 5789,
       "sha256": "90aa6301114ca3a00804f78b405ef9ebe26fe5f05bd6160435718a8b76c5fa65"
@@ -943,8 +973,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 21268,
-      "sha256": "6817c747a1381f8a1b01b981e47dd9d12ca7e75f67c00cee8e50272c887ab68c"
+      "size": 23942,
+      "sha256": "c2c3f56a6475d4433d5f02159c24240768898e1e06ae11bc34f3f9714caef312"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1262,9 +1292,14 @@
       "sha256": "de1e7d8af41bedfabdf956dd738062dd3b7a591d59d78fea3076c26693150948"
     },
     {
+      "path": "src/aipd_os/llm/experience.py",
+      "size": 6344,
+      "sha256": "381f19782505a4c130c3b6cbeb22f0e700f9907c6a73742549101456f9197051"
+    },
+    {
       "path": "src/aipd_os/llm/idea_decomposer_provider.py",
-      "size": 4287,
-      "sha256": "0b6c8703daff1b24ba8aac5a402c919d41acaf837ae2e16766ea74087d38275d"
+      "size": 4707,
+      "sha256": "33f88571c861bcc0576cae111d285521330f18f03c42121e2124d55f4fc61e3b"
     },
     {
       "path": "src/aipd_os/llm/json_helpers.py",
@@ -1273,8 +1308,8 @@
     },
     {
       "path": "src/aipd_os/llm/product_intelligence_provider.py",
-      "size": 10487,
-      "sha256": "83431948b86bd3983f7517c50d05ac93d55183c84eff07562b079346c66f6d78"
+      "size": 11020,
+      "sha256": "ce19b0f78956a13beb94c240c3fc7a4bf5d187f5737e62fe43d04fff51622c04"
     },
     {
       "path": "src/aipd_os/llm/tokens.py",
@@ -1458,8 +1493,8 @@
     },
     {
       "path": "src/aipd_os/runtime.py",
-      "size": 16897,
-      "sha256": "4b7185cd498dec73c5cf58f2d3dee3d3cfa530197f11b3741a51b283be166f16"
+      "size": 17470,
+      "sha256": "df4380532471414b6a8f55716858df1bb666adec71518df4cb0c98f5e1d0d201"
     },
     {
       "path": "src/aipd_os/scripts/__init__.py",

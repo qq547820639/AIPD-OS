@@ -1,8 +1,8 @@
 {
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
-  "source_commit": "1a57427e5e6279d292a00d2b766941336993fb84",
-  "generated_at": "2026-08-14T00:19:32+00:00",
+  "source_commit": "47d8e4954732065431b7f69dae1b954585a2c16b",
+  "generated_at": "2026-08-14T06:30:57+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 14143,
-      "sha256": "6d372726e9824516d974cd6b4cafdc3f032743f892412ff19478c8e8f49f5781"
+      "size": 14975,
+      "sha256": "39a4c9cb151d947b54086b55e9e5b7088ce8836f4fbfcfc7b3ac233eba36f00e"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 14469,
-      "sha256": "ba8e69317beb4d261ee4a896b1ed431b19d26fc042c6072cfebba773fac29958"
+      "size": 15841,
+      "sha256": "433a17bf281f9ad12b8eb3b44e99d3dda2150beb9e612d9231fe51256d411be6"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -177,8 +177,8 @@
     },
     {
       "path": "SKILL.md",
-      "size": 9406,
-      "sha256": "6f74f489a4be8c03562863b67b041cda9bbbee5c8a38a17c190be97a630c3e2b"
+      "size": 9473,
+      "sha256": "996af8a52259e5b3119347b32721f33368d74e4118886c10db5889ae3afb771b"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -946,6 +946,31 @@
       "sha256": "e81f08e147c90129902f9b10811738ca947a6e5423346eaff75d942470a0363c"
     },
     {
+      "path": "src/aipd_os/bom/__init__.py",
+      "size": 906,
+      "sha256": "8559da031c8aa85ec9890bf220a7a9dd5cbad15eb2fc448d05236f6ec7ed1c0f"
+    },
+    {
+      "path": "src/aipd_os/bom/cost.py",
+      "size": 3845,
+      "sha256": "5114f8cf9dc07bb4ee61e6922ca2bb7a4b4d3a0f5a617361574ee5dfd25ce94c"
+    },
+    {
+      "path": "src/aipd_os/bom/models.py",
+      "size": 4115,
+      "sha256": "edb519551b5a5ac2f92e8fa9d38465e5e70fdea68d695972feed93ac0d9f79bb"
+    },
+    {
+      "path": "src/aipd_os/bom/projection.py",
+      "size": 3167,
+      "sha256": "d9ac556121d7ea9b5609650ff1f7228b6e1ac520672fa65dfe54f366f35065fe"
+    },
+    {
+      "path": "src/aipd_os/bom/store.py",
+      "size": 15640,
+      "sha256": "3ee623e00c10768cc4855d901096b44eba5930b5e4813389563a2ab752c7c65a"
+    },
+    {
       "path": "src/aipd_os/cad/__init__.py",
       "size": 1139,
       "sha256": "87fc0193cb63ec6d09bfc19b6fe5b1fc9d71384dfd586ddb10c747b2c6e70357"
@@ -987,8 +1012,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands.py",
-      "size": 21655,
-      "sha256": "b36fdac185956fddf42cd7027b2ee72e687f8d3768ca8f401b6e50cbdd72d1b5"
+      "size": 21847,
+      "sha256": "2b833851ffd84bda11512b23d75337f56fb3eb97ccd04797b980ee817e79ba89"
     },
     {
       "path": "src/aipd_os/cli/commands_cad.py",
@@ -1011,6 +1036,11 @@
       "sha256": "2a0263953aa01f20b46d97cb0d12f2fa3bda10cf1f4389defdf87d6f570ad873"
     },
     {
+      "path": "src/aipd_os/cli/commands_manufacturing.py",
+      "size": 7493,
+      "sha256": "0e131150623e99a58acb9b7ecb59677060a126575c6c5e228847396336af9a72"
+    },
+    {
       "path": "src/aipd_os/cli/commands_owner.py",
       "size": 5789,
       "sha256": "90aa6301114ca3a00804f78b405ef9ebe26fe5f05bd6160435718a8b76c5fa65"
@@ -1022,8 +1052,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 21268,
-      "sha256": "6817c747a1381f8a1b01b981e47dd9d12ca7e75f67c00cee8e50272c887ab68c"
+      "size": 23942,
+      "sha256": "c2c3f56a6475d4433d5f02159c24240768898e1e06ae11bc34f3f9714caef312"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1341,9 +1371,14 @@
       "sha256": "de1e7d8af41bedfabdf956dd738062dd3b7a591d59d78fea3076c26693150948"
     },
     {
+      "path": "src/aipd_os/llm/experience.py",
+      "size": 6344,
+      "sha256": "381f19782505a4c130c3b6cbeb22f0e700f9907c6a73742549101456f9197051"
+    },
+    {
       "path": "src/aipd_os/llm/idea_decomposer_provider.py",
-      "size": 4287,
-      "sha256": "0b6c8703daff1b24ba8aac5a402c919d41acaf837ae2e16766ea74087d38275d"
+      "size": 4707,
+      "sha256": "33f88571c861bcc0576cae111d285521330f18f03c42121e2124d55f4fc61e3b"
     },
     {
       "path": "src/aipd_os/llm/json_helpers.py",
@@ -1352,8 +1387,8 @@
     },
     {
       "path": "src/aipd_os/llm/product_intelligence_provider.py",
-      "size": 10487,
-      "sha256": "83431948b86bd3983f7517c50d05ac93d55183c84eff07562b079346c66f6d78"
+      "size": 11020,
+      "sha256": "ce19b0f78956a13beb94c240c3fc7a4bf5d187f5737e62fe43d04fff51622c04"
     },
     {
       "path": "src/aipd_os/llm/tokens.py",
@@ -1537,8 +1572,8 @@
     },
     {
       "path": "src/aipd_os/runtime.py",
-      "size": 16897,
-      "sha256": "4b7185cd498dec73c5cf58f2d3dee3d3cfa530197f11b3741a51b283be166f16"
+      "size": 17470,
+      "sha256": "df4380532471414b6a8f55716858df1bb666adec71518df4cb0c98f5e1d0d201"
     },
     {
       "path": "src/aipd_os/scripts/__init__.py",
@@ -1996,6 +2031,11 @@
       "sha256": "0d65446c3b45f6ad49de7dce9459d86c1e7be945007b092d0bcfcefde961523c"
     },
     {
+      "path": "tests/test_bom.py",
+      "size": 6873,
+      "sha256": "3d9b23f18ff9b92c28ccdb58f0cc825c265d6a8898e88546f07c962d6cc3bb2c"
+    },
+    {
       "path": "tests/test_cad_contract_unify.py",
       "size": 8281,
       "sha256": "2b54460e5a0bc243ba126c3df860cdd5524df5517c847a3e9f1fc5aacc55f8df"
@@ -2037,8 +2077,8 @@
     },
     {
       "path": "tests/test_cli.py",
-      "size": 18150,
-      "sha256": "e9f84bff1e3c8d3b2cabc01821ef45dfcabc45bcf0cd54a1845025a5da073f11"
+      "size": 19508,
+      "sha256": "4d3a378e011745e01ec4db52114629741229de471f6dc76e07a4f136a0993204"
     },
     {
       "path": "tests/test_cli_deprecation.py",
@@ -2234,6 +2274,11 @@
       "path": "tests/test_layout.py",
       "size": 2547,
       "sha256": "ad75c46c99425fdabfbcae5bd8f5d4ea8c53c90e11135d801f7f826fd0710af7"
+    },
+    {
+      "path": "tests/test_llm_experience.py",
+      "size": 3039,
+      "sha256": "dd72b5d0d80b8972277b82b64c35e496e4e339b6f4195fb8514d01e0b809a03e"
     },
     {
       "path": "tests/test_llm_providers.py",
