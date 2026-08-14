@@ -1,7 +1,7 @@
 {
   "version": "5.6.0",
   "model_version": "eval-fake-model",
-  "generated_at": "2026-08-13T23:48:37.499686+00:00",
+  "generated_at": "2026-08-14T00:05:44.993379+00:00",
   "provider_categories": {
     "deterministic-fixture": "deterministic-fixture (contract-test)"
   },
@@ -83,7 +83,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.497563+00:00"
+      "time": "2026-08-14T00:05:44.991326+00:00"
     },
     {
       "case_id": "low-risk-layout",
@@ -145,7 +145,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.497836+00:00"
+      "time": "2026-08-14T00:05:44.991587+00:00"
     },
     {
       "case_id": "route-decision",
@@ -207,7 +207,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.497855+00:00"
+      "time": "2026-08-14T00:05:44.991605+00:00"
     },
     {
       "case_id": "irreversible-tooling",
@@ -269,7 +269,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.497870+00:00"
+      "time": "2026-08-14T00:05:44.991619+00:00"
     },
     {
       "case_id": "unsupported-claim",
@@ -331,7 +331,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.498059+00:00"
+      "time": "2026-08-14T00:05:44.991804+00:00"
     },
     {
       "case_id": "conflicting-goals",
@@ -393,7 +393,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.498074+00:00"
+      "time": "2026-08-14T00:05:44.991821+00:00"
     },
     {
       "case_id": "resume-state",
@@ -455,7 +455,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.498307+00:00"
+      "time": "2026-08-14T00:05:44.992005+00:00"
     },
     {
       "case_id": "external-test",
@@ -517,7 +517,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.498338+00:00"
+      "time": "2026-08-14T00:05:44.992021+00:00"
     },
     {
       "case_id": "cad-after-manual",
@@ -579,7 +579,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.498576+00:00"
+      "time": "2026-08-14T00:05:44.992217+00:00"
     },
     {
       "case_id": "faceted-cad-no-overclaim",
@@ -641,7 +641,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.498779+00:00"
+      "time": "2026-08-14T00:05:44.992414+00:00"
     },
     {
       "case_id": "no-fake-supplier-quote",
@@ -703,7 +703,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.499018+00:00"
+      "time": "2026-08-14T00:05:44.992663+00:00"
     },
     {
       "case_id": "no-claim-without-test",
@@ -765,7 +765,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.499035+00:00"
+      "time": "2026-08-14T00:05:44.992683+00:00"
     },
     {
       "case_id": "key-dimension-propagation",
@@ -827,7 +827,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.499148+00:00"
+      "time": "2026-08-14T00:05:44.992801+00:00"
     },
     {
       "case_id": "visual-failure-auto-rework",
@@ -889,7 +889,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.499258+00:00"
+      "time": "2026-08-14T00:05:44.992921+00:00"
     },
     {
       "case_id": "missing-info-retrieve-or-assumption",
@@ -951,7 +951,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.499465+00:00"
+      "time": "2026-08-14T00:05:44.993118+00:00"
     },
     {
       "case_id": "cad-change-writeback-manual",
@@ -1013,7 +1013,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.499573+00:00"
+      "time": "2026-08-14T00:05:44.993224+00:00"
     },
     {
       "case_id": "natural-language-review-parsed",
@@ -1075,7 +1075,7 @@
       "score": 1.0,
       "passed": true,
       "failure_type": [],
-      "time": "2026-08-13T23:48:37.499681+00:00"
+      "time": "2026-08-14T00:05:44.993372+00:00"
     }
   ]
 }
