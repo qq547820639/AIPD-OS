@@ -1,13 +1,15 @@
 """首次使用体验（P2-3）：一句话建项 → 立即产出第一份结果 → 展示能力与
-需外部配置项 → 引导配置 Image/Model/CAD/Mail Provider → 示例项目 → 恢复/重置。
+需外部配置项 → 引导配置 Image/Model/CAD/Mail Provider → 恢复/重置。
 
 全部确定性、可测、可运行于 CI；外部能力缺失时如实标 external_dependency，
 绝不把未配置的能力描述为可用。
+
+（商业化决策：内置示例/演示项目不进入产品面——数据流转已用它们验证完毕，
+演示资产移入 tests/fixtures，仅开发测试使用。）
 """
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 from pathlib import Path
 from typing import Any
@@ -104,32 +106,9 @@ def provider_config_status() -> list[dict[str, Any]]:
     return out
 
 
-def list_examples(repo_root: Path | None = None) -> list[dict[str, Any]]:
-    """列出内置示例项目（来自 evals/golden_projects 与 assets/examples）。"""
-    examples: list[dict[str, Any]] = []
-    root = repo_root or Path(__file__).resolve().parents[3]
-    golden = root / "evals" / "golden_projects"
-    if golden.is_dir():
-        for d in sorted(golden.iterdir()):
-            if d.is_dir():
-                pj = d / "project.json"
-                if pj.exists():
-                    try:
-                        data = json.loads(pj.read_text(encoding="utf-8"))
-                    except Exception:  # noqa: BLE001
-                        data = {}
-                    examples.append({"source": "golden", "name": d.name,
-                                     "goal": data.get("goal") or data.get("name") or d.name})
-    assets = root / "assets" / "examples"
-    if assets.is_dir():
-        for f in sorted(assets.glob("*.json")):
-            examples.append({"source": "asset", "name": f.stem, "goal": f.stem})
-    return examples
-
-
 def onboard(db: AIPDStateDB, idea: str, project_id: str | None = None,
             tenant_id: str = "default") -> dict[str, Any]:
-    """首次使用引导主流程，返回引导结果（含第一份结果、能力、外部配置、示例、恢复信息）。"""
+    """首次使用引导主流程，返回引导结果（含第一份结果、能力、外部配置、恢复信息）。"""
     idea = (idea or "").strip()
     if not idea:
         raise ValueError("请提供一句话产品想法（--idea）。")
@@ -154,7 +133,6 @@ def onboard(db: AIPDStateDB, idea: str, project_id: str | None = None,
         "capabilities": providers,
         "external_config_needed": [c for c in providers
                                    if c["status"] == "external_dependency"],
-        "examples": list_examples(),
         "reset": "可用 `aipd reset --db <db> --project <id>` 重置本项目",
         "recover": "可用 `aipd recover --db <db> --project <id>` 回滚最近可撤销操作 / 从备份恢复",
     }
@@ -186,4 +164,4 @@ def recover_project(db_path: str, project_id: str | None = None,
 
 
 __all__ = ["onboard", "reset_project", "recover_project", "provider_config_status",
-           "list_examples", "EXTERNAL_PROVIDERS"]
+           "EXTERNAL_PROVIDERS"]

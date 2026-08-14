@@ -86,9 +86,6 @@ def cmd_onboard(args):
     print("能力与外部配置：")
     for c in r["capabilities"]:
         print(f"  [{c['status']}] {c['name']}（{c['env']}）")
-    print("示例项目：")
-    for e in r["examples"][:5]:
-        print(f"  · {e['name']}：{e['goal']}")
     print(r["reset"])
     print(r["recover"])
     return 0

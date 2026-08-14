@@ -73,7 +73,7 @@ python3 -m pytest tests/ -q
 ## 9. 运行评估（Evals）
 
 ```bash
-aipd eval --evals evals/evals.json --provider fake --out evals_out
+aipd eval --evals evals/evals.json --provider model --out evals_out  # fake/contract-test 仅测试用
 ```
 
 ## 10. 构建并签名发布物

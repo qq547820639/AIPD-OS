@@ -33,6 +33,11 @@
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归
   「规则喂养 AI 而非替代 AI」的原初定位；
+- **演示模式撤出产品（商业化决策）**：内置示例/演示项目不进入产品面——
+  `aipd onboard` 与 Web 首次向导移除「示例项目/导入示例项目」；黄金演示数据
+  （evals/golden_projects、assets/examples）移入 tests/fixtures（仅测试用）；
+  `aipd eval`/`run-evals` 默认 Provider 由 fake 改为 model（真实端点，未配置
+  诚实报错），fake/contract-test 仅供开发测试显式选择；
 - **收口迭代（2026-08-14+）**：P1×4 缺陷修复（视觉审核诚实降级 / 认证时区 /
   邮件附件 / 状态双重维护标注）+ 发布证据门禁全绿；随后一批代码质量与 UX 收口
   （详见 `docs/audit/IMPRESSION_*` 与本迭代的修复清单）：

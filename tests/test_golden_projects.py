@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from aipd_os.evals_runner import golden_projects  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-GOLDEN = ROOT / "evals" / "golden_projects"
+GOLDEN = ROOT / "tests" / "fixtures" / "golden_projects"
 
 
 def _run(name, tmp_path, minimum_pages=None):

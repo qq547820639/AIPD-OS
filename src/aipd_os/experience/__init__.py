@@ -12,7 +12,6 @@ from .impact_analysis import analyze_impact, estimate_cost_time, type_cn
 from .instructions import Instruction, apply_instruction, parse_instruction
 from .intent_engine import Intent, build_clarifying_question, parse_intent
 from .onboarding import (
-    list_examples,
     onboard,
     provider_config_status,
     recover_project,
@@ -66,5 +65,4 @@ __all__ = [
     "reset_project",
     "recover_project",
     "provider_config_status",
-    "list_examples",
 ]

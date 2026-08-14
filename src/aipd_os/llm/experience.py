@@ -5,7 +5,8 @@
 经验被写成了硬代码，而不是喂给 AI。本模块把它们变成 LLM Provider 的
 运行时提示资产（确定性、可哈希、可审计）：
 
-- ``DEFAULT_EXPERIENCE``：从黄金项目（evals/golden_projects）蒸馏出的
+- ``DEFAULT_EXPERIENCE``：从黄金项目（tests/fixtures/golden_projects，
+  演示资产已撤出产品树）蒸馏出的
   紧凑经验条目（随包内置，不依赖仓库文件路径）；
 - :func:`render_experience`：渲染为系统提示补充段落（受 max_chars 限制）；
 - :class:`ExperienceFeedback`：持有经验集合，提供

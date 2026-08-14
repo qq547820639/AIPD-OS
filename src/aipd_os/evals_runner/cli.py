@@ -2,10 +2,11 @@
 
 用法：
     python -m aipd_os.evals_runner.cli run --evals evals/evals.json \
-        --provider fake --out <dir> [--version 5.0.0] [--threshold 0.1] [--baseline <dir>]
+        --provider model --out <dir> [--version 5.0.0] [--threshold 0.1] [--baseline <dir>]
 
-``--provider fake`` 使用确定性脚本化假实现；``--provider model`` 使用真实模型端点
-（需配置 AIPD_EVAL_MODEL_ENDPOINT）。提供 ``--baseline`` 时按分数下降阈值做回归门禁，
+默认 ``--provider model`` 使用真实模型端点（需配置 AIPD_EVAL_MODEL_ENDPOINT，
+未配置时诚实报错绝不伪造通过率）；``fake/deterministic-fixture/contract-test``
+为确定性夹具，仅供开发测试。提供 ``--baseline`` 时按分数下降阈值做回归门禁，
 若任一 case 下降超过 ``--threshold`` 则以非零退出码结束。
 """
 
@@ -91,8 +92,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--provider",
         choices=["fake", "deterministic-fixture", "contract-test",
                  "model", "real-model", "pure-contract"],
-        default="fake",
-        help="fake/deterministic-fixture/contract-test 为夹具；model/real-model 为真实端点",
+        default="model",
+        help="model/real-model 为真实端点（默认）；fake/deterministic-fixture/"
+             "contract-test 为夹具，仅供开发测试",
     )
     p.add_argument("--out", required=True, help="报告输出目录")
     p.add_argument("--version", default=_PKG_VERSION, help="评估版本号")

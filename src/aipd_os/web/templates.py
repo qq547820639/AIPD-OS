@@ -114,16 +114,14 @@ def render_onboarding(console: WebConsole) -> str:
     if not data["has_project"]:
         parts.append('<section class="card" aria-label="创建或导入项目">'
                      '<h2>创建 / 导入项目</h2>'
-                     '<p class="muted">还没有项目。请先创建项目，或从内置示例导入一个。</p>'
+                     '<p class="muted">还没有项目。请先创建项目。</p>'
                      '<form method="post" action="/api/onboarding/create">'
                      '<label for="onb_name">项目名称</label> '
                      '<input id="onb_name" name="name" required > '
                      '<label for="onb_goal">目标</label> '
                      '<input id="onb_goal" name="goal" required > '
                      '<button type="submit" >创建项目</button></form>'
-                     '<form method="post" action="/api/onboarding/import">'
-                     '<button type="submit" class="secondary" >导入示例项目</button>'
-                     '</form></section>')
+                     '</section>')
     else:
         parts.append('<section class="card" aria-label="项目就绪">'
                      '<h2>项目就绪</h2><p class="muted">已存在项目，可前往'

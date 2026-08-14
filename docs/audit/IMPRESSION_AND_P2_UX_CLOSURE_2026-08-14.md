@@ -250,3 +250,20 @@ FAQ（10 问）/帮助与支持/命令速查（30 主线命令，保持与 SKILL
 提交 `05ab598`（文档）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
 05ab598，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
 **8/8 PASS**；已推送 origin。
+
+---
+
+## 附：第七轮（演示模式撤出产品，商业化决策，2026-08-14）
+
+按「skill + 多 agent 编排系统、商业化产品」的定位执行演示解耦：
+
+| 项 | 落地 |
+|---|---|
+| onboard 示例项目 | 删除 `list_examples()` 及 onboard 结果的 examples 字段；CLI 输出与 help 文案移除「示例项目」；experience 包导出清理 |
+| Web 首次向导 | 移除「导入示例项目」按钮/表单/`/api/onboarding/import` 路由/`import_project_from_examples` 方法 |
+| 演示数据 | `evals/golden_projects/*` 与 `assets/examples/*` 移出产品树（golden 数据移入 `tests/fixtures/golden_projects` 仅测试用，asset 示例删除） |
+| 假 Provider 默认值 | `aipd eval` / `run-evals` / evals_runner CLI 默认 Provider 由 `fake` 改为 `model`（真实端点；未配置诚实报错），fake/contract-test 仅供开发测试显式选择 |
+| 文档 | QUICKSTART eval 示例改为 `--provider model`；CHANGELOG 新增「演示模式撤出产品」条目 |
+| 测试 | 新增 2 个回归（onboard 无 examples、eval 默认为 model）+ 路径/断言更新 |
+
+（收口完成后补最终数字）

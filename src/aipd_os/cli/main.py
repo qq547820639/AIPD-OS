@@ -100,7 +100,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--provider",
                    choices=["fake", "deterministic-fixture", "contract-test",
                             "model", "real-model", "pure-contract"],
-                   default="fake")
+                   default="model",
+                   help="默认真实模型端点；fake/contract-test 仅供开发测试")
     p.add_argument("--out")
     p.add_argument("--threshold", type=float, default=0.1)
     p.add_argument("--baseline")
@@ -249,12 +250,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=COMMAND_FUNCS["test"])
 
     p = sub.add_parser("eval", help="运行评估套件。"
-                                    " Example: aipd eval --evals evals/evals.json --provider fake --out evals_out")  # noqa: E501
+                                    " Example: aipd eval --evals evals/evals.json --provider model --out evals_out")  # noqa: E501
     p.add_argument("--evals", default="evals/evals.json")
     p.add_argument("--provider",
                    choices=["fake", "deterministic-fixture", "contract-test",
                             "model", "real-model", "pure-contract"],
-                   default="fake")
+                   default="model",
+                   help="默认真实模型端点；fake/contract-test 仅供开发测试")
     p.add_argument("--out")
     p.add_argument("--threshold", type=float, default=0.1)
     p.add_argument("--baseline")
@@ -299,7 +301,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["dashboard"])
 
-    p = sub.add_parser("onboard", help="首次使用引导：一句话建项→立即产出第一份结果→展示能力与需外部配置项→Provider 引导→示例项目→恢复/重置。"  # noqa: E501
+    p = sub.add_parser("onboard", help="首次使用引导：一句话建项→立即产出第一份结果→展示能力与需外部配置项→Provider 引导→恢复/重置。"  # noqa: E501
                                        " Example: aipd onboard --db state.db --idea '做一款外骨骼'")
     p.add_argument("--db", required=True)
     p.add_argument("--idea", required=True, help="一句话产品想法")

@@ -199,8 +199,6 @@ class OwnerHandler(BaseHTTPRequestHandler):
             if path == "/api/onboarding/create":
                 return self._send_json(c.create_project(
                     data.get("name", ""), data.get("goal", "")))
-            if path == "/api/onboarding/import":
-                return self._send_json(c.import_project_from_examples())
             if path == "/api/onboarding/fix":
                 return self._send_json(c.fix_issue(data.get("name", "")))
             if path == "/api/decisions/approve":

@@ -642,20 +642,4 @@ class WebConsole:
         return {"ok": True, "ref": safe_ref(pid), "name": name, "goal": goal,
                 "details": {"project_id": pid}}
 
-    def import_project_from_examples(self) -> dict[str, Any]:
-        """从内置示例导入一个示例项目（复用 onboarding 的示例列表，不虚构）。"""
-        from aipd_os.experience.onboarding import list_examples
-        examples = list_examples()
-        if not examples:
-            raise ValueError("没有可用的示例项目")
-        ex = examples[0]
-        pid = "ex_" + hashlib.sha1(ex["name"].encode("utf-8")).hexdigest()[:8]
-        name = str(ex["name"])[:24]
-        goal = str(ex.get("goal") or name)
-        self.db.ensure_default_tenant(self.tenant_id)
-        self.db.init_project(self.tenant_id, pid, name, goal)
-        return {"ok": True, "ref": safe_ref(pid), "name": name, "goal": goal,
-                "details": {"project_id": pid}}
-
-
 __all__ = ["WebConsole", "RunController", "safe_ref"]

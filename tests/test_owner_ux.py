@@ -14,7 +14,6 @@ import pytest
 from aipd_os.experience.impact_analysis import analyze_impact, estimate_cost_time
 from aipd_os.experience.intent_engine import parse_intent
 from aipd_os.experience.onboarding import (
-    list_examples,
     onboard,
     provider_config_status,
     reset_project,
@@ -330,8 +329,6 @@ def test_onboarding_one_sentence_to_first_result(db):
     assert r["external_config_needed"]
     for c in r["external_config_needed"]:
         assert c["status"] == "external_dependency"
-    # 示例项目
-    assert isinstance(r["examples"], list)
     # 恢复 / 重置提示
     assert "reset" in r and "recover" in r
 
@@ -353,13 +350,6 @@ def test_onboarding_reset(db):
     assert reset["backup"]
     with pytest.raises(Exception):  # noqa: B017 - 删除后查询抛底层异常，宽断言保持原语义
         db.get_project("default", "exo")  # 已被删除
-
-
-def test_onboarding_examples(db):
-    examples = list_examples()
-    assert isinstance(examples, list)
-    for e in examples:
-        assert "name" in e and "goal" in e
 
 
 # -------------------------------------------------- 多条件意图：逐条落实（回归）
@@ -415,3 +405,24 @@ def test_revert_operation_legacy_record_without_ids_is_honest(project, db):
     assert "未记录受影响制品清单" in r["note"]
     by_id = {d["deliverable_id"]: d for d in db.list_deliverables("default", "p1")}
     assert by_id[project["cad"]]["status"] == "done"  # 未被误回滚
+
+
+# -------------------------------------------------- 演示模式撤出（商业化决策）
+def test_onboard_no_demo_examples(db):
+    """演示模式不耦合产品：onboard 结果不得再携带内置示例项目。"""
+    r = onboard(db, "做一款轻量外骨骼", project_id="exo-demo-check")
+    assert "examples" not in r
+    assert not hasattr(__import__("aipd_os.experience.onboarding",
+                                 fromlist=["list_examples"]), "list_examples")
+
+
+def test_eval_provider_defaults_to_real_model():
+    """演示模式不耦合产品：eval/run-evals 默认真实模型端点（fake 仅显式可用）。"""
+    from aipd_os.cli.main import build_parser
+
+    parser = build_parser()
+    # 通过解析示例命令验证默认值契约
+    ns = parser.parse_args(["eval", "--evals", "evals/evals.json"])
+    assert ns.provider == "model"
+    ns2 = parser.parse_args(["run-evals", "--evals", "evals/evals.json"])
+    assert ns2.provider == "model"
