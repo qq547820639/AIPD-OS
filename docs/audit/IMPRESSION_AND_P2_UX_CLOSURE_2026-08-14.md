@@ -204,4 +204,9 @@ aipd_store 自检切换、db._next_id 死代码、state_service README/requireme
 | current_version 建表副作用 | 同上（sqlite_master 探测，无 schema_migrations 时返回 0） |
 
 新增回归测试 8 个（备份 integrity、迁移幂等/语句拆分、传输边界拒绝、ACK 理由、
-对象路径、健康只读、密钥扫描扩展）。（收口完成后补最终数字）
+对象路径、健康只读、密钥扫描扩展）。
+
+**第四轮最终结果**：全量回归 **1082 passed / 0 failed / 3 skipped**；ruff/mypy 0；
+提交 `1a57427`（代码）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
+1a57427，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
+**8/8 PASS**；已推送 origin。
