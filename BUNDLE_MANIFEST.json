@@ -2,14 +2,14 @@
   "name": "AIPD-OS bundle manifest",
   "bundle": "aipd-os-5.6.0.zip",
   "bundle_path": "releases/aipd-os-5.6.0.zip",
-  "bundle_sha256": "547b9297cc0a94dc7653e11400c7d032ae979e098dd99cf79200c03f44f145d8",
-  "bundle_size": 2411778,
+  "bundle_sha256": "6f9d75cd373bbc134ddd6b0b81a022771d462cf8d1214b77b10aa6409afa3e85",
+  "bundle_size": 2414687,
   "entry_count": 358,
   "entries": [
     {
       "path": "RELEASE_MANIFEST.json",
-      "size": 52272,
-      "sha256": "185e7120a9fa8392030e45f91c12adfe5824904dc676eabbffe3bd30f2ba9d63"
+      "size": 53268,
+      "sha256": "584de2d3772c549b21d4bea69752f91bce16e09ef1bbdbab16f6a9d60b5cf3a1"
     },
     {
       "path": "assets/schemas/cad_contract.schema.json",
@@ -108,8 +108,8 @@
     },
     {
       "path": "docs/audit/IMPRESSION_AND_P2_UX_CLOSURE_2026-08-14.md",
-      "size": 19448,
-      "sha256": "15804520ee397162d22b4eb649efc1a3d2432821e08c36f914a7c125aa3e1e1d"
+      "size": 20259,
+      "sha256": "7d987683f7212e30b4f408b198fd9ad72a23d381d5ddf6cd0bdc0adc89679a73"
     },
     {
       "path": "docs/audit/IMPRESSION_POST_REFACTOR_2026-08-14.md",
@@ -283,8 +283,8 @@
     },
     {
       "path": "docs/audit/pytest-report.json",
-      "size": 896623,
-      "sha256": "899c3b4c6cf971e5ba173514d1872c2ebf4dd1a674b7f7775e4d95567d7b4690"
+      "size": 903890,
+      "sha256": "2890db59c6db1027355ced2564fff363d4f414780070b272dd2fcbe821105608"
     },
     {
       "path": "docs/audit/release_evidence_notes.md",
