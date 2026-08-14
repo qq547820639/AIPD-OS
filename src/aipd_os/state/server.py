@@ -60,6 +60,10 @@ class StateService:
         migrations.migrate(db_path)
         self.db_path = str(db_path)
         self.default_tenant = default_tenant
+        # 传输边界标记：进程内可信 API 允许 actor=None（系统调用）；
+        # 网络传输（HTTP run_http）启动时翻转为 False——actor=None 即拒绝，
+        # 防止「遗漏注入的 transport/方法无授权直通」（fail-closed）。
+        self.trusted_local_api = True
         self.retention_days = retention_days
         self.insecure_dev_mode = insecure_dev_mode
         if allow_plaintext_sensitive is None:
@@ -163,7 +167,13 @@ class StateService:
 
     def _authorize(self, actor: str | None, tenant_id: str, project_id: str) -> None:
         if actor is None:
-            return  # 内部/系统调用，跳过授权
+            # 仅进程内可信 API 允许系统调用跳过授权；网络传输边界必须
+            # 注入认证身份（trusted_local_api=False 时 fail-closed）。
+            if self.trusted_local_api:
+                return
+            raise UnauthorizedError(
+                "actor is required at this transport boundary; "
+                "unauthenticated calls are denied (fail-closed)")
         self.auth.require_project_access(actor, tenant_id, project_id)
 
     def _audit(self, actor: str | None, action: str, tenant_id: str,
@@ -518,7 +528,12 @@ class _RpcHandler(BaseHTTPRequestHandler):
 
 
 def run_http(service: StateService, host: str = "0.0.0.0", port: int = 8000) -> ThreadingHTTPServer:
-    """启动 HTTP/JSON 状态服务（阻塞）。"""
+    """启动 HTTP/JSON 状态服务（阻塞）。
+
+    传输边界 fail-closed：HTTP 是网络边界，actor=None 一律拒绝
+    （认证已在 _RpcHandler._authenticate 强制，注入身份后经 _authorize）。
+    """
+    service.trusted_local_api = False
     _RpcHandler.service = service
     httpd = ThreadingHTTPServer((host, port), _RpcHandler)
     httpd.serve_forever()

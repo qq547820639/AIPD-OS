@@ -27,7 +27,7 @@ def test_mask_secret_edges():
     assert mask_secret("") == ""
     assert mask_secret(None) == ""
     assert mask_secret("a") == "*"
-    assert mask_secret("ab") == "a*"
+    assert mask_secret("ab") == "**"  # 与 docstring 一致：长度 <=2 全部打 *
     assert mask_secret("abc") == "a**"
     assert mask_secret("abcd") == "a***"
 

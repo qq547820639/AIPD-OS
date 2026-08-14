@@ -14,7 +14,15 @@ _SAFE = re.compile(r"[^A-Za-z0-9._-]")
 
 
 def _safe(name: str) -> str:
-    return _SAFE.sub("_", name)
+    """把名称规整为安全的单层目录/文件名。
+
+    - 非法字符替换为 ``_``；
+    - 去掉首尾 ``.``（此前 ``.`` / ``..`` 原样保留，可经 project_id 逃逸
+      base_dir 造成路径穿越）；
+    - 空结果回退 ``_``。
+    """
+    cleaned = _SAFE.sub("_", name).strip(".")
+    return cleaned or "_"
 
 
 class ObjectStore:

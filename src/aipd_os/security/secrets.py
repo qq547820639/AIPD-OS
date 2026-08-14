@@ -56,8 +56,8 @@ def mask_secret(value: Any) -> str:
     if not s:
         return ""
     n = len(s)
-    if n == 1:
-        return "*"
+    if n <= 2:
+        return "*" * n  # 与 docstring 一致：长度 <= 2 全部打 *
     if n <= 4:
         return s[0] + "*" * (n - 1)
     return s[0] + "*" * (n - 2) + s[-1]

@@ -25,9 +25,9 @@ def health_check(db_path: str) -> dict[str, Any]:
         result["checks"]["db_connectivity"] = f"error: {exc}"
         result["ok"] = False
 
-    # 2) schema 版本（先回填 schema_migrations 记录，保证 version>=1）
+    # 2) schema 版本：只读探测（GET /health 是健康检查，不得触发 migrate
+    #    写副作用——此前这里调用 migrations.migrate()，一次体检会改写数据库）
     try:
-        migrations.migrate(str(path))
         version = migrations.current_version(str(path))
         result["checks"]["schema_version"] = version
     except Exception as exc:  # pragma: no cover

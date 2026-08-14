@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -93,3 +94,23 @@ def test_resume_summary_does_not_relist_resolved_decisions(db):
     # 已解决决策不应再出现在待办/需追问列表
     assert sum(1 for d in summary["pending_decisions"] if d["decision_id"] == did) == 0
     assert summary["next_action"] == "continue phase G0"
+
+
+def test_create_backup_uses_sqlite_snapshot_and_passes_integrity(tmp_path, db):
+    """回归：备份必须是 sqlite3.backup 活库快照（此前 shutil.copy2 直接复制
+    存活文件可能不一致），且备份文件通过 integrity_check。"""
+    _seed(db)
+    bm = BackupManager(str(db.path), backup_dir=str(tmp_path / "backups"))
+    bdir = Path(bm.create_backup(db))
+    backup_db = bdir / Path(db.path).name
+    assert backup_db.is_file()
+    import sqlite3
+    conn = sqlite3.connect(str(backup_db))
+    try:
+        row = conn.execute("PRAGMA integrity_check").fetchone()
+        assert row[0] == "ok"
+        # 备份包含种子里的事实
+        n = conn.execute("SELECT COUNT(*) FROM facts").fetchone()[0]
+        assert n >= 1
+    finally:
+        conn.close()

@@ -190,7 +190,19 @@ class UnifiedStateService:
         bundle.mkdir(parents=True, exist_ok=True)
 
         db_file = bundle / Path(self.db.path).name
-        shutil.copy2(self.db.path, db_file)
+        if not Path(self.db.path).is_file():
+            raise FileNotFoundError(f"数据库文件不存在，无法备份: {self.db.path}")
+        # 活库安全快照：sqlite3 backup API（同 BackupManager；此前
+        # shutil.copy2 复制存活 SQLite，备份可能不一致）
+        src_conn = sqlite3.connect(str(self.db.path))
+        try:
+            dst_conn = sqlite3.connect(str(db_file))
+            try:
+                src_conn.backup(dst_conn)
+            finally:
+                dst_conn.close()
+        finally:
+            src_conn.close()
         db_sha = _sha256_file(db_file)
 
         obj_dir = bundle / "objects"

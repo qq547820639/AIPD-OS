@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -37,7 +38,19 @@ class BackupManager:
         backup_dir = out / f"backup_{stamp}"
         backup_dir.mkdir(parents=True, exist_ok=True)
         db_file = backup_dir / src.name
-        shutil.copy2(src, db_file)
+        if not src.is_file():
+            raise FileNotFoundError(f"数据库文件不存在，无法备份: {src}")
+        # 活库安全快照：sqlite3 backup API（此前 shutil.copy2 直接复制存活
+        # SQLite 文件，写入进行中备份可能不一致/损坏）
+        src_conn = sqlite3.connect(str(src))
+        try:
+            dst_conn = sqlite3.connect(str(db_file))
+            try:
+                src_conn.backup(dst_conn)
+            finally:
+                dst_conn.close()
+        finally:
+            src_conn.close()
         checksum = _checksum(db_file)
         manifest = {
             "backup_created_at": datetime.now(timezone.utc).isoformat(),

@@ -5,6 +5,8 @@ import json
 import threading
 from http.client import HTTPConnection
 
+import pytest
+
 from aipd_os.state.server import StateService, _RpcHandler
 
 
@@ -95,3 +97,18 @@ def test_http_transport_requires_auth(tmp_path):
     finally:
         httpd.shutdown()
         httpd.server_close()
+
+
+def test_authorize_actor_none_denied_when_transport_untrusted(tmp_path):
+    """回归：网络传输边界（trusted_local_api=False）下 actor=None 必须拒绝
+    （此前 _authorize 对 actor=None 静默跳过，遗漏注入即无授权直通）。"""
+    from aipd_os.state.server import StateService, UnauthorizedError
+
+    db_path = str(tmp_path / "state.db")
+    svc = StateService(db_path, encryption_key="x" * 16)
+    svc.trusted_local_api = False
+    with pytest.raises(UnauthorizedError):
+        svc._authorize(None, "default", "p1")
+    # 进程内可信 API 默认允许系统调用
+    svc.trusted_local_api = True
+    svc._authorize(None, "default", "p1")

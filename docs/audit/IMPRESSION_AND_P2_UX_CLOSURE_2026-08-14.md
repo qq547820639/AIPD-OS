@@ -181,3 +181,27 @@ maturity_ceiling、SKILL/QUICKSTART/--stage、CHANGELOG。本轮补齐剩余项�
 提交 `9d05733`（代码）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
 9d05733，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
 **8/8 PASS**；已推送 origin。
+
+---
+
+## 附：第四轮（状态/安全/发布基础设施审计消化，2026-08-14）
+
+依据状态/安全/发布审计报告（subagent 768650fb）核对后，前三轮已覆盖 rollback
+project 过滤、add_fact changes 脱敏、CVE/证据/git fail-closed、doctor 敏感 env、
+aipd_store 自检切换、db._next_id 死代码、state_service README/requirements。
+本轮补齐剩余项：
+
+| 项 | 落地 |
+|---|---|
+| 备份用 shutil.copy2 复制活库 | BackupManager.create_backup 与 RecoveryService.backup 均改 sqlite3.backup() 活库快照 + integrity_check 测试 |
+| 迁移非原子 / 无并发锁 | migrate() 包 BEGIN IMMEDIATE（并发迁移串行化）；executescript 隐式 COMMIT 消除（_split_statements 引号/注释感知拆分 + _exec_script 事务内逐条执行）；schema_migrations 记录与 DDL 同事务提交 |
+| _authorize actor=None 静默跳过 | StateService.trusted_local_api 传输边界标记：进程内可信 API 允许；run_http（HTTP 网络边界）翻转 False，actor=None 抛 UnauthorizedError（fail-closed） |
+| AIPD_ACK_SECRET 整文件豁免 | ACK 必须带理由（伪造/fake/mock/fixture/样例）才豁免；扫描后缀扩展到 .json/.yaml/.yml/.toml/.md/.env |
+| mask_secret 长度≤2 与 docstring 不符 | 长度≤2 全部打 *（docstring 契约）+ 测试更新 |
+| require_mask 恒真死分支 | 合并为 `scope in SENSITIVE_SCOPES` 单一语义 |
+| objects._safe 不中和 . / .. | 去首尾 "."（".."→"_"），路径穿越封堵 + 测试 |
+| GET /health 触发 migrate 副作用 | health_check 改只读 current_version（不建表不迁移）；current_version 本身改为纯只读探测 |
+| current_version 建表副作用 | 同上（sqlite_master 探测，无 schema_migrations 时返回 0） |
+
+新增回归测试 8 个（备份 integrity、迁移幂等/语句拆分、传输边界拒绝、ACK 理由、
+对象路径、健康只读、密钥扫描扩展）。（收口完成后补最终数字）

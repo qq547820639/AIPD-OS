@@ -499,19 +499,25 @@ _SECRET_PATTERNS = (
 
 def _check_secrets(repo: Path, source_manifest):
     import re
-    _ACK = 'AIPD_ACK_SECRET'
+    # 扫描后缀从 .py 扩展到常见配置/数据文件（密钥常泄漏在 .env/.json/.yaml）
+    scan_suffixes = (".py", ".json", ".yaml", ".yml", ".toml", ".md", ".env")
+    # 承认必须“带理由”：AIPD_ACK_SECRET 标记行需同时含「伪造/fake/mock/
+    # fixture」等声明词（防止在含真实密钥的文件里塞一句 ACK 即跳过整文件）。
+    _ack_justification = ("伪造", "fake", "mock", "fixture", "样例")
     hits = []
     for e in source_manifest.get('files', []):
         rel = e.get('path')
-        if not rel or not rel.endswith('.py'):
+        if not rel or not rel.endswith(scan_suffixes):
             continue
         p = repo / rel
         try:
             text = p.read_text(encoding='utf-8', errors='ignore')
         except OSError:
             continue
-        # 显式声明“含故意测试夹具密钥”的文件视为已承认，不误报。
-        if _ACK in text:
+        # 带理由的显式声明「含故意测试夹具密钥」的文件视为已承认，不误报。
+        if any("AIPD_ACK_SECRET" in line
+               and any(w in line.lower() for w in _ack_justification)
+               for line in text.splitlines()):
             continue
         for pat in _SECRET_PATTERNS:
             if re.search(pat, text):

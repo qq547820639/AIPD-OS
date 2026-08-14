@@ -99,3 +99,32 @@ def test_migrate_then_rollback(tmp_path):
     assert decisions[0]["topic"] == "pick model"
     assert carries["n"] == 1
     assert gates[0]["result"] == "pass"
+
+
+def test_migrate_idempotent_and_repeatable(tmp_path):
+    """回归：migrate 幂等（第二次返回空），且迁移记录与版本一致。"""
+    import sqlite3
+
+    from aipd_os.state.migrations import current_version, migrate
+
+    db = str(tmp_path / "m.db")
+    first = migrate(db)
+    assert first, "fresh db 应应用全部迁移"
+    assert current_version(db) == max(first)
+    assert migrate(db) == []  # 第二次无新迁移
+    conn = sqlite3.connect(db)
+    try:
+        rows = conn.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall()
+        assert [r[0] for r in rows] == sorted(first)
+    finally:
+        conn.close()
+
+
+def test_split_statements_handles_semicolon_in_literal():
+    from aipd_os.state.migrations import _split_statements
+
+    script = "CREATE TABLE t (a TEXT); INSERT INTO t VALUES ('x;y');"
+    stmts = _split_statements(script)
+    assert len(stmts) == 2
+    assert stmts[0].startswith("CREATE TABLE")
+    assert "x;y" in stmts[1]

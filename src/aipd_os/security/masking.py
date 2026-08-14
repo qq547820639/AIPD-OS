@@ -130,14 +130,12 @@ def can_access(
 def require_mask(user: str | None, scope: str) -> bool:
     """判断给定的敏感作用域是否需要掩码。
 
-    对敏感作用域，若用户未被显式授权则返回 True（需要掩码）。
+    对敏感作用域，未显式授权（user=None 或无授权信息）一律要求掩码
+    （fail-closed）。非敏感作用域不需要掩码。显式授权由上层 granted
+    校验负责（本函数不接收 granted，恒真分支合并为单一语义）。
     """
-    if scope not in SENSITIVE_SCOPES:
-        return False
-    if user is None:
-        return True
-    # 无授权信息时保守地要求掩码
-    return True
+    # 敏感作用域：保守要求掩码；非敏感作用域不需要
+    return scope in SENSITIVE_SCOPES
 
 
 def _encrypt_at_rest(value: str, key: str) -> str:

@@ -247,3 +247,31 @@ def test_schema_valid_rejects_invalid_cad_contract(tmp_path):
     assert any("schema_valid" in f for f in out["failures"])
     assert out["passed"] is False
     assert r.returncode == 2
+
+
+def test_secrets_scan_ack_requires_justification(tmp_path):
+    """回归：AIPD_ACK_SECRET 必须带理由（伪造/fake 等），否则不豁免；
+    且扫描扩展到 .json 等后缀。"""
+    (tmp_path / "secret.py").write_text(
+        "api_key = 'sk-1234567890123456'\n", encoding="utf-8")
+    # 无理由 ACK：不豁免
+    (tmp_path / "acked_bare.py").write_text(
+        "AIPD_ACK_SECRET\napi_key = 'sk-abcdef1234567890'\n", encoding="utf-8")
+    # 带理由 ACK：豁免
+    (tmp_path / "acked_justified.py").write_text(
+        "AIPD_ACK_SECRET: 本文件含故意伪造的密钥样例（fake fixture）\n"
+        "api_key = 'sk-abcdef1234567890'\n", encoding="utf-8")
+    # .json 也被扫描
+    (tmp_path / "config.json").write_text(
+        '{"key": "sk-1234567890123456"}', encoding="utf-8")
+    manifest = {"files": [
+        {"path": "secret.py"}, {"path": "acked_bare.py"},
+        {"path": "acked_justified.py"}, {"path": "config.json"},
+    ]}
+    ok, hits = _NS["_check_secrets"](tmp_path, manifest)
+    assert ok is False
+    joined = "; ".join(hits)
+    assert "secret.py" in joined
+    assert "acked_bare.py" in joined
+    assert "config.json" in joined
+    assert "acked_justified.py" not in joined
