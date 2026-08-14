@@ -86,7 +86,10 @@ class PhysicalWriteback:
                 "passed": analysis.get("passed", 0),
                 "failed": analysis.get("failed", 0),
             },
-            status="V" if passed else "S",
+            # 正式 epistemic 语义：通过 → V（Verified：实测确认）；
+            # 失败 → E（Reliable external evidence：实验报告证明存在失败项）。
+            # 此前失败复用 S（Simulation），语义错误（失败结果不是仿真值）。
+            status="V" if passed else "E",
             source="physical_writeback",
         )
         written.append(fact_id)
@@ -107,12 +110,12 @@ class PhysicalWriteback:
             written.append(eid)
 
         if not passed:
-            # 失败项 -> 风险登记
+            # 失败项 -> 风险登记（passed 恒为 bool，此处必为 False）
             risk_id = self.db.add_risk(
                 self.tenant_id,
                 project_id,
                 title=f"{stage} 阶段存在 {analysis.get('failed', 0)} 项失败",
-                probability="high" if passed is False else "medium",
+                probability="high",
                 impact="medium",
                 mitigation="按纠偏行动（corrective action）处理并复测",
                 status="open",

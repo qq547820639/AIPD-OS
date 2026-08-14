@@ -1,8 +1,9 @@
 """RFQ 邮件适配器（'supply.rfq'）。
 
-未配置真实邮件后端（环境变量 AIPD_MAIL_PROVIDER 未设置）时，诚实写出
-外部任务包并抛出 ``external_blocked``，绝不声称邮件已发送。配置了后端时
-仍生成确定性的 RFQ 草稿并注明 provider。
+未配置真实 SMTP（``AIPD_SMTP_HOST`` / ``AIPD_MAILPIT_SMTP_HOST``）时，诚实写出
+外部任务包并抛出 ``external_blocked``，绝不声称邮件已发送。配置了真实 SMTP 时
+经 ``aipd_os.mail.client.send_email`` 真实发送，``sent`` 仅在真实投递成功后为
+True（发送失败上抛 external_blocked，不伪装已发送）。
 """
 
 from __future__ import annotations
@@ -42,8 +43,10 @@ class MailRfqAdapter(ToolAdapter):
                 work_id=input.get("work_id"),
             )
 
-        provider = env("AIPD_MAIL_PROVIDER")
-        if not provider:
+        # 真实 SMTP 判定与实现一致（此前读 AIPD_MAIL_PROVIDER——该变量无任何
+        # 实现读取，配置了也不发送；现在读实现真实读取的 AIPD_SMTP_HOST 等）。
+        smtp_host = env("AIPD_SMTP_HOST") or env("AIPD_MAILPIT_SMTP_HOST")
+        if not smtp_host:
             part = input.get("part", "指定零件")
             qty = input.get("quantity", 1)
             due = input.get("due_date", "待定")
@@ -67,10 +70,27 @@ class MailRfqAdapter(ToolAdapter):
             f"请提供报价、交期与最小起订量。\n\n此致敬礼\nAIPD-OS 采购"
         )
         draft = {"subject": subject, "body": body, "to": supplier, "part": part}
+        # 真实发送：成功才 sent=True；任何失败诚实上抛 external_blocked
+        try:
+            from aipd_os.mail.client import send_email  # noqa: PLC0415
+            user = env("AIPD_SMTP_USER")
+            password = env("AIPD_SMTP_PASSWORD")
+            port = int(env("AIPD_SMTP_PORT") or env("AIPD_MAILPIT_SMTP_PORT") or 587)
+            message_id = send_email(
+                smtp_host, port, user or "", password or "",
+                env("AIPD_SMTP_FROM") or "aipd@local.aipd-os.dev",
+                [supplier], subject, body)
+        except Exception as exc:  # noqa: BLE001 - 发送失败诚实上报，绝不伪装已发送
+            raise external_blocked_error(
+                "supply.rfq",
+                f"RFQ 真实发送失败（{exc}）；未声称已发送，请人工补发或重试。",
+                work_id=input.get("work_id"),
+            ) from exc
         result = {
             "rfq_draft": draft,
-            "provider": provider,
-            "sent": False,  # 仅生成草稿，不声称已发送
+            "provider": "smtp",
+            "sent": True,
+            "message_id": message_id,
             "_meta": token_meta(subject + body),
         }
         return result

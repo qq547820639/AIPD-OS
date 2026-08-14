@@ -12,8 +12,12 @@ from typing import Any
 
 from aipd_os.state.db import AIPDStateDB
 
-# 事实状态映射：供应链记录 -> AIPD 事实状态（V 已验证 / P 待定 / E 过期）
-_QUOTE_FACT_STATUS = {"official": "V", "superseded": "S", "draft": "P"}
+# 事实状态映射：供应链记录 -> AIPD 事实状态（正式 epistemic 语义，见
+# docs/architecture/STATUS_SEMANTICS.md）：
+#   official → V（Verified：正式报价单）；superseded → R（Retired：已被新版本
+#   取代、不再有效）；draft → P（Pending）。此前 superseded 复用 S（Simulation），
+#   语义错误（superseded 不是仿真值）。
+_QUOTE_FACT_STATUS = {"official": "V", "superseded": "R", "draft": "P"}
 _CERT_FACT_STATUS = {"verified": "V", "pending": "P", "expired": "E"}
 
 DEFAULT_TENANT = "default"

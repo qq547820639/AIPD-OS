@@ -1,6 +1,10 @@
-"""内置适配器注册。
+"""内置核心工具适配器注册。
 
-将全部具体适配器注册进 :class:`AdapterRegistry`。
+注册 10 个内置核心适配器（research / document / imggen / layout / cad /
+local_brep / faceted / mail_rfq / supplier / evt_dvt_pvt）进
+:class:`AdapterRegistry`。注意：product.*、idea.*、researchstudio 等适配器
+不在此注册，由 runtime bootstrap（``aipd_os.runtime._register_external_providers``）
+按配置动态装配——此处不是「全部适配器」。
 """
 
 from __future__ import annotations

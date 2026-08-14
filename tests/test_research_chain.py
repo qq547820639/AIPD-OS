@@ -299,7 +299,7 @@ def test_mark_evidence_expired_flags_linked_fact_stale(db):
     ev = db.list_evidence("default", "p1")[0]
     result = mark_evidence_expired(db, "default", "p1", ev["evidence_id"], reason="superseded")
     assert fact_id in result["stale_fact_ids"]
-    assert db.get_fact("default", "p1", fact_id)["status"] == "S"
+    assert db.get_fact("default", "p1", fact_id)["status"] == "R"
     # 过期元数据已写入 Evidence Register
     ev2 = db.list_evidence("default", "p1")[0]
     assert "expired_at" in (ev2["metadata_json"] or {})

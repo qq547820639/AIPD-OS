@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import builtins
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -187,7 +187,14 @@ def import_certificate_file(
             })
     target = registry or CertificationRegistry()
     target.register(cert)
-    return {"ok": bool(cert.evidence_ref), "cert": cert, "errors": errors, "registry": target}
+    # ok 语义显式化：仅当证书字段完整（subject/standard/有效期均可解析）才为
+    # True（此前恒 True——evidence_ref 永远非空，字段缺失也报 ok，误导消费方）。
+    # registered 恒 True 表示已登记（登记 ≠ 已验证）。
+    verified_ok = (bool(subject) and standard not in ("", "unknown")
+                   and expiry_dt is not None
+                   and not any(e.get("not_verified") for e in errors))
+    return {"ok": verified_ok, "registered": True, "cert": cert,
+            "errors": errors, "registry": target}
 
 
 def expiring_certs(
@@ -208,10 +215,13 @@ def expiring_certs(
             continue
         days_left = (dt - ref).total_seconds() / 86400.0
         if days_left < 0:
-            cert.status = "expired"
-            out.append({"cert": cert, "status": "expired", "days_left": int(days_left)})
+            # 查询不得突变注册对象（此前 cert.status="expired" 直接改注册表
+            # 里的原对象，查询有副作用且反复调用状态漂移）
+            out.append({"cert": replace(cert, status="expired"),
+                        "status": "expired", "days_left": int(days_left)})
         elif days_left <= within_days:
-            out.append({"cert": cert, "status": "expiring", "days_left": int(days_left)})
+            out.append({"cert": cert, "status": "expiring",
+                        "days_left": int(days_left)})
     out.sort(key=lambda e: e["days_left"])
     return out
 

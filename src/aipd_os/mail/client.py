@@ -203,6 +203,13 @@ def _decode_header(value: Any) -> str:
         return "".join(parts)
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
+    if isinstance(value, str):
+        # RFC 2047 编码词（=?utf-8?B?...?=）在 compat32 策略下仍是原始串，
+        # 这里真实解码（失败则原样返回，不破坏既有行为）
+        try:
+            return str(email.header.make_header(email.header.decode_header(value)))
+        except Exception:  # noqa: BLE001 - 解码失败原样返回
+            return value
     return str(value)
 
 

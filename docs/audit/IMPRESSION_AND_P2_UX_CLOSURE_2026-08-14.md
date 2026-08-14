@@ -157,3 +157,24 @@ default=str、SystemExit 保护、onboarding 去重/缓存。本轮补齐剩余�
 提交 `496f011`（代码）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
 496f011，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
 **8/8 PASS**；已推送 origin。
+
+---
+
+## 附：第三轮（供应链/卫生审计报告消化，2026-08-14）
+
+依据供应链/适配器+仓库卫生审计报告（subagent 205deb78）核对后，前两轮已覆盖
+gmail XOAUTH2、lab .xlsx 断链、quotes 重复+表头校验、token 口径、discover()
+maturity_ceiling、SKILL/QUICKSTART/--stage、CHANGELOG。本轮补齐剩余项：
+
+| 项 | 落地 |
+|---|---|
+| 事实状态码 "S" 三重语义重载 | 统一正式 epistemic 语义：superseded 报价 → R（Retired）、失败阶段实验 → E（可靠外部证据）、expiry stale → R（Retired）；fact.schema.json 描述对齐（S=纯 Simulation、R=Retired）；STATUS_SEMANTICS.md 复用清单标记「已清理」 |
+| certification `ok` 恒 True | `ok`=字段完整可验证，新增 `registered`（登记 ≠ 已验证）；PDF 测试改断言 ok=False |
+| expiring_certs 查询副作用 | `dataclasses.replace` 拷贝，不再突变注册表原对象 + 回归测试 |
+| writeback `passed is False` 死分支 | 恒 "high" 显式化 |
+| builtin.py docstring 注册范围 | 更正为「10 个内置核心适配器；product.*/idea.* 由 runtime 动态装配」 |
+| mail_rfq 配 AIPD_MAIL_PROVIDER 仍不发送 | 改读实现真实读取的 AIPD_SMTP_HOST/MAILPIT；配 SMTP 后经 mail.client.send_email 真实发送（sent 仅成功为 True），失败诚实 external_blocked + 2 个回归测试 |
+| schema_check 名不副实 | schema Draft-7 元校验 + 同名模板数据真实 jsonschema.validate + 3 个测试 |
+| 测试盲区 | 新增 test_mail_parse.py（8 个 MIME 解析/附件/主题/线程测试，含 RFC2047 解码改进）+ test_idea_product_adapters.py（4 个适配器直接测试）+ lab.import_lab_xlsx 直接测试 |
+
+（收口完成后补最终数字）

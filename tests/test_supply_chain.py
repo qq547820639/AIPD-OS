@@ -19,6 +19,7 @@ from aipd_os.supply_chain.analysis import (
 )
 from aipd_os.supply_chain.certification import (
     Certification,
+    CertificationRegistry,
     expiring_certs,
     import_certificate_file,
 )
@@ -209,14 +210,43 @@ def test_mail_rfq_no_provider_writes_task_package(tmp_path, monkeypatch):
     assert list(tmp_path.glob("*.task.json"))
 
 
-def test_mail_rfq_with_provider_makes_draft(monkeypatch):
+def test_mail_rfq_provider_env_ignored_without_real_smtp(monkeypatch):
+    """回归：AIPD_MAIL_PROVIDER 无任何实现读取；未配 AIPD_SMTP_HOST 时必须
+    诚实 external_blocked（此前设了 AIPD_MAIL_PROVIDER 就返回"草稿已就绪"）。"""
     monkeypatch.setenv("AIPD_MAIL_PROVIDER", "smtp")
+    monkeypatch.delenv("AIPD_SMTP_HOST", raising=False)
+    monkeypatch.delenv("AIPD_MAILPIT_SMTP_HOST", raising=False)
+    reg = build_registry()
+    a = reg.get("supply.rfq")
+    with pytest.raises(AdapterError) as ei:
+        a.execute({"supplier": "Acme", "part": "Widget-X"})
+    assert ei.value.classification == "external_blocked"
+
+
+def test_mail_rfq_with_real_smtp_sends_and_marks_sent(monkeypatch):
+    """回归：配置 AIPD_SMTP_HOST 后真实发送；sent 仅在 send_email 成功后为 True。"""
+    from aipd_os.mail import client as mail_client
+
+    seen: dict[str, dict] = {}
+
+    def fake_send(host, port, user, password, from_addr, to_addrs,
+                  subject, body, **kw):
+        seen["send"] = {"host": host, "to": to_addrs, "subject": subject}
+        return "m-1"
+
+    monkeypatch.setattr(mail_client, "send_email", fake_send)
+    monkeypatch.setenv("AIPD_SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("AIPD_SMTP_USER", "buyer")
+    monkeypatch.setenv("AIPD_SMTP_PASSWORD", "secret")
+    monkeypatch.delenv("AIPD_MAILPIT_SMTP_HOST", raising=False)
     reg = build_registry()
     a = reg.get("supply.rfq")
     out = a.execute({"supplier": "Acme", "part": "Widget-X"})
+    assert out["sent"] is True
     assert out["provider"] == "smtp"
-    assert out["sent"] is False
-    assert "Acme" in out["rfq_draft"]["to"]
+    assert out["message_id"] == "m-1"
+    assert seen["send"]["host"] == "smtp.example.com"
+    assert "Acme" in seen["send"]["to"]
 
 
 def test_no_official_quote_and_no_executed_lab_not_passed(tmp_path):
@@ -463,9 +493,22 @@ def test_certificate_import_pdf_not_verified(tmp_path):
     p = tmp_path / "cert.pdf"
     p.write_bytes(b"%PDF-1.4 fake")
     out = import_certificate_file(p)
-    assert out["ok"] is True  # 已登记（evidence_ref 存在）
+    assert out["ok"] is False  # ok=字段完整可验证；PDF 无法解析 → 不冒充已验证
+    assert out["registered"] is True  # 已登记（登记 ≠ 已验证）
     assert out["cert"].status == "pending"
     assert any(e.get("not_verified") for e in out["errors"])
+
+
+def test_expiring_certs_query_does_not_mutate_registry(tmp_path):
+    """回归：expiring_certs 查询不得把注册表里的原对象 status 改成 expired。"""
+    past = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
+    reg = CertificationRegistry()
+    reg.register(Certification(cert_id="C2", subject="Beta", standard="IATF16949",
+                               expires_at=past))
+    expired = expiring_certs(reg, within_days=30)
+    assert expired and expired[0]["cert"].status == "expired"
+    # 注册表原对象未被突变
+    assert reg.get("C2").status != "expired"
 
 
 # ---------------------------------------------------------------- 阶段导入 + 根因
@@ -548,3 +591,16 @@ def test_writeback_physical_present_writes_truth_and_gate(tmp_path):
     assert out["written"]
     assert db.list_gates("default", "p1")[-1]["result"] == "PASS"
     assert db.list_evidence("default", "p1")  # 阶段报告已登记为证据
+
+
+def test_import_lab_xlsx_direct_parse_or_external_blocked(tmp_path):
+    """import_lab_xlsx 直接测试：openpyxl 可用时解析、不可用/坏文件时
+    external_blocked（诚实，不伪造解析）。"""
+    from aipd_os.supply_chain.lab import import_lab_xlsx
+    p = tmp_path / "lab.xlsx"
+    p.write_bytes(b"PK\x03\x04 fake xlsx")
+    try:
+        out = import_lab_xlsx(p, "dvt")
+        assert out["format"] == "xlsx"
+    except AdapterError as ei:
+        assert ei.classification == "external_blocked"

@@ -44,7 +44,7 @@
         "R",
         "U"
       ],
-      "description": "事实的认知/分类状态（epistemic_status）。V=verified（已验证为真，仅显式确认后使用）；S=Simulation（模拟/仿真值；注意 expiry 模块历史复用 S 标记 stale，语义不同）；C=Constraint（约束）；E=Reliable external evidence（可靠外部证据——外部来源（论文/报告/供应商）最多 E，绝不自动 V）；A=Assumption（假设）；P=Plan（计划）；T=Target（目标）；R=Requirement（需求）；U=Unknown / 未验证（无证据或未确认的认知状态）。"
+      "description": "事实的认知/分类状态（epistemic_status）。V=Verified（已验证为真，仅显式确认后使用）；S=Simulation（模拟/仿真值）；C=Calculation（可复核计算）；E=Reliable external evidence（可靠外部证据——外部来源（论文/报告/供应商）最多 E，绝不自动 V）；A=Assumption（假设）；P=Pending（待第三方确认）；T=Testable（待测试）；R=Retired（已退役：曾有效、已被取代或失效；不是 Rejected）；U=Unknown / 未验证（无证据或未确认的认知状态）。"
     },
     "confidence": {
       "type": "number",

@@ -39,12 +39,12 @@
 | U | Unknown | 未知（评估过但不知道） |
 | R | Retired | 已退役（Retired；**不是** Rejected —— Rejected 属于 ClaimAssessment） |
 
-**历史状态位复用（保留既有行为，不视为正式语义冲突）**：
-- `research/expiry.py`：`S` 被复用标记 stale（有警示注释，见该文件头）；
-- `supply_chain/`：`S` 复用标记 superseded、`C`/`V` 用于阶段判定
-  （`persistence.py _QUOTE_FACT_STATUS`、`writeback.py`）；
+**历史状态位复用（已清理，2026-08-14）**：
+- `research/expiry.py`：曾复用 `S` 标记 stale → 已改为 `R`（Retired）；
+- `supply_chain/`：曾复用 `S` 标记 superseded / 失败 → 已改为
+  `R`（superseded 报价）与 `E`（失败的阶段实验报告，可靠外部证据）；
 - `experience/`：`C` 用于 Owner 指令确认的 fact（`source="owner-instruction"`）。
-  这些是旧代码对状态位的既有复用；**新代码不得新增此类复用**，新 domain
+  这些复用已收敛到上表正式语义；**新代码不得新增任何语义复用**，新 domain
   一律按上表正式语义取值。
 
 ### 1.2b ClaimAssessment（证据 → 命题的评估，v5.8.1 起独立语义）
