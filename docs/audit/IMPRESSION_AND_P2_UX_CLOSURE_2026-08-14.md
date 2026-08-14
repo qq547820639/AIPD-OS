@@ -177,4 +177,7 @@ maturity_ceiling、SKILL/QUICKSTART/--stage、CHANGELOG。本轮补齐剩余项�
 | schema_check 名不副实 | schema Draft-7 元校验 + 同名模板数据真实 jsonschema.validate + 3 个测试 |
 | 测试盲区 | 新增 test_mail_parse.py（8 个 MIME 解析/附件/主题/线程测试，含 RFC2047 解码改进）+ test_idea_product_adapters.py（4 个适配器直接测试）+ lab.import_lab_xlsx 直接测试 |
 
-（收口完成后补最终数字）
+**第三轮最终结果**：全量回归 **1075 passed / 0 failed / 3 skipped**；ruff/mypy 0；
+提交 `9d05733`（代码）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
+9d05733，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
+**8/8 PASS**；已推送 origin。
