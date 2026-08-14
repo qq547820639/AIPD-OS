@@ -235,3 +235,13 @@ aipd_store 自检切换、db._next_id 死代码、state_service README/requireme
 提交 `47d8e49`（代码）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
 47d8e49，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
 **8/8 PASS**；已推送 origin。
+
+---
+
+## 附：第六轮（README 面向终端用户重写，2026-08-14）
+
+README.md 重写为面向非技术读者的产品说明文档：产品简介（总监类比）/
+核心功能亮点（8 项白话+类比）/三分钟快速上手（6 步）/常见场景（6 个）/
+FAQ（10 问）/帮助与支持/命令速查（30 主线命令，保持与 SKILL.md 同源，
+`tests/test_command_coverage.py` 声明⊆注册 与 `test_version_consistency.py`
+首行 v5.6.0 契约继续满足）。（收口完成后补最终数字）
