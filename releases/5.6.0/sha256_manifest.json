@@ -77,7 +77,7 @@
   },
   {
     "path": "docs/audit/IMPRESSION_AND_P2_UX_CLOSURE_2026-08-14.md",
-    "sha256": "7d987683f7212e30b4f408b198fd9ad72a23d381d5ddf6cd0bdc0adc89679a73"
+    "sha256": "28881189291b0c7980904c1dbef17063edc5dce0d6867b0f8b4f24e0a1d90bf2"
   },
   {
     "path": "docs/audit/IMPRESSION_POST_REFACTOR_2026-08-14.md",
@@ -217,7 +217,7 @@
   },
   {
     "path": "docs/audit/pytest-report.json",
-    "sha256": "2890db59c6db1027355ced2564fff363d4f414780070b272dd2fcbe821105608"
+    "sha256": "ed61dcadc57348b123ba9d202e3c235315f15fc1db258a8e84660c13a15ef39b"
   },
   {
     "path": "docs/audit/release_evidence_notes.md",
@@ -298,18 +298,6 @@
   {
     "path": "evals/exo001_v13_outcome_reclassification.json",
     "sha256": "b5f9a476775a0d32143e53d9ad45541b08718b83af141527b9d5d6120441c87a"
-  },
-  {
-    "path": "evals/golden_projects/consumer_electronics/project.json",
-    "sha256": "114f7cd5633716384ab3166d3f4a9491b7b41e947905932a8f3e22297a101711"
-  },
-  {
-    "path": "evals/golden_projects/exoskeleton/project.json",
-    "sha256": "dd47b1cf740bc170bb112ac49a48453d8fcd936df1cbfa24ce8852ed4fd87d2b"
-  },
-  {
-    "path": "evals/golden_projects/simple_mechanical_tool/project.json",
-    "sha256": "0f2028c50749687af19f82300d184513dc92cd343c3f77b67629dc5e4a06dd12"
   },
   {
     "path": "evals/manual_visual_gap_review.json",
@@ -761,7 +749,7 @@
   },
   {
     "path": "src/aipd_os/cli/commands_owner.py",
-    "sha256": "90aa6301114ca3a00804f78b405ef9ebe26fe5f05bd6160435718a8b76c5fa65"
+    "sha256": "116690df0cbb84f2edf30dcf78782156f60aeadc889ba96f48a6fcfaa726c6b8"
   },
   {
     "path": "src/aipd_os/cli/commands_release.py",
@@ -769,7 +757,7 @@
   },
   {
     "path": "src/aipd_os/cli/main.py",
-    "sha256": "c2c3f56a6475d4433d5f02159c24240768898e1e06ae11bc34f3f9714caef312"
+    "sha256": "04aa4dd2dd26ebd0f56d5e3123ccbf936f8a478067ab308eaab20996218bf2cb"
   },
   {
     "path": "src/aipd_os/cli/product_commands.py",
@@ -793,7 +781,7 @@
   },
   {
     "path": "src/aipd_os/evals_runner/cli.py",
-    "sha256": "49e11def7388273b1148054f625e70906a06f9191c50cfff809c501a9874ef2e"
+    "sha256": "ce070b95498eb7637ec48b918e878831c01da2af8b8dfb46514fb599c3b98d6d"
   },
   {
     "path": "src/aipd_os/evals_runner/completion.py",
@@ -865,7 +853,7 @@
   },
   {
     "path": "src/aipd_os/experience/__init__.py",
-    "sha256": "94c87c2448eb72388e69ae7ad93bb5b86731a0b1c6278277d27d157731e7ad49"
+    "sha256": "b4339af94c5117423cda9f15cf65b29320ec196c20e2a29bb7abdca5189eee78"
   },
   {
     "path": "src/aipd_os/experience/artifact_preview.py",
@@ -897,7 +885,7 @@
   },
   {
     "path": "src/aipd_os/experience/onboarding.py",
-    "sha256": "65babd2d9fd5d1e6d741b3ed9040d2de5293f5e5d20be512b026eb3459d583a4"
+    "sha256": "dac8bfb0d0fa1d5048a786c50df5cc023b9b06fb79e15b0f51ca6e6419b92f67"
   },
   {
     "path": "src/aipd_os/experience/operations.py",
@@ -1025,7 +1013,7 @@
   },
   {
     "path": "src/aipd_os/llm/experience.py",
-    "sha256": "381f19782505a4c130c3b6cbeb22f0e700f9907c6a73742549101456f9197051"
+    "sha256": "007351fce116ad43e965eae9523dbdabe429f611e1e70665011a0bd1f97e6a1a"
   },
   {
     "path": "src/aipd_os/llm/idea_decomposer_provider.py",
@@ -1417,14 +1405,14 @@
   },
   {
     "path": "src/aipd_os/web/server.py",
-    "sha256": "5b358f3fa773666ae9916c12ed0ac49210e0fb07edfcd7237e72b4ce38495335"
+    "sha256": "7125ee4a70c4f19002de2bf16a53cbf1c574dc92b60fad2df6f0fe101fb62fe0"
   },
   {
     "path": "src/aipd_os/web/templates.py",
-    "sha256": "43f5f49001120a834ff1803638eb3edc67532670d73c33b4b740ec2865c2ad1d"
+    "sha256": "f097cb0f854cffd0844728a0e1cb48dc35057eaa60b30de198afdea55c5d0ede"
   },
   {
     "path": "src/aipd_os/web/views.py",
-    "sha256": "ae34a26098adf279139fc772ca48b05197f214b6dc2220dcf4281cdd49e1f4a7"
+    "sha256": "717a8fcc9c8911cced0aaebc61464ed4dee18c5c3afebe1040721e72d35344ec"
   }
 ]
