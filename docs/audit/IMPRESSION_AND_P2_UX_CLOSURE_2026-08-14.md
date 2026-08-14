@@ -244,4 +244,9 @@ README.md 重写为面向非技术读者的产品说明文档：产品简介（�
 核心功能亮点（8 项白话+类比）/三分钟快速上手（6 步）/常见场景（6 个）/
 FAQ（10 问）/帮助与支持/命令速查（30 主线命令，保持与 SKILL.md 同源，
 `tests/test_command_coverage.py` 声明⊆注册 与 `test_version_consistency.py`
-首行 v5.6.0 契约继续满足）。（收口完成后补最终数字）
+首行 v5.6.0 契约继续满足）。
+
+**第六轮最终结果**：全量回归 **1095 passed / 0 failed / 3 skipped**；ruff/mypy 0；
+提交 `05ab598`（文档）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
+05ab598，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
+**8/8 PASS**；已推送 origin。
