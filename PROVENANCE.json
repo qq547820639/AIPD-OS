@@ -1,7 +1,7 @@
 {
   "name": "AIPD-OS provenance",
   "version": "5.6.0",
-  "source_commit": "9d0573310a1b88e441d4f22ad8a2d033ec7906e0",
+  "source_commit": "1a57427e5e6279d292a00d2b766941336993fb84",
   "build_environment": {
     "python": "3.9.6",
     "python_implementation": "CPython",
@@ -13,26 +13,26 @@
       "jsonschema": "4.25.1"
     }
   },
-  "build_time": "2026-08-14T00:07:35+00:00",
+  "build_time": "2026-08-14T00:19:32+00:00",
   "dependency_lock": {
     "files": {
       "requirements-quality.txt": "1dc9b146a4c1fc822b0938f5af742882ac1dc358ae16896b7acc1c7051418a37"
     },
-    "pip_freeze": "-e git+ssh://git@github.com/qq547820639/AIPD-OS.git@9d0573310a1b88e441d4f22ad8a2d033ec7906e0#egg=aipd_os\nattrs==26.1.0\nboolean.py==5.0\nbuild==1.4.4\nCacheControl==0.14.3\ncadquery==2.5.2\ncadquery-ocp==7.7.2\ncasadi==3.7.2\ncertifi==2026.7.22\ncffi==2.0.0\ncharset-normalizer==3.4.9\ncoverage==7.10.7\ncryptography==50.0.0\ncyclonedx-python-lib==9.1.0\ndefusedxml==0.7.1\nexceptiongroup==1.3.1\nezdxf==1.4.2\nfilelock==3.19.1\nfonttools==4.60.2\nidna==3.18\nimportlib_metadata==8.7.1\niniconfig==2.1.0\njsonschema==4.25.1\njsonschema-specifications==2025.9.1\nlibrt==0.13.0\nlicense-expression==30.4.4\nmarkdown-it-py==3.0.0\nmdurl==0.1.2\nmsgpack==1.1.2\nmultimethod==1.12\nmypy==1.19.1\nmypy_extensions==1.1.0\nnlopt==2.9.1\nnumpy==2.0.2\npackageurl-python==0.17.6\npackaging==26.3\npath==17.1.1\npathspec==1.1.1\npillow==11.3.0\npip-api==0.0.34\npip-requirements-parser==32.0.1\npip_audit==2.9.0\nplatformdirs==4.4.0\npluggy==1.6.0\npy-serializable==2.1.0\npycparser==2.23\nPygments==2.20.0\npyparsing==3.3.2\npyproject_hooks==1.2.0\npytest==8.4.2\npytest-cov==7.1.0\npytest-json-report==1.5.0\npytest-metadata==3.1.1\nPyYAML==6.0.3\nreferencing==0.36.2\nreportlab==5.0.0\nrequests==2.32.5\nrich==15.0.0\nrpds-py==0.27.1\nruff==0.16.1\nsortedcontainers==2.4.0\ntoml==0.10.2\ntomli==2.4.1\ntyping_extensions==4.16.0\ntypish==1.9.3\nurllib3==2.6.3\nzipp==3.23.1"
+    "pip_freeze": "-e git+ssh://git@github.com/qq547820639/AIPD-OS.git@1a57427e5e6279d292a00d2b766941336993fb84#egg=aipd_os\nattrs==26.1.0\nboolean.py==5.0\nbuild==1.4.4\nCacheControl==0.14.3\ncadquery==2.5.2\ncadquery-ocp==7.7.2\ncasadi==3.7.2\ncertifi==2026.7.22\ncffi==2.0.0\ncharset-normalizer==3.4.9\ncoverage==7.10.7\ncryptography==50.0.0\ncyclonedx-python-lib==9.1.0\ndefusedxml==0.7.1\nexceptiongroup==1.3.1\nezdxf==1.4.2\nfilelock==3.19.1\nfonttools==4.60.2\nidna==3.18\nimportlib_metadata==8.7.1\niniconfig==2.1.0\njsonschema==4.25.1\njsonschema-specifications==2025.9.1\nlibrt==0.13.0\nlicense-expression==30.4.4\nmarkdown-it-py==3.0.0\nmdurl==0.1.2\nmsgpack==1.1.2\nmultimethod==1.12\nmypy==1.19.1\nmypy_extensions==1.1.0\nnlopt==2.9.1\nnumpy==2.0.2\npackageurl-python==0.17.6\npackaging==26.3\npath==17.1.1\npathspec==1.1.1\npillow==11.3.0\npip-api==0.0.34\npip-requirements-parser==32.0.1\npip_audit==2.9.0\nplatformdirs==4.4.0\npluggy==1.6.0\npy-serializable==2.1.0\npycparser==2.23\nPygments==2.20.0\npyparsing==3.3.2\npyproject_hooks==1.2.0\npytest==8.4.2\npytest-cov==7.1.0\npytest-json-report==1.5.0\npytest-metadata==3.1.1\nPyYAML==6.0.3\nreferencing==0.36.2\nreportlab==5.0.0\nrequests==2.32.5\nrich==15.0.0\nrpds-py==0.27.1\nruff==0.16.1\nsortedcontainers==2.4.0\ntoml==0.10.2\ntomli==2.4.1\ntyping_extensions==4.16.0\ntypish==1.9.3\nurllib3==2.6.3\nzipp==3.23.1"
   },
   "test_report": {
     "present": true,
     "path": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/docs/audit/pytest-report.json",
     "parsed": true,
-    "sha256": "93050041abb8476afd78e34e13b4030c2c1b9b9bcca88e43583652587d6cfbe6",
-    "passed": 1075,
+    "sha256": "899c3b4c6cf971e5ba173514d1872c2ebf4dd1a674b7f7775e4d95567d7b4690",
+    "passed": 1082,
     "failed": 0,
-    "total": 1078,
+    "total": 1085,
     "errors": null,
-    "source_commit": "9d0573310a1b88e441d4f22ad8a2d033ec7906e0",
+    "source_commit": "1a57427e5e6279d292a00d2b766941336993fb84",
     "package_version": "5.6.0",
-    "generated_at": 1786666049.751165
+    "generated_at": 1786666767.275884
   },
   "bundle": "aipd-os-5.6.0.zip",
-  "bundle_hash": "798c9850d061c61a07ff67584cd5ed9f0cccd02c03ae57e4a99ea0a77197eab9"
+  "bundle_hash": "0293740ded488302eab2a570e70e9f86bfb59857486301b2902bd64784fe7025"
 }

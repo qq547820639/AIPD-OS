@@ -77,7 +77,7 @@
   },
   {
     "path": "docs/audit/IMPRESSION_AND_P2_UX_CLOSURE_2026-08-14.md",
-    "sha256": "f21bab59cd34dfbe5fd04faf71ed514e1bb0b285e0ea4652ffa7d372edb7b8b0"
+    "sha256": "3fed219cf4279c8a82da0565379ada3c7dd529d0c7be050a2b98bd551fdfe024"
   },
   {
     "path": "docs/audit/IMPRESSION_POST_REFACTOR_2026-08-14.md",
@@ -217,7 +217,7 @@
   },
   {
     "path": "docs/audit/pytest-report.json",
-    "sha256": "fe3445d23b373d4df308c43e55d7cf0507cd053ac0d7d1245eacdcc3f38232c8"
+    "sha256": "93050041abb8476afd78e34e13b4030c2c1b9b9bcca88e43583652587d6cfbe6"
   },
   {
     "path": "docs/audit/release_evidence_notes.md",
@@ -577,7 +577,7 @@
   },
   {
     "path": "scripts/production_release_gate.py",
-    "sha256": "b1431d5ec44cd7a358c95c7827832172446572e70efe250bb5ff4925aeb103e7"
+    "sha256": "d52991d5af42b4bcbe5d629aff516a2791a01c81ca7196ce06feebd6ff4022aa"
   },
   {
     "path": "scripts/quality_gate.py",
@@ -1173,7 +1173,7 @@
   },
   {
     "path": "src/aipd_os/security/masking.py",
-    "sha256": "921ff374d3e1e60f58faf05686e263b9596871fe6bab834943ee0a6cab3c18a9"
+    "sha256": "07b67929b97bfdd0ada0c5e1b666be5836203a0b1a51bf59a8dcb6d38ef426a8"
   },
   {
     "path": "src/aipd_os/security/prompt_injection.py",
@@ -1185,7 +1185,7 @@
   },
   {
     "path": "src/aipd_os/security/secrets.py",
-    "sha256": "f66391c89dc288e4576765a4c2bed939d08a9a7b6e6e140e5fe23cdc6f07c04f"
+    "sha256": "54ab6e5dcbbcd5786af397852e8bef4aa2fefb54b11c381a952228a4175541f5"
   },
   {
     "path": "src/aipd_os/state/__init__.py",
@@ -1201,7 +1201,7 @@
   },
   {
     "path": "src/aipd_os/state/backup.py",
-    "sha256": "97c0e7b4c420164ce2b2c8726b98dbc2166c0bddc56364c2c763ecd339b101c8"
+    "sha256": "f1e769ea84f012169ae3c485b43aaacdb59a74648ef3f3d2d0f43b7c67348fa9"
   },
   {
     "path": "src/aipd_os/state/checkpoint.py",
@@ -1217,7 +1217,7 @@
   },
   {
     "path": "src/aipd_os/state/health.py",
-    "sha256": "cf4257e8112d322e9223a51f833955f9099bc42cdefd10439325dee695c641ea"
+    "sha256": "2c830e494eac959024478af58e2aaebc079c5d39a2e3b30b8cde3edbc287f715"
   },
   {
     "path": "src/aipd_os/state/lineage.py",
@@ -1225,19 +1225,19 @@
   },
   {
     "path": "src/aipd_os/state/migrations.py",
-    "sha256": "a37cfd4f57169ad1fa24c6a85cdaeb19d81125c69325701de116e182f9dcef52"
+    "sha256": "be580e846bc4ec3d753dadaadc2b406e6185454554331e412575c32e6b9ee20a"
   },
   {
     "path": "src/aipd_os/state/objects.py",
-    "sha256": "96d27ded0feea1efd2baaf4641aa98bc6587c5f83aeecb311a195521f8146ea8"
+    "sha256": "7425fe91baf23fc80e081a305af14c3bd0b64910b504d0e95613883f5fd01a09"
   },
   {
     "path": "src/aipd_os/state/recovery.py",
-    "sha256": "54bfacf0a2d232531ba4f8b76b1f98009825b7bd26ef76b058c2cff8adf5f9de"
+    "sha256": "e458a6e2fcd816e55ba4dcc48c8f1bd16fd8abc3155dc3e234a99d0052724034"
   },
   {
     "path": "src/aipd_os/state/server.py",
-    "sha256": "dcb9b80e581e74bec3c06d5a5b0dd45b03ef8ae09c14fa449819fdd6dcedb941"
+    "sha256": "eb47d6086b84d6fdc16e126401c2547622421d9cd3ba5b8f0837103285d3701f"
   },
   {
     "path": "src/aipd_os/state/state_backend.py",
