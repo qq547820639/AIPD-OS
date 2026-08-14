@@ -266,4 +266,7 @@ FAQ（10 问）/帮助与支持/命令速查（30 主线命令，保持与 SKILL
 | 文档 | QUICKSTART eval 示例改为 `--provider model`；CHANGELOG 新增「演示模式撤出产品」条目 |
 | 测试 | 新增 2 个回归（onboard 无 examples、eval 默认为 model）+ 路径/断言更新 |
 
-（收口完成后补最终数字）
+**第七轮最终结果**：全量回归 **1096 passed / 0 failed / 3 skipped**；ruff/mypy 0；
+提交 `a660405`（代码）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
+a660405，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
+**8/8 PASS**；已推送 origin。
