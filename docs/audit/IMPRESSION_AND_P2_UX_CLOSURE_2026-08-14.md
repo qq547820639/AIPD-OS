@@ -229,4 +229,9 @@ aipd_store 自检切换、db._next_id 死代码、state_service README/requireme
 | 文档 | SKILL.md（30 命令清单）、README（功能 9 + 场景 4b）、CHANGELOG（v5.10 条目） |
 
 新增测试 15 个（BOM 模型/存储/防循环/乐观锁/成本诚实性/检查清单 + 经验渲染/
-指纹/双 Provider 注入 + CLI 端到端含 Product Truth 写回）。（收口完成后补最终数字）
+指纹/双 Provider 注入 + CLI 端到端含 Product Truth 写回）。
+
+**第五轮最终结果**：全量回归 **1095 passed / 0 failed / 3 skipped**；ruff/mypy 0；
+提交 `47d8e49`（代码）+ tag v5.6.0 更新指向 + 发布证据刷新（test_report 锚定
+47d8e49，bundle 重建 + Ed25519/MAC 重签）+ 证据提交；`release-ready --tag v5.6.0`
+**8/8 PASS**；已推送 origin。
