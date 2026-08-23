@@ -62,3 +62,15 @@ AIPD-OS 与 Vencertia-Intelligence-Lab（github.com/qq547820639/Vencertia-Intell
 - 正向：零依赖契约、版本线（v5.x）、签名发布体系、pytest 套件各自独立完整。
 - 代价：4 组功能等价实现平行存在（OpenAI 客户端 urllib vs httpx、指标、mock provider、发布打包），约 500 行，接受。
 - 重新评估触发条件：出现第三个同哲学项目且产生真实重复维护负担；两仓间形成真实数据联动需求（按规则 4 建契约）；任一仓部署形态根本变化。
+
+---
+
+## 增补（2026-08-23）：合成层——product-decision-router
+
+所有者决策：在两仓之上增设**意图路由合成层**（github.com/qq547820639/product-decision-router），以模型驱动的 SKILL 形态统一入口：商业决策意图路由到 Vencertia，产品实现意图路由到 AIPD-OS，混合意图按"先决策、后执行"两段式接力。
+
+该合成层与本裁决**兼容而非冲突**：
+
+- 它不建立代码依赖、不读取两仓数据库，仅通过规则 4 允许的文件级契约（`schemas/handoff_v1.json`）交互——两仓独立性不变；
+- 它把**编排**（意图理解、技能选择、接力顺序）交给模型，而本仓的真相核（state/migrations/gate/snapshot/commit/签名发布）保持确定性，不随模型漂移；
+- 编排层的"僵化规则降级路线"（S0–S8 阶段机模板化、决策卡片影响档位模型化、硬编码经验文本退役等）记录在 router 仓 `docs/architecture.md`，作为后续独立 PR 执行，每项须附回归测试。
