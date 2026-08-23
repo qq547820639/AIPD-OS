@@ -94,6 +94,54 @@ class SlowAdapter(ToolAdapter):
         return {"ok": True}
 
 
+# ---------------------------------------------------------------------------
+# 2b) EXTERNAL_SIDE_EFFECT 失败不得被 closure 返工循环重跑
+# ---------------------------------------------------------------------------
+class ExternalFailingAdapter(ToolAdapter):
+    """EXTERNAL_SIDE_EFFECT 且总是失败（如发邮件被 SMTP 拒绝）。"""
+
+    def __init__(self):
+        self.calls = 0
+
+    def capability_id(self):
+        return "test.external_fail"
+
+    def discover(self):
+        return {"id": self.capability_id(), "name": "ext", "provider": "local",
+                "version": "1", "maturity_ceiling": None, "available": True}
+
+    def side_effect_mode(self):
+        return "EXTERNAL_SIDE_EFFECT"
+
+    def retry_limits(self):
+        return 3
+
+    def execute(self, inp):
+        self.calls += 1
+        raise AdapterError("smtp rejected", classification="transient")
+
+
+def test_external_side_effect_failure_not_reworked(tmp_path, monkeypatch):
+    """router 层已禁重试；closure 返工循环同样不得重跑外部副作用失败记录。"""
+    monkeypatch.setenv("AIPD_OUTPUT_DIR", str(tmp_path))
+    reg = build_registry()
+    adapter = ExternalFailingAdapter()
+    reg.register(adapter)
+    _, registry, router, cstore = _make_env(tmp_path, reg)
+    run = _bind(ClosureRun(), cstore, registry, router, max_rework=2)
+    result = run.execute("WX", [ClosureStep(step_id="ext",
+                                            capability_id="test.external_fail",
+                                            inputs={})])
+    # 外部副作用只允许执行 1 次（此前会被返工循环重复执行）
+    assert adapter.calls == 1
+    # 终态 failed 并留痕（fail 事件），不进入 rework
+    assert result["status"] == "failed"
+    kinds = [e["kind"] for e in result["events"]]
+    assert "rework" not in kinds
+    assert "fail" in kinds
+    assert result["failure_message"] is not None
+
+
 def test_step_timeout_marks_timed_out(tmp_path, monkeypatch):
     monkeypatch.setenv("AIPD_OUTPUT_DIR", str(tmp_path))
     reg = build_registry()
