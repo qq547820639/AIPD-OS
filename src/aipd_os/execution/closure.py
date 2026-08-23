@@ -285,6 +285,15 @@ class ClosureRun:
 
             classification = record.error_classification or "tool_error"
             self._log_tool_call(step, record, status="failed")
+            # 与 ExecutionRouter 的重试语义一致：仅 PURE / IDEMPOTENT 副作用
+            # 的失败允许自动返工。EXTERNAL_SIDE_EFFECT（发邮件/登记报价等）
+            # 重跑会重复执行外部副作用 → 不重跑，直接进入终态 failed 并留痕。
+            if record.side_effect_mode not in ("PURE", "IDEMPOTENT"):
+                self._emit_fail(
+                    f"step {step.step_id} failed; side_effect_mode="
+                    f"{record.side_effect_mode} 禁止自动返工"
+                    f"（避免重复外部副作用）: {record.error_message}")
+                return "failed"
             action = rework.record_failure(classification, record.error_message)
             self._emit_rework(step, rework)
             if action == "escalate":

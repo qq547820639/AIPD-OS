@@ -14,7 +14,7 @@ from __future__ import annotations
 import pytest
 
 from aipd_os.state.db import AIPDStateDB
-from aipd_os.supervisor import Supervisor
+from aipd_os.supervisor import PHASES, Supervisor
 
 
 def _make_env(tmp_path, projects=("P1", "P2")):
@@ -42,6 +42,31 @@ def test_two_projects_coexist(tmp_path):
     assert sup1.project_id() == "P1"
     assert sup2.project_id() == "P2"
     assert sup1.tenant_id() == "default"
+
+
+# ---------------------------------------------------------------------------
+# 1b) 多项目 phase 初始化不得静默丢失（run_id 主键带项目作用域）
+# ---------------------------------------------------------------------------
+def test_init_lifecycle_phase_runs_scoped_per_project(tmp_path):
+    db = _make_env(tmp_path)
+    sup1 = _make_sup(db, "P1")
+    sup2 = _make_sup(db, "P2")
+    # 两个项目分别 init 后，各自 phase runs 都必须是 9 个
+    # （旧实现固定 RUN-{i:02d} 主键 + INSERT OR IGNORE，会把第二个项目全部吞掉）
+    assert len(sup1.status()["phases"]) == len(PHASES)
+    assert len(sup2.status()["phases"]) == len(PHASES)
+    with sup1.connect() as c:
+        n1 = c.execute(
+            "SELECT COUNT(*) FROM supervisor_phase_runs WHERE project_id='P1'"
+        ).fetchone()[0]
+        n2 = c.execute(
+            "SELECT COUNT(*) FROM supervisor_phase_runs WHERE project_id='P2'"
+        ).fetchone()[0]
+    assert n1 == len(PHASES) == 9
+    assert n2 == len(PHASES) == 9
+    # 同一项目重复 init 保持幂等（不产生重复行）
+    sup1.init_lifecycle()
+    assert len(sup1.status()["phases"]) == len(PHASES)
 
 
 # ---------------------------------------------------------------------------

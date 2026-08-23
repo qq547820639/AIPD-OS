@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import importlib.util
 import json
 import os
@@ -38,13 +39,39 @@ def _repo_root() -> Path:
     raise RuntimeError("无法定位仓库根目录")
 
 
+# 仓库布局不可用时（非 editable 安装 / 脱离仓库目录运行）的包内等价模块。
+# 这些 scripts/ 顶层脚本已迁入 src/aipd_os/，scripts/ 下只剩薄兼容 wrapper，
+# 因此可直接从已安装包解析同名能力（如 aipd init 只需 Supervisor 类）。
+_PACKAGE_FALLBACK_MODULES = {
+    "aipd_supervisor": "aipd_os.supervisor",
+}
+
+
 def _import_module(name: str, subdir: str = "scripts"):
-    """按路径加载仓库内的顶层脚本模块（非包）。"""
-    path = _repo_root() / subdir / f"{name}.py"
-    spec = importlib.util.spec_from_file_location(name, str(path))
-    mod = importlib.util.module_from_spec(cast(Any, spec))
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    return mod
+    """按路径加载仓库内的顶层脚本模块（非包）。
+
+    仓库内开发行为不变：优先按 ``<repo>/<subdir>/<name>.py`` 路径加载。
+    仓库布局定位失败（如非 editable 安装、在任意目录运行 CLI）时回退：
+    1. 包内等价模块（见 :data:`_PACKAGE_FALLBACK_MODULES`）；
+    2. 环境中的同名顶层模块（``importlib.import_module(name)``）。
+    都找不到才抛出与原 ``_repo_root()`` 相同的定位失败错误。
+    """
+    try:
+        path = _repo_root() / subdir / f"{name}.py"
+    except RuntimeError:
+        path = None
+    if path is not None and path.exists():
+        spec = importlib.util.spec_from_file_location(name, str(path))
+        mod = importlib.util.module_from_spec(cast(Any, spec))
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        return mod
+    candidates = [_PACKAGE_FALLBACK_MODULES.get(name), name]
+    for candidate in dict.fromkeys(c for c in candidates if c):
+        try:
+            return importlib.import_module(candidate)
+        except ImportError:
+            continue
+    raise RuntimeError("无法定位仓库根目录")
 
 
 def _ns(**kwargs: Any) -> argparse.Namespace:

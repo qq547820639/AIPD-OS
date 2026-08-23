@@ -218,7 +218,11 @@ class Supervisor:
         ts = now()
         with self.connect() as c:
             for i, phase in enumerate(PHASES):
-                rid = f"RUN-{i:02d}"
+                # run_id 必须带项目作用域：固定 RUN-{i:02d} 会让第二个项目的
+                # init 全部被 INSERT OR IGNORE 吞掉（主键冲突）。同一项目重复
+                # init 仍幂等（键相同被忽略）；旧库中 RUN-00 格式的历史行键不同，
+                # 不会冲突（旧行保留，新键插入）。
+                rid = f"RUN-{pid}-{i:02d}"
                 c.execute(
                     "INSERT OR IGNORE INTO supervisor_phase_runs("
                     "run_id,project_id,tenant_id,phase,status,entry_checks_json,"
