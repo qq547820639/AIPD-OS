@@ -21,7 +21,7 @@ AIPD-OS 与 Vencertia-Intelligence-Lab（github.com/qq547820639/Vencertia-Intell
    - 依赖哲学对立：AIPD 的架构原则是"仅 jsonschema、其余全标准库"（LLM 客户端用 urllib 自实现）；Vencertia 域层全量建筑在 pydantic/FastAPI/httpx 上。合并必破 AIPD 的零依赖契约；
    - 存储哲学相反：AIPD 为 21+ 张专用表富关系模型（多租户 + 版本化迁移 + SHA256 冻结 v1），Vencertia 为泛型 entities + event_log 实体存储。共存将产生 decisions/evidence 双真相源；
    - 测试套件物理冲突：同名 `tests/test_cli.py` + 本仓 `tests/__init__.py` 包结构，合并即 pytest import mismatch；Vencertia conftest 顶层依赖 fastapi，本仓零依赖测试环境无法收集。
-5. **SKILL 形态核查**：**本仓已经是规范 SKILL 形态**——根 `SKILL.md`（agent 行为契约）+ `scripts/check_skill_package.py`（强制全仓恰好一个 SKILL.md、front matter 校验）+ `references/` `templates/` 配套。SKILL 化对本仓是既成事实，无需改造。Vencertia 是独立产品（FastAPI Web 决策工作台），其引擎核理论可 skill 化但会移除产品面，不予实施。
+5. **SKILL 形态核查**：本仓发布链与 SKILL.md 深度耦合（`check_skill_package.py` 强制恰好一个 SKILL.md、`skill_quality_audit.py` 命令覆盖率审计入 CI、`test_command_coverage.py` 解析命令清单、`runtime_preflight.py` 引为架构文件）——SKILL.md 是发布链的校验组件，不能简单删除。Vencertia 是独立产品（FastAPI Web 决策工作台），其引擎核理论可 skill 化但会移除产品面，不予实施。
 
 ## 决策矩阵（weighted-scoring，权重 + 评分 1-5）
 
@@ -65,12 +65,14 @@ AIPD-OS 与 Vencertia-Intelligence-Lab（github.com/qq547820639/Vencertia-Intell
 
 ---
 
-## 增补（2026-08-23）：合成层——product-decision-router
+## 增补（2026-08-23，同日修订）：合成层 IdeaToLaunch
 
-所有者决策：在两仓之上增设**意图路由合成层**（github.com/qq547820639/product-decision-router），以模型驱动的 SKILL 形态统一入口：商业决策意图路由到 Vencertia，产品实现意图路由到 AIPD-OS，混合意图按"先决策、后执行"两段式接力。
+所有者决策：在两仓之上增设**旗舰合成技能** [IdeaToLaunch](https://github.com/qq547820639/IdeaToLaunch)（模型驱动的 SKILL，零代码），作为**唯一 agent-facing 入口**：它持有"想法 → 决策验证 → 产品落地 → 复盘回流"全链路方法论，本仓与 Vencertia 降级为其执行后端。
+
+本仓配套调整：**根 `SKILL.md` 降级为废弃存根**——description 标注勿加载并指向 IdeaToLaunch，方法论章节移除（唯一维护点收敛到 IdeaToLaunch），仅保留命令清单以维持发布链一致性审计（`skill_quality_audit.py` / `test_command_coverage.py` 依赖该清单）。产品形态（CLI/服务）不受影响。
 
 该合成层与本裁决**兼容而非冲突**：
 
-- 它不建立代码依赖、不读取两仓数据库，仅通过规则 4 允许的文件级契约（`schemas/handoff_v1.json`）交互——两仓独立性不变；
-- 它把**编排**（意图理解、技能选择、接力顺序）交给模型，而本仓的真相核（state/migrations/gate/snapshot/commit/签名发布）保持确定性，不随模型漂移；
-- 编排层的"僵化规则降级路线"（S0–S8 阶段机模板化、决策卡片影响档位模型化、硬编码经验文本退役等）记录在 router 仓 `docs/architecture.md`，作为后续独立 PR 执行，每项须附回归测试。
+- 它不建立代码依赖、不读取两仓数据库，仅通过规则 4 允许的文件级契约（IdeaToLaunch 仓 `schemas/handoff_v1.json`）交互——两仓独立性不变；
+- 它把**编排**（意图理解、流程组织、接力顺序）交给模型，而本仓的真相核（state/migrations/gate/snapshot/commit/签名发布）保持确定性，不随模型漂移；
+- 编排层的"僵化规则降级路线"（S0–S8 阶段机模板化、决策卡片影响档位模型化、硬编码经验文本退役等）记录在 IdeaToLaunch 仓 `docs/architecture.md`，作为后续独立 PR 执行，每项须附回归测试。
