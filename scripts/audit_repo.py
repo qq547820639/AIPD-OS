@@ -19,6 +19,7 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 # 需要扫描遗留 CAD 冲突的文件后缀
@@ -484,6 +485,52 @@ def _write_report(report: dict, json_out: str, markdown_out: str) -> None:
         print(f"[audit_repo] Markdown 已写入: {out.resolve()}")
 
 
+def _check_strict(report: dict) -> list[str]:
+    """严格模式检查：返回违规列表。空列表表示通过。
+
+    严格模式下以下情况视为失败：
+    - release manifest hash mismatch
+    - source manifest hash mismatch
+    - version truth 不一致（pyproject 版本 != manifest 版本）
+    - provenance source commit 与报告 HEAD 不一致
+    """
+    violations: list[str] = []
+
+    # Release manifest 检查
+    rm = report.get("release_manifest_verification", {})
+    if rm.get("present") and rm.get("parsed"):
+        if rm.get("hash_mismatch_count", 0) > 0:
+            violations.append(
+                f"Release manifest hash mismatch: {rm['hash_mismatch_count']} files")
+    elif rm.get("present") and not rm.get("parsed"):
+        violations.append("Release manifest 存在但解析失败")
+
+    # Source manifest 检查
+    sm = report.get("source_manifest_verification", {})
+    if sm.get("present") and sm.get("parsed"):
+        if sm.get("hash_mismatch_count", 0) > 0:
+            violations.append(
+                f"Source manifest hash mismatch: {sm['hash_mismatch_count']} files")
+        # 版本一致性：manifest source_commit 应与报告 HEAD 一致
+        manifest_source = sm.get("source_commit", "")
+        report_head = report.get("source_commit", "")
+        if manifest_source and report_head and manifest_source != report_head:
+            violations.append(
+                f"Provenance source commit mismatch: "
+                f"manifest={manifest_source[:12]}… vs HEAD={report_head[:12]}…")
+    elif sm.get("present") and not sm.get("parsed"):
+        violations.append("Source manifest 存在但解析失败")
+
+    # 版本一致性
+    pyproject_ver = report.get("package_version", "")
+    manifest_ver = rm.get("version", "") if rm.get("parsed") else ""
+    if pyproject_ver and manifest_ver and pyproject_ver != manifest_ver:
+        violations.append(
+            f"Version mismatch: pyproject={pyproject_ver} vs manifest={manifest_ver}")
+
+    return violations
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="AIPD-OS 版本真实性审计")
     parser.add_argument("--repo", default=".", help="仓库根目录（默认当前目录）")
@@ -491,12 +538,25 @@ def main() -> None:
     parser.add_argument("--markdown-out", default="", help="Markdown 报告输出路径")
     parser.add_argument("--pin-commit", default="",
                         help="把报告 latest_commit_sha 固定到最终 tag SHA（默认取当前 HEAD）")
+    parser.add_argument("--strict", action="store_true",
+                        help="严格模式：manifest hash mismatch / version mismatch / "
+                             "provenance commit 不一致时 exit 1（用于 CI release-ready 检查）")
     args = parser.parse_args()
 
     report = audit_repo(args.repo, pin_commit=args.pin_commit or None)
     _write_report(report, args.json_out or "", args.markdown_out or "")
     if not args.json_out and not args.markdown_out:
         print(json.dumps(report, ensure_ascii=False, indent=2))
+
+    if args.strict:
+        violations = _check_strict(report)
+        if violations:
+            print("\n[STRICT MODE] 审计失败：", file=sys.stderr)
+            for v in violations:
+                print(f"  ✗ {v}", file=sys.stderr)
+            sys.exit(1)
+        else:
+            print("\n[STRICT MODE] 审计通过。", file=sys.stderr)
 
 
 if __name__ == "__main__":

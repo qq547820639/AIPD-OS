@@ -101,6 +101,32 @@ aipd version --verbose      # 打印版本 + Git HEAD + 构建时间 + 能力矩
 aipd ui --db state.db       # 启动本地 Owner Web Console（http://127.0.0.1:8080）
 ```
 
+## 13. 验证、Issue 与制造就绪度（v5.10）
+
+```bash
+# 创建验证计划
+aipd validation plan --db state.db --project p1 --stage EVT --title "EVT 验证计划"
+
+# 导入验证数据（CSV/XLSX/JSON）
+aipd validation import --db state.db --project p1 --file test_results.csv --stage EVT
+
+# 列出验证计划/测试/结果
+aipd validation list --db state.db --project p1 --what plans
+aipd validation list --db state.db --project p1 --what tests
+aipd validation list --db state.db --project p1 --what results
+
+# 查看 Issue
+aipd issue list --db state.db --project p1
+aipd issue list --db state.db --project p1 --blocking  # 仅阻塞发布 Issue
+
+# 解决 Issue
+aipd issue resolve --db state.db --project p1 --id issue_xxx --disposition FIX
+
+# 检查制造就绪度（确定性计算，缺数据默认 HOLD）
+aipd readiness check --db state.db --project p1
+aipd readiness check --db state.db --project p1 --json  # 机器可读 JSON
+```
+
 ## 旧版命令对照表（deprecated）
 
 以下 v5.0 旧命令**保留功能但已废弃**，执行时会打印 `DeprecationWarning`；

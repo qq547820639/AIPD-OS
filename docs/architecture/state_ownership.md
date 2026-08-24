@@ -15,6 +15,9 @@
 | 附件 / manual_batch / visual_bible 对象 | `ObjectStore`/`LocalStateBackend` + attachment index | UnifiedStateService | ✓ | sha256 | 统一备份 manifest |
 | Manual 状态（pages/prompts/batches） | `.manual.json`（独立 JSON） | ManualChain | 仅 project_id 字段 | 无 | 无（已知债务，见收敛） |
 | 闭包运行 | `ClosureStore`（`execution/closure_core.py`） | ClosureEngine | 待查 | 无显式版本 | 无 |
+| ValidationPlan / Test / Run / Result | `AIPDStateDB`（migration v13） | ValidationService | ✓ tenant_id+project_id | 乐观锁 | audit_trail |
+| Issue / CorrectiveAction | `AIPDStateDB`（migration v13） | IssueService | ✓ tenant_id+project_id | version | audit_trail_json |
+| BOM | `BomStore`（`bom/store.py`） | BomStore | ✓ | version | 无独立审计表 |
 
 ## 2. 一个 project 的 canonical truth 在哪里
 

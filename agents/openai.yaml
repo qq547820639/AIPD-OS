@@ -1,6 +1,9 @@
 interface:
-  display_name: "AI全链路产品开发与交付主管 v4.0"
-  short_description: "一个对话入口，自主完成从产品想法到生产发布的数字工作"
-  default_prompt: "接管当前产品项目。全部数字工作由你完成，我只审核。请自主完成理论研究、产品定义、连续附件产品手册、工程CAD、工业化、供应链和验证管理；只有命中决策闸门时向我提交决策包。"
+  display_name: "AIPD-OS Execution Backend"
+  short_description: "AI 产品工程决策执行后端：state management、validation、issue tracking、readiness gate"
+  default_prompt: "使用 AIPD-OS 执行后端提供的 CLI 命令或 MCP 服务来管理产品开发状态、验证计划、问题跟踪和制造就绪度评估。"
 policy:
-  allow_implicit_invocation: true
+  # AIPD-OS 是执行后端，不是 agent-facing orchestrator。
+  # IdeaToLaunch 是唯一的 agent-facing 入口。
+  allow_implicit_invocation: false
+  notes: "AIPD-OS 定位为执行后端。用户对话入口和 S0-S8 编排由 IdeaToLaunch 负责。"

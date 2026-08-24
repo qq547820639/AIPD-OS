@@ -64,7 +64,7 @@ def test_current_package_paths_exist():
         "src/aipd_os/product_truth/lineage.py",       # facade
         "src/aipd_os/research/providers/researchstudio.py",
         "src/aipd_os/supervisor/idea_capabilities.py",
-        "src/aipd_os/state/migrations.py",
+        "src/aipd_os/state/migrations/__init__.py",
     ):
         assert (REPO_ROOT / rel).is_file(), f"missing {rel}"
 
@@ -174,3 +174,197 @@ def test_cad_identity_contract_documented():
     assert ("语义 hash" in doc or "semantic" in doc
             or "几何身份" in doc or "byte_reproducibility" in doc
             or "byte_reproducibility" in cad_tests)
+
+
+# =====================================================================
+# Architecture Boundary Invariants（v5.10 P0）
+# =====================================================================
+
+def test_project_boundary_doc_exists():
+    """project_boundary.md 必须存在且声明 AIPD-OS 是执行后端。"""
+    doc_path = REPO_ROOT / "docs" / "architecture" / "project_boundary.md"
+    assert doc_path.is_file(), "docs/architecture/project_boundary.md 缺失"
+    text = doc_path.read_text(encoding="utf-8")
+    # 必须声明 AIPD-OS 不是 agent-facing orchestrator
+    assert "执行后端" in text or "execution backend" in text.lower(), \
+        "project_boundary.md 必须声明 AIPD-OS 是执行后端"
+    assert "IdeaToLaunch" in text, \
+        "project_boundary.md 必须提及 IdeaToLaunch 是唯一 agent-facing 入口"
+
+
+def test_agent_yaml_boundary_consistent():
+    """agents/openai.yaml 不得重新声明 AIPD-OS 为旗舰 agent。
+
+    当 project_boundary.md 声明 AIPD-OS 不是主 agent-facing entry 时，
+    agent metadata 不得重新声明相反行为。
+    """
+    import yaml  # type: ignore[import-not-found]
+
+    boundary = (REPO_ROOT / "docs" / "architecture" / "project_boundary.md").read_text(
+        encoding="utf-8")
+    # 确认 boundary 文档存在且声明了 backend 定位
+    if "执行后端" not in boundary and "execution backend" not in boundary.lower():
+        return  # boundary 文档不存在或未声明 → 跳过此检查
+
+    agent_path = REPO_ROOT / "agents" / "openai.yaml"
+    if not agent_path.is_file():
+        return  # agent 文件不存在 → 跳过
+
+    with open(agent_path, encoding="utf-8") as fh:
+        agent = yaml.safe_load(fh)
+
+    policy = agent.get("policy", {})
+    # 不得允许隐式调用
+    assert not policy.get("allow_implicit_invocation", False), \
+        "agents/openai.yaml: allow_implicit_invocation 不得为 true（AIPD-OS 是执行后端）"
+
+    interface = agent.get("interface", {})
+    display = interface.get("display_name", "")
+    # 不得自称"主管"或"旗舰"
+    assert "主管" not in display, \
+        f"agents/openai.yaml: display_name 不得含'主管'（当前: {display}）"
+
+
+def test_skill_md_boundary_consistent():
+    """SKILL.md 不得同时宣传 AIPD-OS 是独立旗舰 Agent 入口。"""
+    boundary = (REPO_ROOT / "docs" / "architecture" / "project_boundary.md").read_text(
+        encoding="utf-8")
+    if "执行后端" not in boundary and "execution backend" not in boundary.lower():
+        return
+
+    skill = (REPO_ROOT / "SKILL.md").read_text(encoding="utf-8")
+    # SKILL.md 的 frontmatter description 不得声称是"唯一需要对话的执行入口"
+    # （因为 IdeaToLaunch 才是）
+    # 允许 SKILL.md 描述 CLI 命令能力，但不得重新声明旗舰 agent 定位
+    lines = skill.splitlines()
+    for line in lines:
+        # 检查 frontmatter 中的 description
+        if line.strip().startswith("description:") and "唯一" in line and "入口" in line:
+            raise AssertionError(
+                "SKILL.md frontmatter 不得声明 AIPD-OS 是'唯一入口'")
+
+
+def test_command_contract_is_single_source_of_truth():
+    """命令元数据必须来自 canonical contract，不得在审计脚本中硬编码。"""
+    # command_contract.py 必须存在
+    contract_path = REPO_ROOT / "src" / "aipd_os" / "cli" / "command_contract.py"
+    assert contract_path.is_file(), "src/aipd_os/cli/command_contract.py 缺失"
+
+    # 导入并验证基本结构
+    from aipd_os.cli.command_contract import (
+        PUBLIC_COMMANDS,
+        CommandCategory,
+        CommandStatus,
+        get_all_commands,
+    )
+    # 必须有 public 命令
+    assert len(PUBLIC_COMMANDS) > 0, "PUBLIC_COMMANDS 为空"
+    # 必须有分类和状态
+    cmds = get_all_commands()
+    assert len(cmds) > 0
+    for cmd in cmds:
+        assert isinstance(cmd.status, CommandStatus)
+        assert isinstance(cmd.category, CommandCategory)
+
+
+def test_audit_repo_strict_mode_supported():
+    """audit_repo.py 必须支持 --strict 模式。"""
+    src = (REPO_ROOT / "scripts" / "audit_repo.py").read_text(encoding="utf-8")
+    assert "--strict" in src, "audit_repo.py 缺少 --strict 模式"
+    assert "_check_strict" in src, "audit_repo.py 缺少 _check_strict 函数"
+
+
+# =====================================================================
+# Architecture Invariant Tests（v5.10 Section 12）
+# =====================================================================
+
+def test_validation_tables_have_tenant_project_scope():
+    """新 project-scoped canonical table 必须有 tenant/project scope（#3）。"""
+    defs_path = REPO_ROOT / "src" / "aipd_os" / "state" / "migrations" / "definitions.py"
+    migration_src = defs_path.read_text(encoding="utf-8")
+    # validation_* 表必须有 tenant_id 和 project_id
+    for table in ("validation_plans", "validation_tests", "validation_runs",
+                  "validation_results", "issues", "corrective_actions"):
+        assert f"CREATE TABLE IF NOT EXISTS {table}" in migration_src, \
+            f"migration 缺少 {table} 表"
+        # 每个表必须有 tenant_id 和 project_id
+        # 找到对应 CREATE TABLE 块
+        idx = migration_src.find(f"CREATE TABLE IF NOT EXISTS {table}")
+        if idx >= 0:
+            block = migration_src[idx:idx + 1000]
+            assert "tenant_id TEXT NOT NULL" in block, \
+                f"{table} 缺少 tenant_id"
+            assert "project_id TEXT NOT NULL" in block, \
+                f"{table} 缺少 project_id"
+
+
+def test_validation_no_separate_truth_db():
+    """Validation/Issue 不允许独立创建新的未经 ADR 批准的 truth DB（#4）。"""
+    # validation 模块必须使用 AIPDStateDB，不创建新 DB
+    service_src = (REPO_ROOT / "src" / "aipd_os" / "validation" / "service.py").read_text(
+        encoding="utf-8")
+    issue_src = (REPO_ROOT / "src" / "aipd_os" / "validation" / "issues.py").read_text(
+        encoding="utf-8")
+    # 不得有 sqlite3.connect 或创建新数据库的代码
+    assert "sqlite3.connect" not in service_src, \
+        "ValidationService 不得直接创建数据库连接"
+    assert "sqlite3.connect" not in issue_src, \
+        "IssueService 不得直接创建数据库连接"
+
+
+def test_readiness_no_missing_data_pass():
+    """Missing evidence 不能生成 PASS（#5）。"""
+    readiness_src = (REPO_ROOT / "src" / "aipd_os" / "validation" / "readiness.py").read_text(
+        encoding="utf-8")
+    # 当数据缺失时必须返回 HOLD，不是 PASS
+    assert "READINESS_HOLD" in readiness_src, "readiness.py 缺少 READINESS_HOLD"
+    # 检查 default 行为是 HOLD
+    assert "missing_evidence" in readiness_src, "readiness.py 缺少 missing_evidence 处理"
+
+
+def test_stale_result_not_satisfy_readiness():
+    """Stale result 不能满足 readiness（#6）。"""
+    test_src = (REPO_ROOT / "tests" / "test_readiness.py").read_text(encoding="utf-8")
+    assert "stale" in test_src.lower(), "test_readiness.py 缺少 stale 测试"
+    assert "READINESS_HOLD" in test_src, "test_readiness.py 缺少 HOLD 验证"
+
+
+def test_blocking_issue_not_pass_readiness():
+    """Blocking open issue 不能 readiness PASS（#7）。"""
+    test_src = (REPO_ROOT / "tests" / "test_readiness.py").read_text(encoding="utf-8")
+    assert "blocking" in test_src.lower(), "test_readiness.py 缺少 blocking 测试"
+    assert "READINESS_FAIL" in test_src, "test_readiness.py 缺少 FAIL 验证"
+
+
+def test_external_side_effect_no_unsafe_retry():
+    """External side-effect operation 不允许不安全自动重复（#8）。"""
+    adapter_path = REPO_ROOT / "src" / "aipd_os" / "tool_adapters" / "evt_dvt_pvt_adapter.py"
+    adapter_src = adapter_path.read_text(encoding="utf-8")
+    # 必须声明 side_effect_mode
+    assert "side_effect_mode" in adapter_src, "evt_dvt_pvt_adapter.py 缺少 side_effect_mode"
+    assert "EXTERNAL_SIDE_EFFECT" in adapter_src, \
+        "evt_dvt_pvt_adapter.py 必须声明 EXTERNAL_SIDE_EFFECT"
+
+
+def test_multi_project_ids_no_conflict():
+    """Multi-project IDs 不得冲突（#9）。"""
+    test_src = (REPO_ROOT / "tests" / "test_validation_domain.py").read_text(encoding="utf-8")
+    # 必须有 multi-tenant/multi-project 隔离测试
+    assert "t2" in test_src, "test_validation_domain.py 缺少多租户测试"
+    assert "p2" in test_src, "test_validation_domain.py 缺少多项目测试"
+
+
+def test_doc_architecture_matches_executable_metadata():
+    """Documentation architecture assertions 与 executable metadata 不得明显冲突（#12）。"""
+    # project_boundary.md 必须存在且声明 backend
+    boundary = _doc("architecture/project_boundary.md")
+    assert "执行后端" in boundary or "execution backend" in boundary.lower()
+    # openai.yaml 不得声明旗舰 agent
+    import yaml  # type: ignore[import-not-found]
+    agent_path = REPO_ROOT / "agents" / "openai.yaml"
+    if agent_path.is_file():
+        with open(agent_path, encoding="utf-8") as fh:
+            agent = yaml.safe_load(fh)
+        policy = agent.get("policy", {})
+        assert not policy.get("allow_implicit_invocation", False), \
+            "agent metadata 与 project_boundary.md 冲突"

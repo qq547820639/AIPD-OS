@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] — 5.6.0 之后的连续迭代（v5.7 ~ v5.9.2 + 收口迭代）
+## [Unreleased] — 5.6.0 之后的连续迭代（v5.7 ~ v5.10 + 收口迭代）
 
 > 说明：包版本暂保持 5.6.0（版本双轨制留待正式发布统一）；以下按 workstream
 > 记录已交付能力。各批次的实现/审计证据见 `docs/audit/`。
@@ -38,6 +38,31 @@
   （evals/golden_projects、assets/examples）移入 tests/fixtures（仅测试用）；
   `aipd eval`/`run-evals` 默认 Provider 由 fake 改为 model（真实端点，未配置
   诚实报错），fake/contract-test 仅供开发测试显式选择；
+- **v5.10 Canonical Validation / Issue / Readiness（2026-08-24）**：
+  - **Canonical Validation Domain**（migration v13）：ValidationPlan / ValidationTest /
+    ValidationRun / ValidationResult 四张表，全含 tenant_id + project_id 作用域；
+    ValidationService 提供 CRUD + stale propagation（artifact revision 变化自动标记
+    stale，stale PASS 不计入有效结果）；
+  - **Canonical Issue / Corrective Action**：Issue + CorrectiveAction 表，close 语义
+    防绕过（disposition 必须记录、revalidation 必须存在、blocking condition 必须解除、
+    audit trail 完整）；idempotent creation（相同 validation_result_ref 不重复创建）；
+  - **EVT/DVT/PVT Ingestion Canonicalization**：IngestionService 实现
+    CSV/XLSX/JSON → parser → DTO → schema validation → ValidationService → IssueService
+    完整链路（不再把临时 dict 当最终真相）；
+  - **Manufacturing Readiness Gate**：ReadinessService 确定性计算 8 个维度
+    （product_definition / CAD / BOM / cost / validation / issues / supply_chain / lineage），
+    缺数据默认 HOLD 不是 PASS，LLM 可解释但不决定 PASS/FAIL；
+  - **CLI 命令**：`aipd validation plan/list/show/import`、`aipd issue list/show/resolve`、
+    `aipd readiness check`，全部支持 `--json`；
+  - **Command Truth Single Source of Truth**：`src/aipd_os/cli/command_contract.py` 集中
+    管理所有命令元数据（status / category / introduced_in），skill_quality_audit.py
+    消费 canonical contract 不再硬编码；
+  - **Audit Repo Strict Mode**：`scripts/audit_repo.py --strict` 在 manifest hash
+    mismatch / version inconsistency / provenance commit mismatch 时 exit 1；
+  - **Agent Boundary Enforcement**：`docs/architecture/project_boundary.md` 声明 AIPD-OS
+    是执行后端（IdeaToLaunch 是唯一 agent-facing 入口），`agents/openai.yaml`
+    `allow_implicit_invocation: false`，架构回归测试覆盖；
+  - 91 新测试（1099 → 1190），ruff 全通过，mypy 194 文件无错误；
 - **收口迭代（2026-08-14+）**：P1×4 缺陷修复（视觉审核诚实降级 / 认证时区 /
   邮件附件 / 状态双重维护标注）+ 发布证据门禁全绿；随后一批代码质量与 UX 收口
   （详见 `docs/audit/IMPRESSION_*` 与本迭代的修复清单）：

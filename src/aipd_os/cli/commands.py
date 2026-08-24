@@ -79,6 +79,16 @@ from .commands_release import (
     cmd_release_check,
     cmd_test,
 )
+from .commands_validation import (
+    cmd_issue_list,
+    cmd_issue_resolve,
+    cmd_issue_show,
+    cmd_readiness_check,
+    cmd_validation_import,
+    cmd_validation_list,
+    cmd_validation_plan,
+    cmd_validation_show,
+)
 
 
 # --------------------------------------------------------------------------
@@ -518,6 +528,15 @@ COMMAND_FUNCS: dict[str, Any] = {
     "bom show": cmd_bom,
     "bom add": cmd_bom,
     "cost calc": cmd_cost,
+    # v5.10 Validation / Issue / Readiness
+    "validation plan": cmd_validation_plan,
+    "validation list": cmd_validation_list,
+    "validation show": cmd_validation_show,
+    "validation import": cmd_validation_import,
+    "issue list": cmd_issue_list,
+    "issue show": cmd_issue_show,
+    "issue resolve": cmd_issue_resolve,
+    "readiness check": cmd_readiness_check,
 }
 
 PLANNED_COMMANDS = list(COMMAND_FUNCS.keys())
