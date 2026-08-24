@@ -420,3 +420,40 @@ def _create_outbox(conn: sqlite3.Connection) -> None:
 def _drop_outbox(conn: sqlite3.Connection) -> None:
     conn.execute("DROP TABLE IF EXISTS external_operations")
     conn.execute("DROP TABLE IF EXISTS outbox_events")
+
+
+# ---------------------------------------------------------------------------
+# v15 helpers: Readiness Snapshots
+# ---------------------------------------------------------------------------
+def _create_readiness_snapshots(conn: sqlite3.Connection) -> None:
+    """v15 up：readiness_snapshots 表。
+
+    Readiness evaluation 的可审计快照。每个 evaluation 产生一条记录，
+    包含 ruleset_version 和 input_fingerprint 用于追溯。
+    Readiness snapshot 是 projection，不是 domain truth。
+    """
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS readiness_snapshots ("
+        " snapshot_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL DEFAULT 'default',"
+        " project_id TEXT NOT NULL DEFAULT '',"
+        " evaluated_at TEXT NOT NULL,"
+        " overall_status TEXT NOT NULL DEFAULT 'HOLD',"
+        " ruleset_version TEXT NOT NULL DEFAULT '1.0',"
+        " input_fingerprint TEXT NOT NULL DEFAULT '',"
+        " dimension_results_json TEXT NOT NULL DEFAULT '{}',"
+        " blockers_json TEXT NOT NULL DEFAULT '[]',"
+        " warnings_json TEXT NOT NULL DEFAULT '[]',"
+        " missing_evidence_json TEXT NOT NULL DEFAULT '[]',"
+        " stale_dependencies_json TEXT NOT NULL DEFAULT '[]',"
+        " remediation_actions_json TEXT NOT NULL DEFAULT '[]',"
+        " superseded INTEGER NOT NULL DEFAULT 0,"
+        " created_at TEXT NOT NULL,"
+        " PRIMARY KEY (snapshot_id, tenant_id, project_id))")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rsnapshot_project "
+        "ON readiness_snapshots(tenant_id, project_id, evaluated_at)")
+
+
+def _drop_readiness_snapshots(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP TABLE IF EXISTS readiness_snapshots")

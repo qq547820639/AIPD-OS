@@ -19,12 +19,14 @@ from .helpers import (
     _add_snapshot_basis,
     _create_commit_ledger,
     _create_outbox,
+    _create_readiness_snapshots,
     _create_snapshot_tables,
     _drop_commit_ledger,
     _drop_decision_metadata,
     _drop_generation_metadata,
     _drop_lineage_columns,
     _drop_outbox,
+    _drop_readiness_snapshots,
     _drop_retire_columns,
     _drop_selection_status,
     _drop_snapshot_basis,
@@ -489,6 +491,20 @@ MIGRATIONS: list[dict[str, Any]] = [
         ],
         "down": [
             _drop_outbox,
+        ],
+    },
+    # v5.12（P2-M7: Readiness Snapshots）：
+    # readiness_snapshots：Readiness evaluation 的可审计快照
+    # 包含 ruleset_version + input_fingerprint 用于追溯
+    # snapshot 是 projection，不是 domain truth
+    {
+        "version": 15,
+        "name": "readiness_snapshots",
+        "up": [
+            _create_readiness_snapshots,
+        ],
+        "down": [
+            _drop_readiness_snapshots,
         ],
     },
 ]
