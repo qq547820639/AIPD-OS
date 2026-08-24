@@ -356,3 +356,67 @@ def _create_commit_ledger(conn: sqlite3.Connection) -> None:
 def _drop_commit_ledger(conn: sqlite3.Connection) -> None:
     conn.execute("DROP TABLE IF EXISTS product_definition_commits;")
     conn.execute("DELETE FROM id_sequences WHERE name='product_commit';")
+
+
+# ---------------------------------------------------------------------------
+# v14 helpers: Outbox + External Operation Ledger
+# ---------------------------------------------------------------------------
+def _create_outbox(conn: sqlite3.Connection) -> None:
+    """v14 up：outbox_events + external_operations 表。
+
+    outbox_events：域事务内追加的事件，dispatcher 异步消费。
+    external_operations：外部副作用操作台账，记录 UNKNOWN_OUTCOME 语义。
+    """
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS outbox_events ("
+        " event_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL DEFAULT 'default',"
+        " project_id TEXT NOT NULL DEFAULT '',"
+        " aggregate_type TEXT NOT NULL DEFAULT '',"
+        " aggregate_id TEXT NOT NULL DEFAULT '',"
+        " event_type TEXT NOT NULL DEFAULT '',"
+        " payload_json TEXT NOT NULL DEFAULT '{}',"
+        " schema_version INTEGER NOT NULL DEFAULT 1,"
+        " created_at TEXT NOT NULL,"
+        " available_at TEXT NOT NULL,"
+        " claimed_at TEXT,"
+        " completed_at TEXT,"
+        " attempt_count INTEGER NOT NULL DEFAULT 0,"
+        " max_attempts INTEGER NOT NULL DEFAULT 5,"
+        " last_error TEXT NOT NULL DEFAULT '',"
+        " idempotency_key TEXT NOT NULL DEFAULT '',"
+        " PRIMARY KEY (event_id, tenant_id, project_id))")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS external_operations ("
+        " operation_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL DEFAULT 'default',"
+        " project_id TEXT NOT NULL DEFAULT '',"
+        " idempotency_key TEXT NOT NULL DEFAULT '',"
+        " provider TEXT NOT NULL DEFAULT '',"
+        " operation_kind TEXT NOT NULL DEFAULT '',"
+        " request_hash TEXT NOT NULL DEFAULT '',"
+        " status TEXT NOT NULL DEFAULT 'PENDING',"
+        " attempt INTEGER NOT NULL DEFAULT 0,"
+        " external_reference TEXT NOT NULL DEFAULT '',"
+        " started_at TEXT,"
+        " completed_at TEXT,"
+        " last_error TEXT NOT NULL DEFAULT '',"
+        " PRIMARY KEY (operation_id, tenant_id, project_id))")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_outbox_available "
+        "ON outbox_events(tenant_id, project_id, available_at) "
+        "WHERE completed_at IS NULL")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_outbox_claim "
+        "ON outbox_events(claimed_at) WHERE completed_at IS NULL")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_ext_ops_status "
+        "ON external_operations(tenant_id, project_id, status)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_ext_ops_idempotency "
+        "ON external_operations(tenant_id, project_id, idempotency_key)")
+
+
+def _drop_outbox(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP TABLE IF EXISTS external_operations")
+    conn.execute("DROP TABLE IF EXISTS outbox_events")

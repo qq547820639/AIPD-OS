@@ -18,11 +18,13 @@ from .helpers import (
     _add_selection_status,
     _add_snapshot_basis,
     _create_commit_ledger,
+    _create_outbox,
     _create_snapshot_tables,
     _drop_commit_ledger,
     _drop_decision_metadata,
     _drop_generation_metadata,
     _drop_lineage_columns,
+    _drop_outbox,
     _drop_retire_columns,
     _drop_selection_status,
     _drop_snapshot_basis,
@@ -473,6 +475,20 @@ MIGRATIONS: list[dict[str, Any]] = [
             "DROP TABLE IF EXISTS validation_runs",
             "DROP TABLE IF EXISTS validation_tests",
             "DROP TABLE IF EXISTS validation_plans",
+        ],
+    },
+    # v5.11（P2-M5: Outbox + External Operation Ledger）：
+    # - outbox_events：域事务内追加的事件，dispatcher 异步消费
+    # - external_operations：外部副作用操作台账，UNKNOWN_OUTCOME 语义
+    # 全部包含 tenant_id + project_id 作用域。
+    {
+        "version": 14,
+        "name": "outbox_and_external_operations",
+        "up": [
+            _create_outbox,
+        ],
+        "down": [
+            _drop_outbox,
         ],
     },
 ]
