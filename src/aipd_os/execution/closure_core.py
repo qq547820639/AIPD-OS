@@ -391,6 +391,8 @@ CREATE TABLE IF NOT EXISTS closure_runs(
 CREATE TABLE IF NOT EXISTS closure_events(
   event_id INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL DEFAULT 'default',
+  project_id TEXT NOT NULL DEFAULT '',
   seq INTEGER NOT NULL,
   kind TEXT NOT NULL,
   step TEXT,
@@ -400,12 +402,16 @@ CREATE TABLE IF NOT EXISTS closure_events(
 CREATE TABLE IF NOT EXISTS closure_checkpoints(
   checkpoint_id INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL DEFAULT 'default',
+  project_id TEXT NOT NULL DEFAULT '',
   step_id TEXT NOT NULL,
   data_json TEXT NOT NULL,
   created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS closure_tool_calls(
   call_id INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL DEFAULT 'default',
+  project_id TEXT NOT NULL DEFAULT '',
   seq INTEGER NOT NULL,
   step_id TEXT NOT NULL,
   tool TEXT NOT NULL,
@@ -419,6 +425,8 @@ CREATE TABLE IF NOT EXISTS closure_tool_calls(
 CREATE TABLE IF NOT EXISTS closure_dependencies(
   dep_id INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL DEFAULT 'default',
+  project_id TEXT NOT NULL DEFAULT '',
   upstream_step TEXT NOT NULL,
   downstream_step TEXT NOT NULL,
   input_hash TEXT NOT NULL,
@@ -426,6 +434,8 @@ CREATE TABLE IF NOT EXISTS closure_dependencies(
 CREATE TABLE IF NOT EXISTS closure_stale(
   stale_id INTEGER PRIMARY KEY AUTOINCREMENT,
   run_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL DEFAULT 'default',
+  project_id TEXT NOT NULL DEFAULT '',
   step_id TEXT NOT NULL,
   artifact_path TEXT,
   reason TEXT NOT NULL,
@@ -434,7 +444,67 @@ CREATE INDEX IF NOT EXISTS idx_closure_runs_tenant
   ON closure_runs(tenant_id, project_id);
 CREATE INDEX IF NOT EXISTS idx_closure_runs_project
   ON closure_runs(project_id, status);
+CREATE INDEX IF NOT EXISTS idx_closure_events_tenant
+  ON closure_events(tenant_id, project_id, run_id);
+CREATE INDEX IF NOT EXISTS idx_closure_checkpoints_tenant
+  ON closure_checkpoints(tenant_id, project_id, run_id);
+CREATE INDEX IF NOT EXISTS idx_closure_tool_calls_tenant
+  ON closure_tool_calls(tenant_id, project_id, run_id);
+CREATE INDEX IF NOT EXISTS idx_closure_stale_tenant
+  ON closure_stale(tenant_id, project_id, run_id);
 """
+
+
+def _migrate_closure_tenant_scope(conn: sqlite3.Connection) -> None:
+    """P2-M2: 幂等补齐所有 closure 表的 tenant_id/project_id 列。
+
+    历史 closure DB 只有 closure_runs.project_id，其他表无 tenant scope。
+    此函数对所有 closure 表执行幂等 ALTER TABLE + CREATE INDEX。
+    """
+    _CHILD_TABLES = [
+        "closure_events",
+        "closure_checkpoints",
+        "closure_tool_calls",
+        "closure_dependencies",
+        "closure_stale",
+    ]
+    # closure_runs tenant_id 已在 schema 中，但历史 DB 可能缺失
+    runs_cols = {r[1] for r in conn.execute(
+        "PRAGMA table_info(closure_runs)").fetchall()}
+    if "tenant_id" not in runs_cols:
+        conn.execute(
+            "ALTER TABLE closure_runs ADD COLUMN "
+            "tenant_id TEXT NOT NULL DEFAULT 'default'")
+
+    # 子表补齐 tenant_id + project_id
+    for table in _CHILD_TABLES:
+        cols = {r[1] for r in conn.execute(
+            f"PRAGMA table_info({table})").fetchall()}
+        if "tenant_id" not in cols:
+            conn.execute(
+                f"ALTER TABLE {table} ADD COLUMN "
+                "tenant_id TEXT NOT NULL DEFAULT 'default'")
+        if "project_id" not in cols:
+            conn.execute(
+                f"ALTER TABLE {table} ADD COLUMN "
+                "project_id TEXT NOT NULL DEFAULT ''")
+
+    # 确保索引存在
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_closure_runs_tenant "
+        "ON closure_runs(tenant_id, project_id)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_closure_events_tenant "
+        "ON closure_events(tenant_id, project_id, run_id)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_closure_checkpoints_tenant "
+        "ON closure_checkpoints(tenant_id, project_id, run_id)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_closure_tool_calls_tenant "
+        "ON closure_tool_calls(tenant_id, project_id, run_id)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_closure_stale_tenant "
+        "ON closure_stale(tenant_id, project_id, run_id)")
 
 
 class ClosureStore:
@@ -445,13 +515,8 @@ class ClosureStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as c:
             c.executescript(_CLOSURE_SCHEMA)
-            # P2-M2: 幂等补齐 tenant_id 列（历史 closure DB 无此列）
-            cols = {r[1] for r in c.execute(
-                "PRAGMA table_info(closure_runs)").fetchall()}
-            if "tenant_id" not in cols:
-                c.execute(
-                    "ALTER TABLE closure_runs ADD COLUMN "
-                    "tenant_id TEXT NOT NULL DEFAULT 'default'")
+            # P2-M2: 幂等补齐 tenant_id/project_id 列（历史 closure DB 无此列）
+            _migrate_closure_tenant_scope(c)
 
     @contextmanager
     def connect(self):
