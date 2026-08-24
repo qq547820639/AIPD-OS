@@ -380,6 +380,7 @@ _CLOSURE_SCHEMA = r"""
 CREATE TABLE IF NOT EXISTS closure_runs(
   run_id TEXT PRIMARY KEY,
   work_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL DEFAULT 'default',
   project_id TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL,
   current_step TEXT,
@@ -429,6 +430,10 @@ CREATE TABLE IF NOT EXISTS closure_stale(
   artifact_path TEXT,
   reason TEXT NOT NULL,
   marked_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_closure_runs_tenant
+  ON closure_runs(tenant_id, project_id);
+CREATE INDEX IF NOT EXISTS idx_closure_runs_project
+  ON closure_runs(project_id, status);
 """
 
 
@@ -440,6 +445,13 @@ class ClosureStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as c:
             c.executescript(_CLOSURE_SCHEMA)
+            # P2-M2: 幂等补齐 tenant_id 列（历史 closure DB 无此列）
+            cols = {r[1] for r in c.execute(
+                "PRAGMA table_info(closure_runs)").fetchall()}
+            if "tenant_id" not in cols:
+                c.execute(
+                    "ALTER TABLE closure_runs ADD COLUMN "
+                    "tenant_id TEXT NOT NULL DEFAULT 'default'")
 
     @contextmanager
     def connect(self):
@@ -455,14 +467,16 @@ class ClosureStore:
             c.close()
 
     # ---- runs ----
-    def create_run(self, work_id: str, project_id: str = "") -> str:
+    def create_run(self, work_id: str, project_id: str = "",
+                   tenant_id: str = "default") -> str:
         run_id = f"CL-{uuid.uuid4().hex[:12]}"
         ts = _now()
         with self.connect() as c:
             c.execute(
-                "INSERT INTO closure_runs(run_id,work_id,project_id,status,started_at,updated_at)"
-                " VALUES(?,?,?,?,?,?)",
-                (run_id, work_id, project_id, "started", ts, ts))
+                "INSERT INTO closure_runs"
+                "(run_id,work_id,tenant_id,project_id,status,started_at,updated_at)"
+                " VALUES(?,?,?,?,?,?,?)",
+                (run_id, work_id, tenant_id, project_id, "started", ts, ts))
         return run_id
 
     def update_run(self, run_id: str, **fields: Any) -> dict[str, Any]:

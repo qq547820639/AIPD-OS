@@ -1,50 +1,102 @@
-# State Ownership：对象归属、事务边界与收敛路径（P1-2）
+# State Ownership：对象归属、事务边界与收敛路径（P2）
 
 > 目标：明确每类对象的 canonical owner / storage / 事务边界 / 版本化 / 审计行为，
 > 回答「一个 project 的 canonical truth 在哪里」，并给出收敛路径。
+> 详见 `state_inventory.md` 完整审计。
 
-## 1. 对象归属表（来源：REPOSITORY_MAPS.md D 节）
+## 1. 对象归属表（P2 verified against HEAD 1509746）
 
-| 状态对象 | 存储 | Canonical Owner | 租户/项目 | 版本化 | 审计 |
-|---|---|---|---|---|---|
-| Project / Fact / Evidence / Decision / Risk / Deliverable / Gate / Change / Checkpoint | `AIPDStateDB`（`state/db.py`，复合主键含 tenant_id+project_id） | StateService | ✓ | `version_no` 乐观锁（`_update`，冲突抛 `OptimisticLockError`） | `audit_log` 表 + `audit.log` JSONL（`AuditLogger`） |
-| user_access / sessions | `AIPDStateDB` | AuthManager | ✓（user_access 含 tenant/project） | 无（授权行直接覆盖） | 敏感操作经 StateService 审计 |
-| supervisor_work_items / phase_runs / capabilities / reviews / lineage / claims | Supervisor 表（`scripts/aipd_supervisor.py`） | Supervisor | 仅 project_id，**无 tenant_id** | 无显式版本 | 部分经 audit |
-| product_truth / truth_lineage / rework_tasks | `ProductTruthStore`（`product_truth/store.py`） | ProductTruthStore | ✓（CS6 起含 tenant/project） | `version` 递增（返工 bump） | 无独立审计表 |
-| execution_runs | `RunStore`（`execution/runs.py`） | ExecutionRouter | project_id（无 tenant_id） | 追加式（retry_lineage） | evidence_refs / output_hash |
-| 附件 / manual_batch / visual_bible 对象 | `ObjectStore`/`LocalStateBackend` + attachment index | UnifiedStateService | ✓ | sha256 | 统一备份 manifest |
-| Manual 状态（pages/prompts/batches） | `.manual.json`（独立 JSON） | ManualChain | 仅 project_id 字段 | 无 | 无（已知债务，见收敛） |
-| 闭包运行 | `ClosureStore`（`execution/closure_core.py`） | ClosureEngine | 待查 | 无显式版本 | 无 |
-| ValidationPlan / Test / Run / Result | `AIPDStateDB`（migration v13） | ValidationService | ✓ tenant_id+project_id | 乐观锁 | audit_trail |
-| Issue / CorrectiveAction | `AIPDStateDB`（migration v13） | IssueService | ✓ tenant_id+project_id | version | audit_trail_json |
-| BOM | `BomStore`（`bom/store.py`） | BomStore | ✓ | version | 无独立审计表 |
+| 状态对象 | 存储 | Canonical Owner | tenant_id | project_id | 版本化 | 审计 |
+|---|---|---|---|---|---|---|
+| Project / Fact / Evidence / Decision / Risk / Deliverable / Gate / Change | `AIPDStateDB` | StateService | ✓ | ✓ | `version_no` 乐观锁 | `audit_log` 表 |
+| ValidationPlan / Test / Run / Result | `AIPDStateDB` (v13) | ValidationService | ✓ | ✓ | optimistic_version | audit_trail |
+| Issue / CorrectiveAction | `AIPDStateDB` (v13) | IssueService | ✓ | ✓ | version | audit_trail_json |
+| BOM / bom_lines | `BomStore` | BomService | ✓ | ✓ | version | bom_changes |
+| Product Truth / lineage | `ProductTruthStore` | ProductTruthService | ✓ | ✓ | version | 无独立审计表 |
+| Supervisor work/phase/capability/review/lineage | `SupervisorDB` | Supervisor | ✓ | ✓ | 无显式版本 | 部分经 audit |
+| Execution runs | `ExecutionRunsDB` | RunStore | ✓ (post-v5.7) | ✓ | 追加式 | evidence_refs |
+| **Closure runs/events/checkpoints/tool_calls/deps/stale** | **`ClosureStore`** | **ClosureEngine** | **❌ MISSING** | **✓ (run_id only)** | **无** | **无** |
+| Manual state (pages/prompts/batches) | `.manual.json` | ManualChain | ❌ | 部分 | 无 | 无 |
 
-## 2. 一个 project 的 canonical truth 在哪里
+## 2. Critical P2 Findings
 
-**主事实**（facts）在 `AIPDStateDB.facts`：epistemic 状态 V/S/C/E/A/P/T/R + confidence + source，
-是 owner/dashboard/supervisor 读取的「当前真相」。但 **Product Truth 级对象、
-Supervisor 工作项、Manual 状态、执行记录分散在多个独立存储**，互不统一
-（REPOSITORY_MAPS.md 已记录此债务）。CS6 已把 ProductTruth 三表纳入
-tenant/project 作用域，但尚未并入主库。
+### F1: ClosureStore missing tenant_id — HIGH risk
+All 6 closure tables have NO tenant_id. Only `closure_runs.project_id` exists.
+Cross-tenant data leakage possible if two tenants share a closure DB path.
+**Fix**: Migration v14 adds tenant_id to all closure tables.
 
-## 3. 事务边界
+### F2: Manual JSON has no scope — HIGH risk
+`*.manual.json` stores state as flat JSON with no tenant/project scope.
+**Fix**: ManualStateRepository with canonical DB + legacy JSON fallback.
 
-- 单对象写操作（fact/decision/evidence/risk/deliverable）在 `AIPDStateDB.connect()`
-  的单个事务内完成（`db.py` contextmanager：成功 commit、异常 rollback）。
-- 跨存储操作（例如「执行成功 → 写 Product Truth + 更新 deliverable」）**没有
-  分布式事务**：目前靠执行顺序 + 追加式记录保证可审计，不保证原子性。
-- 乐观锁只保护单表版本冲突；跨表一致性需要上层补偿/返工（`propagation` 的
-  stale/blocked 语义）。
+### F3: No unified connection policy
+6+ modules call `sqlite3.connect()` independently with no common pragmas.
+**Fix**: `state/connection.py` with ConnectionFactory + transaction context manager.
 
-## 4. 收敛路径（不一次性重写 DB）
+### F4: No outbox for external side effects
+External operations have no idempotency ledger. UNKNOWN_OUTCOME not distinguished from FAILED.
+**Fix**: outbox_events + operation_ledger tables.
 
-1. **先定边界**：以 StateService 为 canonical API，禁止外部直接写 `AIPDStateDB`
-   之外的存储（Manual/Closure/Supervisor 表逐步收敛到 StateService 门面）。
-2. **统一作用域**：为 supervisor 表、execution_runs、`.manual.json` 补齐
-   tenant_id（已在计划中；`state_backend.py` 已提供统一对象存储抽象）。
-3. **统一版本化**：对需要跨对象因果链的证据（执行 → truth → 制品），复用
-   `execution_runs.idempotency_key / remote_operation_id` 与 truth `version` 串联。
-4. **统一审计**：所有状态变更经 `AuditLogger.log`（JSONL + audit_log 表）落审计；
-   独立存储自身的写入也追加 audit 事件，不改变既有表结构。
+## 3. Canonical Truth Map
 
-收敛是增量迁移：每一步保持旧读路径可用，新写路径统一走 StateService。
+```
+AIPDStateDB (state.db)          ← CANONICAL: Project domain truth
+├── tenants, users, sessions
+├── projects, facts, evidence, decisions
+├── ideas, claims, requirements, features
+├── validation_plans/tests/runs/results
+├── issues, corrective_actions
+├── product_definition_snapshots
+└── gate_evaluations, product_definition_commits
+
+BomStore (*.bom.db)             ← CANONICAL: BOM truth
+ProductTruthStore (*.truth.db)  ← CANONICAL: Product definition truth
+SupervisorDB (*.supervisor.db)  ← CANONICAL: Work management truth
+
+ExecutionRunsDB (*.runs.db)     ← EXECUTION_LOG: Runtime telemetry
+ClosureStore (*.closure.db)     ← EXECUTION_LOG: Runtime telemetry
+Manual JSON (*.manual.json)     ← LEGACY_STATE: Being migrated
+```
+
+## 4. Single-Writer Rule
+
+| Canonical Domain | Writer | Readers |
+|------------------|--------|---------|
+| Project/Fact/Evidence | StateService | CLI, Web, Supervisor, Dashboard |
+| Validation | ValidationService | CLI, ReadinessService, IssueService |
+| Issues | IssueService | CLI, ReadinessService |
+| BOM | BomService | CLI, CostService, ReadinessService |
+| Product Truth | ProductTruthService | CLI, Supervisor, ReadinessService |
+| Supervisor | Supervisor | CLI, Dashboard |
+
+**Prohibited**: CLI, Web, Supervisor, Adapter directly writing SQL to canonical tables.
+
+## 5. Transaction Model
+
+- **Same-DB atomic**: AIPDStateDB operations within `db.connect()` context manager
+- **Cross-store**: No distributed transaction — use outbox + idempotency (P2-M5)
+- **External side effects**: Operation ledger with UNKNOWN_OUTCOME semantics (P2-M5)
+
+## 6. Stale Propagation Rules
+
+| Source Change | Affected Domain | Stale Rule |
+|---------------|-----------------|------------|
+| BOM material change | Cost snapshot | Old snapshot → stale |
+| CAD revision change | Validation results | Affected results → stale |
+| Requirement/CTQ change | Validation coverage | Linked results → stale |
+| Supplier qualification change | Supply readiness | Supply dimension → stale |
+| Blocking issue opens | Readiness | Immediately no longer PASS |
+| Validation PASS becomes stale | Readiness | Readiness → HOLD |
+
+## 7. Convergence Path (incremental, no big-bang)
+
+1. **P2-M1**: Common DB infrastructure (connection factory, pragmas, transaction boundary)
+2. **P2-M2**: Tenant/project scope for ClosureStore + ExecutionRuns
+3. **P2-M3**: Repository facades (upper layers don't touch SQLite directly)
+4. **P2-M4**: Manual JSON → canonical DB migration
+5. **P2-M5**: Outbox + external operation ledger
+6. **P2-M6**: Unified stale/dependency propagation
+7. **P2-M7**: Readiness snapshot with ruleset versioning
+8. **P2-M8**: Migration modularization
+9. **P2-M9**: Optimistic concurrency + audit trail
+10. **P2-M10**: Performance validation + full regression

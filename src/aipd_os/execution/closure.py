@@ -108,7 +108,9 @@ class ClosureRun:
         assert self.store is not None
         self.work_id = work_id
         self.project_id = project_id
-        self.run_id = self.store.create_run(work_id, project_id)
+        tenant_id = getattr(self, "tenant_id", "default")
+        self.run_id = self.store.create_run(
+            work_id, project_id, tenant_id=tenant_id)
         self._start_mono = _now_monotonic()
         self._last_heartbeat = 0.0
         self.store.emit_event(self.run_id, EVENT_START, message="run started")
