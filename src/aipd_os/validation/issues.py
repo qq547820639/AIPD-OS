@@ -476,15 +476,22 @@ class IssueService:
             issue.closed_at = now
 
         import json as _json
+        expected_version = issue.version
         with self._db.connect() as conn:
-            conn.execute(
+            cursor = conn.execute(
                 "UPDATE issues SET status=?, resolved_at=?, closed_at=?, "
-                "audit_trail_json=?, updated_at=? "
-                "WHERE tenant_id=? AND project_id=? AND issue_id=?",
+                "audit_trail_json=?, updated_at=?, version=version+1 "
+                "WHERE tenant_id=? AND project_id=? AND issue_id=? AND version=?",
                 (issue.status, issue.resolved_at, issue.closed_at,
                  _json.dumps(issue.audit_trail), issue.updated_at,
-                 tenant_id, project_id, issue_id),
+                 tenant_id, project_id, issue_id, expected_version),
             )
+            if cursor.rowcount == 0:
+                raise ValueError(
+                    f"concurrent modification detected on issue {issue_id} "
+                    f"(expected version {expected_version})"
+                )
+        issue.version = expected_version + 1
         return issue
 
     def set_disposition(
@@ -516,16 +523,24 @@ class IssueService:
         })
 
         import json as _json
+        expected_version = issue.version
         with self._db.connect() as conn:
-            conn.execute(
+            cursor = conn.execute(
                 "UPDATE issues SET disposition=?, root_cause=?, "
-                "revalidation_required=?, audit_trail_json=?, updated_at=? "
-                "WHERE tenant_id=? AND project_id=? AND issue_id=?",
+                "revalidation_required=?, audit_trail_json=?, updated_at=?, "
+                "version=version+1 "
+                "WHERE tenant_id=? AND project_id=? AND issue_id=? AND version=?",
                 (issue.disposition, issue.root_cause,
                  int(issue.revalidation_required),
                  _json.dumps(issue.audit_trail), issue.updated_at,
-                 tenant_id, project_id, issue_id),
+                 tenant_id, project_id, issue_id, expected_version),
             )
+            if cursor.rowcount == 0:
+                raise ValueError(
+                    f"concurrent modification detected on issue {issue_id} "
+                    f"(expected version {expected_version})"
+                )
+        issue.version = expected_version + 1
         return issue
 
     def _find_by_validation_ref(

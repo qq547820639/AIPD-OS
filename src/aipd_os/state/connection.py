@@ -9,9 +9,9 @@ P2-M1: Common DB Infrastructure
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Generator
 
 # ── 统一 pragma 配置 ──────────────────────────────────────────
 # 所有 AIPD-OS SQLite 连接必须应用这些 pragma。
