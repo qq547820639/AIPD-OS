@@ -387,15 +387,15 @@ def test_state_infrastructure_modules_exist():
 def test_state_errors_importable():
     """状态层错误类型必须可导入。"""
     from aipd_os.state.errors import (
-        StateError,
-        NotFoundError,
-        ConflictError,
         ConcurrentModificationError,
-        TenantScopeViolation,
-        ProjectScopeViolation,
+        ConflictError,
+        ExternalOperationUnknownError,
         InvalidTransitionError,
         MigrationError,
-        ExternalOperationUnknownError,
+        NotFoundError,
+        ProjectScopeViolation,
+        StateError,
+        TenantScopeViolation,
     )
     # 继承链验证
     assert issubclass(NotFoundError, StateError)
