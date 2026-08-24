@@ -156,7 +156,7 @@ def test_migration_v2_creates_ideas_on_v1_era_db(tmp_path):
     conn.execute("DROP TABLE claim_evidence_relations")
     conn.execute("DROP TABLE claims")
     conn.execute("DROP TABLE ideas")
-    conn.execute("DELETE FROM schema_migrations WHERE version IN (2,3,4,5,6,7,8,9,10,11,12,13,14,15)")
+    conn.execute("DELETE FROM schema_migrations WHERE version > 1")
     conn.commit()
     conn.close()
     assert migrations.current_version(db_path) == 1
