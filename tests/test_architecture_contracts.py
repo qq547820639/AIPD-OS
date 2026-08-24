@@ -368,3 +368,55 @@ def test_doc_architecture_matches_executable_metadata():
         policy = agent.get("policy", {})
         assert not policy.get("allow_implicit_invocation", False), \
             "agent metadata 与 project_boundary.md 冲突"
+
+
+# =====================================================================
+# P2 State Infrastructure Architecture Invariants
+# =====================================================================
+
+def test_state_infrastructure_modules_exist():
+    """P2 state infrastructure 必须存在。"""
+    for rel in (
+        "src/aipd_os/state/connection.py",
+        "src/aipd_os/state/transaction.py",
+        "src/aipd_os/state/errors.py",
+    ):
+        assert (REPO_ROOT / rel).is_file(), f"missing {rel}"
+
+
+def test_state_errors_importable():
+    """状态层错误类型必须可导入。"""
+    from aipd_os.state.errors import (
+        StateError,
+        NotFoundError,
+        ConflictError,
+        ConcurrentModificationError,
+        TenantScopeViolation,
+        ProjectScopeViolation,
+        InvalidTransitionError,
+        MigrationError,
+        ExternalOperationUnknownError,
+    )
+    # 继承链验证
+    assert issubclass(NotFoundError, StateError)
+    assert issubclass(ConflictError, StateError)
+    assert issubclass(ConcurrentModificationError, ConflictError)
+    assert issubclass(TenantScopeViolation, StateError)
+    assert issubclass(ProjectScopeViolation, StateError)
+    assert issubclass(InvalidTransitionError, StateError)
+    assert issubclass(MigrationError, StateError)
+    assert issubclass(ExternalOperationUnknownError, StateError)
+
+
+def test_state_transaction_importable():
+    """事务上下文管理器必须可导入。"""
+    from aipd_os.state.transaction import transaction, transaction_from_path
+    assert callable(transaction)
+    assert callable(transaction_from_path)
+
+
+def test_state_connection_factory_importable():
+    """ConnectionFactory 必须可导入。"""
+    from aipd_os.state.connection import ConnectionFactory, apply_pragmas
+    assert callable(ConnectionFactory)
+    assert callable(apply_pragmas)
