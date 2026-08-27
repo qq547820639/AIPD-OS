@@ -212,7 +212,7 @@ class ReadinessService:
         else:
             overall = READINESS_PASS
 
-        return ReadinessReport(
+        report = ReadinessReport(
             overall_status=overall,
             dimensions=dimensions,
             blockers=all_blockers,
@@ -225,6 +225,47 @@ class ReadinessService:
                 "project_id": project_id,
             },
         )
+
+        # P2-M7: Persist readiness snapshot for audit trail
+        self._persist_snapshot(tenant_id, project_id, report)
+
+        return report
+
+    def _persist_snapshot(
+        self,
+        tenant_id: str,
+        project_id: str,
+        report: ReadinessReport,
+    ) -> None:
+        """持久化 readiness 快照到 readiness_snapshots 表。"""
+        try:
+            import uuid as _uuid
+
+            from aipd_os.validation.readiness_snapshot_repo import (
+                ReadinessSnapshotRepository,
+                compute_input_fingerprint,
+            )
+            snapshot_id = f"rsnap-{_uuid.uuid4().hex[:12]}"
+            fingerprint = compute_input_fingerprint(report.input_snapshot)
+            with self._validation._db.connect() as conn:
+                repo = ReadinessSnapshotRepository(conn)
+                repo.mark_superseded(tenant_id, project_id)
+                repo.create(
+                    snapshot_id=snapshot_id,
+                    tenant_id=tenant_id,
+                    project_id=project_id,
+                    overall_status=report.overall_status,
+                    dimension_results=[d.to_dict() for d in report.dimensions],
+                    blockers=report.blockers,
+                    warnings=report.warnings,
+                    missing_evidence=report.missing_evidence,
+                    stale_dependencies=report.stale_dependencies,
+                    remediation_actions=report.remediation_actions,
+                    input_fingerprint=fingerprint,
+                )
+        except Exception:
+            # Snapshot persistence should never break readiness evaluation
+            pass
 
     def _eval_product_definition(self, complete: bool | None) -> DimensionStatus:
         if complete is None:
