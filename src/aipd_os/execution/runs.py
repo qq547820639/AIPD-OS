@@ -94,16 +94,10 @@ class RunStore:
 
     @contextmanager
     def connect(self):
-        c = sqlite3.connect(self.path)
-        c.row_factory = sqlite3.Row
-        try:
+        from aipd_os.state.connection import ConnectionFactory
+        factory = ConnectionFactory(self.path)
+        with factory.transaction() as c:
             yield c
-            c.commit()
-        except Exception:
-            c.rollback()
-            raise
-        finally:
-            c.close()
 
     def _new_run_id(self) -> str:
         return f"RUN-{uuid.uuid4().hex[:12]}"

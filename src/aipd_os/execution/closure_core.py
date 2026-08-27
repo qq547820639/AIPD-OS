@@ -520,16 +520,10 @@ class ClosureStore:
 
     @contextmanager
     def connect(self):
-        c = sqlite3.connect(self.path)
-        c.row_factory = sqlite3.Row
-        try:
+        from aipd_os.state.connection import ConnectionFactory
+        factory = ConnectionFactory(self.path)
+        with factory.transaction() as c:
             yield c
-            c.commit()
-        except Exception:
-            c.rollback()
-            raise
-        finally:
-            c.close()
 
     # ---- runs ----
     def create_run(self, work_id: str, project_id: str = "",
