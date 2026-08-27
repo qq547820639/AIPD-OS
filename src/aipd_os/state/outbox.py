@@ -82,20 +82,37 @@ class OutboxRepository:
              event_type, json.dumps(payload), schema_version, now, now,
              0, 5, "", idempotency_key))
 
-    def claim_available(self, worker_id: str, limit: int = 10) -> list[dict[str, Any]]:
-        """Claim 可用事件（原子操作）。"""
+    def claim_available(
+        self,
+        worker_id: str,
+        limit: int = 10,
+        lease_seconds: int = 300,
+    ) -> list[dict[str, Any]]:
+        """Claim 可用事件（原子操作）。
+
+        使用 claimed_by + claim_expires_at 实现真正的 claim lease。
+        lease_seconds: 默认 5 分钟。
+        """
         now = _now()
+        from datetime import datetime, timedelta, timezone
+        expires = (datetime.now(timezone.utc) +
+                   timedelta(seconds=lease_seconds)).isoformat()
         rows = self._conn.execute(
             "SELECT * FROM outbox_events "
-            "WHERE completed_at IS NULL AND (claimed_at IS NULL OR claimed_at < ?) "
+            "WHERE completed_at IS NULL "
+            "AND (claimed_at IS NULL "
+            "     OR claim_expires_at IS NULL "
+            "     OR claim_expires_at < ?) "
             "ORDER BY available_at LIMIT ?",
             (now, limit)).fetchall()
         claimed = []
         for row in rows:
             self._conn.execute(
-                "UPDATE outbox_events SET claimed_at=? "
+                "UPDATE outbox_events SET claimed_at=?, "
+                "claimed_by=?, claim_expires_at=? "
                 "WHERE event_id=? AND tenant_id=? AND project_id=?",
-                (now, row["event_id"], row["tenant_id"], row["project_id"]))
+                (now, worker_id, expires,
+                 row["event_id"], row["tenant_id"], row["project_id"]))
             claimed.append(dict(row))
         return claimed
 

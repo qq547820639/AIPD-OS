@@ -457,3 +457,58 @@ def _create_readiness_snapshots(conn: sqlite3.Connection) -> None:
 
 def _drop_readiness_snapshots(conn: sqlite3.Connection) -> None:
     conn.execute("DROP TABLE IF EXISTS readiness_snapshots")
+
+
+# ── v16: Outbox lease + Manual workflows ─────────────────────────────
+
+
+def _v16_upgrade_outbox(conn: sqlite3.Connection) -> None:
+    """v16 up：outbox claim lease + manual_workflows 表。
+
+    outbox_events 新增：claimed_by, claim_expires_at
+    external_operations 新增 UNIQUE partial index on idempotency_key
+    manual_workflows：Manual State canonical storage
+    """
+    # outbox_events: add claimed_by + claim_expires_at
+    cols = {r[1] for r in conn.execute(
+        "PRAGMA table_info(outbox_events)").fetchall()}
+    if "claimed_by" not in cols:
+        conn.execute(
+            "ALTER TABLE outbox_events ADD COLUMN "
+            "claimed_by TEXT NOT NULL DEFAULT ''")
+    if "claim_expires_at" not in cols:
+        conn.execute(
+            "ALTER TABLE outbox_events ADD COLUMN "
+            "claim_expires_at TEXT")
+
+    # manual_workflows: canonical manual state storage
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS manual_workflows ("
+        " workflow_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL DEFAULT 'default',"
+        " project_id TEXT NOT NULL DEFAULT '',"
+        " state_json TEXT NOT NULL DEFAULT '{}',"
+        " version_no INTEGER NOT NULL DEFAULT 1,"
+        " legacy_source_hash TEXT NOT NULL DEFAULT '',"
+        " legacy_imported_at TEXT,"
+        " created_at TEXT NOT NULL,"
+        " updated_at TEXT NOT NULL,"
+        " PRIMARY KEY (workflow_id, tenant_id, project_id))")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_manual_wf_project "
+        "ON manual_workflows(tenant_id, project_id)")
+    # Idempotency uniqueness: prevent duplicate external operations
+    # with same (tenant, project, provider, kind, idempotency_key)
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_ext_ops_idempotency_unique "
+        "ON external_operations("
+        "tenant_id, project_id, provider, operation_kind, idempotency_key) "
+        "WHERE idempotency_key <> ''")
+
+
+def _v16_downgrade(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP TABLE IF EXISTS manual_workflows")
+    conn.execute(
+        "DROP INDEX IF EXISTS idx_ext_ops_idempotency_unique")
+    # Note: SQLite cannot DROP COLUMN in older versions.
+    # claimed_by and claim_expires_at will remain as ghost columns.

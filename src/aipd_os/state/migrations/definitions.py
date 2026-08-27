@@ -36,6 +36,8 @@ from .helpers import (
     _restore_score_defaults,
     _seed_legacy_sequences,
     _unseed_legacy_sequences,
+    _v16_downgrade,
+    _v16_upgrade_outbox,
 )
 from .schema import V1_INITIAL_SCHEMA
 
@@ -505,6 +507,20 @@ MIGRATIONS: list[dict[str, Any]] = [
         ],
         "down": [
             _drop_readiness_snapshots,
+        ],
+    },
+    # v5.13（P2-M3/M4/M5: Outbox lease + Manual workflows + Idempotency）：
+    # outbox_events: claimed_by, claim_expires_at
+    # manual_workflows: canonical manual state storage (替代 *.canonical.json)
+    # external_operations: UNIQUE partial index on idempotency_key
+    {
+        "version": 16,
+        "name": "outbox_lease_and_manual_workflows",
+        "up": [
+            _v16_upgrade_outbox,
+        ],
+        "down": [
+            _v16_downgrade,
         ],
     },
 ]

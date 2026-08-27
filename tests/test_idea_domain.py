@@ -137,8 +137,8 @@ def test_migration_applies_idea_claim_relation_tables(tmp_path):
     db_path = str(tmp_path / "m.db")
     applied = migrations.migrate(db_path)
     # v5.8.1 Commit 7/9：v5=id_sequences，v6=generic lineage 列
-    assert applied == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-    assert migrations.current_version(db_path) == 15
+    assert applied == list(range(1, migrations.MIGRATIONS[-1]["version"] + 1))
+    assert migrations.current_version(db_path) == migrations.MIGRATIONS[-1]["version"]
     conn = sqlite3.connect(db_path)
     tables = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
@@ -161,7 +161,7 @@ def test_migration_v2_creates_ideas_on_v1_era_db(tmp_path):
     conn.close()
     assert migrations.current_version(db_path) == 1
     applied = migrations.migrate(db_path)
-    assert applied == [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    assert applied == list(range(2, migrations.MIGRATIONS[-1]["version"] + 1))
     conn = sqlite3.connect(db_path)
     tables = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
@@ -174,7 +174,7 @@ def test_migration_rollback_drops_idea_tables(tmp_path):
     db_path = str(tmp_path / "m.db")
     migrations.migrate(db_path)
     rolled = migrations.rollback(db_path, target=1)
-    assert rolled == [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2]
+    assert rolled == list(range(migrations.MIGRATIONS[-1]["version"], 1, -1))
     assert migrations.current_version(db_path) == 1
     conn = sqlite3.connect(db_path)
     tables = {r[0] for r in conn.execute(
@@ -198,7 +198,7 @@ def test_migration_ups_idempotent_on_existing_db(tmp_path):
     AIPDStateDB(db_path)  # __init__ 走 migrate() 建全部表
     applied = migrations.migrate(db_path)
     assert applied == []  # 已全部应用
-    assert migrations.current_version(db_path) == 15
+    assert migrations.current_version(db_path) == migrations.MIGRATIONS[-1]["version"]
     conn = sqlite3.connect(db_path)
     tables = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
