@@ -61,7 +61,8 @@ class ManualStateRepository:
         """加载导入记录。"""
         path = self._import_ledger_path()
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+            result: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+            return result
         return {}
 
     def _save_import_ledger(self, ledger: dict[str, Any]) -> None:
@@ -74,7 +75,8 @@ class ManualStateRepository:
         """读取 canonical state。"""
         path = self._canonical_path(workflow_id)
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+            result: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+            return result
         return None
 
     def write(self, workflow_id: str, state: dict[str, Any]) -> None:
