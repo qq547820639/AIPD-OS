@@ -90,16 +90,10 @@ class BomStore:
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
-        conn = sqlite3.connect(self.path)
-        conn.row_factory = sqlite3.Row
-        try:
+        from aipd_os.state.connection import ConnectionFactory
+        factory = ConnectionFactory(self.path)
+        with factory.transaction() as conn:
             yield conn
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
 
     # ------------------------------------------------------------- id 分配
     def _next_id(self, c: sqlite3.Connection, prefix: str) -> str:

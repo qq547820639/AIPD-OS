@@ -144,17 +144,10 @@ class ProductTruthStore:
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
-        conn = sqlite3.connect(str(self.path))
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        try:
+        from aipd_os.state.connection import ConnectionFactory
+        factory = ConnectionFactory(self.path)
+        with factory.transaction() as conn:
             yield conn
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
 
     # ----------------------------------------------------------- 新增 / 查询
     def add(self, record: TruthRecord, tenant_id: str | None = None,

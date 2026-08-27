@@ -20,7 +20,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import sqlite3
 import sys
 from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
@@ -135,16 +134,10 @@ class Supervisor:
 
     @contextmanager
     def connect(self):
-        c = sqlite3.connect(self.path)
-        c.row_factory = sqlite3.Row
-        try:
+        from aipd_os.state.connection import ConnectionFactory
+        factory = ConnectionFactory(self.path)
+        with factory.transaction() as c:
             yield c
-            c.commit()
-        except Exception:
-            c.rollback()
-            raise
-        finally:
-            c.close()
 
     # ------------------------------------------------------------- scope
     def tenant_id(self):
