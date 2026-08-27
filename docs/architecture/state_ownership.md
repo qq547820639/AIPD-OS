@@ -15,27 +15,20 @@
 | Product Truth / lineage | `ProductTruthStore` | ProductTruthService | ✓ | ✓ | version | 无独立审计表 |
 | Supervisor work/phase/capability/review/lineage | `SupervisorDB` | Supervisor | ✓ | ✓ | 无显式版本 | 部分经 audit |
 | Execution runs | `ExecutionRunsDB` | RunStore | ✓ (post-v5.7) | ✓ | 追加式 | evidence_refs |
-| **Closure runs/events/checkpoints/tool_calls/deps/stale** | **`ClosureStore`** | **ClosureEngine** | **❌ MISSING** | **✓ (run_id only)** | **无** | **无** |
-| Manual state (pages/prompts/batches) | `.manual.json` | ManualChain | ❌ | 部分 | 无 | 无 |
+| Closure runs/events/checkpoints/tool_calls/deps/stale | `ClosureStore` | ClosureEngine | ✓ (P2-M2) | ✓ | 无 | 无 |
+| Manual state (pages/prompts/batches) | Canonical + legacy JSON | ManualStateRepository | ✓ (P2-M4) | ✓ | version | import_ledger |
+| Outbox events | `state.db` (v14) | OutboxRepository | ✓ (P2-M5) | ✓ | attempt_count | completed_at |
+| External operations | `state.db` (v14) | ExternalOperationRepository | ✓ (P2-M5) | ✓ | status machine | idempotency_key |
+| Readiness snapshots | `state.db` (v15) | ReadinessService | ✓ | ✓ | ruleset_version | superseded flag |
 
-## 2. Critical P2 Findings
+## 2. P2 Findings — Status
 
-### F1: ClosureStore missing tenant_id — HIGH risk
-All 6 closure tables have NO tenant_id. Only `closure_runs.project_id` exists.
-Cross-tenant data leakage possible if two tenants share a closure DB path.
-**Fix**: Migration v14 adds tenant_id to all closure tables.
-
-### F2: Manual JSON has no scope — HIGH risk
-`*.manual.json` stores state as flat JSON with no tenant/project scope.
-**Fix**: ManualStateRepository with canonical DB + legacy JSON fallback.
-
-### F3: No unified connection policy
-6+ modules call `sqlite3.connect()` independently with no common pragmas.
-**Fix**: `state/connection.py` with ConnectionFactory + transaction context manager.
-
-### F4: No outbox for external side effects
-External operations have no idempotency ledger. UNKNOWN_OUTCOME not distinguished from FAILED.
-**Fix**: outbox_events + operation_ledger tables.
+| Finding | Risk | Status | Notes |
+|---------|------|--------|-------|
+| F1: ClosureStore missing tenant_id | HIGH | ✅ FIXED (P2-M2) | All 6 tables have tenant_id + project_id |
+| F2: Manual JSON has no scope | HIGH | ✅ FIXED (P2-M4) | ManualStateRepository with canonical + legacy import |
+| F3: No unified connection policy | MEDIUM | ✅ FIXED (P2-M1) | ConnectionFactory + transaction context manager |
+| F4: No outbox for external side effects | HIGH | ✅ FIXED (P2-M5) | OutboxRepository + ExternalOperationRepository with state machine |
 
 ## 3. Canonical Truth Map
 
