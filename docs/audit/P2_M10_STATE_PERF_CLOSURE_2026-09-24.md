@@ -9,7 +9,9 @@
 | 项 | 结果 |
 |---|---|
 | 起点全量回归 | **6 failed / 1262 passed / 3 skipped**（178.48s） |
-| 收口全量回归 | **2 failed / 1287 passed / 3 skipped**（264.69s，本轮机器被其他会话的 pytest 抢占 CPU）—— 仅剩发布清单哈希未重算 |
+| 收口全量回归 | **1289 passed / 0 failed / 3 skipped**（166.41s，清单重算后复跑） |
+| release-ready 门禁 | 8 项中 **7 绿 1 时序红**（`workspace_clean`，见 §8.5）；CVE 项在补上 `pip-audit` 后为 `no unacknowledged CVE` |
+| `audit_repo --strict` | 哈希两项已消除；`source_commit == HEAD` 这一条自 v5.6.0 发布起对**任意**后续提交都必红（已证实为既有状态，未擅自放宽，见 §8.6） |
 | ruff（CI 口径 `src tests state_service`） | 0 错误 |
 | mypy（CI 口径，356 文件） | 0 错误 |
 | 新增测试 | `tests/test_connection_reentrancy.py` 8 例、`tests/test_state_perf_gates.py` 10 例、`test_stale_propagation.py` +3 例、`test_migration.py` 迁移到新模块 |
@@ -166,9 +168,9 @@ mypy（CI 口径，356 文件）0 错误（顺带修掉 `test_architecture_contr
 `logger.warning("readiness_snapshot_persist_failed", exc_info=True)`：
 快照持久化失败仍不打断 readiness 评估（保持原语义），但不再静默丢快照。
 
-### 8.2 `audit_repo.py --strict`：3 项红，2 项已修，1 项是既有发布锚点漂移
+### 8.2 `audit_repo.py --strict`：2 项哈希漂移已修，1 项是既有发布锚点漂移
 
-修完后复跑结果见 §8.4。收口前实测：
+本轮动手前实测三项红：
 
 ```
 ✗ Release manifest hash mismatch: 2 files
@@ -176,24 +178,28 @@ mypy（CI 口径，356 文件）0 错误（顺带修掉 `test_architecture_contr
 ✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=1465a249d35d…
 ```
 
-- 前两项由 `scripts/regenerate_release_manifest.py` +
-  `scripts/release_evidence.py`（只取 `SOURCE_MANIFEST.json`）重算后消除；
-- 第三项**不是本轮引入**：`PROVENANCE.json` 的 `source_commit` 锚在
-  v5.6.0 的 tag 提交 `a660405`，而 2026-08-14 之后 P2 的 20+ 个提交都走在了
-  tag 前面。任何 `a660405` 之后的提交都会让这条判红，属于结构性事实。
+- 前两项由 `scripts/regenerate_release_manifest.py` 与
+  `scripts/release_evidence.py`（只取回 `SOURCE_MANIFEST.json`）重算后消除；
+- 第三项**不是本轮引入**，也不是 `PROVENANCE.json` 的问题：`audit_repo` 把
+  `SOURCE_MANIFEST.source_commit` 叫做「Provenance」并与 HEAD 比较，而
+  `release_evidence.py` 缺省把 `source_commit` 写成**当时的 HEAD**。
+  只要「生成证据 → 再提交证据」，HEAD 就必然领先，所以 v5.6.0 之后的每个提交
+  都会让这条判红。修法是 `--source-commit <tag SHA>` 显式预置锚点：
+  本轮生成时它一度被写成 `1465a24`（我引入的一次偏离），
+  已用 `--source-commit a660405…` 重新生成，使 SOURCE_MANIFEST 与
+  PROVENANCE 再次携带同一个发布锚点。
 
 ### 8.3 有意不做的发布动作
 
-闭合 §8.2 第三项需要：重建 bundle → 重算 `BUNDLE_MANIFEST.json` →
+真正闭合「锚点落后于 HEAD」需要：重建 bundle → 重算 `BUNDLE_MANIFEST.json` →
 Ed25519 重签 → 决定新版本号并打 tag（版本号双轨制本就是待决项）。
 这些是**发布行为**，且涉及共享状态（tag / 远端），因此：
 
 - 没有改写 `PROVENANCE.json` / `BUNDLE_MANIFEST.json` / 任何 `.sig`；
-  生成到临时目录的新 `PROVENANCE.json`（`source_commit=1465a24`）**未拷回仓库**，
+  生成到临时目录的新 `PROVENANCE.json` **未拷回仓库**，
   以免给一个未构建、未签名的提交留下「已发布证据」；
 - 没有 `git push`，没有移动 `v5.6.0` tag；
-- 发布锚点是否随本轮 P2 重锚，留给 owner 决定（`aipd` 侧的
-  `release-ready` 语义要求 tag 与被测提交一致）。
+- 发布锚点是否随本轮 P2 重锚，留给 owner 决定。
 
 顺带修正了门禁自身一处**输出不实**：`commit_matches_head` 通过时的 detail
 文案写的是 `HEAD matches`，而 `_check_commit` 实际比较的是
@@ -201,11 +207,70 @@ Ed25519 重签 → 决定新版本号并打 tag（版本号双轨制本就是待
 发布证据元数据提交略领先于 tag，属正常」）。逻辑没错、名字与文案误导，
 已把通过文案改为「provenance source_commit 与 tag 指向同一提交」。
 
-### 8.4 CVE / license 检查
+### 8.4 CVE / license 检查：一次「量具假阴性」的实录
 
-`no_unacknowledged_cve` 在缺少 `pip-audit` 时按 fail-closed 判红（设计如此）。
-本轮在本机 `.venv` 安装 `pip-audit 2.9.0`（仅开发工具，不改产品依赖声明）
-后复跑，结果见本文件末尾的复跑记录。
+`no_unacknowledged_cve` 缺 `pip-audit` 时按 fail-closed 判红（设计正确）。
+但本轮装上 `pip-audit 2.9.0`（`.venv/bin/pip-audit --version` 可执行）后
+首次复跑**仍然**报 `pip-audit not available`。根因不是没装：
+检查用 `shutil.which('pip-audit')` 找可执行文件，而调用方式是
+`.venv/bin/python scripts/production_release_gate.py …`——
+`.venv/bin` 不在 PATH 上，`which` 自然找不到。
+
+教训（写进本仓的量具纪律）：**「查不到」不等于「不存在」**，
+否定结论前要先确认探针自身的前置条件（这里是 PATH）。
+用 `PATH=.venv/bin:$PATH` 复跑后的真实结果见 §8.5。
+
+### 8.5 release-ready 门禁最终判定
+
+`PATH="$PWD/.venv/bin:$PATH" .venv/bin/python scripts/production_release_gate.py
+--release-ready --tag v5.6.0`（工作树尚有本轮文档未提交时）：
+
+```
+FAIL workspace_clean            ← 仅因该次运行时 SOURCE_MANIFEST/文档未提交
+PASS commit_matches_head        provenance source_commit 与 tag 指向同一提交
+PASS source_manifest_zero_diff  zero diff
+PASS bundle_manifest_zero_diff  zero diff
+PASS test_numbers_from_report   passed=1096 failed=0 total=1099 source_commit=a660405…
+PASS signature_verifiable       Ed25519 signature verified
+PASS no_secrets                 no secret patterns found
+PASS no_unacknowledged_cve      pip-audit: no unacknowledged CVE
+```
+
+即 **8 项中 7 项绿**，唯一红项是「工作区不干净」这一时序性原因：
+`workspace_clean` 只能在「证据链最后一次提交」之后成立——把门禁输出再写回
+受 `SOURCE_MANIFEST` 覆盖的文件，又会脏。因此本轮把它作为发布证据提交的
+收尾动作：以 `--release-ready` 在上述命令下复跑一次，结果记录在运行者的
+终端与 `--json-out` 指向的仓外文件里，不再回写仓库。
+
+**两条必须一起读的注意事项**（否则这串绿会被误读）：
+
+1. `test_numbers_from_report` 的 1096/0 是 **v5.6.0 tag 那次发布**的数字
+   （`source_commit=a660405`），不是当前 HEAD 的 1289/0。
+   门禁按设计只校验「证据与被 tag 锚定的提交一致」，
+   所以它绿 ≠ 当前提交被门禁测过；当前提交的测试事实来自 §8.1 的复跑。
+2. `bundle_manifest_zero_diff` / `signature_verifiable` 校验的是
+   8-14 构建的那个 zip 与它的签名，同样不覆盖当前源码。
+
+### 8.6 `audit_repo --strict` 与门禁的不变量互相矛盾（待决，未擅自放宽）
+
+同一个锚点，两个工具要求不同：
+
+| 工具 | 不变量 | 对「发布之后的任意提交」 |
+|---|---|---|
+| `production_release_gate --release-ready --tag` | `provenance.source_commit == tag` 指向的提交（源码注释明确允许 HEAD 领先） | 可绿 |
+| `audit_repo --strict` | `SOURCE_MANIFEST.source_commit == HEAD` | **必红** |
+
+已证实这是既有状态，不是本轮引入：本轮起点 `1d0f84f` 上
+`SOURCE_MANIFEST.source_commit` 就是 `a660405`（读 `git show` 比对，二者不等），
+所以自 v5.6.0 发布以来的每个提交都会让 `audit_repo --strict` 判红。
+
+两条出路，属发布决策，交 owner：
+1. 重新发布（重建 bundle → 重算 BUNDLE_MANIFEST → Ed25519 重签 →
+   决定新版本号并打 tag），顺带统一版本号双轨制；
+2. 或让 `audit_repo --strict` 像门禁一样按 tag 锚定比较。
+   本轮**没有**改这条判据：放宽一个发布安全检查不该在收口迭代里顺手做。
+
+
 
 
 ## 9. 未做 / 下一步
