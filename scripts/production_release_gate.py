@@ -590,7 +590,9 @@ def run_release_ready(repo: Path, tag: str | None, test_report: Path | None) -> 
 
     # 2) tag / provenance 指向 HEAD
     ok, errs = _check_commit(repo, tag, provenance)
-    add('commit_matches_head', ok, errs or 'HEAD matches')
+    add('commit_matches_head', ok,
+        errs or 'provenance source_commit 与 tag 指向同一提交'
+        if tag else errs or 'provenance source_commit == HEAD')
 
     # 3) Source Manifest 零差异
     ok, errs = _check_source_manifest_zero_diff(repo)

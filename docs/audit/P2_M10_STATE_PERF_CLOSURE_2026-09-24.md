@@ -142,23 +142,82 @@ runner 与 helpers 均改为向下依赖。
 真实超时来自 `sqlite3.connect(timeout=10)`。已从策略中删除并加注释说明，
 同时补写 §4.1 重入规则与 §6.1 索引门禁。
 
-## 8. 回归记录
+## 8. 回归与发布证据记录
 
-- 起点（HEAD `1d0f84f`，工作区干净）：
-  `6 failed / 1262 passed / 3 skipped / 2 deselected in 178.48s`
-  失败项：`test_exception_hygiene::test_no_uncommented_empty_except`、
-  `test_import_cycles::test_no_import_cycles`、
-  `test_packaging::{test_release_manifest_hashes_match_disk, test_source_manifest_hashes_match_disk}`、
-  `test_supervisor_execution::{test_run_supervisor_executes_doc_to_complete, test_mark_stale_exact_dependency_match}`
-- 收口：`2 failed / 1287 passed / 3 skipped / 2 deselected in 264.69s`
-  —— 剩余 2 项为发布清单哈希与磁盘不一致（本轮改了源文件，清单尚未重算），
-  由 `scripts/regenerate_release_manifest.py` 重算后消除。
-- `readiness.py` 的 `except Exception: pass` 改为
-  `logger.warning("readiness_snapshot_persist_failed", exc_info=True)`：
-  快照持久化失败仍不打断 readiness 评估（保持原语义），但不再静默丢快照。
+### 8.1 全量回归（`pytest -q -m "not model_eval"`）
+
+| 阶段 | 结果 |
+|---|---|
+| 起点（HEAD `1d0f84f`，工作区干净） | `6 failed / 1262 passed / 3 skipped / 2 deselected in 178.48s` |
+| 收口（清单未重算时） | `2 failed / 1287 passed / 3 skipped / 2 deselected in 220.68s` |
+| 收口（清单重算后复跑） | **`1289 passed / 0 failed / 3 skipped / 2 deselected in 166.41s`** |
+
+起点 6 项失败：`test_exception_hygiene::test_no_uncommented_empty_except`、
+`test_import_cycles::test_no_import_cycles`、
+`test_packaging::{test_release_manifest_hashes_match_disk, test_source_manifest_hashes_match_disk}`、
+`test_supervisor_execution::{test_run_supervisor_executes_doc_to_complete, test_mark_stale_exact_dependency_match}`。
+
+质量门禁：ruff（CI 口径 `src tests state_service`）0 错误；
+mypy（CI 口径，356 文件）0 错误（顺带修掉 `test_architecture_contracts.py`
+里过期的 `# type: ignore[import-not-found]`——本机 mypy 对 pyyaml 报的是
+`import-untyped`，两个码同时保留才在有无 `types-PyYAML` 的环境下都成立）。
+
+`readiness.py` 的 `except Exception: pass` 改为
+`logger.warning("readiness_snapshot_persist_failed", exc_info=True)`：
+快照持久化失败仍不打断 readiness 评估（保持原语义），但不再静默丢快照。
+
+### 8.2 `audit_repo.py --strict`：3 项红，2 项已修，1 项是既有发布锚点漂移
+
+修完后复跑结果见 §8.4。收口前实测：
+
+```
+✗ Release manifest hash mismatch: 2 files
+✗ Source manifest hash mismatch: 26 files
+✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=1465a249d35d…
+```
+
+- 前两项由 `scripts/regenerate_release_manifest.py` +
+  `scripts/release_evidence.py`（只取 `SOURCE_MANIFEST.json`）重算后消除；
+- 第三项**不是本轮引入**：`PROVENANCE.json` 的 `source_commit` 锚在
+  v5.6.0 的 tag 提交 `a660405`，而 2026-08-14 之后 P2 的 20+ 个提交都走在了
+  tag 前面。任何 `a660405` 之后的提交都会让这条判红，属于结构性事实。
+
+### 8.3 有意不做的发布动作
+
+闭合 §8.2 第三项需要：重建 bundle → 重算 `BUNDLE_MANIFEST.json` →
+Ed25519 重签 → 决定新版本号并打 tag（版本号双轨制本就是待决项）。
+这些是**发布行为**，且涉及共享状态（tag / 远端），因此：
+
+- 没有改写 `PROVENANCE.json` / `BUNDLE_MANIFEST.json` / 任何 `.sig`；
+  生成到临时目录的新 `PROVENANCE.json`（`source_commit=1465a24`）**未拷回仓库**，
+  以免给一个未构建、未签名的提交留下「已发布证据」；
+- 没有 `git push`，没有移动 `v5.6.0` tag；
+- 发布锚点是否随本轮 P2 重锚，留给 owner 决定（`aipd` 侧的
+  `release-ready` 语义要求 tag 与被测提交一致）。
+
+顺带修正了门禁自身一处**输出不实**：`commit_matches_head` 通过时的 detail
+文案写的是 `HEAD matches`，而 `_check_commit` 实际比较的是
+`provenance.source_commit` 与 **tag** 指向的提交（源码注释说明「HEAD 可能因
+发布证据元数据提交略领先于 tag，属正常」）。逻辑没错、名字与文案误导，
+已把通过文案改为「provenance source_commit 与 tag 指向同一提交」。
+
+### 8.4 CVE / license 检查
+
+`no_unacknowledged_cve` 在缺少 `pip-audit` 时按 fail-closed 判红（设计如此）。
+本轮在本机 `.venv` 安装 `pip-audit 2.9.0`（仅开发工具，不改产品依赖声明）
+后复跑，结果见本文件末尾的复跑记录。
+
 
 ## 9. 未做 / 下一步
 
+- **`executescript()` 与重入事务不兼容（本轮定位，当前不可达）**：
+  Python 的 `Cursor.executescript()` 执行前隐式 COMMIT，所以
+  `with factory.transaction() as c: c.executescript(...)` 之后的语句
+  已不在该事务内；此时若再嵌套 `transaction()`，`SAVEPOINT`/`RELEASE`
+  会自成一个小事务并提前提交。产品代码目前只在 `Supervisor.__init__`
+  建表处使用 `executescript`，且该处无重入调用，故不触发。
+  修法：DDL 也走 `migrations/sqlsplit.exec_script()`（拆分后逐条 execute，
+  不隐式提交）。
 - `OutboxDispatcher` 在 `src/`、`scripts/` 内**无任何产品调用点**（实测 grep），
   目前只有测试与量具消费它。M5 交付的是机制，接线尚未发生。
 - 两套事务登记表（`AIPDStateDB` 与 `ConnectionFactory`）未统一，见 §2 遗留风险。

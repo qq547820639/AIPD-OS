@@ -787,8 +787,8 @@
     },
     {
       "path": "scripts/production_release_gate.py",
-      "size": 30730,
-      "sha256": "d52991d5af42b4bcbe5d629aff516a2791a01c81ca7196ce06feebd6ff4022aa"
+      "size": 30840,
+      "sha256": "cded26db072e804dd9ca951446e9c8530e54c60522339924bcedd0331cefe55e"
     },
     {
       "path": "scripts/quality_gate.py",
@@ -914,6 +914,11 @@
       "path": "scripts/skill_quality_audit.py",
       "size": 8819,
       "sha256": "df63f86ccf2bd6c8ee5987ac008e1470e3e47c9a361ed9266814df9dd193f33c"
+    },
+    {
+      "path": "scripts/state_perf_gate.py",
+      "size": 19616,
+      "sha256": "0eff954dd986022da64040cc311bd75da7557b028cfa9d06ae844f7a88f135c0"
     },
     {
       "path": "src/aipd_os/__init__.py",
@@ -1622,8 +1627,8 @@
     },
     {
       "path": "src/aipd_os/state/connection.py",
-      "size": 4722,
-      "sha256": "787e57e2bde03791442952709f8c6720085c108176164fe3d78c76d5e5f45705"
+      "size": 4858,
+      "sha256": "38a9e6dbf8c1085bdf3dbd103d15d7c32831c37cecb20f7536856e3bc00a5069"
     },
     {
       "path": "src/aipd_os/state/crypto.py",
@@ -1684,6 +1689,11 @@
       "path": "src/aipd_os/state/migrations/schema.py",
       "size": 6265,
       "sha256": "88e413f908f99d1d90f24acfb4f3d77050725a12716c2ffeafb98f9de6e839e6"
+    },
+    {
+      "path": "src/aipd_os/state/migrations/sqlsplit.py",
+      "size": 1986,
+      "sha256": "577eb411ca3ad8c94adead7aa6d1e5d8422c2680dd0fe5c3801901a0ab28fbee"
     },
     {
       "path": "src/aipd_os/state/objects.py",
@@ -2196,6 +2206,11 @@
       "sha256": "65c8fefc918420ab1d4a951b41879397aaea278237006aa5338c9ad10e725a1f"
     },
     {
+      "path": "tests/test_connection_reentrancy.py",
+      "size": 5207,
+      "sha256": "c335a99348085b8d935806fd2c971794128348733f6e8041fceb99303d7f9d3b"
+    },
+    {
       "path": "tests/test_credibility.py",
       "size": 2361,
       "sha256": "ebd6dc00b69843ae994e1a862834f9168d448218c6dacd75b3ef84fdf7e1423d"
@@ -2669,6 +2684,11 @@
       "path": "tests/test_state_db.py",
       "size": 3528,
       "sha256": "03637219cd3d1de2c0053e77a590bc6f6f5c62421e2f6cf0374edf844bcb1bdf"
+    },
+    {
+      "path": "tests/test_state_perf_gates.py",
+      "size": 9741,
+      "sha256": "da964e1f29765d1823c4fcc1d36b6b6c3d9895d29bcb33facb3be65c54403937"
     },
     {
       "path": "tests/test_status_semantics_contract.py",

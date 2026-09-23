@@ -108,11 +108,12 @@ class ConnectionFactory:
 
     @contextmanager
     def connection(self) -> Generator[sqlite3.Connection, None, None]:
-        """非事务连接上下文（自动 commit 每条语句）。
+        """非事务连接上下文：无活动事务时自开连接（语句级自动 commit）。
 
         用于只读查询或不需要原子性的单条写操作。
-        同一 (库, 线程) 已有活动事务时复用它——在 rollback-journal
-        模式下另开连接读取自己未提交的写会阻塞在写锁上。
+        同一 (库, 线程) 已有活动事务时改为复用该事务连接——在
+        rollback-journal 模式下另开连接读取自己未提交的写会阻塞在写锁上，
+        且此时语句不再自动 commit，而是随外层事务一起提交/回滚。
         """
         active = _active_conn(self._key)
         if active is not None:
