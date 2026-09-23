@@ -1,6 +1,6 @@
 # State Inventory — AIPD-OS P2
 
-> Updated: 2026-08-25 (HEAD: 10f8020)
+> Updated: 2026-09-24 (P2-M10 收口；schema HEAD = v17)
 > Purpose: P2 State Ownership Convergence — complete persistence point audit
 
 ## Physical Stores
@@ -35,11 +35,33 @@
 
 | Module | Status | Purpose |
 |--------|--------|---------|
-| `state/connection.py` | ✅ EXISTS | ConnectionFactory, unified pragmas |
+| `state/connection.py` | ✅ EXISTS | ConnectionFactory, unified pragmas, 可重入事务（SAVEPOINT） |
 | `state/transaction.py` | ✅ EXISTS | Transaction context manager |
 | `state/errors.py` | ✅ EXISTS | 8 unified error types |
 | `state/outbox.py` | ✅ EXISTS (P2-M5) | OutboxRepository + ExternalOperationRepository |
 | `state/manual_state.py` | ✅ EXISTS (P2-M4) | ManualStateRepository with legacy import |
+| `state/migrations/sqlsplit.py` | ✅ EXISTS (P2-M10) | 语句拆分/执行叶子模块，断开 definitions→helpers→runner 导入环 |
+
+## Performance Validation (P2-M10)
+
+| 资产 | 位置 | 作用 |
+|------|------|------|
+| 性能量具 | `scripts/state_perf_gate.py` | 12 个场景 × N 轮，min/median/mean/max/stdev + 相对阈值棘轮门禁 |
+| 基线 | `docs/audit/state_perf_baseline.json` | 提交进仓的 median 基线；`--update-baseline` 采集（`data/` 是 gitignore 的运行时目录，不能放契约） |
+| 报告 | `docs/audit/state_perf_report.json` | 最近一次完整测量输出 |
+| 确定性门禁 | `tests/test_state_perf_gates.py` | EXPLAIN QUERY PLAN、连接复用计数、claim 互斥、语句数线性度 |
+
+Schema 版本：HEAD = **v17**（v17 = 两条热读路径索引 `idx_changes_scope_time`、
+`idx_outbox_due`，见 `state_infrastructure.md` §6.1）。
+
+## Migration 版本清单
+
+| Version | Name |
+|---------|------|
+| v14 | outbox_events + external_operations |
+| v15 | readiness_snapshots |
+| v16 | outbox_lease_and_manual_workflows |
+| v17 | hot_read_perf_indexes |
 
 ## Direct sqlite3.connect Classification
 

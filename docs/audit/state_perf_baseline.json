@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "scenarios": {
+    "migrate_cold_ms": {
+      "median": 27.8881,
+      "metric": "ms"
+    },
+    "migrate_noop_ms": {
+      "median": 1.1107,
+      "metric": "ms"
+    },
+    "connect_overhead_us": {
+      "median": 224.325,
+      "metric": "us"
+    },
+    "fact_batched_ops_s": {
+      "median": 18424.6891,
+      "metric": "ops/s"
+    },
+    "fact_autocommit_ops_s": {
+      "median": 277.2147,
+      "metric": "ops/s"
+    },
+    "outbox_append_ops_s": {
+      "median": 81639.3175,
+      "metric": "ops/s"
+    },
+    "outbox_claim_batch_ms": {
+      "median": 2.1283,
+      "metric": "ms"
+    },
+    "stale_fanout_500_ms": {
+      "median": 8.7675,
+      "metric": "ms"
+    },
+    "snapshot_create_ops_s": {
+      "median": 27880.5564,
+      "metric": "ops/s"
+    },
+    "readiness_evaluate_ops_s": {
+      "median": 220.1613,
+      "metric": "ops/s"
+    },
+    "nested_txn_marginal_us": {
+      "median": 52.2289,
+      "metric": "us"
+    },
+    "batch_over_autocommit_ratio": {
+      "median": 0.015,
+      "metric": "ratio"
+    },
+    "changes_recent_100_ms": {
+      "median": 1.1291,
+      "metric": "ms"
+    }
+  }
+}

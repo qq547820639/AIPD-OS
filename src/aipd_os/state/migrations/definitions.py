@@ -38,6 +38,8 @@ from .helpers import (
     _unseed_legacy_sequences,
     _v16_downgrade,
     _v16_upgrade_outbox,
+    _v17_drop_perf_indexes,
+    _v17_perf_indexes,
 )
 from .schema import V1_INITIAL_SCHEMA
 
@@ -521,6 +523,19 @@ MIGRATIONS: list[dict[str, Any]] = [
         ],
         "down": [
             _v16_downgrade,
+        ],
+    },
+    # v17: P2-M10 性能验证实测出的两条热读路径索引
+    #   changes(tenant,project,created_at) — list_changes 此前全表 SCAN + 临时排序
+    #   outbox_events(available_at) partial — claim 每批都要排序全部候选
+    {
+        "version": 17,
+        "name": "hot_read_perf_indexes",
+        "up": [
+            _v17_perf_indexes,
+        ],
+        "down": [
+            _v17_drop_perf_indexes,
         ],
     },
 ]

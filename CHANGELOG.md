@@ -78,6 +78,52 @@
     `aipd_store` 自检切换 AIPDStateDB、一次性补丁脚本归档、SKILL/state_service
     文档刷新、CI 增加 lint（ruff/mypy）job。
 
+- **P2 状态归属收敛（2026-08-24 ~ 2026-09-24，M1–M10 全部关闭）**：
+  - **M1–M9**：统一状态基础设施（`state/connection.py` ConnectionFactory +
+    `state/transaction.py` + 8 类错误语义）、ClosureStore/ExecutionRuns 的
+    tenant+project scope（含 10 条跨租户负例）、5 个 domain store 迁移到
+    工厂、Manual JSON 收敛进 canonical DB（`ManualStateRepository`）、
+    Outbox + External Operation ledger（v14，含 lease 与 dispatcher runtime）、
+    统一 stale 传播服务（v15/M6）、Readiness snapshot + ruleset 版本化（M7）、
+    migrations 模块化（schema/helpers/definitions/runner）、Issue 乐观并发（M9）；
+  - **M8 收口修复（F8）**：模块化留下 `definitions → helpers → runner →
+    definitions` 导入环（helpers 以函数内 import 取 `runner._exec_script`），
+    工具下沉为叶子模块 `migrations/sqlsplit.py` 后断环；
+  - **F5（Critical）重入事务自死锁**：`ConnectionFactory.transaction()`
+    每次另开连接并 `BEGIN IMMEDIATE`，同线程嵌套时与自己的写锁互等，
+    `busy_timeout` 到点抛 `database is locked`——`run_supervisor` 的 execute
+    阶段因此整体退化为 `internal_rework`（`add_lineage → project_id → connect`
+    即触发）。改为按 **(解析后库路径, 线程)** 登记活动事务：重入复用同一连接
+    并以 `SAVEPOINT` 提供内层原子性，与 v5.9.1 起 `AIPDStateDB` 已在用的形状收敛
+    一致。新增 `tests/test_connection_reentrancy.py`（8 例，反向验证：旧实现下
+    6 例失败、耗时 31.8s 全是等锁）；
+  - **F6 stale 传播写坏列**：`_mark_downstream_stale` 的 cost_snapshot 分支
+    向 `changes` 写 `entity_type/entity_id/change_type/change_data`——这些列
+    不存在，一旦依赖图非空即 `OperationalError`。原有 P2-M6 用例全部跑在
+    「零依赖」图上，因此从未执行到该分支。修列名并补齐 3 条非空依赖路径用例
+    （BOM→cost 写 changes、CAD→validation_result 标 stale 且不改 PASS 语义、
+    零依赖合法路径）；
+  - **F7 热读路径缺索引 → migration v17**：`EXPLAIN QUERY PLAN` 显示
+    `changes` 按 (tenant, project) 取最近 N 条是全表 `SCAN` + 临时 B-tree，
+    outbox `claim_available` 对全量候选做 `ORDER BY available_at` 排序。
+    新增 `idx_changes_scope_time` 与 partial 索引 `idx_outbox_due`；
+    实测（同机 A/B）审计取最近 100 条 5.57ms → 1.36ms，claim 批处理
+    2.62ms → 2.32ms（纯候选读取 0.29ms → 0.01ms，排序项随积压消失），
+    outbox 追加写放大不可测出（129.6k vs 139.7k ops/s，落在噪声内）；
+  - **M10 性能验证量具**：`scripts/state_perf_gate.py`（12 场景 × N 轮，
+    min/median/mean/max/stdev，与 `docs/audit/state_perf_baseline.json` 比**相对**
+    劣化，另含轮内比值门禁「单事务批处理 ≥3x 逐条自提交」；实测批处理
+    18.4k–22.2k ops/s vs 逐条 277–300 ops/s）+
+    `tests/test_state_perf_gates.py`（机器无关硬门禁：查询计划、连接复用计数、
+    claim 互斥、传播语句数线性度）；量具本身做过两组反向验证（人为收紧基线、
+    真实删除 v17 索引）均能判红；
+  - **文档诚实性修正**：`state_infrastructure.md` 原记载的
+    `PRAGMA timeout = 10000` 在 SQLite 中不存在（实测被静默忽略），已删除；
+    连接等待改记为 `sqlite3.connect(timeout=...)`；
+  - 收口前基线为 **6 failed / 1262 passed**（HEAD 1d0f84f，工作区干净），
+    收口后全量回归 0 失败；详见
+    `docs/audit/P2_M10_STATE_PERF_CLOSURE_2026-09-24.md`。
+
 ## [5.6.0] — 2026-08-06
 
 AIPD-OS v5.6「Release Candidate 产品化收口版」—— 从“可靠的 Beta 编排内核”推进为“可复现、可实际操作、对产品所有者友好的 Release Candidate”。

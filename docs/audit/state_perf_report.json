@@ -1,0 +1,138 @@
+{
+  "engine": "scripts/state_perf_gate.py",
+  "python": "3.9.6",
+  "sqlite": "3.54.0",
+  "rounds": 7,
+  "scenarios": {
+    "migrate_cold_ms": {
+      "kind": "absolute",
+      "metric": "ms",
+      "rounds": 7,
+      "min": 26.9701,
+      "median": 27.8881,
+      "mean": 28.3885,
+      "max": 31.241,
+      "stdev": 1.2674
+    },
+    "migrate_noop_ms": {
+      "kind": "absolute",
+      "metric": "ms",
+      "rounds": 7,
+      "min": 0.9149,
+      "median": 1.1107,
+      "mean": 1.1458,
+      "max": 1.7278,
+      "stdev": 0.259
+    },
+    "connect_overhead_us": {
+      "kind": "absolute",
+      "metric": "us",
+      "rounds": 7,
+      "min": 194.0404,
+      "median": 224.325,
+      "mean": 223.3831,
+      "max": 241.8983,
+      "stdev": 15.5346
+    },
+    "fact_batched_ops_s": {
+      "kind": "absolute",
+      "metric": "ops/s",
+      "rounds": 7,
+      "min": 11678.8608,
+      "median": 18424.6891,
+      "mean": 16633.2984,
+      "max": 19634.9933,
+      "stdev": 3043.7568
+    },
+    "fact_autocommit_ops_s": {
+      "kind": "absolute",
+      "metric": "ops/s",
+      "rounds": 7,
+      "min": 186.0217,
+      "median": 277.2147,
+      "mean": 262.8812,
+      "max": 310.5037,
+      "stdev": 38.1189
+    },
+    "outbox_append_ops_s": {
+      "kind": "absolute",
+      "metric": "ops/s",
+      "rounds": 7,
+      "min": 76281.776,
+      "median": 81639.3175,
+      "mean": 83300.4816,
+      "max": 98067.6553,
+      "stdev": 7192.592
+    },
+    "outbox_claim_batch_ms": {
+      "kind": "absolute",
+      "metric": "ms",
+      "rounds": 7,
+      "min": 1.8637,
+      "median": 2.1283,
+      "mean": 2.2573,
+      "max": 2.582,
+      "stdev": 0.2613
+    },
+    "changes_recent_100_ms": {
+      "kind": "absolute",
+      "metric": "ms",
+      "rounds": 7,
+      "min": 0.9373,
+      "median": 1.1291,
+      "mean": 1.1715,
+      "max": 1.4905,
+      "stdev": 0.211
+    },
+    "stale_fanout_500_ms": {
+      "kind": "absolute",
+      "metric": "ms",
+      "rounds": 7,
+      "min": 8.4987,
+      "median": 8.7675,
+      "mean": 8.9881,
+      "max": 9.6565,
+      "stdev": 0.4564
+    },
+    "snapshot_create_ops_s": {
+      "kind": "absolute",
+      "metric": "ops/s",
+      "rounds": 7,
+      "min": 25460.1379,
+      "median": 27880.5564,
+      "mean": 27767.9253,
+      "max": 30893.198,
+      "stdev": 1860.5228
+    },
+    "readiness_evaluate_ops_s": {
+      "kind": "absolute",
+      "metric": "ops/s",
+      "rounds": 7,
+      "min": 199.4921,
+      "median": 220.1613,
+      "mean": 233.376,
+      "max": 299.6588,
+      "stdev": 33.1322
+    },
+    "nested_txn_marginal_us": {
+      "kind": "absolute",
+      "metric": "us",
+      "rounds": 7,
+      "min": 43.6677,
+      "median": 52.2289,
+      "mean": 50.6755,
+      "max": 54.1523,
+      "stdev": 3.6638
+    },
+    "batch_over_autocommit_ratio": {
+      "kind": "comparative",
+      "metric": "ratio",
+      "rounds": 7,
+      "min": 0.0143,
+      "median": 0.015,
+      "mean": 0.0156,
+      "max": 0.0181,
+      "stdev": 0.0016
+    }
+  }
+}

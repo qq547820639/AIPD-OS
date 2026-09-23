@@ -198,7 +198,7 @@ def test_agent_yaml_boundary_consistent():
     当 project_boundary.md 声明 AIPD-OS 不是主 agent-facing entry 时，
     agent metadata 不得重新声明相反行为。
     """
-    import yaml  # type: ignore[import-not-found]
+    import yaml  # type: ignore[import-not-found, import-untyped]
 
     boundary = (REPO_ROOT / "docs" / "architecture" / "project_boundary.md").read_text(
         encoding="utf-8")
@@ -360,7 +360,7 @@ def test_doc_architecture_matches_executable_metadata():
     boundary = _doc("architecture/project_boundary.md")
     assert "执行后端" in boundary or "execution backend" in boundary.lower()
     # openai.yaml 不得声明旗舰 agent
-    import yaml  # type: ignore[import-not-found]
+    import yaml  # type: ignore[import-not-found, import-untyped]
     agent_path = REPO_ROOT / "agents" / "openai.yaml"
     if agent_path.is_file():
         with open(agent_path, encoding="utf-8") as fh:

@@ -264,8 +264,9 @@ class ReadinessService:
                     input_fingerprint=fingerprint,
                 )
         except Exception:
-            # Snapshot persistence should never break readiness evaluation
-            pass
+            # 快照持久化失败不能把已算出的 readiness 结论变成异常——
+            # 但必须可观测：静默丢快照会让「有快照可追溯」这一承诺失真。
+            logger.warning("readiness_snapshot_persist_failed", exc_info=True)
 
     def _eval_product_definition(self, complete: bool | None) -> DimensionStatus:
         if complete is None:

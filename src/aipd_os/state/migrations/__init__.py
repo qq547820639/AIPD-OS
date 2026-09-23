@@ -8,19 +8,20 @@
 - ``schema.py``       — V1 冻结文本 + SHA-256 校验
 - ``helpers.py``      — 迁移步骤中使用的 callable 辅助函数
 - ``definitions.py``  — MIGRATIONS 列表（每版本 up/down 定义）
+- ``sqlsplit.py``     — 语句拆分/执行工具（叶子模块，打断 definitions→helpers→runner 环）
 - ``runner.py``       — migrate / rollback / current_version / applied_versions
 """
 from __future__ import annotations
 
 from .definitions import MIGRATIONS
 from .runner import (
-    _split_statements,
     applied_versions,
     current_version,
     migrate,
     rollback,
 )
 from .schema import V1_FROZEN_SHA256, V1_INITIAL_SCHEMA, _v1_frozen_sha256
+from .sqlsplit import exec_script, split_statements
 
 __all__ = [
     "MIGRATIONS",
@@ -31,5 +32,6 @@ __all__ = [
     "V1_INITIAL_SCHEMA",
     "V1_FROZEN_SHA256",
     "_v1_frozen_sha256",
-    "_split_statements",
+    "split_statements",
+    "exec_script",
 ]

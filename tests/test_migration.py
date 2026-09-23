@@ -121,10 +121,10 @@ def test_migrate_idempotent_and_repeatable(tmp_path):
 
 
 def test_split_statements_handles_semicolon_in_literal():
-    from aipd_os.state.migrations import _split_statements
+    from aipd_os.state.migrations.sqlsplit import split_statements
 
     script = "CREATE TABLE t (a TEXT); INSERT INTO t VALUES ('x;y');"
-    stmts = _split_statements(script)
+    stmts = split_statements(script)
     assert len(stmts) == 2
     assert stmts[0].startswith("CREATE TABLE")
     assert "x;y" in stmts[1]

@@ -65,9 +65,9 @@ def _make_claim_confidence_nullable(conn: sqlite3.Connection) -> None:
     legacy_unscored 处理为 None，行为不变）。SQLite 无 ALTER COLUMN，
     重建表保持 PK 与约束。
     """
-    from .runner import _exec_script
+    from .sqlsplit import exec_script
 
-    _exec_script(conn, """
+    exec_script(conn, """
     CREATE TABLE claims_new (
       claim_id TEXT NOT NULL, project_id TEXT NOT NULL,
       tenant_id TEXT NOT NULL DEFAULT 'default',
@@ -91,9 +91,9 @@ def _make_relation_strength_nullable(conn: sqlite3.Connection) -> None:
 
     旧 0.5 值保守保留（legacy_unscored 语义，模型层读取时映射 None）。
     """
-    from .runner import _exec_script
+    from .sqlsplit import exec_script
 
-    _exec_script(conn, """
+    exec_script(conn, """
     CREATE TABLE claim_evidence_relations_new (
       relation_id TEXT NOT NULL, project_id TEXT NOT NULL,
       tenant_id TEXT NOT NULL DEFAULT 'default',
@@ -119,9 +119,9 @@ def _make_relation_strength_nullable(conn: sqlite3.Connection) -> None:
 
 def _restore_score_defaults(conn: sqlite3.Connection) -> None:
     """v9 down：恢复 NOT NULL DEFAULT 0.5（NULL → 0.5 legacy 哨兵）。"""
-    from .runner import _exec_script
+    from .sqlsplit import exec_script
 
-    _exec_script(conn, """
+    exec_script(conn, """
     CREATE TABLE claims_old (
       claim_id TEXT NOT NULL, project_id TEXT NOT NULL,
       tenant_id TEXT NOT NULL DEFAULT 'default',
@@ -164,9 +164,9 @@ def _restore_score_defaults(conn: sqlite3.Connection) -> None:
 def _seed_legacy_sequences(conn: sqlite3.Connection) -> None:
     """v9 up：为 legacy scan-max 对象（fact/decision/deliverable/risk）seed
     id_sequences（从存量 display id 推导 next_val，防新行与存量冲突）。"""
-    from .runner import _exec_script
+    from .sqlsplit import exec_script
 
-    _exec_script(conn, """
+    exec_script(conn, """
     INSERT OR IGNORE INTO id_sequences(name, next_val) SELECT 'fact',
       COALESCE(MAX(CAST(substr(fact_id, 3) AS INTEGER)), 0)
       FROM facts WHERE fact_id LIKE 'F-%';
@@ -184,9 +184,9 @@ def _seed_legacy_sequences(conn: sqlite3.Connection) -> None:
 
 def _unseed_legacy_sequences(conn: sqlite3.Connection) -> None:
     """v9 down：移除 v9 新增的 sequence seed。"""
-    from .runner import _exec_script
+    from .sqlsplit import exec_script
 
-    _exec_script(conn,
+    exec_script(conn,
         "DELETE FROM id_sequences WHERE name IN "
         "('fact','decision','deliverable','risk');"
     )
@@ -512,3 +512,26 @@ def _v16_downgrade(conn: sqlite3.Connection) -> None:
         "DROP INDEX IF EXISTS idx_ext_ops_idempotency_unique")
     # Note: SQLite cannot DROP COLUMN in older versions.
     # claimed_by and claim_expires_at will remain as ghost columns.
+
+
+def _v17_perf_indexes(conn: sqlite3.Connection) -> None:
+    """v17 up：补齐 P2-M10 实测暴露的两条热读路径索引。
+
+    - ``changes`` 只有 PK，``list_changes`` 的
+      ``WHERE tenant_id=? AND project_id=? ORDER BY created_at``
+      在全表规模上是 SCAN + 临时 B-tree 排序；
+    - ``outbox_events`` 已有的 ``idx_outbox_claim`` / ``idx_outbox_available``
+      都服务不了 claim 查询的 ``ORDER BY available_at LIMIT n``
+      （前者无 available_at，后者最左列未绑定），每批 claim 都要排序全量候选。
+    """
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_changes_scope_time "
+        "ON changes(tenant_id, project_id, created_at)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_outbox_due "
+        "ON outbox_events(available_at) WHERE completed_at IS NULL")
+
+
+def _v17_drop_perf_indexes(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_changes_scope_time")
+    conn.execute("DROP INDEX IF EXISTS idx_outbox_due")

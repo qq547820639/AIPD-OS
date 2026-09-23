@@ -201,12 +201,12 @@ class StalePropagationService:
                     elif target_type == "cost_snapshot":
                         conn.execute(
                             "INSERT OR IGNORE INTO changes"
-                            "(tenant_id, project_id, entity_type, entity_id, "
-                            "change_type, change_data, created_at) "
-                            "VALUES(?,?,?,?,?,?,?)",
-                            (tenant_id, project_id, target_type,
+                            "(project_id, tenant_id, object_type, object_id, "
+                            "action, after_json, reason, created_at) "
+                            "VALUES(?,?,?,?,?,?,?,?)",
+                            (project_id, tenant_id, target_type,
                              dep["target_id"], "stale",
-                             json.dumps({"reason": reason}), now))
+                             json.dumps({"reason": reason}), reason, now))
                         affected.append({
                             "target_type": target_type,
                             "target_id": dep["target_id"],
