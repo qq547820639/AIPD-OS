@@ -10,7 +10,7 @@
 |---|---|
 | 起点全量回归 | **6 failed / 1262 passed / 3 skipped**（178.48s） |
 | 收口全量回归 | **1289 passed / 0 failed / 3 skipped**（166.41s，清单重算后复跑） |
-| release-ready 门禁 | 8 项中 **7 绿 1 时序红**（`workspace_clean`，见 §8.5）；CVE 项在补上 `pip-audit` 后为 `no unacknowledged CVE` |
+| release-ready 门禁 | **8/8 PASS**（exit 0；CVE 项需 `pip-audit` 在 PATH 上，见 §8.4/§8.5）。注意其中 3 项描述的是 v5.6.0 那次发布的 bundle，不是当前提交，见 §8.5 注意事项 |
 | `audit_repo --strict` | 哈希两项已消除；`source_commit == HEAD` 这一条自 v5.6.0 发布起对**任意**后续提交都必红（已证实为既有状态，未擅自放宽，见 §8.6） |
 | ruff（CI 口径 `src tests state_service`） | 0 错误 |
 | mypy（CI 口径，356 文件） | 0 错误 |
@@ -236,11 +236,21 @@ PASS no_secrets                 no secret patterns found
 PASS no_unacknowledged_cve      pip-audit: no unacknowledged CVE
 ```
 
-即 **8 项中 7 项绿**，唯一红项是「工作区不干净」这一时序性原因：
-`workspace_clean` 只能在「证据链最后一次提交」之后成立——把门禁输出再写回
-受 `SOURCE_MANIFEST` 覆盖的文件，又会脏。因此本轮把它作为发布证据提交的
-收尾动作：以 `--release-ready` 在上述命令下复跑一次，结果记录在运行者的
-终端与 `--json-out` 指向的仓外文件里，不再回写仓库。
+即 **8 项中 7 项绿**，唯一红项是「工作区不干净」。这条不是循环死结：
+`workspace_clean` 判的是「工作树有无未提交改动」，所以只要把文档与清单一起
+提交，它就重新成立。把上面的改动提交后（`e9206bf`）复跑同一条命令：
+
+```
+PASS workspace_clean            clean
+PASS commit_matches_head        provenance source_commit 与 tag 指向同一提交
+PASS source_manifest_zero_diff  zero diff
+PASS bundle_manifest_zero_diff  zero diff
+PASS test_numbers_from_report   passed=1096 failed=0 total=1099 source_commit=a660405…
+PASS signature_verifiable       Ed25519 signature verified
+PASS no_secrets                 no secret patterns found
+PASS no_unacknowledged_cve      pip-audit: no unacknowledged CVE
+→ 8/8，exit 0
+```
 
 **两条必须一起读的注意事项**（否则这串绿会被误读）：
 
