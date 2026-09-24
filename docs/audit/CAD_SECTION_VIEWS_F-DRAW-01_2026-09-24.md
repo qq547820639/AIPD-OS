@@ -160,11 +160,29 @@ TMP=$(mktemp -d) && PYTHONPATH=src .venv/bin/aipd drawing generate --out "$TMP/s
 
 ## 八、收尾读数
 
+- 提交：实现 `b8ef3d7`（CAD: cut real section views and fill them with DXF HATCH entities）、
+  产物重锚 `96efa03`（Release artifacts: re-anchor manifests after the section-view slice）；
+  本节所在的 docs 提交是本轮第三个提交。
+
 - `tests/test_cad_section_views.py`：**12 passed**；`tests/test_cad_gdt_frames.py`：**12 passed**；
 - 全量：`1538 passed / 2 failed / 3 skipped`，两条失败**只**是
   `tests/test_packaging.py::test_release_manifest_hashes_match_disk` 与
   `::test_source_manifest_hashes_match_disk`——本轮改了 `src/`，清单哈希按惯例在收尾时重算（见下），
   不是回归；
-- 收尾后：`SOURCE_MANIFEST.json` / `PROVENANCE` 重锚、`production_release_gate --release-ready --tag v5.6.0`、
-  `skill_quality_audit`、`state_perf_gate` 读数与提交号记在 `current_status` / 本轮提交信息里。
+- 收尾后（同一轮内实测）：清单重生成 `RELEASE_MANIFEST.json` **584 个文件**（+1 = 新增的
+  `tests/test_cad_section_views.py`），`release_evidence.py --bundle releases/aipd-os-5.6.0.zip
+  --test-report docs/audit/pytest-report-v5.6.0.json
+  --source-commit a66040520139405095648461f7144d4f00629924` 重写
+  `SOURCE_MANIFEST / BUNDLE_MANIFEST / PROVENANCE`（bundle 未重建、未重签、tag 未动）；
+  重跑全量 **1540 passed / 0 failed / 3 skipped**；`production_release_gate --release-ready --tag v5.6.0`
+  **8/8 通过**（`release_ready: true`，报告读数 `passed=1096 failed=0 total=1099
+  source_commit=a660405…`，Ed25519 验签通过，pip-audit 无未承认 CVE）；
+  `skill_quality_audit` **0 警告 0 失败**；`state_perf_gate` **PASS**
+  （空闲单跑；本机读数与其他会话并发时绝对值可差数倍，不作跨机契约）。
+- 一次踩坑记录（值得写下来）：门禁的 CVE 检查用 `shutil.which('pip-audit')` 找可执行文件，
+  在本会话这种没激活 venv 的最小 PATH 下 `.venv/bin/pip-audit` 看不见，于是按 fail-closed
+  判红（`pip-audit not available; cannot verify no_unacknowledged_cve`）——**这是判据在正常工作，
+  不是回归**；跑门禁要带 `PATH="$PWD/.venv/bin:$PATH"`。
 - 未做且有意不做：不 `git push`、不动 tag、不重建 bundle、不重签 Ed25519、不放宽任何共享门禁。
+  `audit_repo --strict` 仍按设计判红（锚点在 tag 上，不在 HEAD），留给属主的真实发布闭合。
+
