@@ -70,6 +70,12 @@ class ValidationDataAdapter(ToolAdapter):
 
         analysis = analyze_stage(all_records, stage)
         correction_tasks = create_correction_tasks(analysis, stage)
+        # 这里的 facts/bom 来自调用方 payload（不是状态库），因此 propagated_stale
+        # 只是"调用方自带数据的回声"。真正会改库的影响传播在
+        # aipd_os.supply_chain.impact.propagate_lab_impact，由 aipd validation import /
+        # aipd industrialize --lab-data 两条可达命令驱动（F-SUPPLY-03）。
+        # 本适配器目前未被产品侧排产，见 tests/test_lab_impact_propagation.py
+        # 的 UNREACHABLE_ADAPTERS 声明表。
         facts = input.get("facts") or {}
         bom = input.get("bom") or []
         affected_keys = [it["test_item"] for it in analysis.get("failing_items", [])]

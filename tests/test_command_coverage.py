@@ -100,3 +100,50 @@ def test_command_coverage_report() -> None:
     print(f"已声明但未测试（{len(declared_untested)}）：{declared_untested}")
     print(f"已注册但未测试（{len(registered_untested)}）：{registered_untested}")
     print(f"已注册但未声明（{len(registered_undeclared)}）：{registered_undeclared}")
+
+
+# --------------------------------------------------------------------------
+# F-CLI-01：真正的产品面是 argparse 解析器，不是 COMMAND_FUNCS 这张表
+# --------------------------------------------------------------------------
+#
+# 上面三条一致性检查比的是「契约 ↔ COMMAND_FUNCS ↔ 文档」——三份内部副本互相对表。
+# 实测：`validation plan/list/show/import`、`issue list/show/resolve`、`readiness check`
+# 八条命令在契约里是 PUBLIC、在 SKILL.md 里被逐条声明、函数实现与测试也都在，
+# 但 `build_parser()` 从来没有为它们建 subparser ⇒ `aipd validation import` 直接
+# "invalid choice"。也就是说这三份副本可以同时对表而产品面上根本不存在这条命令。
+# 因此这里把**解析器对象本身**当成权威读数来核对。
+
+import argparse  # noqa: E402
+
+from aipd_os.cli.main import build_parser  # noqa: E402
+
+
+def _parseable_commands() -> set[str]:
+    """从真实 parser 对象里解析出所有可输入的 command / command + verb。"""
+    parser = build_parser()
+    subs = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]
+    assert subs, "解析器没有子命令动作 ⇒ 本探针在空转"
+    top = subs[0]
+    out: set[str] = set(top.choices)
+    for name, sub in top.choices.items():
+        for action in sub._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                out.update(f"{name} {verb}" for verb in action.choices)
+    return out
+
+
+def test_every_registered_command_is_parseable() -> None:
+    """注册进 COMMAND_FUNCS 的每条命令都必须真能被 argparse 接受。"""
+    parseable = _parseable_commands()
+    missing = sorted(set(COMMAND_FUNCS) - parseable - {"usage"})
+    assert not missing, (
+        f"这些命令已登记分发但 CLI 解析器没有接线（用户输入即 invalid choice）："
+        f"{missing}")
+
+
+def test_parser_probe_can_fire() -> None:
+    """注入反证：解析器面必须能判红（探针读到 0 条或把已接线命令读成缺失都算失效）。"""
+    parseable = _parseable_commands()
+    assert {"bom add", "quote apply", "outbox drain"} <= parseable, "正向对照失配"
+    assert "validation import" in parseable, (
+        "validation import 未接线 ⇒ 上一条测试应当判红，而不是被跳过")

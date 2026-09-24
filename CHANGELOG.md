@@ -156,6 +156,23 @@
   接线后自己又量出一处（**F-SUPPLY-02**）：同文件二次 `quote apply` 崩在 `UNIQUE constraint failed: facts…key, facts.version`——版本号取自进程内注册表（每次从 v1 起）而事实按项目持久；state.db 与 bom.db 之间没有跨库原子性，「重放即修复」因此不是便利而是唯一收口手段。现版本号以库为准：内容相同即复用既有那版（零新事实、零改价），改价才出新版本且旧版 `V` 事实随即转 `R`。
   16 条新用例（全部走 `main(argv)` 真实入口，不手搓 args 副本）+ 4 组变异对照开火。
   证据与未证范围见 `docs/audit/QUOTE_BOM_COST_F-SUPPLY-01_2026-09-24.md`；
+- **v5.10 修复 F-SUPPLY-03 / F-CLI-01：声明的影响传播不可达，且 8 条 PUBLIC 命令根本没接线**：
+  `industrialize.physical_writeback` 自称「测试结果 → 事实主表更新 → BOM/CAD 影响传播」
+  且 `current_limitation=None`，实测其唯一调用点把 `input["facts"]`/`input["bom"]`
+  （调用方自带、实际不传）喂给 `propagate_impact`，而该适配器 id
+  `validation.import-evt-dvt-pvt` 在全仓（含测试）除自身外**零引用**；产品侧唯一的
+  capability 排产点 `supervisor/idea_capabilities.py` 只排 `idea.*`/`product.*`。
+  顺着这条线量出更大一处：**`validation plan/list/show/import`、`issue list/show/resolve`、
+  `readiness check` 这 8 条命令在契约、`COMMAND_FUNCS`、SKILL.md 三处都是 PUBLIC，
+  但 CLI 解析器从未为它们建 subparser**——`aipd validation import` 在终端上是
+  `invalid choice`。既有的"命令覆盖率"检查比的是三份内部副本互相对表，谁也不读解析器。
+  现补 `supply_chain/impact.py`：失败项 → 归一化全等命中 BOM 行 → 关联 deliverable
+  按 CAS 置 `stale`（`released`/`archived` 不回溯改写）→ 写 `impact.<项>` 事实（status P），
+  由 `aipd validation import` 与 `aipd industrialize --lab-data` 两条真命令驱动，
+  未收口即 exit 4；补 8 条命令的 parser 接线与 `industrialize --project`。
+  17 条新用例（`--collect-only` 实测：11+4+2），变异对照 M1/M2/M3 分别判红 4/1/2 条——
+  其中 M1 还暴露了我自己一条只断言"命令打印了什么"的弱用例，已按"必须读库"补强。
+  证据与未证范围见 `docs/audit/LAB_IMPACT_PROPAGATION_F-SUPPLY-03_2026-09-24.md`；
 
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），

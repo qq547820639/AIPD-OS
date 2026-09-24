@@ -71,6 +71,8 @@ class IngestionResult:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     idempotent_skips: int = 0
+    #: 本次导入中判失败的 test_item（去重、保持出现顺序），供影响传播使用
+    failing_items: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +229,7 @@ class IngestionService:
         idempotent_skips = 0
         errors: list[str] = []
         warnings: list[str] = []
+        failing_items: list[str] = []
 
         # Group by test_item
         by_item: dict[str, list[LabRecordDTO]] = {}
@@ -282,6 +285,8 @@ class IngestionService:
 
                 # If FAIL, create issue (idempotent)
                 if result_status == RESULT_FAIL:
+                    if test_item not in failing_items:
+                        failing_items.append(test_item)
                     self._issues.create_issue(
                         tenant_id, project_id,
                         title=f"Validation failure: {test_item} ({stage.upper()})",
@@ -307,6 +312,7 @@ class IngestionService:
             errors=errors,
             warnings=warnings,
             idempotent_skips=idempotent_skips,
+            failing_items=failing_items,
         )
 
     def _find_or_create_test(
@@ -352,6 +358,9 @@ class IngestionService:
             total.errors.extend(result.errors)
             total.warnings.extend(result.warnings)
             total.idempotent_skips += result.idempotent_skips
+            for fi in result.failing_items:
+                if fi not in total.failing_items:
+                    total.failing_items.append(fi)
 
         return total
 

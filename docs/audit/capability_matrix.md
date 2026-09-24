@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-24T17:59:57`
+- 生成时间：`2026-09-24T18:57:51`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`1c8a50565848464226da97be83f5c04eefc38ea7`
+- 默认分支：`main`；HEAD：`2fbe0a9966f900daa1a607bcba67c7e20fce73aa`
 - 版本：`5.6.0`
 - 能力总数：`78`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -11,8 +11,8 @@
 
 | 分类 | 数量 | 说明 |
 | --- | --- | --- |
-| `fully_implemented` | 36 | 完整实现（有真实运行工件与测试证据） |
-| `partially_implemented` | 29 | 部分实现（核心路径可用，边界/证据不全） |
+| `fully_implemented` | 35 | 完整实现（有真实运行工件与测试证据） |
+| `partially_implemented` | 30 | 部分实现（核心路径可用，边界/证据不全） |
 | `protocol_only` | 0 | 仅协议/接口（无真实执行） |
 | `template_only` | 0 | 仅模板/示例（无真实执行） |
 | `external_dependency` | 13 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
@@ -98,10 +98,10 @@
 | 报价解析 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/quotes.py | aipd_os.supply_chain.quotes.normalize_quote | `aipd industrialize --quote <file>` | tests/test_supply_chain.py | 附件格式解析范围有限；解析本身不动钱，落到 BOM 由 industrialize.quote_to_bom_cost 承担 |
 | 报价→BOM→成本闭环 | `partially_implemented` | references/tool-and-physical-boundaries.md; docs/audit/QUOTE_BOM_COST_F-SUPPLY-01_2026-09-24.md | src/aipd_os/supply_chain/apply.py; src/aipd_os/cli/commands_supply.py | aipd_os.supply_chain.apply.apply_quotes_to_bom | `aipd quote apply --db <state.db> --file <quotes.csv>` | tests/test_quote_to_cost_chain.py | 报价文件表头无币种列，币种必须由 --currency 显式声明并逐行核对；draft/superseded 报价与作废行一律拒绝改价；跨币种折算未实现 |
 | 供应商资质 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/suppliers.py | aipd_os.supply_chain.suppliers.SupplierRegistry | `aipd industrialize` | tests/test_supply_chain.py | 证书真实性需人工/外部核验 |
-| EVT/DVT/PVT数据导入 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/lab.py; tool_adapters/evt_dvt_pvt_adapter.py | aipd_os.supply_chain.lab.import_lab_csv | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py | 导入格式范围有限 |
+| EVT/DVT/PVT数据导入 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/lab.py; src/aipd_os/validation/ingestion.py | aipd_os.supply_chain.lab.import_lab_csv | `aipd validation import --db <state.db> --project <p> --stage dvt --file <csv>（或 aipd industrialize --lab-data <csv>）` | tests/test_supply_chain.py; tests/test_validation_ingestion.py | 导入格式范围有限（PDF/DOCX 报告走 external_blocked 不虚构）；tool_adapters 里的 ValidationDataAdapter 未被产品侧排产，产品面是这两条命令 |
 | 测试失败根因 | `fully_implemented` | references/end-to-end-closure-model.md | src/aipd_os/supply_chain/analysis.py | aipd_os.supply_chain.analysis.analyze_stage | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py |  |
 | 纠正任务 | `fully_implemented` | references/end-to-end-closure-model.md | src/aipd_os/supply_chain/analysis.py | aipd_os.supply_chain.analysis.create_correction_tasks | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py |  |
-| 实体数据回写 | `fully_implemented` | references/end-to-end-closure-model.md | src/aipd_os/supply_chain/analysis.py | aipd_os.supply_chain.analysis.propagate_impact | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py |  |
+| 实体数据回写 | `partially_implemented` | references/end-to-end-closure-model.md; docs/audit/LAB_IMPACT_PROPAGATION_F-SUPPLY-03_2026-09-24.md | src/aipd_os/supply_chain/impact.py; src/aipd_os/cli/commands_validation.py | aipd_os.supply_chain.impact.propagate_lab_impact | `aipd validation import --db <state.db> --project <p> --stage dvt --file <lab.csv>` | tests/test_lab_impact_propagation.py | 匹配按 BOM 行 item 归一化全等，不做子串或父子链推断；未关联 deliverable 的行只如实报告 unresolved（不代造制品），此时命令 exit 4 不静默通过；released/archived 制品不被回溯改写，返工范围由人决定；product_truth 的 PropagationEngine 仍是 0 调用点，本条走的是 deliverable+fact 这条已接线的路 |
 | 认证状态 | `partially_implemented` | references/quality-and-claim-governance.md | src/aipd_os/supply_chain/certification.py | aipd_os.supply_chain.certification.CertificationRegistry | `aipd industrialize` | tests/test_certification.py | 状态机确定性实现，证书真实性仍需外部权威核验 |
 
 ## 跨会话与用户体验

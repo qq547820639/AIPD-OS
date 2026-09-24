@@ -128,7 +128,7 @@ def cmd_validation_import(args: Any) -> int:
         plan_id=getattr(args, "plan_id", "") or "",
     )
 
-    output = {
+    output: dict[str, Any] = {
         "command": "validation import", "ok": len(result.errors) == 0,
         "result": {
             "stage": result.stage,
@@ -137,10 +137,27 @@ def cmd_validation_import(args: Any) -> int:
             "runs_created": result.runs_created,
             "results_created": result.results_created,
             "issues_created": result.issues_created,
+            "failing_items": list(result.failing_items),
             "errors": result.errors,
             "warnings": result.warnings,
         },
+        "impact": None,
     }
+
+    # 影响传播（F-SUPPLY-03）：失败项 → BOM 行 → 关联制品 stale → impact 事实。
+    # 没有 BOM 可查时（纯导入用法）如实说明"未传播"，不假装这条链走完了。
+    if result.failing_items:
+        from aipd_os.bom import BomStore
+        from aipd_os.supply_chain.impact import propagate_lab_impact
+
+        from .commands_manufacturing import _bom_store_path
+
+        report = propagate_lab_impact(
+            db, BomStore(str(_bom_store_path(args.db))), args.tenant or "default",
+            args.project, result.failing_items,
+            source=f"validation import:{result.stage}")
+        output["impact"] = report.to_dict()
+        output["ok"] = output["ok"] and report.clean
 
     def prose():
         print(f"导入完成：{result.records_imported} 条记录")
@@ -148,13 +165,24 @@ def cmd_validation_import(args: Any) -> int:
         print(f"  执行创建：{result.runs_created}")
         print(f"  结果创建：{result.results_created}")
         print(f"  Issue 创建：{result.issues_created}")
+        if result.failing_items:
+            print(f"  失败项：{'，'.join(result.failing_items)}")
+        if output["impact"]:
+            imp = output["impact"]
+            print(f"  影响传播：受影响 BOM 行 {len(imp['affected_lines'])}，"
+                  f"置 stale 制品 {len(imp['stale_deliverables'])}，"
+                  f"关联不到制品的行 {len(imp['unresolved_lines'])}")
+            if imp["unresolved_lines"]:
+                print("  ⇒ 有受影响行挂不到制品上（补 --deliverable 后重跑即可收口）")
         if result.errors:
             print(f"  错误：{result.errors}")
         if result.warnings:
             print(f"  警告：{result.warnings}")
 
     _emit(args, output, prose)
-    return 0 if len(result.errors) == 0 else 1
+    if len(result.errors) > 0:
+        return 1
+    return 4 if (output["impact"] and not output["impact"]["clean"]) else 0
 
 
 # --------------------------------------------------------------------------

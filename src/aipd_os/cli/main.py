@@ -248,6 +248,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("industrialize", help="供应链 + 验证执行（报价登记/阶段分析/纠偏任务；无数据则如实报告不虚构）。"  # noqa: E501
                                              " Example: aipd industrialize --db state.db --quote quotes.csv --stage dvt --lab-data lab.csv")  # noqa: E501
     p.add_argument("--db")
+    p.add_argument("--project", help="影响传播需要定位 BOM 与制品时的项目（缺省：库内唯一项目）")
     p.add_argument("--quote")
     p.add_argument("--stage")
     p.add_argument("--lab-data")
@@ -465,6 +466,98 @@ def build_parser() -> argparse.ArgumentParser:
                     help="报价单价的币种（报价文件表头无币种列，必须显式声明）")
     qp.add_argument("--json", action="store_true")
     qp.set_defaults(func=COMMAND_FUNCS["quote apply"])
+
+    # ---- v5.10 验证 / Issue / 就绪度 ----
+    # 这 8 条命令此前只有实现、契约与文档，parser 从未接线（F-CLI-01）：
+    # `aipd validation import` 在真实 CLI 上是 invalid choice。
+    p_val = sub.add_parser(
+        "validation", help="验证计划与 EVT/DVT/PVT 数据。"
+                           " Example: aipd validation import --db state.db --project p1"
+                           " --stage dvt --file lab.csv")
+    val_sub = p_val.add_subparsers(dest="validation_cmd", required=True)
+
+    vp = val_sub.add_parser("plan", help="创建验证计划。")
+    vp.add_argument("--db", required=True)
+    vp.add_argument("--project", required=True)
+    vp.add_argument("--tenant", default="default")
+    vp.add_argument("--stage", required=True, choices=["evt", "dvt", "pvt"])
+    vp.add_argument("--title", required=True)
+    vp.add_argument("--objective", default="")
+    vp.add_argument("--json", action="store_true")
+    vp.set_defaults(func=COMMAND_FUNCS["validation plan"])
+
+    vp = val_sub.add_parser("list", help="列出验证计划/测试/结果。")
+    vp.add_argument("--db", required=True)
+    vp.add_argument("--project", required=True)
+    vp.add_argument("--tenant", default="default")
+    vp.add_argument("--what", default="plans", choices=["plans", "tests", "results"])
+    vp.add_argument("--json", action="store_true")
+    vp.set_defaults(func=COMMAND_FUNCS["validation list"])
+
+    vp = val_sub.add_parser("show", help="显示验证计划/测试详情。")
+    vp.add_argument("--db", required=True)
+    vp.add_argument("--project", required=True)
+    vp.add_argument("--tenant", default="default")
+    vp.add_argument("--what", default="plan", choices=["plan", "test"])
+    vp.add_argument("--id", required=True, help="VP- / VT- 编号")
+    vp.add_argument("--json", action="store_true")
+    vp.set_defaults(func=COMMAND_FUNCS["validation show"])
+
+    vp = val_sub.add_parser(
+        "import", help="导入 EVT/DVT/PVT 数据（失败项会传播到 BOM/制品）。")
+    vp.add_argument("--db", required=True)
+    vp.add_argument("--project", required=True)
+    vp.add_argument("--tenant", default="default")
+    vp.add_argument("--stage", required=True, choices=["evt", "dvt", "pvt"])
+    vp.add_argument("--file", required=True, help="实验室数据文件（CSV/XLSX/JSON）")
+    vp.add_argument("--plan-id", default="", help="关联的验证计划 ID（可选）")
+    vp.add_argument("--json", action="store_true")
+    vp.set_defaults(func=COMMAND_FUNCS["validation import"])
+
+    p_iss = sub.add_parser(
+        "issue", help="验证 Issue 列表/详情/处置。"
+                           " Example: aipd issue list --db state.db --project p1")
+    iss_sub = p_iss.add_subparsers(dest="issue_cmd", required=True)
+
+    ip = iss_sub.add_parser("list", help="列出 Issue。")
+    ip.add_argument("--db", required=True)
+    ip.add_argument("--project", required=True)
+    ip.add_argument("--tenant", default="default")
+    ip.add_argument("--status", help="按状态过滤（如 OPEN / RESOLVED）")
+    ip.add_argument("--blocking", action="store_true", help="只看阻塞发布的 Issue")
+    ip.add_argument("--json", action="store_true")
+    ip.set_defaults(func=COMMAND_FUNCS["issue list"])
+
+    ip = iss_sub.add_parser("show", help="显示 Issue 详情。")
+    ip.add_argument("--db", required=True)
+    ip.add_argument("--project", required=True)
+    ip.add_argument("--tenant", default="default")
+    ip.add_argument("--id", required=True, help="IS- 编号")
+    ip.add_argument("--json", action="store_true")
+    ip.set_defaults(func=COMMAND_FUNCS["issue show"])
+
+    ip = iss_sub.add_parser("resolve", help="记录处置并把 Issue 置为 RESOLVED。")
+    ip.add_argument("--db", required=True)
+    ip.add_argument("--project", required=True)
+    ip.add_argument("--tenant", default="default")
+    ip.add_argument("--id", required=True)
+    ip.add_argument("--disposition", required=True,
+                    choices=["FIX", "WAIVE", "DESIGN_CHANGE", "NOT_APPLICABLE"])
+    ip.add_argument("--root-cause", default="")
+    ip.add_argument("--revalidation", action="store_true", help="要求复验")
+    ip.add_argument("--json", action="store_true")
+    ip.set_defaults(func=COMMAND_FUNCS["issue resolve"])
+
+    p_ready = sub.add_parser(
+        "readiness", help="制造就绪度评估。"
+                          " Example: aipd readiness check --db state.db --project p1")
+    ready_sub = p_ready.add_subparsers(dest="readiness_cmd", required=True)
+    rp = ready_sub.add_parser("check", help="按验证/Issue 事实评估就绪度。")
+    rp.add_argument("--db", required=True)
+    rp.add_argument("--project", required=True)
+    rp.add_argument("--tenant", default="default")
+    rp.add_argument("--json", action="store_true")
+    rp.set_defaults(func=COMMAND_FUNCS["readiness check"])
 
     p_cost = sub.add_parser(
         "cost", help="成本核算（BOM 材料 + 模具摊销 + NRE + 毛利，写回 Product Truth）。"

@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from aipd_os.cli._helpers import (
+    DEFAULT_TENANT,
     _cad_gate_summary,
     _emit,
     _import_module,
@@ -80,8 +82,8 @@ def cmd_industrialize(args):
         quotes_note = "未收到报价数据，未登记任何官方报价（不发散、不虚构）。"
 
     analysis = None
-    correction_tasks = []
     lab_note = None
+    correction_tasks = []
     if args.lab_data:
         stage = (args.stage or "validation").strip().lower()
         if stage != "validation" and stage not in VALID_STAGES:
@@ -93,13 +95,42 @@ def cmd_industrialize(args):
         pass_flag = analysis["total"] > 0 and analysis["failed"] == 0
         analysis = {"stage": stage, "total": analysis["total"],
                     "passed": analysis["passed"], "failed": analysis["failed"],
-                    "items": analysis["items"], "pass_flag": pass_flag}
+                    "items": analysis["items"],
+                    "failing_items": analysis["failing_items"],
+                    "pass_flag": pass_flag}
     else:
         lab_note = "未收到实验室数据，未执行阶段分析（不虚构）。"
 
-    result = {"command": "industrialize", "ok": True,
+    # 影响传播（F-SUPPLY-03）：只有拿得到状态库才可能真的落到制品上，
+    # 否则如实报告"没传播"，不再让登记表那句 BOM/CAD 影响传播自证成立。
+    impact: dict[str, Any] | None = None
+    impact_note = None
+    if analysis and args.lab_data:
+        failing = analysis["failing_items"]
+        if not getattr(args, "db", None):
+            impact_note = ("未提供 --db：无法定位 BOM 与制品，本次未执行影响传播"
+                           "（不落任何 stale 标记，也不写 impact 事实）。")
+        else:
+            from aipd_os.bom import BomStore
+            from aipd_os.state.db import AIPDStateDB
+            from aipd_os.supply_chain.impact import propagate_lab_impact
+
+            from .commands_manufacturing import _bom_store_path, _resolve_project
+
+            db_state = AIPDStateDB(args.db)
+            pid = _resolve_project(db_state, getattr(args, "project", None))
+            report = propagate_lab_impact(
+                db_state, BomStore(str(_bom_store_path(args.db))),
+                DEFAULT_TENANT, pid, failing, source=f"industrialize:{analysis['stage']}")
+            impact = report.to_dict()
+
+    stage_failed = bool(analysis) and not analysis["pass_flag"]
+    impact_unclean = bool(impact) and not impact["clean"]
+    result = {"command": "industrialize",
+              "ok": not stage_failed and not impact_unclean,
               "official_quotes": official_quotes, "quotes_note": quotes_note,
               "analysis": analysis, "lab_note": lab_note,
+              "impact": impact, "impact_note": impact_note,
               "correction_tasks": correction_tasks}
 
     def prose():
@@ -116,8 +147,17 @@ def cmd_industrialize(args):
             print(f"纠偏任务：{len(correction_tasks)} 个")
             for t in correction_tasks:
                 print(f"  · {t['work_id']} {t['test_item']} -> {t['action']}")
+        if impact_note:
+            print(impact_note)
+        if impact:
+            print(f"影响传播：受影响 BOM 行 {len(impact['affected_lines'])}，"
+                  f"已置 stale 的制品 {len(impact['stale_deliverables'])}，"
+                  f"关联不到制品的行 {len(impact['unresolved_lines'])}"
+                  f"（结论事实 {len(impact['fact_keys'])} 条）")
+            for k in impact["fact_keys"]:
+                print(f"  · {k}")
     _emit(args, result, prose)
-    return 0
+    return 4 if (stage_failed or impact_unclean) else 0
 
 
 # ---- validate：生产发布证据门禁（映射 production_release_gate）----
