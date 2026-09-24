@@ -561,7 +561,10 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
     """
     import ezdxf
 
+    from aipd_os.cad.stackup import view_stackup
+
     spec_stats = resolve_spec_tolerances(views, spec)
+    stackups = {v.name: view_stackup(v.dimensions, v.name) for v in views}
     width, height = SHEET_SIZES[sheet]
     doc = ezdxf.new("R2010", setup=True)
     msp = doc.modelspace()
@@ -613,6 +616,12 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
     return {"sheet": sheet, "sheet_size_mm": [width, height], "scale": scale,
             "views": placed, "entity_counts": counts,
             "dimension_chain_check": {v["view"]: v["chain_check"] for v in placed},
+            "stackup_check": stackups,
+            "stackup_inconsistent": any(
+                s["verdict"] == "inconsistent" for s in stackups.values()),
+            "stackup_undecidable": sorted(
+                name for name, s in stackups.items()
+                if s["verdict"] in ("insufficient_data", "no_closing_tolerance")),
             "bytes": path.stat().st_size,
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             **spec_stats}

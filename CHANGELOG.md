@@ -224,6 +224,21 @@
   `solids().size()` 并补「两个实体数出 2」的用例。证据见
   `docs/audit/RELEASE_EVIDENCE_PRODUCER_F-EVID-01_2026-09-24.md`；
 
+- **v5.10 F-DRAW-01 第 2 片：一维公差叠加——把「图纸自相矛盾」变成机器判定**：上一片画出了
+  链也标得出公差，但没人检查这些公差**能不能同时成立**。现新增 `src/aipd_os/cad/stackup.py`：
+  每环公差带 ``band = upper - lower``（``0/0`` 算声明、没声明算 ``None``，**不按 0 折算**），
+  ``worst_case = Σband``、``rss = √(Σband²)``，若各段带和超过封闭环自己声明的带 ⇒
+  判 ``inconsistent`` 并给出超出量，``aipd drawing generate`` 随之判未收口（exit 4）。
+  三种「不可判定」（无链 / 某环缺声明 / 封闭环缺声明）都**不是通过**。
+  刻意不做：不猜功能限值（仓库里没有「间隙必须 ≤ X」这类外部要求，给数就是编判据）、
+  不做三维/角度叠加、不做分布型统计公差（``rss`` 只按带宽平方和开根，是用量近似）。
+  上游对照：读 ``tolerance-stackup-cli``（MIT、1 star）源码确认它对 tol 取 ``abs()``
+  ⇒ **不支持非对称偏差**，也不计算封闭环（要人手动列一行），两条恰好都是本片的判据本体，
+  故只借公式形状、判据自实现。真机读数（内置黄金件 TOP，5 段各 20.0，声明 ±0.05、
+  总宽 ±0.2）：``worst_case=0.5 > closing_band=0.4`` ⇒ ``inconsistent``、超出 0.1、``rc=4``。
+  12 条新用例、7 条变异全部打破；证据新增 ``stackup_check`` / ``stackup_inconsistent`` /
+  ``stackup_undecidable``。证据见 `docs/audit/CAD_STACKUP_F-DRAW-01_2026-09-24.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

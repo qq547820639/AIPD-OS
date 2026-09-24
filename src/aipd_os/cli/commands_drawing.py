@@ -104,6 +104,7 @@ def cmd_drawing(args):
         return 2
 
     unmatched = list(evidence.get("spec_unmatched_features") or [])
+    stackups = evidence.get("stackup_check") or {}
 
     def prose():
         print(f"已出图：{out}（{evidence['sheet']} 1:{evidence['scale']}，"
@@ -119,9 +120,24 @@ def cmd_drawing(args):
         print(f"公差：声明 {len(evidence.get('spec_declared_features') or [])} 项、"
               f"落到图上 {evidence.get('tolerance_applied', 0)} 处"
               f"（无声明则不写任何公差）")
+        for name, stack in sorted(stackups.items()):
+            verdict = stack["verdict"]
+            if verdict == "consistent":
+                print(f"  公差叠加 {name}：一致（封闭带 {stack['closing_band']} ≥ "
+                      f"各段合成 {stack['worst_case']}，余量 {stack['margin']}）")
+            elif verdict == "inconsistent":
+                print(f"  公差叠加 {name}：**图纸自相矛盾** —— 各段公差带之和 "
+                      f"{stack['worst_case']} 超出封闭环 {stack['closing_feature']} "
+                      f"的公差带 {stack['closing_band']}，超出 {stack['excess']}")
+            elif verdict != "no_chain":
+                missing = ", ".join(stack["undeclared"])
+                suffix = f"，缺声明：{missing}" if missing else ""
+                print(f"  公差叠加 {name}：不可判定（{verdict}）{suffix}")
         if unmatched:
             print(f"未收口：spec 声明的这些特征在图上找不到 ⇒ 少标了公差：{unmatched}")
+        if evidence.get("stackup_inconsistent"):
+            print("未收口：叠加判定的矛盾意味着这些公差无法同时达成，需改声明或改标注方案。")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
         print("未含 GD&T 形位公差框/剖视/局部放大，见 capability cad.2d_drawings 的 limitation。")
     _emit(args, evidence, prose)
-    return 4 if unmatched else 0
+    return 4 if (unmatched or evidence.get("stackup_inconsistent")) else 0
