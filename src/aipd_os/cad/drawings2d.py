@@ -51,9 +51,11 @@
 一律不继承：裁剪窗的大小不是零件的尺寸。空放大图（圆内什么图线都没有）不编号、
 不在母视图上画圈，与空剖视同一条规矩。
 
-明确**未实现**（不要当成已具备）：爆炸图、多零件装配图；阶梯剖/旋转剖；
+明确**未实现**（不要当成已具备）：爆炸图与装配约束/配合；阶梯剖/旋转剖；
 叠加未做三维/角度与分布型统计（Cpk）；GD&T 用的是 drawn 几何
 而非 DXF ``TOLERANCE`` 语义实体（其 ``content`` 转义码无权威来源，见 ``cad.gdt`` docstring）。
+多零件装配图在 ``aipd_os.cad.assembly``（逐件投影 + 序号球标 + 明细表，
+走本模块的 ``write_dxf``，但装配视图上不接受剖视与局部放大）；
 放大图不重投影（FreeCAD TechDraw 走的是「圆柱与实体求交后重新投影」），
 这一取舍的理由与后果见 ``docs/audit/CAD_DETAIL_VIEWS_F-DRAW-01_2026-09-24.md``。
 见 registry 的 ``current_limitation``。
@@ -144,6 +146,7 @@ class ViewGeometry:
     detail_factor: float = 1.0
     detail_problems: list[str] = field(default_factory=list)
     detail_markers: list[dict[str, Any]] = field(default_factory=list)
+    assembly: dict[str, Any] | None = None
 
     @property
     def width(self) -> float:
@@ -1081,10 +1084,14 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
               part_name: str, revision: str, scale: float = 1.0,
               material: str = "-", sheet: str = "A3",
               provenance: dict[str, Any] | None = None,
-              spec: dict[str, Any] | None = None) -> dict[str, Any]:
+              spec: dict[str, Any] | None = None,
+              assembly_parts: list[dict[str, Any]] | None = None,
+              bom: dict[str, Any] | None = None) -> dict[str, Any]:
     """把视图排到图纸上并写 DXF；返回机器可核验的实体统计。
 
     ``spec`` 是**唯一**的公差来源；不传则整张图不含任何公差。
+    ``assembly_parts`` 非空表示这是装配图：明细表由它生成，球标由各个视图的
+    ``view.assembly`` 画（编号与零件名都来自 manifest，不是这里推的）。
     """
     import ezdxf
 
@@ -1110,6 +1117,11 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                             ("HATCH", 3, "Continuous"),
                             ("SECTION", 1, "Continuous"),
                             ("DETAIL", 5, "Continuous"),
+                            ("BALLOON", 4, "Continuous"),
+                            # 明细表由 ezdxf 的 TablePainter 画，它用的就是这两个层名；
+                            # 不预先建层，别的软件会读到未定义的图层引用
+                            ("TABLECONTENT", 7, "Continuous"),
+                            ("TABLEGRID", 7, "Continuous"),
                             ("FRAME", 7, "Continuous")):
         if name not in doc.layers:
             doc.layers.add(name, color=color)
@@ -1161,7 +1173,31 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                        "detail_of": view.detail_of,
                        "detail_empty": bool(view.detail_of) and bool(view.detail_problems),
                        "detail_markers": [dict(m) for m in view.detail_markers],
+                       "assembly_parts": ([dict(p) for p in view.assembly["parts"]]
+                                           if view.assembly else None),
+                       "segments": ([dict(s) for s in view.assembly["segments"]]
+                                    if view.assembly else None),
+                       "balloons": ([dict(b) for b in view.assembly["balloons"]]
+                                    if view.assembly else None),
+                       "balloon_view": (bool(view.assembly["balloon_view"])
+                                        if view.assembly else None),
+                       "envelope": (list(view.assembly["envelope"])
+                                    if view.assembly else None),
+                       "overlap_area_mm2": (view.assembly["overlap_area_mm2"]
+                                            if view.assembly else None),
                        "dimensions": view.dimensions})
+
+    assembly_views = [v for v in views if v.assembly]
+    parts_list = None
+    assembly_warnings: list[str] = []
+    if assembly_views and assembly_parts:
+        from aipd_os.cad.assembly import draw_parts_list, overlap_warnings, parts_list_rows
+
+        parts_list = draw_parts_list(msp, parts_list_rows(assembly_parts),
+                                     (width, height), bom)
+        assembly_warnings = sorted(
+            {w for v in assembly_views
+             for w in overlap_warnings(v) + list((v.assembly or {}).get("warnings") or [])})
 
     _draw_title_block(msp, width, height, part_name, revision, scale, material,
                       sheet, provenance or {})
@@ -1191,6 +1227,15 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
             "detail_numbers": detail_numbers,
             "detail_issues": sorted({msg for view in views
                                      for msg in view.detail_problems}),
+            "assembly": ({"parts": [{k: v for k, v in p.items() if k != "shape"}
+                                    for p in (assembly_parts or [])]}
+                         if assembly_views else None),
+            "parts_list": parts_list,
+            "bom": bom,
+            "assembly_issues": sorted({msg for view in assembly_views
+                                       if view.assembly
+                                       for msg in view.assembly["issues"]}),
+            "assembly_warnings": assembly_warnings,
             "bytes": path.stat().st_size,
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             **spec_stats}
@@ -1294,6 +1339,10 @@ def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float,
 
     _draw_section_symbols(msp, view, place, scale, symbol_linetype)
     _draw_detail_marks(msp, view, place, scale)
+    if view.assembly:      # 球标与图线共用同一个 place：自己再算偏移会飞到视图外面
+        from aipd_os.cad.assembly import render_assembly
+
+        render_assembly(msp, view, scale, place)
 
 
 def _draw_detail_marks(msp: Any, view: ViewGeometry, place: Any, scale: float) -> None:
@@ -1363,6 +1412,54 @@ def _draw_title_block(msp: Any, width: float, height: float, part: str, rev: str
            .set_placement((x0 + 30.0, yy))
 
 
+def _finish_evidence(path: Path, evidence: dict[str, Any], part_name: str, revision: str,
+                     provenance: dict[str, Any] | None) -> dict[str, Any]:
+    """补上溯源、写 ``.evidence.json`` sidecar（单件图与装配图共用同一条收尾）。"""
+    evidence.update(provenance or {})
+    evidence.update({"part": part_name, "revision": revision,
+                     "generated_at": datetime.now(timezone.utc).isoformat(),
+                     "hidden_line_method": HIDDEN_LINE_METHOD})
+    sidecar = path.with_suffix(".evidence.json")
+    sidecar.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n",
+                       encoding="utf-8")
+    evidence["evidence_file"] = str(sidecar)
+    return evidence
+
+
+def _generate_assembly(model: Any, path: Path, *, assembly: str, part_name: str,
+                       revision: str, views: tuple[str, ...], scale: float,
+                       material: str, sheet: str,
+                       provenance: dict[str, Any] | None,
+                       spec: dict[str, Any] | None,
+                       sections: Sequence[str], details: Sequence[str]) -> dict[str, Any]:
+    """装配图分支：逐件投影成 ``ASSY_<视图>``，画球标与明细表。
+
+    派生视图（剖视、局部放大）在这里**明确拒绝**，而不是默默产出错的图：
+    装配视图的折线按零件归属，裁剪/切割会把归属打散，球标就成了指错零件的假标注。
+    """
+    from aipd_os.cad.assembly import (
+        build_assembly_view,
+        load_assembly_parts,
+        parse_assembly_manifest,
+    )
+
+    if sections or details:
+        raise ValueError("装配图本轮不接受 --section/--detail：剖视与局部放大是按合并折线"
+                         "裁剪的，会把「这条线属于哪个零件」打散，球标就成了假标注。")
+    for name in views:
+        if name not in STANDARD_VIEWS:
+            raise ValueError(f"未知视图 {name}；可用：{sorted(STANDARD_VIEWS)}")
+    specs = parse_assembly_manifest(assembly)
+    parts = load_assembly_parts(specs)
+    built = [build_assembly_view(parts, f"ASSY_{name}", *STANDARD_VIEWS[name],
+                                 with_balloons=(idx == 0))
+             for idx, name in enumerate(views)]
+    evidence = write_dxf(built, path, part_name=part_name, revision=revision,
+                         scale=scale, material=material, sheet=sheet,
+                         provenance=provenance, spec=spec, assembly_parts=parts)
+    return _finish_evidence(path, evidence, part_name, revision, provenance)
+
+
 def generate_drawing(model: Any, out_path: Path | str, *,
                      part_name: str, revision: str = "A",
                      views: tuple[str, ...] = ("FRONT", "TOP", "RIGHT"),
@@ -1371,7 +1468,8 @@ def generate_drawing(model: Any, out_path: Path | str, *,
                      provenance: dict[str, Any] | None = None,
                      spec: dict[str, Any] | None = None,
                      sections: Sequence[str] = (),
-                     details: Sequence[str] = ()) -> dict[str, Any]:
+                     details: Sequence[str] = (),
+                     assembly: str | None = None) -> dict[str, Any]:
     """端到端：模型 -> 视图 -> DXF -> 证据字典（含哈希与实体统计）。
 
     ``spec`` 只用于声明公差（``{"features": [{"feature": "TOP.hole_2",
@@ -1382,6 +1480,12 @@ def generate_drawing(model: Any, out_path: Path | str, *,
     倍数是相对母视图印出比例的放大。母视图名写错直接报错，不静默少一张图。
     """
     path = Path(out_path)
+    if assembly:
+        return _generate_assembly(model, path, assembly=assembly, part_name=part_name,
+                                  revision=revision, views=views, scale=scale,
+                                  material=material, sheet=sheet,
+                                  provenance=provenance, spec=spec,
+                                  sections=sections, details=details)
     built: list[ViewGeometry] = []
     for name in views:
         if name not in STANDARD_VIEWS:
@@ -1407,12 +1511,4 @@ def generate_drawing(model: Any, out_path: Path | str, *,
     evidence = write_dxf(built, path, part_name=part_name, revision=revision,
                          scale=scale, material=material, sheet=sheet,
                          provenance=provenance, spec=spec)
-    evidence.update(provenance or {})
-    evidence.update({"part": part_name, "revision": revision,
-                     "generated_at": datetime.now(timezone.utc).isoformat(),
-                     "hidden_line_method": HIDDEN_LINE_METHOD})
-    sidecar = path.with_suffix(".evidence.json")
-    sidecar.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n",
-                       encoding="utf-8")
-    evidence["evidence_file"] = str(sidecar)
-    return evidence
+    return _finish_evidence(path, evidence, part_name, revision, provenance)

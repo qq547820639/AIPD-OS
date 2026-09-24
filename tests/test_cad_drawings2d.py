@@ -312,7 +312,16 @@ class TestCapabilityDeclaration:
 
         cap = load_default_registry().get("cad.2d_drawings")
         assert cap is not None
-        assert (Path(__file__).resolve().parents[1] / cap.implementation_file).is_file()
+        # 实现文件可以登记多个（";" 分隔，与下面 unit_test 同一套规矩，也是
+        # registry.probe_file_has_impl 认的形状），但**每一个**都得真存在
+        root = Path(__file__).resolve().parents[1]
+        declared_impls = [p.strip() for p in (cap.implementation_file or "").split(";")
+                          if p.strip()]
+        assert declared_impls, "实现文件未登记"
+        for rel in declared_impls:
+            assert (root / rel).is_file(), f"登记指向的实现文件不存在：{rel}"
+        assert "src/aipd_os/cad/assembly.py" in declared_impls, \
+            "装配图的实现改了名/搬了家，登记就要跟着改"
         # 入口要"取得到真身"，而不是钉一个字符串形状：这里曾钉的正是探针解析不了的
         # 文件路径形态（F-REG-01），等于把错写法当成了基线。
         module_name, _, attr = cap.entry_point.rpartition(".")
@@ -320,7 +329,6 @@ class TestCapabilityDeclaration:
         assert probe_entry_callable(
             cap.entry_point, Path(__file__).resolve().parents[1]) is True
         assert cap.run_command == "aipd drawing generate"
-        root = Path(__file__).resolve().parents[1]
         declared_tests = [t.strip() for t in (cap.unit_test or "").split(";") if t.strip()]
         assert set(declared_tests) >= {"tests/test_cad_drawings2d.py",
                                        "tests/test_cad_drawings_chain_tolerance.py"}
@@ -332,6 +340,10 @@ class TestCapabilityDeclaration:
         for token in ("GD&T", "公差叠加", "剖视", "爆炸图", "相切"):
             assert token in cap.current_limitation, cap.current_limitation
         for token in ("尺寸链", "--spec", "退出码 4"):
+            assert token in cap.current_limitation, cap.current_limitation
+        # 装配图这一维已经落地，行内必须同时写清「做到什么」和「没做什么」：
+        # 只写球标不写「不干涉判定/数量列未接 BOM」就是把现状说大
+        for token in ("球标", "明细表", "干涉", "爆炸图"):
             assert token in cap.current_limitation, cap.current_limitation
         assert "Product Truth" in cap.current_limitation, "公差声明未接权威事实源这点要写明"
 

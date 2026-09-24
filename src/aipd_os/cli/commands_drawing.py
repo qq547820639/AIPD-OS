@@ -42,9 +42,9 @@ def _load_model(step: str | None, native: str | None):
     return backend._build(model)
 
 
-def _external_task_pack(args, reason: str) -> int:
+def _external_task_pack(args, reason: str, command: str = "drawing generate") -> int:
     pack = {
-        "command": "drawing generate",
+        "command": command,
         "ok": False,
         "status": "HOLD",
         "reason": reason,
@@ -256,9 +256,87 @@ def cmd_drawing(args):
                   f"CTQ 的 {issue['min']:g}–{issue['max']:g} 内"
                   f"{('（CTQ ' + issue['ctq_ref'] + '）') if issue['ctq_ref'] else ''}")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
-        print("未含阶梯剖/旋转剖与爆炸图/装配图，"
-              "详见 capability cad.2d_drawings 的 limitation。")
+        print("未含阶梯剖/旋转剖，装配图请走 aipd drawing assembly；"
+              "爆炸图/装配约束仍未含，详见 capability cad.2d_drawings 的 limitation。")
     _emit(args, evidence, prose)
     held = bool(unmatched or evidence.get("stackup_inconsistent") or gdt_issues
                 or gdt_unmatched or section_issues or limit_issues or detail_issues)
     return 4 if held else 0
+
+
+def cmd_drawing_assembly(args):
+    """``aipd drawing assembly`` —— 多零件装配图：逐件投影 + 序号球标 + 明细表。
+
+    几何来自 manifest 里每个零件自己的 STEP，不是单个模型；所以这里**不加载**
+    ``--step/--native``，也不接受 ``--spec``：装配视图只有包络尺寸，件级特征公差
+    属于单件图（``drawing generate``），在这里声明只会得到「声明了图上没有的特征」。
+    """
+    out = Path(args.out)
+    if not args.part:
+        print("--part 必填（标题栏 PART 字段）")
+        return 2
+    if not args.manifest:
+        print("--manifest 必填（装配清单 JSON：{\"parts\":[{name,step,balloon,offset}]}）")
+        return 2
+    manifest = Path(args.manifest)
+    if not manifest.is_file():
+        print(f"--manifest 指向的文件不存在：{manifest}")
+        return 2
+    try:
+        import cadquery  # noqa: F401
+        import ezdxf  # noqa: F401
+    except ImportError as exc:
+        return _external_task_pack(args, f"CAD 内核缺失（{exc}）",
+                                   command="drawing assembly")
+
+    from aipd_os.cad.backends import CadQueryBackend
+    from aipd_os.cad.drawings2d import generate_drawing
+
+    provenance = {"tool": f"cadquery {CadQueryBackend().tool_version()}",
+                  "model_source": str(manifest), "command": "drawing assembly",
+                  "ok": True, "status": "DONE"}
+    try:
+        evidence = generate_drawing(
+            None, out, part_name=args.part, revision=args.revision,
+            views=tuple(v.strip() for v in args.views.split(",") if v.strip()),
+            scale=args.scale, material=args.material, sheet=args.sheet,
+            provenance=provenance, assembly=str(manifest))
+    except ValueError as exc:
+        print(f"装配声明不合法：{exc}")
+        return 2
+
+    issues = list(evidence.get("assembly_issues") or [])
+    warnings = list(evidence.get("assembly_warnings") or [])
+
+    def prose():
+        parts = (evidence.get("assembly") or {}).get("parts") or []
+        print(f"已出装配图：{out}（{evidence['sheet']} 1:{evidence['scale']}，"
+              f"{len(parts)} 个零件 / {len(evidence['views'])} 个视图）")
+        for view in evidence["views"]:
+            segments = view.get("segments")
+            print(f"  {view['view']:11s} 包络 {view['size_mm'][0]}x{view['size_mm'][1]}mm "
+                  f"实线 {view['visible_polylines']} 条 / 虚线 {view['hidden_polylines']} 条"
+                  f"（分段按零件归属：{len(segments or [])} 段）")
+            for one in view.get("assembly_parts") or []:
+                print(f"      {one['balloon']:>3d} {one['part']:12s} "
+                      f"可见折线 {one['visible_polylines']} 条 / "
+                      f"隐藏 {one['hidden_polylines']} 条 "
+                      f"挂点 ({one['centroid'][0]:g}, {one['centroid'][1]:g})")
+            balloons = view.get("balloons")
+            if view.get("balloon_view"):
+                print(f"      球标 {len(balloons or [])} 个，包络投影重叠 "
+                      f"{view['overlap_area_mm2']}mm²")
+            else:
+                print("      本视图不标球标（装配图只在一个视图上编号）")
+        listed = evidence.get("parts_list") or {}
+        print(f"明细表：{len(listed.get('rows') or [])} 行，列 {listed.get('columns')}，"
+              f"绘制方式 {listed.get('rendered_by')}")
+        for msg in issues:
+            print(f"  装配未收口：{msg}")
+        for msg in warnings:
+            print(f"  装配告警：{msg}")
+        print("  没有做的事：干涉检查（只报包络投影重叠，不做实体求交）、"
+              "爆炸图/装配约束、明细表数量与材料列（数量权威在 BOM，尚未接线）。")
+        print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
+    _emit(args, evidence, prose)
+    return 4 if issues else 0

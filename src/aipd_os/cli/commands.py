@@ -49,7 +49,7 @@ from .commands_cad import (
     cmd_validate,
 )
 from .commands_doctor import cmd_doctor
-from .commands_drawing import cmd_drawing, cmd_drawing_spec
+from .commands_drawing import cmd_drawing, cmd_drawing_assembly, cmd_drawing_spec
 from .commands_legacy import (
     cmd_build_release,
     cmd_init_project,
@@ -509,6 +509,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "cad build": cmd_cad_build,
     "drawing generate": cmd_drawing,
     "drawing spec": cmd_drawing_spec,
+    "drawing assembly": cmd_drawing_assembly,
     "truth propagate": cmd_truth_propagate,
     "truth tasks": cmd_truth_tasks,
     "outbox drain": cmd_outbox,

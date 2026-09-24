@@ -252,6 +252,27 @@ def build_parser() -> argparse.ArgumentParser:
     ds.add_argument("--json", action="store_true")
     ds.set_defaults(func=COMMAND_FUNCS["drawing spec"])
 
+    da = drawing_sub.add_parser(
+        "assembly", help="多零件装配图：逐件投影 + 序号球标 + 明细表。"
+                         " Example: aipd drawing assembly --manifest assembly.json "
+                         "--out assy.dxf --part ASSY-1")
+    da.add_argument("--manifest", required=True,
+                    help='装配清单 JSON：{"parts":[{"name":"支架","step":"a.step",'
+                         '"balloon":1,"offset":[0,0,0]}]}。'
+                         "balloon 是作者声明的件号（正整数、不重复），"
+                         "缺号/重号/写 0/零件重名/STEP 不存在一律 rc=2，不按遍历顺序发号")
+    da.add_argument("--out", required=True, help="DXF 输出路径")
+    da.add_argument("--part", required=True, help="标题栏 PART 字段（装配体代号）")
+    da.add_argument("--revision", default="A", help="标题栏 REV 字段")
+    da.add_argument("--views", default="FRONT,TOP",
+                    help="逗号分隔装配视图：FRONT/TOP/RIGHT/REAR/LEFT/BOTTOM。"
+                         "球标只标在**第一个**请求的视图上（装配图惯例）")
+    da.add_argument("--scale", type=float, default=1.0, help="比例（1 表示 1:1）")
+    da.add_argument("--material", default="-", help="标题栏材料")
+    da.add_argument("--sheet", default="A3", choices=["A3", "A4"], help="图纸幅面")
+    da.add_argument("--json", action="store_true")
+    da.set_defaults(func=COMMAND_FUNCS["drawing assembly"])
+
     p_outbox = sub.add_parser("outbox", help="消费对外副作用事件（RFQ 邮件等）。"
                                             " Example: aipd outbox drain --db state.db")
     outbox_sub = p_outbox.add_subparsers(dest="outbox_cmd", required=True)
