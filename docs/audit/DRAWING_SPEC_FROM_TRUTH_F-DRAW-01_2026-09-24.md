@@ -163,6 +163,33 @@ PATH="$PWD/.venv/bin:$PATH" .venv/bin/python scripts/production_release_gate.py 
   --release-ready --tag v5.6.0 --json-out /tmp/gate.json
 ```
 
-## 九、收尾读数
+## 九、收尾读数（全部来自本轮实跑输出，非记忆）
 
-（本节在全量与门禁跑完后按**实际输出**填写，不用记忆值。）
+- 提交：实现 `18df5a2`（CAD: grow the tolerance declaration from CTQ and check it against
+  measured geometry）、产物重锚 `b41a0a4`（Release artifacts: re-anchor manifests after the
+  CTQ-to-spec slice），本节所在提交是本轮第三个；
+- `regenerate_release_manifest.py --version 5.6.0` → **RELEASE_MANIFEST.json 已刷新：586 个文件**
+  （584 → 586 = 新增 `src/aipd_os/cad/spec_from_truth.py` 与 `tests/test_cad_spec_from_truth.py`；
+  `docs/audit/` 整体不在清单内，所以审计文档与报告不牵动任何哈希）；
+- `release_evidence.py --bundle releases/aipd-os-5.6.0.zip --version 5.6.0
+  --test-report docs/audit/pytest-report-v5.6.0.json
+  --source-commit a66040520139405095648461f7144d4f00629924` → 重写
+  `SOURCE_MANIFEST / BUNDLE_MANIFEST / PROVENANCE`，bundle 未重建、未重签、tag 未动；
+- 重锚前那次全量是 **1556 passed / 2 failed / 3 skipped**，两条失败**只**是
+  `tests/test_packaging.py::test_release_manifest_hashes_match_disk` 与
+  `::test_source_manifest_hashes_match_disk`——本轮改了 `src/`，清单哈希按惯例在收尾时重算，
+  不是回归；重锚后复跑才是上面那行 0 failed；
+- 重锚后全量复跑：**1558 passed / 0 failed / 3 skipped**（309.66s），
+  报告落 `docs/audit/pytest-report.json`；
+- `production_release_gate --release-ready --tag v5.6.0`：**rc=0，release_ready true，8/8 通过**
+  ——`workspace_clean: clean`、`commit_matches_head`（锚点与 tag 同一提交）、
+  两份清单 `zero diff`、`test_numbers_from_report` 读数
+  `passed=1096 failed=0 total=1099 source_commit=a660405…`、`Ed25519 signature verified`、
+  无密钥泄漏、CVE 检查通过（跑门禁须带 `PATH="$PWD/.venv/bin:$PATH"`，否则 `pip-audit`
+  不在 PATH 上会 fail-closed 判红，那是判据在正常工作）；
+- `skill_quality_audit`：**0 项警告 0 项失败**；
+  `tests/test_skill_command_surface.py` 3 条（总数 + 逐条点名 + 注入反证）绿 ⇒ SKILL 的
+  「主线共 45 个」与命令契约表同源；
+- `state_perf_gate`：**PASS**（空闲单跑；绝对值不可跨机/跨负载当契约）。
+- 未做且有意不做：不 `git push`、不动 tag、不重建 bundle、不重签、不放宽任何共享门禁；
+  `audit_repo --strict` 仍按设计判红（锚点在 tag 而非 HEAD），留给属主的真实发布闭合。
