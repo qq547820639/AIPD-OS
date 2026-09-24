@@ -119,3 +119,18 @@ python scripts/production_release_gate.py --manifest evidence.json --target C6
 # 关键读数：gdt_covers_ctq 由文档里的真实派生项决定；未给 --model 时
 # drawing_cad_same_revision 必须是 False（缺输入即判红，不猜）。
 ```
+
+## 七、收尾读数
+
+- 全量回归：**1504 passed / 0 failed / 3 skipped**（重锚清单前为 1502 passed + 2 条 manifest
+  判红，属预期）；
+- `ruff check src tests state_service` 0；`mypy src tests` 0（**381** 文件）；
+- `production_release_gate --release-ready --tag v5.6.0`：**退出码 0（8/8，release_ready=true）**；
+- `skill_quality_audit`：0 警告 / 0 失败；
+- `state_perf_gate`：**PASS**（load 2.83）：`fact_batched_ops_s` 23281 ops/s、
+  `batch_over_autocommit_ratio` 0.0466。诚实标注：`nested_txn_marginal_us` 本轮读到 24.24µs，
+  上一轮同机闲时是 18.67µs——**该指标在机器上会漂**，门禁按阈值判，不代表回归；
+  引用它做对比时要连负载一起引。
+- 清单：**579 文件**（+2：新模块与新用例），`SOURCE_MANIFEST.source_commit` 仍钉
+  `a6604052`（v5.6.0 tag），未移 tag、未重建/重签 bundle、未 push；
+- 提交：`2d8affc`（生产者 + 命令 + 用例 + 文档）/ 其后的清单重锚提交。
