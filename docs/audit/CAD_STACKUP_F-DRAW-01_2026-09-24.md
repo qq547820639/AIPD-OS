@@ -115,3 +115,17 @@ python -m pytest tests/test_cad_stackup.py -q
 python -m aipd_os.cli.main drawing generate --out /tmp/s.dxf --part bracket \
   --views TOP --spec /tmp/contradiction.json ; echo $?
 ```
+
+## 九、收尾读数
+
+- 全量回归：**1516 passed / 0 failed / 3 skipped**；
+- `ruff check src tests state_service` 0；`mypy src tests` 0（**383** 文件）；
+- `production_release_gate --release-ready --tag v5.6.0` 退出码 0（8/8）；
+  `skill_quality_audit` 0/0；`state_perf_gate` **PASS**（load 4.02；
+  `fact_batched_ops_s` 20768 ops/s > 基线 18424.7、批处理比 0.0474、
+  `nested_txn_marginal_us` 20.19µs）；
+- 清单 581 文件（+2：新模块与新用例），锚点仍钉 v5.6.0，未移 tag、未重签 bundle、未 push；
+- 提交：`d9dbb43`（叠加判据 + 用例 + 文档）/ `a4e5755`（清单重锚）。
+- 自我更正两处（都在提交前自查发现）：接线时把 `_emit` 误写成条件表达式（会导致永不输出）；
+  审计文档初稿把模块写成「60 行」「9 条变异」，实测是 **103 行 / 7 条**，已按 `wc -l` 与
+  变异台输出改正——数字一律取现算，不取记忆。
