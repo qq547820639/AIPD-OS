@@ -67,7 +67,8 @@ def cmd_drawing(args):
         return 2
 
     provenance = {"tool": f"cadquery {CadQueryBackend().tool_version()}",
-                  "model_source": args.step or args.native or "golden_default"}
+                  "model_source": args.step or args.native or "golden_default",
+                  "command": "drawing generate", "ok": True, "status": "DONE"}
     try:
         evidence = generate_drawing(
             model, out, part_name=args.part, revision=args.revision,
@@ -77,10 +78,6 @@ def cmd_drawing(args):
     except ValueError as exc:
         print(f"出图参数不合法：{exc}")
         return 2
-
-    evidence.update({"command": "drawing generate", "ok": True,
-                     "status": "DONE", "model_source": provenance["model_source"],
-                     "tool": provenance["tool"]})
 
     def prose():
         print(f"已出图：{out}（{evidence['sheet']} 1:{evidence['scale']}，"

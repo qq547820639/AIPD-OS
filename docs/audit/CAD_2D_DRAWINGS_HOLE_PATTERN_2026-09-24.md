@@ -14,9 +14,9 @@
 |----|------|----------|
 | `cad.2d_drawings` 分类 | `external_dependency` → **`partially_implemented`** | `scripts/capability_matrix.py --repo . --out docs/audit` 复算 |
 | 全能力分布 | fully 36 / partially 28 / external 13 / 其余 0（共 77） | `docs/audit/capability_matrix.json` |
-| 图纸用例 | 24 passed | `tests/test_cad_drawings2d.py` |
+| 图纸用例 | 27 passed | `tests/test_cad_drawings2d.py` |
 | CAD 黄金闭环用例 | 18 passed（新增 6 条） | `tests/test_cad_golden_loop.py` |
-| 全量回归 | 1320 passed / 2 failed / 3 skipped | 2 条失败是清单哈希，见 §6 |
+| 全量回归 | **1323 passed / 0 failed / 3 skipped**（清单重算后复跑） | 重算前那 2 条哈希失败见 §6 |
 | F-CAD-01 | 已修 + 已入门禁 + 已配反证 | §5 |
 | ruff（`src tests state_service`）/ mypy（359 文件） | 0 项 | CI 作用域 |
 
@@ -100,9 +100,23 @@ entities LWPOLYLINE 38 / LINE 58 / DIMENSION 8 / TEXT 18   bytes 76454
 
 ---
 
-## 5. F-CAD-01：`hole_count=4` 实际只钻出 3 个孔（已修）
+### 4.1 未跑过的入参分支 = 没交付：`--step` / `--native` 补测又抓出一处
 
-**发现方式**：为 §4 定位「孔位为何对不上参数」时，直接量 B-Rep 的圆柱面，得到
+写这轮文档时回头查覆盖，发现 `cmd_drawing` 只有 **HOLD 分支**有常驻用例，
+`--native` 与 `--step` 全靠我手工命令验证。补 `TestCliInputPaths` 三条后，
+第一条真跑就红了：`.evidence.json` 里**没有** `model_source`/`tool`/`ok`/`status`——
+`generate_drawing` 先写 sidecar，`cmd_drawing` 之后才把溯源字段 `update` 进返回字典，
+于是「本次输出说了画的是哪个模型」这件事**不落盘**。归档图纸时会丢掉来源。
+
+修法：溯源在出图前就进 `provenance`，由 `generate_drawing` 唯一一次写盘，
+磁盘证据与 stdout 同形（`evidence_file` 一条除外，它天然只能在写后加）。
+现状钉住用例：默认回退（既无 `--step` 也无 `--native` ⇒ 用默认黄金模型）
+必须在证据里点名 `model_source == "golden_default"`，翻转条件已写进 docstring。
+
+教训：**手工跑过不等于有常驻断言**；一个从未被用例走过的入参分支，
+它的证据链是否完整是未知的——本轮两处假绿（§4 的圆心、此处的 sidecar）都出自这类分支。
+
+## 5. F-CAD-01：`hole_count=4` 实际只钻出 3 个孔（已修）**发现方式**：为 §4 定位「孔位为何对不上参数」时，直接量 B-Rep 的圆柱面，得到
 `x = -40, -30, 0`——三个孔位，不是四个。也就是说图纸没错，**模型是错的**。
 
 **根因**（实测三种写法，非推测）：CadQuery 的 `Workplane.center(x, y)` 相对
@@ -142,6 +156,12 @@ BOM 数量与模具摊销/成本核算跟着错，图纸也是错图的忠实投
   `src/aipd_os/cli/{command_contract,commands,main}.py`、`src/aipd_os/registry_data.py`。
   处理方式沿用 P2：改完内容后重生成清单，`SOURCE_MANIFEST.source_commit`
   **仍锚在 `v5.6.0` tag 提交**，不移动 tag、不重签名、不 push。
+  §4.1 的 sidecar 修复之后这两条又红了一次（同一机制，不是回归）。
+- 收尾读数：`production_release_gate --release-ready --tag` **8/8 绿**（exit 0），
+  `state_perf_gate` **PASS**（批处理比 median 0.0161 ≤ 0.34），
+  `skill_quality_audit` 0 警告 0 失败，`audit_repo --strict` 仍按既有原因红：
+  「Provenance source commit mismatch: manifest=a660405… vs HEAD=…」——
+  即发布锚点仍在 tag 上、本轮提交未发布，属预期状态而非本轮引入。
 - **已发布黄金工件未再生成**：`releases/golden-projects/B-cad-engineering-change/`
   里的 `bracket*.py/step` 与 `report.json` 仍是修复前的几何（3 孔），其
   `source_commit = d58ab14…`。本轮没有覆盖它们：用未提交的代码重算出的字节，去声称

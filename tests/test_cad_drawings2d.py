@@ -25,6 +25,11 @@ from aipd_os.cad.drawings2d import (  # noqa: E402
 
 L, W, T, HD = 40.0, 20.0, 10.0, 6.0
 
+# 真实发布的黄金件原生源（只读输入：参数由 AST 取，几何由内核现算）
+GOLDEN_BRACKET_SOURCE = (Path(__file__).resolve().parents[1] / "releases" /
+                         "golden-projects" / "B-cad-engineering-change" /
+                         "bracket.py")
+
 
 def _plate(hole: str = "Z"):
     wp = cadquery.Workplane("XY").box(L, W, T)
@@ -237,6 +242,64 @@ class TestDxfOutput:
                               views=("FRONT",), scale=0.5)
         assert ev["views"][0]["size_mm"][0] == pytest.approx(L * 0.5, abs=1e-3)
         assert ev["scale"] == 0.5
+
+
+class TestCliInputPaths:
+    """CLI 的两种输入都必须真跑一遍。
+
+    此前只有 HOLD 分支被覆盖，`--native` 与 `--step` 全靠手工命令验证；
+    一个没人跑过的入参分支等于没交付。
+    """
+
+    @staticmethod
+    def _ns(out, **kw):
+        import argparse
+
+        base = dict(out=str(out), part="cli_part", revision="A",
+                    views="TOP", scale=1.0, material="-", sheet="A3",
+                    json=True, step=None, native=None)
+        base.update(kw)
+        return argparse.Namespace(**base)
+
+    def test_native_source_input_writes_dxf_and_evidence(self, tmp_path):
+        from aipd_os.cli.commands_drawing import cmd_drawing
+
+        out = tmp_path / "from_native.dxf"
+        rc = cmd_drawing(self._ns(out, native=str(GOLDEN_BRACKET_SOURCE)))
+        assert rc == 0
+        assert out.stat().st_size > 1000
+        ev = json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        holes = [d for v in ev["views"] for d in v["dimensions"]
+                 if d["kind"] == "hole_diameter"]
+        assert sorted(round(h["center"][0], 3) for h in holes) == \
+            [-30.0, -10.0, 10.0, 30.0]
+
+    def test_step_input_writes_dxf(self, tmp_path):
+        from aipd_os.cli.commands_drawing import cmd_drawing
+
+        step = tmp_path / "bracket.step"
+        cadquery.exporters.export(TestRealBracketPattern._bracket(), str(step),
+                                  exportType="STEP")
+        out = tmp_path / "from_step.dxf"
+        assert cmd_drawing(self._ns(out, step=str(step))) == 0
+        assert out.is_file() and out.stat().st_size > 1000
+
+    def test_no_input_falls_back_to_default_but_says_so(self, tmp_path):
+        """现状钉住：既无 --step 也无 --native 时回退默认黄金模型。
+
+        这是本仓 `load_native_model` 的既有约定（与 `cad build` 一致），但出图
+        不能让人以为画的是自己那个件——所以回退必须在证据里点名。
+        翻转条件：若改为「缺输入即报错」，本用例改为断言 rc != 0 且不落文件。
+        """
+        from aipd_os.cli.commands_drawing import cmd_drawing
+
+        out = tmp_path / "default.dxf"
+        assert cmd_drawing(self._ns(out)) == 0
+        ev = json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        assert ev["model_source"] == "golden_default"
+        # 溯源必须落在磁盘证据里，而不是只存在于本次 stdout
+        assert ev["ok"] is True and ev["status"] == "DONE"
+        assert ev["command"] == "drawing generate"
 
 
 class TestCapabilityDeclaration:

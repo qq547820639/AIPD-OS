@@ -539,6 +539,7 @@ def generate_drawing(model: Any, out_path: Path | str, *,
     evidence = write_dxf(built, path, part_name=part_name, revision=revision,
                          scale=scale, material=material, sheet=sheet,
                          provenance=provenance)
+    evidence.update(provenance or {})
     evidence.update({"part": part_name, "revision": revision,
                      "generated_at": datetime.now(timezone.utc).isoformat(),
                      "hidden_line_method": HIDDEN_LINE_METHOD})
