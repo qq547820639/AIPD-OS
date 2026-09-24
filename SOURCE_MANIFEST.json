@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-24T11:07:37+00:00",
+  "generated_at": "2026-09-24T11:32:00+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 37924,
-      "sha256": "2f106d3661a3e1aa10a8a4475b55fb1aa7346eead491ff2090a3833ef0782ba8"
+      "size": 39169,
+      "sha256": "c5e6cdcc55c8ed3d8b33afcefff5709b57cc71d06b127e0acd4cec429b53cc92"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1532,13 +1532,13 @@
     },
     {
       "path": "src/aipd_os/registry.py",
-      "size": 12479,
-      "sha256": "cc555f2024bdb6b2a9a68e894c51093f9a4be8f9b4a333def9dc36dc5d5c89d7"
+      "size": 12813,
+      "sha256": "ff1b64ec6dad7b0a9716288b2631d7f5cc59100da40210385a773092dfd096c8"
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 51420,
-      "sha256": "7cd0e67c2acd33dcd31694245e51e1dda55813113d707dbbfbdb7c0883261aa5"
+      "size": 51475,
+      "sha256": "470dc9e5e93fc36faf219cf7dae7b0e0977b8ea8b04c517c799e253493510987"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -2187,8 +2187,8 @@
     },
     {
       "path": "tests/test_cad_drawings2d.py",
-      "size": 15450,
-      "sha256": "c09ec85f7104502174f750e02cfbcb8c456c1941c53cdc4ec68079dc33b67a57"
+      "size": 15931,
+      "sha256": "e6b090bcba678f49325f1b72277f99b9437e51696d6b75d61c769f486c0e4484"
     },
     {
       "path": "tests/test_cad_golden_loop.py",
@@ -2204,6 +2204,11 @@
       "path": "tests/test_cad_maturity_gate.py",
       "size": 2095,
       "sha256": "b76f799628254847dc0daada95cfa02a2ea3e79c2ed029ff2dd2888c6f8b9d83"
+    },
+    {
+      "path": "tests/test_capability_entry_surface.py",
+      "size": 4486,
+      "sha256": "75ce85555737f57a95fbe7f1992fff10a5d8f7fb149d654fdd193f4a6ceaec12"
     },
     {
       "path": "tests/test_capability_matrix.py",
