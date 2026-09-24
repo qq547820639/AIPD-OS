@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-24T14:47:37+00:00",
+  "generated_at": "2026-09-24T15:33:47+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 48777,
-      "sha256": "4c724184f6fd49908393a796a6a0a60d5bacb19ce6c087866ae152fd21fa9c34"
+      "size": 51593,
+      "sha256": "a90280f19830a28247985a08a172534e3b0d0cb98e723973b6dadb0c71c412a1"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 16130,
-      "sha256": "91ea3812c179409f8046f6f817c74085fc3ece9fca3e4d5d46a65d12f325bc6a"
+      "size": 16724,
+      "sha256": "88165629e777c554d5be0295a78682ad056023cb76b53c6e4c76404131a70914"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -177,8 +177,8 @@
     },
     {
       "path": "SKILL.md",
-      "size": 3020,
-      "sha256": "75d24ef1b6ccf50dde7db4be0d84531911e5a6b98a4bf08b7bf9e2a96fa46bea"
+      "size": 3037,
+      "sha256": "d1552ffdeb6782a480a81ad46ad5765c23f60d1fdb2509ba7fe798dc804eadf7"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -967,8 +967,8 @@
     },
     {
       "path": "src/aipd_os/cad/drawings2d.py",
-      "size": 44784,
-      "sha256": "e954461b40d14466ca4d9bf82ae10a657301ca3cb1ad0e81bf3279973f9b8cb5"
+      "size": 46582,
+      "sha256": "b223dd1d6338c76d1eb5f6958c50d4d80ca83648b41831d79675595a8dacf1f8"
     },
     {
       "path": "src/aipd_os/cad/evidence.py",
@@ -984,6 +984,11 @@
       "path": "src/aipd_os/cad/maturity.py",
       "size": 7811,
       "sha256": "f111a6722277c0c4a02da0e6cd330a564f5e5d610abe1ce9c23ab82189647eda"
+    },
+    {
+      "path": "src/aipd_os/cad/spec_from_truth.py",
+      "size": 6068,
+      "sha256": "78cad132519bad0f6b6e80f96210036cd628652d409bc4d17416f3ab336dd031"
     },
     {
       "path": "src/aipd_os/cad/stackup.py",
@@ -1007,13 +1012,13 @@
     },
     {
       "path": "src/aipd_os/cli/command_contract.py",
-      "size": 13444,
-      "sha256": "a5256fda224cdb00f51347b077ab996b1a8a0a56f7fc5d5f341d19037351f41b"
+      "size": 13708,
+      "sha256": "8748d058be06f28456f8173ec90e85c584691d8f0c57ac6fe49ab493053f479e"
     },
     {
       "path": "src/aipd_os/cli/commands.py",
-      "size": 22751,
-      "sha256": "b90f8b3cd97d7cc9d3088af656f7edb54483a9ae32ea12b8f67c62a4f74d1e2d"
+      "size": 22807,
+      "sha256": "1a5c697e94ca4340c55464f415003ec5b3ce837c1ba3782f8e58351fe5ab3df2"
     },
     {
       "path": "src/aipd_os/cli/commands_cad.py",
@@ -1027,8 +1032,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 7778,
-      "sha256": "ebed81b72d06ad297bd7f2a467b80fe2210e9ad3356473ece7b3410769bf79bf"
+      "size": 10357,
+      "sha256": "bc4ef3632505d1c50331beae2f4ace97780928a0467f99a5539a6662541e555e"
     },
     {
       "path": "src/aipd_os/cli/commands_legacy.py",
@@ -1072,8 +1077,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 35838,
-      "sha256": "1e3789af6cca005c5ca60d19835796a189d8f4f8fe98a6883076a99b38395d2e"
+      "size": 36681,
+      "sha256": "4d38c819984f8bccbee5b0a743305e09f373f25d1752d464c18b82538e51f87a"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1547,13 +1552,13 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 54244,
-      "sha256": "e5bb6d211f11c45ea60b53543ccbf3bc1f787ed8e5f4bb89e35d8287a36b02b6"
+      "size": 55097,
+      "sha256": "088da71d370fd591eca7d65bbafd1f85bfa653432717ea91c800b8bbbb4813e1"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
-      "size": 13851,
-      "sha256": "788f900857fb6e8dc5f11c8810ad22a564dbd0193f2b980c2f724feb0c1468cb"
+      "size": 13906,
+      "sha256": "6224d193c67b9076f2fe138b92d10925d03eb16694cef3420d0d989a4c60ccc5"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -2234,6 +2239,11 @@
       "path": "tests/test_cad_section_views.py",
       "size": 9137,
       "sha256": "5c77538c25adb1ca8cc27b1ad31b5d33bae06a739da72af4d728c89d590cba4b"
+    },
+    {
+      "path": "tests/test_cad_spec_from_truth.py",
+      "size": 12966,
+      "sha256": "2a73598ef263129fbe72bb905d4c73cc7abf113bc56bd2e35c96f8fda00da1a1"
     },
     {
       "path": "tests/test_cad_stackup.py",
