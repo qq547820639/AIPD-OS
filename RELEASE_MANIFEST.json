@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 27952,
-      "sha256": "450fce5c4e5561a4603da50e33a3d9d8c465bf3c8e16285a170c3881097086ac"
+      "size": 29273,
+      "sha256": "e356ada4e032a1e4151bea63bc06467bf23e0d91f9a6f8aeb1dce92f8b20ce94"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -367,8 +367,8 @@
     },
     {
       "path": "docs/architecture/import_architecture.md",
-      "size": 1790,
-      "sha256": "d8ecaa510cb2a1de6ce59c74d9dac98a8929109979a844ebaef87ceb1fa25a80"
+      "size": 3169,
+      "sha256": "eb6b8cac037c754b1fe721fa1c76781ec8e12a184055f5d75ffb6bfd0a4db5e4"
     },
     {
       "path": "docs/architecture/project_boundary.md",
@@ -477,8 +477,8 @@
     },
     {
       "path": "pyproject.toml",
-      "size": 2499,
-      "sha256": "d81bacc9841cce349c61fb9a281144178f9d0f10b0ad85ecec227b0194c37118"
+      "size": 2737,
+      "sha256": "93becd9738374e7a8b2bce419aa4489b5c2951156dcc7735a7ead2fbdd63a3b2"
     },
     {
       "path": "references/AIPD-OS-v4.0.docx",
@@ -1072,8 +1072,8 @@
     },
     {
       "path": "src/aipd_os/evals/runner.py",
-      "size": 14840,
-      "sha256": "32b9fc5395b6e1216360c2d02c8ae651d4374b272601333ec3dbbfeab34a9247"
+      "size": 14982,
+      "sha256": "4720960be4f5e323890fb48c7108b1346bf87d4db9e203bf8306cee729036818"
     },
     {
       "path": "src/aipd_os/evals_runner/__init__.py",
@@ -1087,8 +1087,8 @@
     },
     {
       "path": "src/aipd_os/evals_runner/completion.py",
-      "size": 7125,
-      "sha256": "ee593571e8c4ab89774a496c3ff912e60f177a02c0a43f6f2100f673022c7723"
+      "size": 6849,
+      "sha256": "08794ab9a61a241e0e4385240001145b4149ea540d45e66d3d8e94dd195b14bc"
     },
     {
       "path": "src/aipd_os/evals_runner/golden_projects.py",
@@ -1327,8 +1327,8 @@
     },
     {
       "path": "src/aipd_os/imggen/providers.py",
-      "size": 19108,
-      "sha256": "8c3b2aab1678183f86ad554d2064de69ce54981076dadd8871cb7121a6f8b248"
+      "size": 19352,
+      "sha256": "d03426f74c779feb89b7ae94cc6ea06118208fc2b96edfa7b587ddc7d863a2b8"
     },
     {
       "path": "src/aipd_os/imggen/rebuild.py",
@@ -1367,8 +1367,8 @@
     },
     {
       "path": "src/aipd_os/llm/client.py",
-      "size": 4195,
-      "sha256": "de1e7d8af41bedfabdf956dd738062dd3b7a591d59d78fea3076c26693150948"
+      "size": 3902,
+      "sha256": "dee4b3427be7fb7193c907c721d98327de108264c10fc7360a3742da093af341"
     },
     {
       "path": "src/aipd_os/llm/experience.py",
@@ -1414,6 +1414,16 @@
       "path": "src/aipd_os/mail/gmail_oauth.py",
       "size": 4198,
       "sha256": "c77c01e9f2ff92f0fb76479b04d1c1fa515dc6fbfe5d77706e22b6caef20f58f"
+    },
+    {
+      "path": "src/aipd_os/net/__init__.py",
+      "size": 69,
+      "sha256": "b19b40c2bf3b71fa852d3815ae3575d6f6c7be028a6dd322bfa2ed957dbed6ac"
+    },
+    {
+      "path": "src/aipd_os/net/http.py",
+      "size": 7021,
+      "sha256": "8f9a3cfa88421fd57295ed40f27a41dd6f224b07bd4ad847f5a58c878c5b7ff6"
     },
     {
       "path": "src/aipd_os/product_intelligence/__init__.py",
@@ -1557,8 +1567,8 @@
     },
     {
       "path": "src/aipd_os/research/providers/researchstudio.py",
-      "size": 15644,
-      "sha256": "763d506e25619a63dd01949c0ba17f31be7a81e8ca2df639b934f727da041ab1"
+      "size": 16010,
+      "sha256": "b07cf66ac7d420482cee1bb3f26da86c13e0496f9bc64b5b8e42a927777b66b1"
     },
     {
       "path": "src/aipd_os/research/retrieval.py",
@@ -1887,8 +1897,8 @@
     },
     {
       "path": "src/aipd_os/tool_adapters/research_adapter.py",
-      "size": 6184,
-      "sha256": "cdb2066b68f77e0bba9750b276e2ce3c3387d9eb068bf8605e21363190dd7777"
+      "size": 6320,
+      "sha256": "9b729011047d9a3055c6a88905c4b71a071a8efec9dcd87587fa68f6af6f0415"
     },
     {
       "path": "src/aipd_os/tool_adapters/supplier_adapter.py",
@@ -1947,8 +1957,8 @@
     },
     {
       "path": "src/aipd_os/visual_audit/providers.py",
-      "size": 7328,
-      "sha256": "3ef5930fd7fe2efddfc911cada46039c86ffde2d31f465d534148314aec2f7c8"
+      "size": 7320,
+      "sha256": "75e9528cbe1e3ad5ccfc88a6686ea6b3510ac8c377cb4f401a06bb12ef9dc1fe"
     },
     {
       "path": "src/aipd_os/web/__init__.py",
@@ -2102,8 +2112,8 @@
     },
     {
       "path": "tests/test_adapters.py",
-      "size": 6413,
-      "sha256": "e00e96dd7cca63cdb3831b29f5c1a6a6dc113176c79ef417c434eab200c48363"
+      "size": 6881,
+      "sha256": "9b0d695acd2c7ba18ffab507c9ba877837f5db5b472b3706029ff1ef4ef8ad98"
     },
     {
       "path": "tests/test_anthropometry.py",
@@ -2217,8 +2227,8 @@
     },
     {
       "path": "tests/test_completion_endpoint.py",
-      "size": 4121,
-      "sha256": "65c8fefc918420ab1d4a951b41879397aaea278237006aa5338c9ad10e725a1f"
+      "size": 6406,
+      "sha256": "a3f1b78d5f82a2699ad5152e4eee7693b48b69f92249cde865dcf4b57fb518d1"
     },
     {
       "path": "tests/test_connection_reentrancy.py",
@@ -2427,8 +2437,8 @@
     },
     {
       "path": "tests/test_llm_providers.py",
-      "size": 13285,
-      "sha256": "af1b152215c6a84b3ce1af5a43eb4e16216fc1a6c5cdf3fe4464ab91d0c78758"
+      "size": 13495,
+      "sha256": "8548c31e5d99e46c899f2e9529fb7fe091610280b6d0fb216f48295c728bbdda"
     },
     {
       "path": "tests/test_llm_runtime_wiring.py",
@@ -2504,6 +2514,16 @@
       "path": "tests/test_model_evals_honesty.py",
       "size": 6681,
       "sha256": "0bad17fa86796164054d3bb62a992b7642a2364453e0f85b3cea8fbaf33f1cac"
+    },
+    {
+      "path": "tests/test_net_egress_convergence.py",
+      "size": 5293,
+      "sha256": "90d99643915cd5c21eeb9ef86820215f90cbbdb87374fab8fed3ee2f0b93a4e4"
+    },
+    {
+      "path": "tests/test_net_http.py",
+      "size": 6533,
+      "sha256": "45f118933971bd8bb8fcbceeb71848f6e93ec5758c563859f70d68870d1935f7"
     },
     {
       "path": "tests/test_objects.py",
@@ -2797,8 +2817,8 @@
     },
     {
       "path": "tests/test_visual_honesty_guardrail.py",
-      "size": 5582,
-      "sha256": "b06b1c604999e85c3bc81ed7eb21f17f0793aa6ac556dff03a9ddedd8c13f225"
+      "size": 5803,
+      "sha256": "7ebc121e2f958551e2df22808b76ef8ce24100a530671024d5e968dbb5d6ccd9"
     }
   ]
 }
