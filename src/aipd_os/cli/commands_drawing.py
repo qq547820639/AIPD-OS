@@ -172,6 +172,7 @@ def cmd_drawing(args):
     gdt_unmatched = list(evidence.get("gdt_unmatched_features") or [])
     limit_issues = list(evidence.get("spec_limit_issues") or [])
     section_issues = list(evidence.get("section_issues") or [])
+    section_warnings = list(evidence.get("section_warnings") or [])
 
     def prose():
         print(f"已出图：{out}（{evidence['sheet']} 1:{evidence['scale']}，"
@@ -233,12 +234,14 @@ def cmd_drawing(args):
             print(f"  GD&T 未收口：声明了框但图上没有这些特征：{gdt_unmatched}")
         for msg in section_issues:
             print(f"  剖视未收口：{msg}")
+        for msg in section_warnings:
+            print(f"  剖视告警：{msg}")
         for issue in limit_issues:
             print(f"  合格域未收口：{issue['feature']} 实测 {issue['measured']:g} 不在 "
                   f"CTQ 的 {issue['min']:g}–{issue['max']:g} 内"
                   f"{('（CTQ ' + issue['ctq_ref'] + '）') if issue['ctq_ref'] else ''}")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
-        print("未含剖切符号 A-A/阶梯剖/局部放大/爆炸图，"
+        print("未含阶梯剖/旋转剖与局部放大/爆炸图，"
               "详见 capability cad.2d_drawings 的 limitation。")
     _emit(args, evidence, prose)
     held = bool(unmatched or evidence.get("stackup_inconsistent") or gdt_issues

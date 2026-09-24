@@ -207,6 +207,8 @@ aipd drawing generate --out out/bracket.dxf --part bracket --views FRONT,TOP --s
 #   ↑ 剖视是真做的布尔切割：`--section X|Y|Z=偏移` 保留 ≥ 偏移的一侧，切出的材料面
 #     用 DXF `HATCH`（ANSI31 图案线）填剖面线，`material_area_mm2` 由内核量得；
 #     切不到材料/边界接不成闭合环 ⇒ 明说原因并判未收口（4），不交空白剖视当成果。
+#     母视图上会画剖切符号（剖切线 + 指向保留侧的短划 + 两端字母），剖视标 «A-A»、
+#     第二刀 «B-B»；切到空气的那一刀不编号也不标符号。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据

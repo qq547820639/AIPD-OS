@@ -186,3 +186,34 @@ class TestCliSurface:
         text = capsys.readouterr().out
         assert "SECTION_Y" in text and "材料区" in text and "剖面线" in text
         assert "未收口" not in text
+
+
+class TestSeverityIsNotCollapsed:
+    """「面积会被高估」是**告警**，「什么都没切到」是**未收口**——两档不能共用一个退出码。
+
+    真机发现的：黄金件切 z=2 出一张带 4 个内环的剖面，外边界照样填了、面积按高估说明，
+    结果命令和「切到空气」一样返回 4。图纸能交付但需要知道面积偏高，
+    与图纸根本不成交付，是两回事。
+    """
+
+    def test_inner_rings_are_a_warning_not_a_hold(self, tmp_path, capsys):
+        from aipd_os.cli.main import main
+
+        out = tmp_path / "rings.dxf"
+        rc = main(["drawing", "generate", "--out", str(out), "--part", "plate",
+                   "--views", "TOP", "--section", "Z=2"])
+        assert rc == 0, capsys.readouterr().out
+        text = capsys.readouterr().out
+        assert "内环" in text and "剖视告警" in text
+        assert "未收口" not in text
+        ev = __import__("json").loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        assert any("内环" in w for w in ev["section_warnings"]), ev["section_warnings"]
+        assert ev["section_issues"] == []
+        assert _view(ev, "SECTION_Z")["cut_regions"] == 1
+
+    def test_a_missed_cut_is_still_a_hold(self, tmp_path):
+        from aipd_os.cli.main import main
+
+        rc = main(["drawing", "generate", "--out", str(tmp_path / "miss.dxf"),
+                   "--part", "plate", "--views", "TOP", "--section", "Y=999"])
+        assert rc == 4

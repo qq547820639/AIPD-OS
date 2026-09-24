@@ -39,8 +39,13 @@
   ANSI31）。剖面区只取「法向平行 **且** 面心落在剖切平面上」的面——实测只筛法向会把
   后外壁（100×10=1000mm²）当成剖面，凭空多出一块材料。
 
-明确**未实现**（不要当成已具备）：局部放大图、爆炸图、多零件装配图；剖视未做剖切符号
-（A-A 箭头）与阶梯剖；叠加未做三维/角度与分布型统计（Cpk）；GD&T 用的是 drawn 几何
+剖视的**剖切符号**（母视图上的剖切线 + 指向保留侧的短划 + 两端字母 + 剖面标题 «A-A»）
+由 ``assign_section_letters`` 真画：位置由「剖切平面在母视图投影面上的交线」算出
+（``a·u + b·v = offset``），视线与法向平行的视图不是母视图、剖视图自己不标，
+空剖视不编号也不标符号。
+
+明确**未实现**（不要当成已具备）：局部放大图、爆炸图、多零件装配图；阶梯剖/旋转剖；
+叠加未做三维/角度与分布型统计（Cpk）；GD&T 用的是 drawn 几何
 而非 DXF ``TOLERANCE`` 语义实体（其 ``content`` 转义码无权威来源，见 ``cad.gdt`` docstring）。
 见 registry 的 ``current_limitation``。
 """
@@ -90,6 +95,10 @@ SECTION_BASIS = {
 }
 SECTION_PLANE_TOL = 1e-6       # 判定「这个面就落在剖切平面上」
 SECTION_KEEP_LABEL = {"X": "x>=", "Y": "y>=", "Z": "z>="}
+SECTION_LETTERS = "ABCDEFGHJKL"   # 剖切符号字母；按惯例跳过 I
+SECTION_OVERHANG = 4.0            # 剖切线向母视图轮廓两端各伸出的余量（图纸 mm）
+SECTION_TICK = 2.5                # 端部短划长度，指向被保留的一侧
+SECTION_LETTER_HEIGHT = 3.5       # 字母字高
 
 DIMSTYLE = "EZ_M_100_H25_CM"
 DIM_ROW_GAP = 10.0        # 无尺寸链时总体宽尺寸的引出距离
@@ -116,6 +125,10 @@ class ViewGeometry:
     section_of: dict[str, Any] | None = None
     nested_region_wires: int = 0
     section_problems: list[str] = field(default_factory=list)
+    section_warnings: list[str] = field(default_factory=list)
+    section_letter: str = ""
+    label: str = ""
+    section_symbols: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def width(self) -> float:
@@ -441,6 +454,77 @@ def parse_section_spec(spec: str) -> tuple[str, float]:
     return axis, offset
 
 
+def _section_line_in_view(view: ViewGeometry, axis: str,
+                          offset: float) -> dict[str, Any] | None:
+    """剖切平面在某个视图投影面上的交线（视图局部坐标）；不是母视图时返回 ``None``。
+
+    投影是正交的：点 ``p`` 映成 ``(p·right, p·up)``。剖切平面 ``p·n̂ = offset`` 投出来
+    是直线 ``a·u + b·v = offset``，其中 ``a = right·n̂``、``b = up·n̂``。
+    视线与法向平行（``a = b = 0``）时该平面「铺满」这个视图，画不出交线——
+    也就是**这个视图不是母视图**，所以返回 None 而不是硬画一条。
+    """
+    n = SECTION_AXIS_NORMAL[axis]
+    basis = view_basis(view.direction, view.up)
+    right, upv = basis["right"], basis["up"]
+    a = sum(r * k for r, k in zip(right, n))
+    b = sum(r * k for r, k in zip(upv, n))
+    s_len = math.hypot(a, b)
+    if s_len < 1e-9:
+        return None
+    px, py = offset * a / (s_len * s_len), offset * b / (s_len * s_len)
+    dx, dy = b / s_len, -a / s_len
+    corners = [(view.bbox[0], view.bbox[1]), (view.bbox[2], view.bbox[1]),
+               (view.bbox[2], view.bbox[3]), (view.bbox[0], view.bbox[3])]
+    half = max(abs((cx - px) * dx + (cy - py) * dy) for cx, cy in corners)
+    reach = half + SECTION_OVERHANG
+    return {"from": [px - reach * dx, py - reach * dy],
+            "to": [px + reach * dx, py + reach * dy],
+            "dir": [dx, dy], "kept_side": [a / s_len, b / s_len]}
+
+
+def assign_section_letters(views: list[ViewGeometry]) -> dict[str, str]:
+    """给剖视按出现顺序编号 A、B、…，并把剖切符号算到它该出现的母视图上。
+
+    符号落在**所有**视线与剖切面垂直的视图上（一张图可能同时有 TOP 和 BOTTOM 两个母视图）；
+    母视图缺席时不硬画，证据里也就没有那条符号——宁可少标，不可错标。
+    """
+    letters: dict[str, str] = {}
+    for view in views:
+        if not view.section_of:
+            continue
+        if not view.cut_regions:
+            # 空剖视不编号也不标符号：给一刀什么都没切到的剖视标 «B-B»，
+            # 等于图纸声称「这里有一张剖视」而它不存在。原因由 section_problems 说。
+            continue
+        if len(letters) >= len(SECTION_LETTERS):
+            view.section_problems.append(
+                f"剖视数量超过可用字母数 {len(SECTION_LETTERS)}，这张剖视没有编号")
+            continue
+        letter = SECTION_LETTERS[len(letters)]
+        letters[view.name] = letter
+        view.section_letter = letter
+        view.label = f"{letter}-{letter}"
+    for view in views:
+        if view.section_of:
+            continue
+        for sec in views:
+            if not sec.section_of or not sec.section_letter:
+                continue
+            line = _section_line_in_view(view, str(sec.section_of["axis"]),
+                                         float(sec.section_of["offset"]))
+            if line is None:
+                continue
+            view.section_symbols.append({
+                "letter": sec.section_letter, "axis": str(sec.section_of["axis"]),
+                "offset": float(sec.section_of["offset"]), "of": sec.name, "ticks": 2,
+                "from": [round(line["from"][0], 6), round(line["from"][1], 6)],
+                "to": [round(line["to"][0], 6), round(line["to"][1], 6)],
+                "kept_side": [round(line["kept_side"][0], 6),
+                              round(line["kept_side"][1], 6)],
+            })
+    return {name: letter for name, letter in letters.items()}
+
+
 def section_view(model: Any, name: str, axis: str, offset: float = 0.0,
                  include_hidden: bool = True) -> ViewGeometry:
     """真做半空间布尔切割，再按剖切面方向投影，并量出剖面上的材料区。
@@ -489,6 +573,7 @@ def section_view(model: Any, name: str, axis: str, offset: float = 0.0,
     regions: list[list[tuple[float, float]]] = []
     problems: list[str] = []
     nested = 0
+    warnings: list[str] = []
     matched = 0
     for face in cut.Faces():
         normal = face.normalAt()
@@ -512,7 +597,8 @@ def section_view(model: Any, name: str, axis: str, offset: float = 0.0,
         regions.append(poly)
         if len(wires) > 1:
             nested += len(wires) - 1
-            problems.append(f"材料区含 {len(wires) - 1} 个内环，本轮只填外边界，"
+            # 这是**告警**不是阻断：图能交付，只是面积按高估算，与「什么都没切到」不同档
+            warnings.append(f"材料区含 {len(wires) - 1} 个内环，本轮只填外边界，"
                             f"孔/槽面积会被高估")
 
     if not regions:
@@ -524,6 +610,7 @@ def section_view(model: Any, name: str, axis: str, offset: float = 0.0,
     view.cut_regions = regions
     view.nested_region_wires = nested
     view.section_problems = problems
+    view.section_warnings = warnings
     view.section_of = {"axis": axis, "offset": float(offset),
                        "kept": f"{SECTION_KEEP_LABEL[axis]}{float(offset):g}",
                        "normal": [n[0], n[1], n[2]]}
@@ -796,8 +883,11 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
     from aipd_os.cad.gdt import build_gdt_frames
 
     gdt_frames, gdt_issues, gdt_unmatched = build_gdt_frames(views, spec)
+    section_letters = assign_section_letters(views)
     width, height = SHEET_SIZES[sheet]
     doc = ezdxf.new("R2010", setup=True)
+    # 剖切线惯用点划线；没有 PHANTOM 就用虚线，绝不引用文档里不存在的线型
+    cut_line_linetype = "PHANTOM" if doc.linetypes.has_entry("PHANTOM") else "DASHED"
     msp = doc.modelspace()
     for name, color, lt in (("OUTLINE", 7, "Continuous"),
                             ("HIDDEN", 8, "DASHED"),
@@ -805,6 +895,7 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                             ("TEXT", 7, "Continuous"),
                             ("GDT", 6, "Continuous"),
                             ("HATCH", 3, "Continuous"),
+                            ("SECTION", 1, "Continuous"),
                             ("FRAME", 7, "Continuous")):
         if name not in doc.layers:
             doc.layers.add(name, color=color)
@@ -827,10 +918,14 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
         cx = ox + slot_w / 2.0
         cy = oy - (view.height * scale) / 2.0
         _draw_view(msp, view, cx, cy, scale,
-                   [f for f in gdt_frames if f["view"] == view.name])
+                   [f for f in gdt_frames if f["view"] == view.name],
+                   cut_line_linetype)
         label = f"{view.name}  1:{_fmt(1.0 / scale)}"
         msp.add_text(label, dxfattribs={"layer": "TEXT", "height": 4.0}) \
            .set_placement((cx - 10.0, oy + 6.0))
+        if view.label:      # 剖面标题 «A-A»：看图人靠它把剖视与母视图上的符号对上
+            msp.add_text(view.label, dxfattribs={"layer": "TEXT", "height": 4.0}) \
+               .set_placement((cx - 6.0, oy - view.height * scale - 10.0))
         placed.append({"view": view.name, "origin": [round(cx, 2), round(cy, 2)],
                        "size_mm": [round(view.width * scale, 3), round(view.height * scale, 3)],
                        "visible_polylines": len(view.visible),
@@ -842,6 +937,9 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                                                       for r in view.cut_regions), 6),
                        "section_empty": bool(view.section_of) and not view.cut_regions,
                        "section_problems": list(view.section_problems),
+                       "section_warnings": list(view.section_warnings),
+                       "label": view.label,
+                       "section_symbols": [dict(sym) for sym in view.section_symbols],
                        "dimensions": view.dimensions})
 
     _draw_title_block(msp, width, height, part_name, revision, scale, material,
@@ -867,6 +965,8 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
             "gdt_issue_kinds": sorted({str(i["kind"]) for i in gdt_issues}),
             "gdt_unmatched_features": gdt_unmatched,
             "section_issues": sorted({msg for v in placed for msg in v["section_problems"]}),
+            "section_letters": section_letters,
+            "section_warnings": sorted({m for v in placed for m in v["section_warnings"]}),
             "bytes": path.stat().st_size,
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             **spec_stats}
@@ -895,7 +995,8 @@ def _linear_dim(msp: Any, base: tuple[float, float], p1: tuple[float, float],
 
 
 def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float,
-               frames: list[dict[str, Any]] | None = None) -> None:
+               frames: list[dict[str, Any]] | None = None,
+               symbol_linetype: str = "DASHED") -> None:
     off_x = cx - (view.width * scale) / 2.0 - view.bbox[0] * scale
     off_y = cy - (view.height * scale) / 2.0 - view.bbox[1] * scale
 
@@ -966,6 +1067,31 @@ def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float,
                       frame["attach"][1] * scale + off_y)
             draw_frame(msp, frame, origin, anchor)
             cursor_y += 14.0
+
+    _draw_section_symbols(msp, view, place, scale, symbol_linetype)
+
+
+def _draw_section_symbols(msp: Any, view: ViewGeometry, place: Any, scale: float,
+                          linetype: str) -> None:
+    """画剖切符号：剖切线 + 两端指向保留侧的短划 + 两端字母。
+
+    线型由调用方给（PHANTOM 优先，文档里没有时退回 DASHED）：引用不存在的 linetype
+    会让 DXF 在别的软件里被判损坏，所以宁可换线型也不硬写名字。
+    """
+    for sym in view.section_symbols:
+        kept = sym["kept_side"]
+        p1 = place([tuple(sym["from"])])[0]
+        p2 = place([tuple(sym["to"])])[0]
+        msp.add_line(p1, p2, dxfattribs={"layer": "SECTION", "linetype": linetype,
+                                         "color": 1})
+        for end in (p1, p2):
+            tip = (end[0] + kept[0] * SECTION_TICK * scale,
+                   end[1] + kept[1] * SECTION_TICK * scale)
+            msp.add_line(end, tip, dxfattribs={"layer": "SECTION", "color": 1})
+            height = SECTION_LETTER_HEIGHT * scale
+            msp.add_text(sym["letter"], dxfattribs={"layer": "SECTION",
+                                                    "height": height}) \
+               .set_placement((tip[0] - height / 2.0, tip[1] + height * 0.4))
 
 
 def _draw_title_block(msp: Any, width: float, height: float, part: str, rev: str,

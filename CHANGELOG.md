@@ -358,6 +358,30 @@
   13 条新用例（`tests/test_cad_gdt_deviation.py`）。证据见
   `docs/audit/CAD_GDT_DEVIATION_F-DRAW-01_2026-09-24.md`；
 
+- **v5.10 F-DRAW-01 第 8 片：剖切符号与剖面标题 «A-A» 真画到图上，母视图才对得上那一刀**：
+  第 4 片的剖视算对了却没被标出来——图上只有一张叫「SECTION_Y」的视图，
+  母视图上没有剖切线、没有字母，看图人无法定位这一刀切在哪、往哪看；
+  交付图纸里这是**歧义缺陷**，不是美观问题。
+  新增 `assign_section_letters` + `_section_line_in_view`：剖切平面 ``p·n̂ = offset`` 在母视图
+  投影面（正交基 ``right/up``）上就是直线 ``a·u + b·v = offset``（``a = right·n̂``、
+  ``b = up·n̂``），于是符号位置是**算出来的**而不是摆出来的：视线与 ``n̂`` 平行
+  （``a=b=0``）的视图不是母视图 ⇒ 不画；剖视图自己也不标（派生视图不当母视图是显式规则，
+  不是几何副产品——另一刀的法向确实可能在剖视图里投出交线，用例
+  `test_a_section_view_never_carries_another_sections_symbol` 就是钉这个）；
+  **切到空气的剖视不编号也不标符号**——给一张什么都没有的剖视标 «B-B» 等于图纸声称它存在
+  （这一条是真机跑出来才发现的：黄金件 ``--section Z=5`` 空剖视照样拿了 B 并画上 FRONT）。
+  符号 = 剖切线（优先 PHANTOM 点划线，文档里没有就退回 DASHED，
+  **绝不引用文档里不存在的线型**）+ 两端指向保留侧的短划 + 两端字母，
+  外加剖面标题 «A-A»；端点/字母/保留侧方向全部进证据（不是只报「画了符号」）。
+  真机（黄金件 ``--views FRONT,TOP --section Y=0 --section Z=5``）：
+  ``section_letters = {SECTION_Y: A, SECTION_Z: B}``，TOP 上 A 落在 ``v=0``、
+  FRONT 上 B 落在 ``v=5``，跨度 ``±54``（= 轮廓 50 + 两端余量 4），
+  SECTION 层 6 条 LINE + 4 条 TEXT、线型 PHANTOM/BYLAYER，`recover.audit()` **0 错 0 修**；
+  空剖视那一刀 ``rc=4`` 并明说「剖切平面 Z=5 没切到任何材料」。
+  9 条变异全部打破（其中 R8「剖视图自己也标符号」**首轮幸存**，补派生视图用例后才被杀），
+  11 条新用例 `tests/test_cad_section_symbols.py`。第 4 片审计文档已加带日期的更正指针。
+  证据见 `docs/audit/CAD_SECTION_SYMBOLS_F-DRAW-01_2026-09-24.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与
