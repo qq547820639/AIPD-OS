@@ -114,6 +114,10 @@
   handler 先占 `external_operations` 幂等键再投递，同内容重放只发一次（v16 部分唯一索引
   首次被用例经过），超时落 `UNKNOWN_OUTCOME` 并离开可领集合；claim 改为单条
   `WITH … UPDATE … RETURNING *`（带租约返回）；口令不入事件载荷。
+  顺带：`industrialize.email_execution` 的登记入口原写 `mail_rfq_adapter.send`
+  （该符号不存在）现指向真处理器；`SKILL.md` 的「主线共 38 个」在**本轮之前**就比契约
+  少 1（实测 public=39），补为 40 并新增 `tests/test_skill_command_surface.py`
+  做同源核对 + 两条注入反证（`skill_quality_audit` 只查「有没有声明」，不查总数）；
   证据与未证范围见 `docs/audit/EXEC_OUTBOX_WIRING_F-EXEC-02_2026-09-24.md`；
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），

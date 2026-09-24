@@ -89,7 +89,7 @@ outbox 库（命中物是博客、Go demo、`python-cqrs`（Web/CQRS 框架，�
   `unit_test`；顺带修 `state/stale_propagation.py:74` 的「Append propagation event to
   outbox」不实注释（它写的是 `changes` 表）。
 
-## 5. 本轮自己制造又被抓出的四处（登记以免被当成顺带改动）
+## 5. 本轮自己制造又被抓出的六处（登记以免被当成顺带改动）
 
 1. `tests/.../TestCliDrain` 里 `class _Args: db = db` —— class 体用 `LOAD_NAME`，
    绑到了模块级同名 **fixture 函数**上，表现为「no such table: outbox_events」
@@ -112,6 +112,18 @@ outbox 库（命中物是博客、Go demo、`python-cqrs`（Web/CQRS 框架，�
    `faceted_brep_never_reaches_C2` 不判红、只差一个 `never` 的
    `faceted_brep_reaches_C2` 必须仍判红。**把产物写进仓库，就是给所有文档扫描器
    喂新语料**——归档动作要与扫描面对齐，而不是让扫描器记住每个文件名。
+5. 同一个坏测试还在**仓库根留下了 4 个垃圾文件**：`str(fixture 函数)` 被当作数据库
+   路径，`ConnectionFactory` 于是照着这个名字建了空文件。全量测试全绿，没人看见；
+   最后是发布门的 `workspace_clean` 把它们抓出来（4 个 `?? "<pytest_fixture(...)>"`）。
+   处置：删掉（0 字节、本轮产物、非他人工作），并在 CLI 用例里加前提断言
+   `assert Path(db).is_file()` —— 装配错了就地判红，别让文件系统替我记账。
+6. `SKILL.md` 的散文计数「主线共 38 个」**在本轮之前就已经漂了**：契约里 public
+   命令实测 39 条（`get_all_commands()` 现算）。也就是说这个数字已经错着过了
+   至少一次命令新增。补上新命令后写为 40，并加
+   `tests/test_skill_command_surface.py`：总数按契约同源核对、每条 public 命令的
+   名字必须出现在 SKILL 里、外加两条注入反证（总数改错要红、句式漂移要红）。
+   注意既有 `skill_quality_audit.py` 只问「有没有被声明」，不问「总数写对没有」——
+   两者不互相替代。
 
 ## 6. 诚实边界
 
@@ -138,3 +150,16 @@ grep -rn "build_rfq_dispatcher\|OutboxQueue(" src/aipd_os | grep -v "side_effect
 .venv/bin/python scripts/capability_matrix.py --repo . --out docs/audit
 .venv/bin/ruff check src tests state_service && .venv/bin/mypy
 ```
+
+## 8. 收尾读数（本轮，全部现场复算）
+
+| 门禁 | 读数 |
+| --- | --- |
+| 全量 `pytest -q --json-report` | **1412 passed / 0 failed / 3 skipped**（重锚清单前那 2 条 manifest 哈希红已随重锚消失） |
+| 新增常驻用例 | 28（`test_outbox_dispatcher_semantics.py` 9 + `test_outbox_rfq_wiring.py` 16 + `test_skill_command_surface.py` 3） |
+| `ruff check src tests state_service` / `mypy` | 0 / 0（372 个文件） |
+| `production_release_gate --release-ready --tag v5.6.0` | **8/8 exit 0**（认证 v5.6.0 那棵树，见 F-REL-01 的读法约束） |
+| `state_perf_gate` | PASS：批处理比 0.0467 ≤ 0.34；嵌套事务边际 42.2µs（本机与其他 agent 并发跑测试，绝对值只用于同机趋势，见 `overview.md` 测量口径提醒） |
+| `skill_quality_audit` | 0 警告 0 失败（新命令已声明） |
+| 能力矩阵 | 总数仍 77；`industrialize.email_execution` 的分类保持 `external_dependency`（真发仍依赖外部 SMTP），只补齐了入口符号、run_command 与 unit_test 引用 |
+| 工作树 | `git status --short` 空；提交未 push、tag 未动、bundle 未重签 |

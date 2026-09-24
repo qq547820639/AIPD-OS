@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -256,6 +257,10 @@ class TestCliDrain:
 
         # 用 SimpleNamespace 而不是 class 体：class 体里的 `db = db` 走 LOAD_NAME，
         # 会绑到模块级同名 fixture 函数上（表现为「no such table」而不是 NameError）。
+        # 前提：库文件必须真的存在。曾经这里传进去的是 fixture 函数本身，
+        # ConnectionFactory 于是把 str(函数) 当路径**在仓库根创建了文件**，
+        # 直到发布门的 workspace_clean 才被发现。宁可在这里红。
+        assert Path(db).is_file(), f"状态库不存在：{db!r}"
         args = SimpleNamespace(db=db, limit=5, json=True, worker_id="test-outbox")
 
         assert cmd_outbox(args) == 0
