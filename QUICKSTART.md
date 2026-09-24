@@ -61,6 +61,10 @@ aipd manual generate --db state.db --project p1 --batch 1 --prompt "封面与原
 ```bash
 aipd cad preflight --manifest cad.json --target C2
 aipd cad build --manifest cad.json --target C2
+# 由 3D 模型出二维工程图（DXF：可见线 + 隐藏线 + 投影测量的尺寸 + 标题栏），
+# 同时写 <out>.evidence.json 记录视图/实体计数与来源哈希
+aipd drawing generate --native bracket.py --out out/bracket.dxf \
+    --part golden_bracket --revision A --views FRONT,TOP --json
 ```
 
 ## 8. 运行测试

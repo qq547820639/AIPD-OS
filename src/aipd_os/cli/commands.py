@@ -49,6 +49,7 @@ from .commands_cad import (
     cmd_validate,
 )
 from .commands_doctor import cmd_doctor
+from .commands_drawing import cmd_drawing
 from .commands_legacy import (
     cmd_build_release,
     cmd_init_project,
@@ -503,6 +504,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "manual generate": cmd_manual_generate,
     "cad preflight": cmd_cad_preflight,
     "cad build": cmd_cad_build,
+    "drawing generate": cmd_drawing,
     "industrialize": cmd_industrialize,
     "validate": cmd_validate,
     "audit": cmd_audit,

@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-12T12:34:54",
+  "generated_at": "2026-09-24T10:57:30",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "88dcba64d4d1bbbd76f9bbb9e134bb7ff57c7cb0",
-  "source_commit": "88dcba64d4d1bbbd76f9bbb9e134bb7ff57c7cb0",
+  "latest_commit_sha": "5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385",
+  "source_commit": "5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
@@ -30,10 +30,10 @@
     "total_capabilities": 77,
     "by_classification": {
       "fully_implemented": 36,
-      "partially_implemented": 27,
+      "partially_implemented": 28,
       "protocol_only": 0,
       "template_only": 0,
-      "external_dependency": 14,
+      "external_dependency": 13,
       "not_implemented": 0,
       "not_verifiable": 0
     }
@@ -827,7 +827,7 @@
           "unit_test": "tests/test_cad_golden_loop.py; tests/test_adapters.py",
           "integration_test": null,
           "e2e_evidence": "真实 CadQuery/OpenCASCADE 内核参数化 B-Rep（STEP/原生源/重载/几何校验/哈希）",
-          "current_limitation": "单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2）；装配/连续运动/CAE/二维图纸/GD&T 仍依赖外部工具，不冒充已完成",
+          "current_limitation": "单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2）；装配/连续运动/CAE/GD&T 仍依赖外部工具，不冒充已完成；二维图纸已本地出图（见 cad.2d_drawings）",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -869,7 +869,7 @@
           "unit_test": "tests/test_cad_golden_loop.py",
           "integration_test": null,
           "e2e_evidence": "真实 CadQuery/OpenCASCADE 内核参数化 B-Rep 黄金闭环（改参->重生成->STEP/原生源->重载->几何校验->哈希->写回）",
-          "current_limitation": "单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2，需安装 cad extra）；装配/连续运动/CAE/二维图纸/GD&T 仍依赖外部工具，不冒充已完成",
+          "current_limitation": "单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2，需安装 cad extra）；装配/连续运动/CAE/GD&T 仍依赖外部工具，不冒充已完成；二维图纸已本地出图（见 cad.2d_drawings）",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -1027,21 +1027,21 @@
           "id": "cad.2d_drawings",
           "name": "二维图纸",
           "domain": "CAD与生产图纸",
-          "classification": "external_dependency",
-          "external_dependency": true,
+          "classification": "partially_implemented",
+          "external_dependency": false,
           "declaration_file": "references/production-cad-deliverables.md",
-          "implementation_file": null,
-          "entry_point": null,
-          "run_command": null,
-          "input_output": "3D 模型 -> 2D 图纸",
-          "unit_test": null,
-          "integration_test": null,
+          "implementation_file": "src/aipd_os/cad/drawings2d.py",
+          "entry_point": "src/aipd_os/cli/commands_drawing.py:cmd_drawing",
+          "run_command": "aipd drawing generate",
+          "input_output": "3D 模型 -> DXF 正投影视图（可见线 + 隐藏线）+ 尺寸 + 标题栏",
+          "unit_test": "tests/test_cad_drawings2d.py",
+          "integration_test": "tests/test_cad_drawings2d.py::TestDxfOutput",
           "e2e_evidence": null,
-          "current_limitation": "依赖外部 CAD 内核出图",
+          "current_limitation": "出图为 DXF 三视图 + 投影测量的总体尺寸/孔径；隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。未实现：GD&T 形位公差框、尺寸链/公差叠加、剖视与局部放大、爆炸图、装配图，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。",
           "probe": {
-            "implementation_file_exists": false,
+            "implementation_file_exists": true,
             "entry_callable": false,
-            "external_dependency_flag": true
+            "external_dependency_flag": false
           }
         },
         {

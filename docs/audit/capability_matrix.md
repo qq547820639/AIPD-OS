@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-08-12T12:34:54`
+- 生成时间：`2026-09-24T10:57:30`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`88dcba64d4d1bbbd76f9bbb9e134bb7ff57c7cb0`
+- 默认分支：`main`；HEAD：`5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385`
 - 版本：`5.6.0`
 - 能力总数：`77`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -12,10 +12,10 @@
 | 分类 | 数量 | 说明 |
 | --- | --- | --- |
 | `fully_implemented` | 36 | 完整实现（有真实运行工件与测试证据） |
-| `partially_implemented` | 27 | 部分实现（核心路径可用，边界/证据不全） |
+| `partially_implemented` | 28 | 部分实现（核心路径可用，边界/证据不全） |
 | `protocol_only` | 0 | 仅协议/接口（无真实执行） |
 | `template_only` | 0 | 仅模板/示例（无真实执行） |
-| `external_dependency` | 14 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
+| `external_dependency` | 13 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
 | `not_implemented` | 0 | 未实现 |
 | `not_verifiable` | 0 | 无法验证（缺证据/缺环境） |
 
@@ -74,9 +74,9 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CAD运行时预检 | `fully_implemented` | references/cad-runtime-acceptance.md | scripts/runtime_preflight.py; scripts/cad_maturity_gate.py | cad_maturity_gate.main | `aipd cad preflight --manifest <m> --target <Cx>` | tests/test_cad_maturity_gate.py |  |
 | text-to-cad | `external_dependency` | references/cad-plugin-installation.md | src/aipd_os/tool_adapters/cad_adapter.py | cad_adapter | `aipd cad build` | tests/test_adapters.py | 依赖外部 CAD 内核/插件 |
-| 本地原生B-Rep | `partially_implemented` | references/local-cad-fallback.md | src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py | aipd_os.cad.backends:get_default_backend | `aipd cad build` | tests/test_cad_golden_loop.py; tests/test_adapters.py | 单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2）；装配/连续运动/CAE/二维图纸/GD&T 仍依赖外部工具，不冒充已完成 |
+| 本地原生B-Rep | `partially_implemented` | references/local-cad-fallback.md | src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py | aipd_os.cad.backends:get_default_backend | `aipd cad build` | tests/test_cad_golden_loop.py; tests/test_adapters.py | 单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2）；装配/连续运动/CAE/GD&T 仍依赖外部工具，不冒充已完成；二维图纸已本地出图（见 cad.2d_drawings） |
 | Faceted回退 | `partially_implemented` | references/cad-convergence-policy.md | src/aipd_os/tool_adapters/faceted_adapter.py; scripts/faceted_step.py | aipd_os.tool_adapters.faceted_adapter.FacetedAdapter | `aipd cad build` | tests/test_adapters.py; tests/maturity_consistency_test.py | 成熟度最高 C1，不可用于正式图纸/量产 |
-| 参数化模型 | `partially_implemented` | references/cad-engineering-readiness.md | src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py | aipd_os.cad.backends:get_default_backend | `aipd cad build` | tests/test_cad_golden_loop.py | 单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2，需安装 cad extra）；装配/连续运动/CAE/二维图纸/GD&T 仍依赖外部工具，不冒充已完成 |
+| 参数化模型 | `partially_implemented` | references/cad-engineering-readiness.md | src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py | aipd_os.cad.backends:get_default_backend | `aipd cad build` | tests/test_cad_golden_loop.py | 单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2，需安装 cad extra）；装配/连续运动/CAE/GD&T 仍依赖外部工具，不冒充已完成；二维图纸已本地出图（见 cad.2d_drawings） |
 | 装配约束 | `external_dependency` | references/cad-engineering-readiness.md |  |  | `` |  | 依赖外部 CAD 内核 |
 | 连续运动学 | `external_dependency` | references/cad-engineering-readiness.md |  |  | `` |  | 依赖外部仿真/运动学工具 |
 | 人体尺寸族 | `partially_implemented` | references/cad-engineering-readiness.md | src/aipd_os/cad/anthropometry.py | aipd_os.cad.anthropometry.get_dimension | `aipd cad build` | tests/test_anthropometry.py | 内置族为常用成年男女/儿童百分位示例，未覆盖全部人群数据库 |
@@ -84,7 +84,7 @@
 | DFM/DFA | `fully_implemented` | references/cad-engineering-readiness.md | templates/cad_engineering_manifest.json; scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 公差链 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | GD&T | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
-| 二维图纸 | `external_dependency` | references/production-cad-deliverables.md |  |  | `` |  | 依赖外部 CAD 内核出图 |
+| 二维图纸 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/cad/drawings2d.py | src/aipd_os/cli/commands_drawing.py:cmd_drawing | `aipd drawing generate` | tests/test_cad_drawings2d.py | 出图为 DXF 三视图 + 投影测量的总体尺寸/孔径；隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。未实现：GD&T 形位公差框、尺寸链/公差叠加、剖视与局部放大、爆炸图、装配图，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。 |
 | BOM一致性 | `fully_implemented` | references/manual-to-cad-digital-thread.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 检验计划 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 生产发布门 | `fully_implemented` | references/gate-model.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m> --target <level>` | tests/test_production_release_gate.py |  |

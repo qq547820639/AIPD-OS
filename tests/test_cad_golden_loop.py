@@ -24,6 +24,7 @@ from aipd_os.cad.backends import (  # noqa: E402
     GOLDEN_PARAM_SPEC,
     CadQueryBackend,
     _default_golden_params,
+    _through_holes,
 )
 from aipd_os.cad.evidence import verify_artifact  # noqa: E402
 from aipd_os.cad.writeback import propagate_cad_change  # noqa: E402
@@ -143,6 +144,114 @@ def test_export_native_executable_and_reload(tmp_path):
     edited = b.edit_parameter(reloaded, "width", 60.0)
     d = b.regenerate(edited)["derived"]
     assert d["bbox"]["y"] == pytest.approx(60.0, abs=0.01)
+
+
+# ---------------------------------------------------------------------------
+# 4b. 声明参数必须被几何实现（孔数 / 孔径 / 孔位逐一对账）
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("n", [1, 2, 4, 7])
+def test_declared_hole_pattern_is_realized_geometrically(n):
+    """声明 n 个孔 ⇒ 实体上必须有 n 个等距、同半径的整圈通孔。
+
+    只比数量不比位置的话，孔位累加那类缺陷看不出来（见
+    :func:`test_hole_gate_fires_on_legacy_cumulative_center_loop`）。
+    """
+    b = CadQueryBackend()
+    params = _default_golden_params()
+    L = params["length"]
+    check = b.geometry_validity_check(b.edit_parameter(_default_model(),
+                                                       "hole_count", n))
+    assert check["valid"] is True, check["errors"]
+    assert check["checks"]["declared_features"] is True
+    holes = check["checks"]["measurement"]["through_holes"]
+    assert [h["center"][0] for h in holes] == pytest.approx(
+        [-L / 2 + L * (i + 1) / (n + 1) for i in range(n)], abs=1e-6)
+    assert all(h["center"][1] == pytest.approx(0.0, abs=1e-6) for h in holes)
+    assert all(abs(h["radius"] - params["hole_diameter"] / 2) < 1e-6
+               for h in holes)
+    assert all(h["depth_mm"] == pytest.approx(params["thickness"], abs=1e-6)
+               for h in holes)
+
+
+def test_native_source_template_realizes_declared_holes(tmp_path):
+    """渲染出的 .py 独立执行后，几何仍必须等于声明参数（模板路径同源校验）。
+
+    ``geometry_validity_check`` 走的是 ``_build``，模板是另一份代码；
+    两者不一致时发布的黄金工件就是错的，故必须独立量一次。
+    """
+    b = CadQueryBackend()
+    native = tmp_path / "pattern.py"
+    b.export_native(b.edit_parameter(_default_model(), "hole_count", 4), native)
+    out = tmp_path / "pattern.step"
+    env = dict(os.environ)
+    env["EXPORT_STEP"] = str(out)
+    r = subprocess.run([sys.executable, str(native)], env=env,
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    assert out.is_file() and out.stat().st_size > 0
+    holes = b._measure(cq.importers.importStep(str(out)))["through_holes"]
+    params = _default_golden_params()
+    n = 4
+    assert [h["center"][0] for h in holes] == pytest.approx(
+        [-params["length"] / 2 + params["length"] * (i + 1) / (n + 1)
+         for i in range(n)], abs=1e-6)
+
+
+def test_through_hole_measurement_ignores_partial_arc_faces():
+    """量具负控：圆角的四分之一弧柱面不得被读成孔。
+
+    半径由侧面积反解（r = A / 2·pi·h），部分圆弧会反解出偏小的 r，
+    因此额外用「包围盒必须是 2r x 2r」把非整圈柱面排除。
+    """
+    corner_only = (cq.Workplane("XY").box(40, 20, 10)
+                   .edges("|Z").fillet(3.0).solids().vals()[0])
+    assert _through_holes(corner_only) == []
+
+    drilled = (cq.Workplane("XY").box(40, 20, 10).faces(">Z").workplane()
+               .pushPoints([(5.0, 0.0)]).hole(6.0).solids().vals()[0])
+    holes = _through_holes(drilled)
+    assert len(holes) == 1
+    assert holes[0]["radius"] == pytest.approx(3.0, abs=1e-6)
+    assert holes[0]["center"] == pytest.approx([5.0, 0.0], abs=1e-6)
+    assert holes[0]["depth_mm"] == pytest.approx(10.0, abs=1e-6)
+
+
+def test_hole_gate_fires_on_legacy_cumulative_center_loop():
+    """反证（门的效力）：退回逐点 center() 写法时本门必须判红，且 n=1 仍为绿。
+
+    ``Workplane.center()`` 相对**当前笔位**偏移而 ``hole()`` 不重置笔位，
+    所以偏移会累加：实测 n=4 只钻出 3 个孔位 (-40, -30, 0)、其中两孔重合，
+    n=1 时恰好正确。只断言 n=4 判红不足以证明门不是"永远红"，故两向都测。
+    """
+    def legacy_build(self, model):
+        p = model["parameters"]
+        L = float(p["length"])
+        plate = cq.Workplane("XY").box(L, float(p["width"]),
+                                       float(p["thickness"]))
+        if float(p["fillet_radius"]) > 0:
+            plate = plate.edges("|Z").fillet(float(p["fillet_radius"]))
+        for i in range(max(1, int(p["hole_count"]))):
+            cx = (L / (int(p["hole_count"]) + 1)) * (i + 1) - L / 2
+            plate = plate.faces(">Z").workplane().center(cx, 0).hole(
+                float(p["hole_diameter"]))
+        return plate
+
+    b = CadQueryBackend()
+    original = CadQueryBackend._build
+    CadQueryBackend._build = legacy_build
+    try:
+        bad = b.geometry_validity_check(
+            b.edit_parameter(_default_model(), "hole_count", 4))
+        ok_single = b.geometry_validity_check(
+            b.edit_parameter(_default_model(), "hole_count", 1))
+    finally:
+        CadQueryBackend._build = original
+
+    assert bad["valid"] is False
+    assert bad["checks"]["declared_features"] is False
+    assert any("through-hole" in e for e in bad["errors"]), bad["errors"]
+    assert ok_single["valid"] is True, ok_single["errors"]
 
 
 # ---------------------------------------------------------------------------

@@ -208,6 +208,24 @@ def build_parser() -> argparse.ArgumentParser:
     cp.add_argument("--json", action="store_true")
     cp.set_defaults(func=COMMAND_FUNCS["cad build"])
 
+    p_drawing = sub.add_parser("drawing", help="从 3D 模型出二维工程图（DXF）。"
+                                               " Example: aipd drawing generate --step part.step --out part.dxf --part P-1")  # noqa: E501
+    drawing_sub = p_drawing.add_subparsers(dest="drawing_cmd", required=True)
+    dp = drawing_sub.add_parser("generate", help="生成 DXF 图纸 + 机器可核验证据 JSON。"
+                                                 " Example: aipd drawing generate --part bracket --revision A")  # noqa: E501
+    dp.add_argument("--step", help="STEP 模型路径（与 --native 二选一）")
+    dp.add_argument("--native", help="可编辑原生源 .py（缺省用内置黄金模型）")
+    dp.add_argument("--out", required=True, help="DXF 输出路径")
+    dp.add_argument("--part", required=True, help="标题栏 PART 字段")
+    dp.add_argument("--revision", default="A", help="标题栏 REV 字段")
+    dp.add_argument("--views", default="FRONT,TOP,RIGHT",
+                    help="逗号分隔视图：FRONT/TOP/RIGHT/REAR/LEFT/BOTTOM")
+    dp.add_argument("--scale", type=float, default=1.0, help="比例（1 表示 1:1）")
+    dp.add_argument("--material", default="-", help="标题栏材料")
+    dp.add_argument("--sheet", default="A3", choices=["A3", "A4"], help="图纸幅面")
+    dp.add_argument("--json", action="store_true")
+    dp.set_defaults(func=COMMAND_FUNCS["drawing generate"])
+
     p = sub.add_parser("industrialize", help="供应链 + 验证执行（报价登记/阶段分析/纠偏任务；无数据则如实报告不虚构）。"  # noqa: E501
                                              " Example: aipd industrialize --db state.db --quote quotes.csv --stage dvt --lab-data lab.csv")  # noqa: E501
     p.add_argument("--db")

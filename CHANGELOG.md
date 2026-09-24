@@ -29,6 +29,19 @@
   确定性成本核算（材料小计 + 模具摊销 + NRE + 毛利，缺数据不按 0 元假装），
   发布检查清单（开模可用物料清单与成本核算的确定性验收），CLI `aipd bom` /
   `aipd cost`，成本结果写回 Product Truth（status C）；
+- **v5.10 二维工程图（`cad.2d_drawings` 由外部依赖转为本地实现，2026-09-24）**：
+  `aipd drawing generate` 从 STEP/原生参数化模型出 DXF 工程图——六标准视图、
+  可见线 + 隐藏线（逐点射线遮挡，实测本 OCCT 构建的 `HCompound()` 恒空）、
+  尺寸与孔径全部由投影几何测量（Kåsa 圆拟合 + 角向覆盖判整圆），带标题栏与
+  `<name>.evidence.json` 证据 sidecar；内核缺失时返回 HOLD 外部任务包不外推。
+  边界与未实现项（GD&T/尺寸链/剖视/爆炸图/装配图、相切轮廓单侧）见
+  `docs/audit/CAD_2D_DRAWINGS_HOLE_PATTERN_2026-09-24.md`；
+- **v5.10 修复 F-CAD-01：孔阵参数未实现**：`Workplane.center()` 相对当前笔位偏移且
+  `hole()` 不重置笔位，逐点循环使偏移累加——黄金件声明 `hole_count=4` 实测只钻出
+  3 个孔位（两孔重合），`n=1` 时恰好正确故长期不可见。改为 `pushPoints` 批式下发 +
+  `_hole_pattern()` 单源，并新增「声明参数 ↔ 实体几何」对账门
+  （`geometry_validity_check` 的 `declared_features`，配 n=4 判红 / n=1 判绿双向反证）。
+  体积/面数派生量受影响，故 BOM 与成本核算输入此前在多孔件上不可信；
 - **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归

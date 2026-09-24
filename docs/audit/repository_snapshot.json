@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-08-12T12:34:51",
-  "source_commit": "88dcba64d4d1bbbd76f9bbb9e134bb7ff57c7cb0",
+  "generated_at": "2026-09-24T10:57:28",
+  "source_commit": "5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "88dcba64d4d1bbbd76f9bbb9e134bb7ff57c7cb0",
-  "latest_commit_time": "2026-08-12 12:23:03 +0800",
+  "latest_commit_sha": "5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385",
+  "latest_commit_time": "2026-09-24 01:19:18 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -60,7 +60,7 @@
       "THREAT_MODEL.md"
     ],
     "per_dir_file_count": {
-      ".git": 8,
+      ".git": 9,
       ".github": 0,
       ".mypy_cache": 2,
       ".pytest": 1,
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 115
+      "tests": 141
     }
   },
   "tags": [
@@ -103,6 +103,7 @@
       "cad-golden-loop",
       "python-core-matrix",
       "secret-scan",
+      "lint",
       "dependency-audit",
       "license-scan",
       "package-build",
@@ -115,25 +116,68 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 486,
-    "hash_matches": 486,
-    "hash_mismatch_count": 0,
-    "mismatches": []
+    "total_files": 554,
+    "hash_matches": 547,
+    "hash_mismatch_count": 7,
+    "mismatches": [
+      {
+        "path": "SKILL.md",
+        "reason": "hash_mismatch",
+        "expected": "f651087daaf7e5b78691261157314cd11b8427e778881a20c436abd1216bbda1",
+        "actual": "ea9254c14b622379fe64e28f2da01e3dba47b7145a417a6f2bff0ed533c2d0dd"
+      },
+      {
+        "path": "src/aipd_os/cad/backends.py",
+        "reason": "hash_mismatch",
+        "expected": "b1c9561f3dcc99aa3868f16f3b7f1f294a6a5116cd653e476ac472c246cce4b6",
+        "actual": "9b00bf02feed70dccb299e4fc6b9f90c404e86135d5511b5dc62ce79ecc40ea6"
+      },
+      {
+        "path": "src/aipd_os/cli/command_contract.py",
+        "reason": "hash_mismatch",
+        "expected": "bf84955fa4fa0f96245dd4e46e99002d9bb5a10ed2c31890552a1d06822093d2",
+        "actual": "1bb4f328de5d74a2de32dafd9b2ae2f51bc11dab8d32b364e267d2ebc70bfe40"
+      },
+      {
+        "path": "src/aipd_os/cli/commands.py",
+        "reason": "hash_mismatch",
+        "expected": "57780c17d0a747c9beafd87d72c0f80e61ce3f759808e40a16767494787fe00b",
+        "actual": "6d91121b03f3bc00e6c4ee73afbbbd0f7a2f668becf13da3fa9a8ba4efe15369"
+      },
+      {
+        "path": "src/aipd_os/cli/main.py",
+        "reason": "hash_mismatch",
+        "expected": "04aa4dd2dd26ebd0f56d5e3123ccbf936f8a478067ab308eaab20996218bf2cb",
+        "actual": "f5053df9ad7f20503b0448ebf04e669e1e74ff41bdd5fa920cf59667cdcc35c0"
+      },
+      {
+        "path": "src/aipd_os/registry_data.py",
+        "reason": "hash_mismatch",
+        "expected": "ed112d93f650de4085880106156c212cd83af54f59928a591fe20d405f770f38",
+        "actual": "bd90927292211341a8dd659f221d396d2094924fbfeb91efd0206970e6215a23"
+      },
+      {
+        "path": "tests/test_cad_golden_loop.py",
+        "reason": "hash_mismatch",
+        "expected": "bbdece914d42a8c8351ea70b305c34bc4d60f1aaae50fdb8f1cfa7836c3d9acb",
+        "actual": "c238668cb97c8152f9f290f78d2de1c02f5cc77666a103edd12fc60f1e91fb70"
+      }
+    ]
   },
   "untracked_or_generated": [
-    " M BUNDLE_MANIFEST.json",
-    " M PROVENANCE.json",
-    " M RELEASE_MANIFEST.json",
-    " M SOURCE_MANIFEST.json",
-    " M docs/audit/V5_9_2_SNAPSHOT_RUNTIME_COMMIT_CLOSURE.md",
-    " M docs/audit/audit.json",
-    " M docs/audit/audit.md",
+    " M SKILL.md",
     " M docs/audit/capability_matrix.json",
     " M docs/audit/capability_matrix.md",
-    " M docs/audit/pytest-report.json",
     " M docs/audit/repository_snapshot.json",
-    " M releases/aipd-os-5.6.0.zip",
-    "generated .venv/lib/python3.9/site-packages/numpy/distutils/__pycache__",
+    " M src/aipd_os/cad/backends.py",
+    " M src/aipd_os/cli/command_contract.py",
+    " M src/aipd_os/cli/commands.py",
+    " M src/aipd_os/cli/main.py",
+    " M src/aipd_os/registry_data.py",
+    " M tests/test_cad_golden_loop.py",
+    "?? src/aipd_os/cad/drawings2d.py",
+    "?? src/aipd_os/cli/commands_drawing.py",
+    "?? tests/test_cad_drawings2d.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

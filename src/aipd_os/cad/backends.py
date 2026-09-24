@@ -22,6 +22,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import math
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -230,6 +231,47 @@ def _default_golden_params() -> dict[str, float]:
     return {k: float(spec['default']) for k, spec in GOLDEN_PARAM_SPEC.items()}
 
 
+def _hole_pattern(length: float, count: Any) -> list[tuple[float, float]]:
+    """孔阵的唯一真值源：沿长度方向等距均布（n+1 等分点，居中于 0）。
+
+    构建路径与校验路径必须共用本函数，否则「声明的孔数」与「实际钻出的孔」
+    可以各自漂移。
+    """
+    n = max(1, int(count))
+    return [(length / (n + 1) * (i + 1) - length / 2.0, 0.0)
+            for i in range(n)]
+
+
+def _through_holes(solid: Any) -> list[dict[str, Any]]:
+    """从真实 B-Rep 里量出「整圈通孔」：中心 (x,y)、半径、深度。
+
+    只用公开几何量做判别，不读 OCCT 私有面类型：整圈圆柱面的侧面积
+    ``A = 2·pi·r·h`` 反解出 r 后，其包围盒必须正好是 ``2r × 2r``；
+    圆角那类部分圆弧面的盒宽是其半径而非直径，因此被排除。
+    整圈时重心恰落在轴线上，故 ``Center()`` 即孔位。
+    """
+    holes: list[dict[str, Any]] = []
+    for face in solid.Faces():
+        if face.geomType() != 'CYLINDER':
+            continue
+        bb = face.BoundingBox()
+        h = float(bb.zlen)
+        if h <= 1e-9:
+            continue
+        radius = float(face.Area()) / (2.0 * math.pi * h)
+        tol = 1e-6 * max(1.0, 2.0 * radius)
+        if abs(float(bb.xlen) - 2.0 * radius) > tol:
+            continue
+        if abs(float(bb.ylen) - 2.0 * radius) > tol:
+            continue
+        center = face.Center()
+        holes.append({'center': [round(float(center.x), 6),
+                                 round(float(center.y), 6)],
+                      'radius': round(radius, 6),
+                      'depth_mm': round(h, 6)})
+    return sorted(holes, key=lambda d: (d['center'][0], d['center'][1]))
+
+
 # STEP 头部 FILE_NAME 中的易变时间戳形如 '2026-08-06T13:37:07'。
 _STEP_TIMESTAMP_RE = re.compile(r"'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'")
 # OpenCASCADE STEP 翻译器在 PRODUCT 名中嵌入递增的进程计数（7.7 1 / 7.7 2 ...）。
@@ -275,9 +317,8 @@ def _render_native_source(model_name: str, params: dict[str, Any]) -> str:
         "        plate = plate.edges('|Z').fillet(FR)",
         "    if CH > 0:  # 0 倒角 = 不应用倒角（契约合法）",
         "        plate = plate.faces('>Z').edges().chamfer(CH)",
-        "    for i in range(n):",
-        "        cx = (L / (n + 1)) * (i + 1) - L / 2",
-        "        plate = plate.faces('>Z').workplane().center(cx, 0).hole(HD)",
+        "    pts = [(L / (n + 1) * (i + 1) - L / 2, 0.0) for i in range(n)]",
+        "    plate = plate.faces('>Z').workplane().pushPoints(pts).hole(HD)",
         "    return plate",
         '',
         "if __name__ == '__main__':",
@@ -414,13 +455,15 @@ class CadQueryBackend(CadBackend):
             plate = plate.edges('|Z').fillet(FR)
         if CH > 0:
             plate = plate.faces('>Z').edges().chamfer(CH)
-        for i in range(n):
-            cx = (L / (n + 1)) * (i + 1) - L / 2
-            plate = plate.faces('>Z').workplane().center(cx, 0).hole(HD)
+        # 孔阵必须一次性 pushPoints 批式下发：Workplane.center() 相对**当前笔位**
+        # 偏移，而 hole() 不重置笔位，逐点循环会让偏移累加（实测 n=4 只钻出
+        # 3 个孔位、其中两孔重合，n=1 时才恰好正确）。
+        plate = plate.faces('>Z').workplane().pushPoints(
+            _hole_pattern(L, n)).hole(HD)
         return plate
 
     def _measure(self, shape: Any) -> dict[str, Any]:
-        """对真实几何做测量：体积、包围盒、实体数、面数、有效性。"""
+        """对真实几何做测量：体积、包围盒、实体数、面数、有效性、通孔阵。"""
         solid = shape.val()
         bb = solid.BoundingBox()
         return {
@@ -430,8 +473,29 @@ class CadQueryBackend(CadBackend):
                      'z': round(float(bb.zlen), 6)},
             'solid_count': len(shape.solids().vals()),
             'face_count': len(shape.faces().vals()),
+            'through_holes': _through_holes(solid),
             'is_valid': bool(solid.isValid()),
         }
+
+    def _verify_declared_features(self, shape: Any,
+                                  p: dict[str, Any]) -> list[str]:
+        """校验「声明的参数」确实被几何实现：孔数 / 孔径 / 孔位逐一对账。
+
+        只比数量不比位置的话，孔位累加那类缺陷（见 ``_build`` 注释）看不出来。
+        """
+        errors: list[str] = []
+        holes = _through_holes(shape.val())
+        expected = _hole_pattern(float(p['length']), p['hole_count'])
+        want_r = float(p['hole_diameter']) / 2.0
+        # 只统计半径匹配声明孔径的通孔：圆角等其它柱面特征不算孔。
+        found = sorted((round(h['center'][0], 3), round(h['center'][1], 3))
+                       for h in holes if abs(h['radius'] - want_r) <= 1e-3)
+        want = sorted((round(x, 3), round(y, 3)) for x, y in expected)
+        if found != want:
+            errors.append(
+                f"declared hole_count={len(want)} @ {want} but geometry has "
+                f"{len(found)} through-hole(s) of radius {want_r} @ {found}")
+        return errors
 
     def _semantic_geometry_hash(self, shape: Any) -> str:
         """对几何语义的规范化 JSON 做 sha256（P0-14）。
@@ -506,6 +570,10 @@ class CadQueryBackend(CadBackend):
                 checks['measurement'] = m
                 if not m['is_valid'] or m['volume_mm3'] <= 0:
                     errors.append('kernel built an invalid or empty solid')
+                else:
+                    feature_errors = self._verify_declared_features(shape, p)
+                    checks['declared_features'] = not feature_errors
+                    errors.extend(feature_errors)
             except Exception as exc:  # pragma: no cover - 防御
                 checks['kernel_build'] = False
                 errors.append(f'kernel build failed: {exc}')

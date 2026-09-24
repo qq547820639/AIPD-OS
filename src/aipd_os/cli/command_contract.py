@@ -99,6 +99,9 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                  description="CAD 预检"),
     CommandEntry("cad build", CommandStatus.PUBLIC, CommandCategory.CAD, "5.1",
                  description="构建 CAD 模型"),
+    CommandEntry("drawing generate", CommandStatus.PUBLIC, CommandCategory.CAD, "5.10",
+                 requires_args=frozenset({"--part"}),
+                 description="从 3D 模型出二维工程图 DXF（可见线+隐藏线+尺寸+标题栏）"),
 
     # ---- 产品定义 ----
     CommandEntry("product show", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.9",

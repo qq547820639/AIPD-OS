@@ -179,6 +179,7 @@ aipd run --project p1 --db state.db              # 继续推进
 ```bash
 aipd manual plan --db state.db                        # 规划手册
 aipd cad preflight --manifest cad_manifest.json      # 图纸发布前检查
+aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket --views FRONT,TOP  # 3D→二维工程图 DXF
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据
 aipd validate --manifest manifest.json --target C5    # 验证是否达到目标成熟度
 ```
@@ -246,12 +247,14 @@ AI 找到的资料默认是「待确认」状态。只有经过确认后，它�
 
 ## 附：常用命令速查
 
-AIPD 的**一键命令**（`aipd <cmd>`，共 30 个主线命令，另有 10 个旧版别名保留兼容）：
+AIPD 的**一键命令**（`aipd <cmd>`；权威清单是 `src/aipd_os/cli/command_contract.py`
+里的 `PUBLIC_COMMANDS`，由 `scripts/skill_quality_audit.py` 与 `SKILL.md` 逐名核对，
+旧版别名保留兼容）：
 
 - 核心流程：`init` / `intake` / `resume` / `status` / `run` / `decide`
 - 所有者体验：`onboard` / `dashboard` / `operate` / `ui` / `reset` / `recover`
 - 手册链：`manual plan` / `manual generate`
-- 图纸：`cad preflight` / `cad build`
+- 图纸：`cad preflight` / `cad build` / `drawing generate`
 - 产品定义：`product show` / `product gate`
 - 工业化：`industrialize` / `validate`
 - 制造就绪：`bom show` / `bom add` / `cost calc`

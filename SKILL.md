@@ -23,7 +23,7 @@ description: "[已废弃-勿作为入口加载] 本技能的 agent 入口地位�
   - 核心流程：`init` / `intake` / `resume` / `status` / `run` / `decide`
   - 所有者体验：`onboard` / `dashboard` / `operate` / `ui` / `reset` / `recover`
   - 手册链：`manual plan` / `manual generate`
-  - CAD：`cad preflight` / `cad build`
+  - CAD：`cad preflight` / `cad build` / `drawing generate`
   - 产品定义：`product show` / `product gate`
   - 工业化：`industrialize` / `validate`
   - 制造就绪（v5.10）：`bom show` / `bom add` / `cost calc`
