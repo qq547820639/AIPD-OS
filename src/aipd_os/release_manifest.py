@@ -91,12 +91,43 @@ def _agrees_with_ctq(declared: dict[str, float], nominal: float,
             and abs(float(declared["lower"]) - (float(lo) - nominal)) <= 1e-9)
 
 
+def _check_assembly(rel: str, evidence: dict[str, Any], bom_id: str | None,
+                    issues: list[dict[str, Any]]) -> None:
+    """装配图特有的两条就绪判据：球标↔BOM 是否闭合、核的是不是同一张 BOM。
+
+    「图上没号」与「数量来自另一张表」都会让这张图看起来完整而实际不完整，
+    所以都是阻断项；没绑过 BOM 只是「数量没核」，装配图本身仍然成立 ⇒ 非阻断。
+    """
+    unresolved = list(evidence.get("assembly_issues") or [])
+    if unresolved:
+        first = str(unresolved[0])
+        _issue(issues, "assembly_unresolved",
+               f"{rel}：装配图有 {len(unresolved)} 条未收口（球标↔BOM 未闭合），"
+               f"第一条：{first}", blocking=True)
+    bound = str((evidence.get("bom") or {}).get("bom_id") or "")
+    if not bound:
+        _issue(issues, "assembly_bom_unverified",
+               f"{rel}：这张装配图出图时没接 BOM，明细表不含数量列（不算未收口）",
+               blocking=False)
+        return
+    if bom_id and bound != bom_id:
+        _issue(issues, "assembly_bom_mismatch",
+               f"{rel}：图上的数量取自 BOM {bound}，本份证据核的是 BOM {bom_id}；"
+               "两边不是同一张表，计数一致性不成立", blocking=True)
+
+
 def _collect_drawings(drawings: Sequence[Path | str], root: Path,
                       ctq_by_id: dict[str, dict[str, Any]],
-                      issues: list[dict[str, Any]]) -> tuple[list[dict[str, Any]],
-                                                             list[dict[str, Any]],
-                                                             list[str]]:
-    """读每张图的证据 sidecar，产出 (文件引用, gdt 项, 修订号)。"""
+                      issues: list[dict[str, Any]],
+                      bom_id: str | None = None) -> tuple[list[dict[str, Any]],
+                                                          list[dict[str, Any]],
+                                                          list[str]]:
+    """读每张图的证据 sidecar，产出 (文件引用, gdt 项, 修订号)。
+
+    装配图单独判：C6 要的是「总装图 + 零件图」都在，而装配图特有的
+    ``assembly_issues``（球标↔BOM 没闭合）必须影响就绪结论——一张漏了零件的
+    装配图不能读成 ``ok: true``。
+    """
     refs: list[dict[str, Any]] = []
     gdt: list[dict[str, Any]] = []
     revisions: list[str] = []
@@ -112,8 +143,11 @@ def _collect_drawings(drawings: Sequence[Path | str], root: Path,
             continue
         evidence = json.loads(sidecar.read_text(encoding="utf-8"))
         rel = path.relative_to(root).as_posix() if path.parent == root else str(path)
-        refs.append({"path": rel, "sha256": _sha256(path)})
+        kind = "assembly" if evidence.get("assembly") else "part"
+        refs.append({"path": rel, "sha256": _sha256(path), "kind": kind})
         revisions.append(str(evidence.get("revision", "")))
+        if kind == "assembly":
+            _check_assembly(rel, evidence, bom_id, issues)
         for view in evidence.get("views", []):
             for dim in view.get("dimensions", []):
                 tolerance = dim.get("tolerance")
@@ -199,9 +233,18 @@ def _collect_drawings(drawings: Sequence[Path | str], root: Path,
 
 def _collect_bom(db_path: Path, tenant_id: str, project_id: str, bom_id: str | None,
                  issues: list[dict[str, Any]]) -> dict[str, Any]:
-    from aipd_os.bom.store import BomStore
+    from aipd_os.bom.store import BomStore, bom_store_path
 
-    store = BomStore(db_path.parent / "bom.db")
+    # BOM 走独立库（产品口径：不给权威状态库加表，状态库迁移已冻结）。
+    # 库不在就明说「不在」：BomStore() 会建库建表，凭空造一个空 BOM 会被读成
+    # 「接上了但没有行」，那是另一种假装完整。
+    bom_db = bom_store_path(db_path)
+    if not bom_db.is_file():
+        _issue(issues, "bom_db_missing",
+               f"BOM 库不存在：{bom_db}（--db 是状态库，BOM 取同目录的 bom.db）",
+               blocking=True)
+        return {}
+    store = BomStore(bom_db)
     fields: dict[str, Any] = {}
     lines = store.list_lines(tenant_id, project_id, bom_id)
     if not lines:
@@ -266,7 +309,8 @@ def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENA
 
     truth = ProductTruthStore(str(db), tenant_id=tenant_id, project_id=project_id)
     ctq_by_id = _collect_ctq(truth, issues)
-    refs, gdt, revisions = _collect_drawings(list(drawings), root, ctq_by_id, issues)
+    refs, gdt, revisions = _collect_drawings(list(drawings), root, ctq_by_id, issues,
+                                             bom_id=bom_id)
     doc: dict[str, Any] = {
         "runtime": "native_brep" if importlib.util.find_spec("cadquery") else "faceted_brep",
         "units": units,
@@ -276,6 +320,10 @@ def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENA
         "ctq": list(ctq_by_id.values()),
         "gdt": gdt,
         "drawing_count": len(refs),
+        # C6 的「总装图 + 零件图」是两种东西，只报一个总数就读不出缺哪一类。
+        # drawing_count 的既有含义不变（总数），这两条是新增的细分。
+        "assembly_drawing_count": sum(1 for r in refs if r["kind"] == "assembly"),
+        "part_drawing_count": sum(1 for r in refs if r["kind"] == "part"),
     }
     doc.update(_collect_bom(db, tenant_id, project_id, bom_id, issues))
     model_fields = _model_fields(model, issues)

@@ -67,18 +67,28 @@ def _manifest(tmp_path, entries):
     return path, parts
 
 def _bom(tmp_path, items):
-    """建一张 BOM：items = [(item, quantity, unit)]，返回 (db 路径, bom_id)。"""
-    db = tmp_path / "state.db"
-    store = BomStore(db)
+    """按**产品口径**造库：状态库 state.db + 同目录的 bom.db，返回 (state.db, bom_id)。
+
+    夹具故意走和命令行同一个换算（``bom_store_path``）：「BOM 放哪个文件」这条规矩
+    一旦被改动，这里就跟着红——不会像上一片那样测试与命令行各认一个路径。
+    """
+    from aipd_os.bom.store import bom_store_path
+    from aipd_os.state.db import AIPDStateDB
+
+    state = tmp_path / "state.db"
+    AIPDStateDB(state).ensure_default_tenant()
+    store = BomStore(bom_store_path(state))
     header = store.create_bom(TENANT, PROJECT, "装配 BOM")
     for i, (item, qty, unit) in enumerate(items, start=1):
         store.add_line(BomLine(line_id=f"L-{i}", bom_id=header.bom_id,
                                tenant_id=TENANT, project_id=PROJECT,
                                item=item, quantity=qty, unit=unit))
-    return db, header.bom_id
+    return state, header.bom_id
 
 def _lines(db, bom_id):
-    return BomStore(db).list_lines(TENANT, PROJECT, bom_id)
+    from aipd_os.bom.store import bom_store_path
+
+    return BomStore(bom_store_path(db)).list_lines(TENANT, PROJECT, bom_id)
 
 def _load(tmp_path, manifest_path):
     return load_assembly_parts(parse_assembly_manifest(str(manifest_path)))
@@ -339,3 +349,95 @@ def test_bound_quantities_are_actually_drawn_not_only_in_the_evidence(tmp_path):
     # 逐格点名：4/2 是数量、pcs/set 是单位——「4」「2」也可能出现在别处，
     # 所以只在 TABLECONTENT 这一层里核，且核到的是**两行各自**的数量与单位
     assert {"4", "2", "pcs", "set"} <= texts, texts
+
+
+class TestBomLibraryResolution:
+    """``--db`` 指的是**状态库**；BOM 永远在同目录的 ``bom.db`` 里（产品口径）。
+
+    这一整类是我自己上一片埋的坑：`BomStore(path)` 会在 path 上建表，所以
+    ``BomStore(args.db)`` 等于给权威状态库加 BOM 表——而 ``bom/store.py`` 的模块
+    docstring 明写「BOM 使用独立库文件…避免给权威状态库加表（迁移冻结）」。
+    真跑命令行复现了：state.db 的表数 42 → 46，多出 boms / bom_lines /
+    bom_changes / bom_id_sequences，而命令本身还因为读不到 BOM 返回 rc=2。
+    """
+
+    def _tables(self, db: Path) -> set:
+        import sqlite3
+
+        con = sqlite3.connect(str(db))
+        try:
+            return {r[0] for r in con.execute(
+                "select name from sqlite_master where type='table'")}
+        finally:
+            con.close()
+
+    def _state_db(self, tmp_path: Path) -> Path:
+        from aipd_os.state.db import AIPDStateDB
+
+        db = tmp_path / "state.db"
+        state = AIPDStateDB(str(db))
+        state.ensure_default_tenant()
+        state.init_project(TENANT, PROJECT, "装配验证项目", "看 BOM 会不会写进权威库")
+        return db
+
+    def test_reading_bom_never_adds_tables_to_the_state_db(self, tmp_path):
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                           "bom_item": "BRACKET-01"}])
+        db = self._state_db(tmp_path)
+        # 真按产品口径把 BOM 放在同目录的 bom.db 里
+        sibling = tmp_path / "bom.db"
+        store = BomStore(sibling)
+        header = store.create_bom(TENANT, PROJECT, "装配 BOM")
+        store.add_line(BomLine(line_id="L-1", bom_id=header.bom_id, tenant_id=TENANT,
+                               project_id=PROJECT, item="BRACKET-01",
+                               quantity=7.0, unit="pcs"))
+        before = self._tables(db)
+
+        from aipd_os.cli.main import main
+
+        out = tmp_path / "sibling.dxf"
+        rc = main(["drawing", "assembly", "--manifest", str(manifest), "--out", str(out),
+                   "--part", "ASSY-1", "--views", "TOP", "--db", str(db),
+                   "--bom", header.bom_id, "--tenant", TENANT, "--project", PROJECT])
+        assert rc == 0, f"BOM 在同目录 bom.db 里，命令却读不到：rc={rc}"
+        assert self._tables(db) == before, (
+            f"权威状态库被加了表：{sorted(self._tables(db) - before)}")
+        evidence = json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        assert [r["qty"] for r in evidence["parts_list"]["rows"]] == [7.0], \
+            "数量必须来自同目录 bom.db 里那行"
+
+    def test_missing_bom_library_is_rc2_and_creates_nothing(self, tmp_path):
+        """只读消费方不许「顺手建一个空 BOM 库」——那会把「没接线」读成「接了但是空的」。"""
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                            "bom_item": "BRACKET-01"}])
+        db = self._state_db(tmp_path)
+        from aipd_os.cli.main import main
+
+        out = tmp_path / "none.dxf"
+        rc = main(["drawing", "assembly", "--manifest", str(manifest), "--out", str(out),
+                   "--part", "ASSY-1", "--views", "TOP", "--db", str(db),
+                   "--bom", "BOM-001", "--tenant", TENANT, "--project", PROJECT])
+        assert rc == 2
+        assert not (tmp_path / "bom.db").exists(), "读不到就该报错，不该把库建出来"
+        assert not out.exists()
+
+    def test_wrong_state_db_path_is_refused_even_if_a_bom_sits_there(self, tmp_path):
+        """状态库路径写错要当场拒绝，即使同目录真有一个能读的 bom.db。
+
+        少了这条，「--db 拼错」会被 BOM 侧的存在性检查兜住而照常出图（N8 首轮就是这么
+        幸存的）：数量来自一个和这个项目对不上的目录，图纸却看着完全正常。
+        """
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                            "bom_item": "BRACKET-01"}])
+        db, bom_id = _bom(tmp_path, [("BRACKET-01", 7.0, "pcs")])
+        assert (tmp_path / "bom.db").is_file()          # 前提：BOM 侧确实能读到
+
+        from aipd_os.cli.main import main
+
+        out = tmp_path / "wrong.dxf"
+        rc = main(["drawing", "assembly", "--manifest", str(manifest), "--out", str(out),
+                   "--part", "ASSY-1", "--views", "TOP",
+                   "--db", str(tmp_path / "not-this-state.db"), "--bom", bom_id,
+                   "--tenant", TENANT, "--project", PROJECT])
+        assert rc == 2, f"--db 指错却出了图 ⇒ rc={rc}"
+        assert not out.exists()

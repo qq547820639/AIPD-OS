@@ -82,7 +82,8 @@ def cmd_release_manifest(args):
         print(f"  runtime={doc['runtime']} ctq={len(doc['ctq'])} gdt={len(doc['gdt'])} "
               f"图纸={doc['producer']['drawings_referenced']} 张")
         for key in ("model_version", "bom_version", "drawings_version",
-                    "model_part_count", "bom_line_count", "drawing_count"):
+                    "model_part_count", "bom_line_count", "drawing_count",
+                    "assembly_drawing_count", "part_drawing_count"):
             if key in doc:
                 print(f"  {key} = {doc[key]}")
             else:

@@ -300,14 +300,23 @@ def cmd_drawing_assembly(args):
         return 2
     bom_lines = None
     if db_arg:
+        from aipd_os.bom.store import bom_store_path
+
         db = Path(db_arg)
         if not db.is_file():
             print(f"状态库不存在：{db}（读不到 BOM 权威表不等于「没有 BOM」）")
             return 2
+        # --db 指的是**状态库**；BOM 按产品口径在同目录的 bom.db 里。直接
+        # BomStore(db) 会给权威状态库加 BOM 表——状态库迁移已冻结，正是要防这个
+        bom_db = bom_store_path(db)
+        if not bom_db.is_file():
+            print(f"BOM 库不存在：{bom_db}（--db 是状态库，BOM 取同目录的 bom.db；"
+                  "先用 aipd bom 建出来，不拿新建的空库当「已核对」）")
+            return 2
         try:
             from aipd_os.bom.store import BomStore
 
-            store = BomStore(db)
+            store = BomStore(bom_db)
             # 先确认那张表真在：读不到表就当空 BOM，会把「编号写错了」报成
             # 「每一行都对不上」——两句话的处置完全不同
             if store.get_bom(args.tenant, args.project, bom_arg) is None:

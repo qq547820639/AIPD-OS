@@ -14,7 +14,9 @@ from aipd_os.cli._helpers import DEFAULT_TENANT, _emit
 
 
 def _bom_store_path(db_path: str) -> Path:
-    return Path(db_path).parent / "bom.db"
+    from aipd_os.bom.store import bom_store_path
+
+    return bom_store_path(db_path)
 
 
 def _resolve_project(db: Any, project_id: str | None) -> str:

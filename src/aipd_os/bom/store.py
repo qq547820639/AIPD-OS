@@ -79,6 +79,17 @@ class OptimisticLockError(RuntimeError):
     """BOM 行/头版本冲突（并发更新被拒）。"""
 
 
+def bom_store_path(db_path: str | Path) -> Path:
+    """把「状态库路径」换算成产品口径的 BOM 库路径：**同目录的 ``bom.db``**。
+
+    BOM 一律放独立文件（见模块 docstring：不给权威状态库加表，状态库迁移已冻结）。
+    只读消费方（``aipd release manifest``、``aipd drawing assembly --db``）在构造
+    ``BomStore`` 之前还得先确认该文件存在——``BomStore.__init__`` 会建库建表，
+    「顺手建一个空 BOM 库」会把「没接线」读成「接了但是空的」。
+    """
+    return Path(db_path).parent / "bom.db"
+
+
 class BomStore:
     """BOM + 成本快照的结构化存储（own sqlite；乐观锁；审计）。"""
 

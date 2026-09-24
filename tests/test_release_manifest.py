@@ -262,3 +262,149 @@ class TestCliSurface:
         payload = json.loads(out.read_text("utf-8"))
         assert payload["ok"] is False
         assert any(i["kind"] == "no_drawings" for i in payload["issues"])
+
+
+class TestBomLibraryIsNotCreatedOnRead:
+    """只读消费方不许把「没有 BOM 库」变成「有一个空 BOM 库」。
+
+    ``BomStore(path)`` 会建库建表。改前 `_collect_bom` 直接构造它，于是跑一次发布证据
+    就在 state.db 旁边留下一个空 bom.db，而报告说的是「BOM 里没有行」——
+    「没接线」与「接了但是空的」在门禁里是两种处置，报告必须说清是哪一种。
+    """
+
+    def test_missing_bom_library_is_named_and_not_created(self, tmp_path, db):
+        path, payload = _manifest(tmp_path, db, [])
+        doc = json.loads(path.read_text("utf-8"))
+        kinds = {i["kind"] for i in doc["issues"]}
+        assert "bom_db_missing" in kinds, sorted(kinds)
+        assert "no_bom_lines" not in kinds, "库都不在，不该报成「库里有但没有行」"
+        assert not (tmp_path / "bom.db").exists(), "读不到就该报错，不该把库建出来"
+        assert doc["blocking"], "缺 BOM 库必须是阻断项，否则门禁看不见它"
+
+
+def _assy_drawing(tmp_path, bom_items=(("BRACKET-01", 4.0), ("PLATE-02", 2.0)),
+                  parts=(("支架", "BRACKET-01"), ("压板", "PLATE-02")), name="assy",
+                  revision="A"):
+    """造一张**绑过 BOM** 的装配图（走真实入口，不手搓证据）。
+
+    返回 (dxf 路径, 这张图绑的 bom_id)。bom_items 比 parts 多就是「BOM 有行图上没号」。
+    """
+    import cadquery as cq
+
+    from aipd_os.cad.assembly import generate_assembly_drawing
+
+    store = BomStore(str(Path(tmp_path) / "bom.db"))
+    header = store.create_bom(T, P, "装配 BOM", revision=revision)
+    for item, qty in bom_items:
+        store.add_line(BomLine(line_id="", bom_id=header.bom_id, tenant_id=T, project_id=P,
+                               item=item, quantity=qty, unit="pcs"))
+    steps = {}
+    for i, letter in enumerate("ab"):
+        box = cq.Workplane("XY").box(40.0, 20.0, 10.0 + i * 2).solids().vals()[0]
+        path = Path(tmp_path) / f"{letter}.step"
+        cq.exporters.export(box, str(path), exportType="STEP")
+        steps[letter] = path
+    entries = []
+    for idx, (part, item) in enumerate(parts):
+        entries.append({"name": part, "step": str(steps["a" if idx == 0 else "b"]),
+                        "balloon": idx + 1, "offset": [0.0, 45.0 * idx, 0.0],
+                        "bom_item": item})
+    man = Path(tmp_path) / f"{name}.json"
+    man.write_text(json.dumps({"parts": entries}, ensure_ascii=False), encoding="utf-8")
+    out = Path(tmp_path) / f"{name}.dxf"
+    generate_assembly_drawing(out, manifest=str(man), part_name=f"ASSY-{name}",
+                              revision=revision, views=("TOP",),
+                              bom_lines=store.list_lines(T, P, header.bom_id))
+    return out, header.bom_id
+
+
+class TestAssemblyDrawingIsVisible:
+    """C6 要的是「总装图 + 零件图」都在，而改前 manifest 只报 `drawing_count: 1`。
+
+    更要紧的是：装配图证据里的 `assembly_issues`（球标↔BOM 没闭合）改前被整个忽略，
+    一张漏了零件的装配图在发布证据里读起来是 `ok: true`。
+    """
+
+    def test_an_assembly_drawing_is_labelled_as_such(self, tmp_path, db):
+        _seed_ctq(db)
+        bom = _seed_bom(db)
+        dxf, _ = _assy_drawing(tmp_path)
+        path, payload = _manifest(tmp_path, db, [dxf], bom_id=bom.bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        kinds = [d.get("kind") for d in doc["evidence"]["drawings"]]
+        assert kinds == ["assembly"], kinds
+        assert doc["assembly_drawing_count"] == 1
+        assert doc["part_drawing_count"] == 0
+
+    def test_a_part_drawing_keeps_the_old_shape(self, tmp_path, db):
+        """既有口径不许被顺手改掉：单件图仍是 kind=part、计数为 0 的装配侧。"""
+        _seed_ctq(db)
+        bom = _seed_bom(db, revision="A")
+        dxf = _drawing(tmp_path)
+        path, payload = _manifest(tmp_path, db, [dxf], bom_id=bom.bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        assert [d.get("kind") for d in doc["evidence"]["drawings"]] == ["part"]
+        assert doc["assembly_drawing_count"] == 0
+        assert doc["part_drawing_count"] == 1
+        assert [i["kind"] for i in doc["issues"]] == []
+
+    def test_a_leaked_bom_line_on_the_drawing_blocks_readiness(self, tmp_path, db):
+        """BOM 有行而图上没号 ⇒ 这张装配图漏了零件，发布证据不能说齐。"""
+        _seed_ctq(db)
+        bom = _seed_bom(db)
+        dxf, _ = _assy_drawing(tmp_path,
+                               bom_items=(("BRACKET-01", 4.0), ("PLATE-02", 2.0),
+                                          ("SCREW-77", 12.0)))
+        path, payload = _manifest(tmp_path, db, [dxf], bom_id=bom.bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        hits = [i for i in doc["issues"] if i["kind"] == "assembly_unresolved"]
+        assert hits, [i["kind"] for i in doc["issues"]]
+        assert hits[0]["blocking"] is True
+        assert doc["ok"] is False, "有待返工的装配图却 ok=true ⇒ 门禁这条判据是假的"
+        assert "SCREW-77" in hits[0]["detail"] or "1" in hits[0]["detail"], hits[0]
+
+    def test_an_assembly_bound_to_another_bom_is_named(self, tmp_path, db):
+        """图上的数量来自 A 库，发布证据核的是 B 库 ⇒ 两边必须点名，不能各说各话。"""
+        _seed_ctq(db)
+        bom = _seed_bom(db)                       # 与图纸无关的另一张 BOM
+        dxf, bound_to = _assy_drawing(tmp_path)
+        assert bound_to != bom.bom_id
+        path, payload = _manifest(tmp_path, db, [dxf], bom_id=bom.bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        kinds = [i["kind"] for i in doc["issues"]]
+        assert "assembly_bom_mismatch" in kinds, kinds
+        assert doc["ok"] is False
+
+    def test_an_unbound_assembly_is_a_note_not_a_hold(self, tmp_path, db):
+        """出图时没接 BOM 的装配图仍然成立（球标 + ITEM/PART），只是数量没核。
+
+        告警不是未收口：本仓的口径是 blocking=False 不进 ok，但必须在文档里说清，
+        否则「这张图的数量是哪来的」没人会被提醒去问。
+        """
+        import cadquery as cq
+
+        from aipd_os.cad.assembly import generate_assembly_drawing
+
+        _seed_ctq(db)
+        bom = _seed_bom(db, revision="A")
+        steps = {}
+        for letter in "ab":
+            box = cq.Workplane("XY").box(40.0, 20.0, 10.0).solids().vals()[0]
+            path = tmp_path / f"{letter}.step"
+            cq.exporters.export(box, str(path), exportType="STEP")
+            steps[letter] = path
+        man = tmp_path / "plain.json"
+        man.write_text(json.dumps({"parts": [
+            {"name": "支架", "step": str(steps["a"]), "balloon": 1, "offset": [0, 0, 0]},
+            {"name": "压板", "step": str(steps["b"]), "balloon": 2,
+             "offset": [0, 45, 0]}]}, ensure_ascii=False), encoding="utf-8")
+        dxf = tmp_path / "plain.dxf"
+        generate_assembly_drawing(dxf, manifest=str(man), part_name="ASSY-2",
+                                  revision="A", views=("TOP",))
+        path, payload = _manifest(tmp_path, db, [dxf], bom_id=bom.bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        kinds = [i["kind"] for i in doc["issues"]]
+        assert "assembly_bom_unverified" in kinds, kinds
+        assert all(not (i["kind"] == "assembly_bom_unverified" and i["blocking"])
+                   for i in doc["issues"]), "没核数量不该把这张图判死"
+        assert doc["ok"] is True
