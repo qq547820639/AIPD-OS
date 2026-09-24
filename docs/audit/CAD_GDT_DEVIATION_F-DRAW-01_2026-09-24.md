@@ -130,6 +130,31 @@ cd AIPD-OS
 # 判退出码不要用管道）
 ```
 
-## 八、收尾读数
+## 八、收尾读数（全部来自本轮实跑输出，非记忆）
 
-（全量与门禁跑完后按实际输出填写。）
+- 提交：实现 `174ac0f`（CAD: measure position deviation against the true position and refuse
+  bad coverage）、产物重锚 `f967840`（Release artifacts: re-anchor manifests after the
+  position-deviation slice），本节所在提交是本轮第三个；
+- `regenerate_release_manifest.py --version 5.6.0` → **587 个文件**（586 → 587 = 新增的
+  `tests/test_cad_gdt_deviation.py`；审计文档在 `docs/audit/` 下，两份清单整体排除该前缀）；
+- `release_evidence.py --bundle releases/aipd-os-5.6.0.zip --version 5.6.0
+  --test-report docs/audit/pytest-report-v5.6.0.json
+  --source-commit a66040520139405095648461f7144d4f00629924` → 重写三份清单/溯源，
+  bundle 未重建、未重签、tag 未动；
+- 重锚前全量：**1582 passed / 2 failed / 3 skipped**（两条仍是 packaging 的清单哈希，
+  正是这次重锚要清掉的）；重锚后：**1584 passed / 0 failed / 3 skipped**（118.84s）；
+- `production_release_gate --release-ready --tag v5.6.0`：**rc=0，8/8 全绿**，
+  `test_numbers_from_report` 读数 `passed=1096 failed=0 total=1099
+  source_commit=a66040520139405095648461f7144d4f00629924`；
+- `skill_quality_audit`：**0 项警告 0 项失败**；`state_perf_gate`：**PASS**（空闲单跑）。
+
+一处**顺序**教训（本轮实测到，值得写在案上）：产物提交**之前**跑发布门禁，
+`workspace_clean` 必然判红——读数 `[' M PROVENANCE.json', ' M RELEASE_MANIFEST.json',
+' M SOURCE_MANIFEST.json', ' M docs/audit/pytest-report.json']`，`release_ready: False`，
+其余 7 项全绿。这不是回归，是判据要求「发布产物已入库」。
+所以每轮的顺序是：清单重算 → 全量复跑 → **提交产物** → 再跑门禁取 8/8。
+本轮先按旧顺序跑了一次，取到 `rc=2`，提交后重跑才拿到 `rc=0`；
+两个读数都留在这里，免得下一次把「先跑后跑」的差异当成不稳定。
+
+- 未做且有意不做：不 `git push`、不动 tag、不重建 bundle、不重签、不放宽任何共享门禁；
+  `audit_repo --strict` 仍按设计判红（锚点在 tag 而非 HEAD），留给属主的真实发布闭合。
