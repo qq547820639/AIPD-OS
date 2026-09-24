@@ -141,4 +141,43 @@ python scripts/capability_matrix.py --repo . --out docs/audit   # 只有 cad.2d_
 # 真实件端到端（空 --native 即走内置黄金件）：
 python -m aipd_os.cli.main drawing generate --out /tmp/b.dxf --part golden_bracket \
   --views FRONT,TOP,RIGHT --spec /tmp/tol.json ; echo $?   # 声明落空时 4
+# 清单/证据重锚（发布锚点仍钉 v5.6.0；--test-report 必须是 tag 锚定的那份）：
+python scripts/regenerate_release_manifest.py
+python scripts/release_evidence.py --repo . --out . --version 5.6.0 \
+  --bundle releases/aipd-os-5.6.0.zip --test-report docs/audit/pytest-report-v5.6.0.json \
+  --source-commit a66040520139405095648461f7144d4f00629924
+python scripts/production_release_gate.py --release-ready --tag v5.6.0
 ```
+
+## 七、收尾读数
+
+- 全量回归：**1494 passed / 0 failed / 3 skipped**（重锚清单前为 1492 passed + 2 条
+  manifest 判红，属预期，不是回归）；
+- `ruff check src tests`（CI 口径）0；`mypy src tests` 0（**379** 文件）；
+- `production_release_gate --release-ready --tag v5.6.0`：**8/8，release_ready=true**；
+  其 `test_numbers_from_report` 读的是 tag 锚定那份报告
+  （`passed=1096 failed=0 total=1099 source_commit=a660405…`），**与本轮树的 1494 不可互换引用**；
+- `skill_quality_audit`：0 警告 / 0 失败；
+- `state_perf_gate`：**PASS**（闲时，load 2.53；`fact_batched_ops_s` 22704 ops/s、
+  `nested_txn_marginal_us` 18.67µs、批处理比 0.0489）；
+- 清单：**577 文件**（+1 个新用例文件）。实测两份清单都**整体排除 `docs/audit/`**
+  （该前缀条目数 0），所以审计文档与回归报告改多少次都不会牵动清单哈希；
+  `SOURCE_MANIFEST.source_commit`
+  仍钉 `a6604052`（v5.6.0 tag 提交），**未移 tag、未重建/重签 bundle**
+  （`BUNDLE_MANIFEST.json` 重新生成后与磁盘逐字节相同，即 bundle 没被动过）、**未 push**；
+- 提交：`70673c6`（CAD 功能）/ `2aa7c72`（清单重锚）/ `e880992`（证据回绑）。
+
+### 本轮两处自伤（记在这里，免得下一个人以为是工具的错）
+
+1. **证据绑错报告**：我第一次用 `--test-report docs/audit/pytest-report.json` 生成证据，
+   把 `PROVENANCE.test_report` 绑到了本轮树的报告（`source_commit=70673c6`）；而门禁的
+   freshness 判据在 `--tag v5.6.0` 下要求报告绑 **tag 指向的提交**（严格相等，无祖先豁免，
+   见 `production_release_gate.py:454-472`），于是判 STALE 一项红。前几轮的口径是绑
+   `pytest-report-v5.6.0.json`。已在 `e880992` 回绑；本轮 1494 的全量回归仍留在
+   `docs/audit/pytest-report.json` 里当轮次记录，两份清单都排除它，因此回绑不再改清单哈希。
+2. **heredoc 提交与 `&&` 链混写**：`git commit -F - <<MSG … MSG && … <<'PY' … PY` 让第一个
+   heredoc 吞掉了后半段脚本，提交主题变成了那段 Python。树内容是对的
+   （改前后 `HEAD^{tree}` 均为 `63aaef0…`），本地未 push，用 `--amend -F <消息文件>`
+   只重写了主题。规矩：**提交消息先落成文件、单独一条命令**，不要把第二个 heredoc
+   接在同一行链里。
+
