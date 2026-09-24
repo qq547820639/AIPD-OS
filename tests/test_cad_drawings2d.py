@@ -305,12 +305,20 @@ class TestCliInputPaths:
 class TestCapabilityDeclaration:
     def test_registry_declares_real_entry_and_honest_limitation(self, tmp_path):
         """登记必须指向真实实现与真实入口，且写清未覆盖项。"""
-        from aipd_os.registry import load_default_registry
+        import importlib
+
+        from aipd_os.cli.commands_drawing import cmd_drawing
+        from aipd_os.registry import load_default_registry, probe_entry_callable
 
         cap = load_default_registry().get("cad.2d_drawings")
         assert cap is not None
         assert (Path(__file__).resolve().parents[1] / cap.implementation_file).is_file()
-        assert cap.entry_point == "src/aipd_os/cli/commands_drawing.py:cmd_drawing"
+        # 入口要"取得到真身"，而不是钉一个字符串形状：这里曾钉的正是探针解析不了的
+        # 文件路径形态（F-REG-01），等于把错写法当成了基线。
+        module_name, _, attr = cap.entry_point.rpartition(".")
+        assert getattr(importlib.import_module(module_name), attr) is cmd_drawing
+        assert probe_entry_callable(
+            cap.entry_point, Path(__file__).resolve().parents[1]) is True
         assert cap.run_command == "aipd drawing generate"
         assert cap.unit_test == "tests/test_cad_drawings2d.py"
         # 没有 GD&T / 尺寸链 / 剖视 / 爆炸图 ⇒ 不得自称完整生产图纸包

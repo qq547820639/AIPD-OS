@@ -248,24 +248,26 @@ def probe_entry_callable(entry_spec: str | None, repo_root=None) -> bool:
     或用 ``/`` 分隔的多个候选（任一候选可调用即视为可调用）。仓库根目录下的
     ``scripts/`` 模块不在包内，探测时临时将其加入 ``sys.path``，以便解析像
     ``manual_chain.cmd_plan_batches``、``production_release_gate.main`` 这类入口。
+    ``scripts/research/`` 也要加：那批脚本用顶层 ``import _http_runtime`` 引用同级
+    模块，只加 ``scripts/`` 会让 ``research.source_worker.*`` 这类**写法正确**的入口
+    被误读成不可调用（probe 假负数会让"入口证据"这一列失去意义）。
     """
     if not entry_spec:
         return False
     if repo_root is None:
         repo_root = Path(__file__).resolve().parents[2]  # src/aipd_os -> 仓库根
-    scripts_dir = Path(repo_root) / "scripts"
-    added = False
-    if scripts_dir.is_dir():
-        sp = str(scripts_dir)
-        if sp not in sys.path:
-            sys.path.insert(0, sp)
-            added = True
+    extra_dirs = [Path(repo_root) / "scripts",
+                  Path(repo_root) / "scripts" / "research"]
+    added = [str(d) for d in extra_dirs
+             if d.is_dir() and str(d) not in sys.path]
+    for path in added:
+        sys.path.insert(0, path)
     try:
         return any(_resolve_entry_candidate(candidate) for candidate in entry_spec.split("/"))
     finally:
-        if added:
+        for path in added:
             with contextlib.suppress(ValueError):
-                sys.path.remove(str(scripts_dir))  # 清理 sys.path 失败（路径本就不在）可安全忽略
+                sys.path.remove(path)  # 清理 sys.path 失败（路径本就不在）可安全忽略
 
 
 def probe_classification(

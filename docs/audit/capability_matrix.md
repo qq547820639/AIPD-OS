@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-24T18:57:51`
+- 生成时间：`2026-09-24T19:23:05`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`2fbe0a9966f900daa1a607bcba67c7e20fce73aa`
+- 默认分支：`main`；HEAD：`f2ea7a5c171ff53d8e0e8a9b0c2feb278e743aa9`
 - 版本：`5.6.0`
 - 能力总数：`78`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -40,7 +40,7 @@
 | 能力 | 分类 | 声明文件 | 实现文件 | 入口 | 运行命令 | 单元测试 | 当前限制 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 附件读取 | `fully_implemented` | references/research-integration.md | scripts/research/_env.py; src/aipd_os/execution/adapter.py | research.source_worker.run_source | `python scripts/research/source_worker.py` | scripts/research/selftest_postprocess.py |  |
-| 多源论文检索 | `partially_implemented` | references/research-integration.md | scripts/research/search_papers_by_{arxiv,crossref,dblp,open_alex,openreview,semantic_scholar}.py | research.search_papers.selftest | `python scripts/research/search_papers.py --query "..."` | scripts/research/selftest_runtime.py | 需网络/外部源可用 |
+| 多源论文检索 | `partially_implemented` | references/research-integration.md | scripts/research/search_papers_by_{arxiv,crossref,dblp,open_alex,openreview,semantic_scholar}.py | research.search_papers.search_papers | `python scripts/research/search_papers.py --query "..."` | scripts/research/selftest_runtime.py | 需网络/外部源可用 |
 | 全文获取 | `partially_implemented` | references/research-integration.md | scripts/research/_http_runtime.py; source_worker.py | research.source_worker.run_source | `python scripts/research/source_worker.py` | scripts/research/selftest_runtime.py | 各连接器当前仅取摘要，未实现全文获取与全文/摘要区分 |
 | 去重排序 | `fully_implemented` | references/research-integration.md | scripts/research/postprocess.py | research.postprocess.dedup | `python scripts/research/postprocess.py` | scripts/research/selftest_postprocess.py |  |
 | 引用 | `partially_implemented` | references/research-integration.md | scripts/research/postprocess.py | research.postprocess.dedup | `python scripts/research/postprocess.py` | scripts/research/selftest_postprocess.py | 仅后处理附加引用标识，无独立引用生成/引文格式管线 |
@@ -61,7 +61,7 @@
 | 人物一致性 | `partially_implemented` | references/manual-quality-system.md | src/aipd_os/visual_audit/auditor.py | aipd_os.visual_audit.auditor.VisualAuditor | `aipd eval / python -m aipd_os.visual_audit.auditor` | tests/test_visual_golden.py | 依赖视觉/图像后端，无后端时走外部任务包 |
 | 产品结构一致性 | `partially_implemented` | references/manual-quality-system.md | src/aipd_os/visual_audit/auditor.py | aipd_os.visual_audit.auditor.VisualAuditor | `aipd eval` | tests/test_visual_golden.py | 依赖视觉后端 |
 | CMF一致性 | `partially_implemented` | references/manual-quality-system.md | src/aipd_os/visual_audit/auditor.py | aipd_os.visual_audit.auditor.VisualAuditor | `aipd eval` | tests/test_visual_golden.py | 依赖视觉后端 |
-| 真实图像生成 | `external_dependency` | references/image-generation-batch-policy.md | src/aipd_os/imggen/adapter.py | imggen.adapter | `aipd manual generate` | tests/test_imggen.py | imggen 适配器为空壳：即使标 available 也必然抛错，无真实图像模型客户端；未配置后端时向外部任务包诚实降级 |
+| 真实图像生成 | `external_dependency` | references/image-generation-batch-policy.md | src/aipd_os/imggen/adapter.py | aipd_os.imggen.adapter.ImageGenAdapter | `aipd manual generate` | tests/test_imggen.py | imggen 适配器为空壳：即使标 available 也必然抛错，无真实图像模型客户端；未配置后端时向外部任务包诚实降级 |
 | 真实中文排版 | `fully_implemented` | references/product-manual-pipeline.md | src/aipd_os/layout/{composer,renderer}.py | aipd_os.layout.composer.compose_pdf | `aipd manual generate` | tests/test_layout.py |  |
 | 参数表和曲线 | `fully_implemented` | references/product-manual-pipeline.md | src/aipd_os/layout/renderer.py | aipd_os.layout.renderer.render_page | `aipd manual generate` | tests/test_layout.py |  |
 | 失败页局部返工 | `partially_implemented` | references/manual-chain-workflow.md | scripts/manual_chain.py | manual_chain.cmd_run_batch | `aipd manual generate` | tests/test_manual_chain_e2e.py | 仅产出失败页重建计划（rebuild_plan），无据此仅重跑单页的执行入口 |
@@ -73,7 +73,7 @@
 | 能力 | 分类 | 声明文件 | 实现文件 | 入口 | 运行命令 | 单元测试 | 当前限制 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CAD运行时预检 | `fully_implemented` | references/cad-runtime-acceptance.md | scripts/runtime_preflight.py; scripts/cad_maturity_gate.py | cad_maturity_gate.main | `aipd cad preflight --manifest <m> --target <Cx>` | tests/test_cad_maturity_gate.py |  |
-| text-to-cad | `external_dependency` | references/cad-plugin-installation.md | src/aipd_os/tool_adapters/cad_adapter.py | cad_adapter | `aipd cad build` | tests/test_adapters.py | 依赖外部 CAD 内核/插件 |
+| text-to-cad | `external_dependency` | references/cad-plugin-installation.md | src/aipd_os/tool_adapters/cad_adapter.py | aipd_os.tool_adapters.cad_adapter.CadAdapter | `aipd cad build` | tests/test_adapters.py | 依赖外部 CAD 内核/插件 |
 | 本地原生B-Rep | `partially_implemented` | references/local-cad-fallback.md | src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py | aipd_os.cad.backends:get_default_backend | `aipd cad build` | tests/test_cad_golden_loop.py; tests/test_adapters.py | 单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2）；装配/连续运动/CAE/GD&T 仍依赖外部工具，不冒充已完成；二维图纸已本地出图（见 cad.2d_drawings） |
 | Faceted回退 | `partially_implemented` | references/cad-convergence-policy.md | src/aipd_os/tool_adapters/faceted_adapter.py; scripts/faceted_step.py | aipd_os.tool_adapters.faceted_adapter.FacetedAdapter | `aipd cad build` | tests/test_adapters.py; tests/maturity_consistency_test.py | 成熟度最高 C1，不可用于正式图纸/量产 |
 | 参数化模型 | `partially_implemented` | references/cad-engineering-readiness.md | src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py | aipd_os.cad.backends:get_default_backend | `aipd cad build` | tests/test_cad_golden_loop.py | 单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2，需安装 cad extra）；装配/连续运动/CAE/GD&T 仍依赖外部工具，不冒充已完成；二维图纸已本地出图（见 cad.2d_drawings） |
@@ -84,7 +84,7 @@
 | DFM/DFA | `fully_implemented` | references/cad-engineering-readiness.md | templates/cad_engineering_manifest.json; scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 公差链 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | GD&T | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
-| 二维图纸 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/cad/drawings2d.py | src/aipd_os/cli/commands_drawing.py:cmd_drawing | `aipd drawing generate` | tests/test_cad_drawings2d.py | 出图为 DXF 三视图 + 投影测量的总体尺寸/孔径；隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。未实现：GD&T 形位公差框、尺寸链/公差叠加、剖视与局部放大、爆炸图、装配图，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。 |
+| 二维图纸 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/cad/drawings2d.py | aipd_os.cli.commands_drawing.cmd_drawing | `aipd drawing generate` | tests/test_cad_drawings2d.py | 出图为 DXF 三视图 + 投影测量的总体尺寸/孔径；隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。未实现：GD&T 形位公差框、尺寸链/公差叠加、剖视与局部放大、爆炸图、装配图，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。 |
 | BOM一致性 | `fully_implemented` | references/manual-to-cad-digital-thread.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 检验计划 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 生产发布门 | `fully_implemented` | references/gate-model.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m> --target <level>` | tests/test_production_release_gate.py |  |

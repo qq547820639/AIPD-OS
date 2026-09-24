@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-24T18:57:51",
+  "generated_at": "2026-09-24T19:23:05",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "2fbe0a9966f900daa1a607bcba67c7e20fce73aa",
-  "source_commit": "2fbe0a9966f900daa1a607bcba67c7e20fce73aa",
+  "latest_commit_sha": "f2ea7a5c171ff53d8e0e8a9b0c2feb278e743aa9",
+  "source_commit": "f2ea7a5c171ff53d8e0e8a9b0c2feb278e743aa9",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
@@ -295,7 +295,7 @@
           "current_limitation": null,
           "probe": {
             "implementation_file_exists": true,
-            "entry_callable": false,
+            "entry_callable": true,
             "external_dependency_flag": false
           }
         },
@@ -307,7 +307,7 @@
           "external_dependency": false,
           "declaration_file": "references/research-integration.md",
           "implementation_file": "scripts/research/search_papers_by_{arxiv,crossref,dblp,open_alex,openreview,semantic_scholar}.py",
-          "entry_point": "research.search_papers.selftest",
+          "entry_point": "research.search_papers.search_papers",
           "run_command": "python scripts/research/search_papers.py --query \"...\"",
           "input_output": "查询词 -> 多源论文结果",
           "unit_test": "scripts/research/selftest_runtime.py",
@@ -316,7 +316,7 @@
           "current_limitation": "需网络/外部源可用",
           "probe": {
             "implementation_file_exists": true,
-            "entry_callable": false,
+            "entry_callable": true,
             "external_dependency_flag": false
           }
         },
@@ -337,7 +337,7 @@
           "current_limitation": "各连接器当前仅取摘要，未实现全文获取与全文/摘要区分",
           "probe": {
             "implementation_file_exists": true,
-            "entry_callable": false,
+            "entry_callable": true,
             "external_dependency_flag": false
           }
         },
@@ -648,7 +648,7 @@
           "external_dependency": true,
           "declaration_file": "references/image-generation-batch-policy.md",
           "implementation_file": "src/aipd_os/imggen/adapter.py",
-          "entry_point": "imggen.adapter",
+          "entry_point": "aipd_os.imggen.adapter.ImageGenAdapter",
           "run_command": "aipd manual generate",
           "input_output": "页面描述 -> 图像",
           "unit_test": "tests/test_imggen.py",
@@ -657,7 +657,7 @@
           "current_limitation": "imggen 适配器为空壳：即使标 available 也必然抛错，无真实图像模型客户端；未配置后端时向外部任务包诚实降级",
           "probe": {
             "implementation_file_exists": true,
-            "entry_callable": false,
+            "entry_callable": true,
             "external_dependency_flag": true
           }
         },
@@ -800,7 +800,7 @@
           "external_dependency": true,
           "declaration_file": "references/cad-plugin-installation.md",
           "implementation_file": "src/aipd_os/tool_adapters/cad_adapter.py",
-          "entry_point": "cad_adapter",
+          "entry_point": "aipd_os.tool_adapters.cad_adapter.CadAdapter",
           "run_command": "aipd cad build",
           "input_output": "语义描述 -> CAD 模型",
           "unit_test": "tests/test_adapters.py",
@@ -809,7 +809,7 @@
           "current_limitation": "依赖外部 CAD 内核/插件",
           "probe": {
             "implementation_file_exists": true,
-            "entry_callable": false,
+            "entry_callable": true,
             "external_dependency_flag": true
           }
         },
@@ -1031,7 +1031,7 @@
           "external_dependency": false,
           "declaration_file": "references/production-cad-deliverables.md",
           "implementation_file": "src/aipd_os/cad/drawings2d.py",
-          "entry_point": "src/aipd_os/cli/commands_drawing.py:cmd_drawing",
+          "entry_point": "aipd_os.cli.commands_drawing.cmd_drawing",
           "run_command": "aipd drawing generate",
           "input_output": "3D 模型 -> DXF 正投影视图（可见线 + 隐藏线）+ 尺寸 + 标题栏",
           "unit_test": "tests/test_cad_drawings2d.py",
@@ -1040,7 +1040,7 @@
           "current_limitation": "出图为 DXF 三视图 + 投影测量的总体尺寸/孔径；隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。未实现：GD&T 形位公差框、尺寸链/公差叠加、剖视与局部放大、爆炸图、装配图，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。",
           "probe": {
             "implementation_file_exists": true,
-            "entry_callable": false,
+            "entry_callable": true,
             "external_dependency_flag": false
           }
         },

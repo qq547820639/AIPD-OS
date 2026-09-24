@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-24T18:57:50",
-  "source_commit": "2fbe0a9966f900daa1a607bcba67c7e20fce73aa",
+  "generated_at": "2026-09-24T19:23:03",
+  "source_commit": "f2ea7a5c171ff53d8e0e8a9b0c2feb278e743aa9",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "2fbe0a9966f900daa1a607bcba67c7e20fce73aa",
-  "latest_commit_time": "2026-09-24 18:22:45 +0800",
+  "latest_commit_sha": "f2ea7a5c171ff53d8e0e8a9b0c2feb278e743aa9",
+  "latest_commit_time": "2026-09-24 19:13:59 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 152
+      "tests": 153
     }
   },
   "tags": [
@@ -116,65 +116,28 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 572,
-    "hash_matches": 565,
-    "hash_mismatch_count": 7,
+    "total_files": 575,
+    "hash_matches": 573,
+    "hash_mismatch_count": 2,
     "mismatches": [
       {
-        "path": "src/aipd_os/cli/commands_cad.py",
+        "path": "src/aipd_os/registry.py",
         "reason": "hash_mismatch",
-        "expected": "acd6a2cff39eb71d33e80cd7d76df385b622d772f2966c103954e42d88aa90bb",
-        "actual": "3cb7dda560c8c744f0a6cec022174cc1f627f0501acdaa6f1bd6d0e1e37d3bc3"
-      },
-      {
-        "path": "src/aipd_os/cli/commands_validation.py",
-        "reason": "hash_mismatch",
-        "expected": "c81cce544226b608ac9631777f14d440103d89e98aad6dfb14db74a26c79614f",
-        "actual": "547f53142e2b61403ac7d35721fa446f3e4ebd4bfe551dd275688d38ab50756a"
-      },
-      {
-        "path": "src/aipd_os/cli/main.py",
-        "reason": "hash_mismatch",
-        "expected": "0427548be4d06dc869f78fba206db044f4e820911dec8179cfaab3d6f5419019",
-        "actual": "dd2efd032c90cfae4f8c7a469627372ba32e9e1465411626aa59b027c2ba037b"
+        "expected": "cc555f2024bdb6b2a9a68e894c51093f9a4be8f9b4a333def9dc36dc5d5c89d7",
+        "actual": "ff1b64ec6dad7b0a9716288b2631d7f5cc59100da40210385a773092dfd096c8"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "91cedcc85c5e7a695e99e66d3ebfde6637c3e79f04e1fd4da58bd0b3912d0d9c",
-        "actual": "7cd0e67c2acd33dcd31694245e51e1dda55813113d707dbbfbdb7c0883261aa5"
-      },
-      {
-        "path": "src/aipd_os/tool_adapters/evt_dvt_pvt_adapter.py",
-        "reason": "hash_mismatch",
-        "expected": "28915efcf10ac7be0bfa673b2ba30401900341d92141a8730b742c7eb9ffeaf3",
-        "actual": "db2f5e709d355e2e5c29a32186222a9e85a4221a70261c02cb297dd1cf5bc4b5"
-      },
-      {
-        "path": "src/aipd_os/validation/ingestion.py",
-        "reason": "hash_mismatch",
-        "expected": "6c3378dce3cfc32b0318a3e3595f4e925293a0c0dbe1ccb9883394adeea85703",
-        "actual": "515a9baad61b6b52971f962a5a7458ac1c2fe20c58caca7b5bd28e6f6c159e39"
-      },
-      {
-        "path": "tests/test_command_coverage.py",
-        "reason": "hash_mismatch",
-        "expected": "3dea4771c165d3ea3ecdd8cfed0d9338697df5b394d70440bed2388524dd2e0a",
-        "actual": "aebd1a644a0c7f34e538195d55faed9df2387947f34eb931c858c396f3c8075b"
+        "expected": "7cd0e67c2acd33dcd31694245e51e1dda55813113d707dbbfbdb7c0883261aa5",
+        "actual": "470dc9e5e93fc36faf219cf7dae7b0e0977b8ea8b04c517c799e253493510987"
       }
     ]
   },
   "untracked_or_generated": [
-    " M src/aipd_os/cli/commands_cad.py",
-    " M src/aipd_os/cli/commands_validation.py",
-    " M src/aipd_os/cli/main.py",
+    " M src/aipd_os/registry.py",
     " M src/aipd_os/registry_data.py",
-    " M src/aipd_os/tool_adapters/evt_dvt_pvt_adapter.py",
-    " M src/aipd_os/validation/ingestion.py",
-    " M tests/test_command_coverage.py",
-    "?? src/aipd_os/supply_chain/impact.py",
-    "?? tests/test_cli_validation_surface.py",
-    "?? tests/test_lab_impact_propagation.py",
+    "?? tests/test_capability_entry_surface.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

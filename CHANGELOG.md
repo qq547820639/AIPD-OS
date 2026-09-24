@@ -173,6 +173,18 @@
   17 条新用例（`--collect-only` 实测：11+4+2），变异对照 M1/M2/M3 分别判红 4/1/2 条——
   其中 M1 还暴露了我自己一条只断言"命令打印了什么"的弱用例，已按"必须读库"补强。
   证据与未证范围见 `docs/audit/LAB_IMPACT_PROPAGATION_F-SUPPLY-03_2026-09-24.md`；
+- **v5.10 修复 F-REG-01：能力矩阵的「入口可调用」证据是装饰性的**：矩阵自称含运行时 probe
+  证据，但 `entry_callable` 不参与任何判定、也没有门禁要求它为真 ⇒ 78 行里 **11 行**入口
+  解析不到可调用对象，其中 `research.attachment_reading` 还被判成 `fully_implemented`。
+  逐条诊断分三类：4 条**入口字符串本身写错**（`src/...py:cmd_drawing` 文件路径形态被
+  `/` 候选分隔符拆碎、裸词 `cad_adapter`、少包名的 `imggen.adapter`、指向不存在函数的
+  `research.search_papers.selftest`）、3 条是**探针假负**（`scripts/research/*.py` 用顶层
+  `import _http_runtime`，探针只临时加了 `scripts/`）、5 条是有意留空的 external 能力。
+  现：4 条改对、探针补 `scripts/research`、5 条由常驻门禁逐条声明；
+  新增 `tests/test_capability_entry_surface.py`（含"正确写法必须读 true"的反证，防止把
+  探针坏了当成数据错了）。矩阵重生成后 `entry_callable=false` 11 → **5**。
+  变异对照：探针退回旧 path 列表 ⇒ 4 红；把一条入口改回路径形态 ⇒ 1 红。
+  证据见 `docs/audit/CAPABILITY_ENTRY_SURFACE_F-REG-01_2026-09-24.md`；
 
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
