@@ -155,3 +155,24 @@ cd AIPD-OS
 .venv/bin/python -m mypy src tests
 W=$(mktemp -d)   # 两个项目各一条上游/下游后跑 §四 那四条命令
 ```
+
+## 十、收尾读数（全部来自本轮实跑输出，非记忆）
+
+- 新用例 **18 条**（`tests/test_truth_propagate_cli.py`）；变异 **12 条，T9 首轮幸存**，
+  补断言后 12/12 被杀（还原后复算全绿；电池脚本在还原不绿时返回 3）。
+- `ruff check src tests state_service`：All checks passed；
+  `mypy src tests`：**Success: no issues found in 393 source files**。
+- 重锚前全量 **1639 passed / 2 failed / 3 skipped**（两条仍是 packaging 的清单哈希核对）；
+  重锚后 **1641 passed / 0 failed / 3 skipped**（125.00s，总 1644）；
+  `tests/test_packaging.py` 单跑 **8 passed**。
+- 产物：`RELEASE_MANIFEST.json` **591 个文件**（+`commands_truth.py`、+新测试文件）。
+- `production_release_gate --release-ready --tag v5.6.0`（工作区干净后跑，`PATH` 前置 venv）：
+  **rc=0，release_ready true，8/8 全绿**，其中
+  `test_numbers_from_report | passed=1641 failed=0 total=1644 source_commit=a66040520139…`。
+- `skill_quality_audit`：**0 项警告，0 项失败**；`state_perf_gate`：**性能门禁 PASS**（空闲单跑）。
+- `audit_repo --strict`：**rc=1**，唯一一条
+  `✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=86abcaf3f93a…`
+  ——发布锚点在 tag 上而 HEAD 已前进，按设计判红；改绿需要移 tag + 重签，属业主侧动作。
+- 未做且有意不做：不 `git push`、不动 tag、不重建 bundle、不重签、不放宽任何共享门禁。
+  另两处同类缺口留在下一轮：`StalePropagationService` 仍 0 产品调用点（§八），
+  `gate.commit_snapshot` 这条 truth 写入路径仍不可从 CLI 触达（§二候选 (a) 的理由）。
