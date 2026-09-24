@@ -223,6 +223,29 @@ W=$(mktemp -d) && .venv/bin/aipd drawing generate --part plate-e2e \
   `skill_quality_audit` / `state_perf_gate` 的读数：记在下一节末（门禁必须在工作区干净时跑，
   所以它的输出只能晚于本文件的提交）。
 
-## 十一、门禁读数（文档提交后运行）
+## 十一、门禁读数（文档提交后运行，工作区干净）
 
-补录于工作区干净之后：见下一次文档提交「record the gate readings」中的原文读数。
+`production_release_gate --release-ready --tag v5.6.0`（`PATH` 前置本仓 venv，否则
+`shutil.which('pip-audit')` 找不到而把 CVE 项 fail-close 成红）：
+
+```
+release_ready: True | checks: 8
+PASS workspace_clean | clean
+PASS commit_matches_head | provenance source_commit 与 tag 指向同一提交
+PASS source_manifest_zero_diff | zero diff
+PASS bundle_manifest_zero_diff | zero diff
+PASS test_numbers_from_report | passed=1623 failed=0 total=1626 source_commit=a66040520139405095648461f7144d4f00629924
+PASS signature_verifiable | Ed25519 signature verified
+PASS no_secrets | no secret patterns found
+PASS no_unacknowledged_cve | pip-audit: no unacknowledged CVE
+GATE_RC=0
+```
+
+- `skill_quality_audit`：**0 项警告，0 项失败**，rc=0；
+- `state_perf_gate`：**性能门禁 PASS**（`batch_over_autocommit_ratio median=0.0456`，
+  门限 ≤0.34）；空闲单跑，未与别的 CPU 重活并发。
+- 收尾后 `git status --short` 为空；**未 push、tag 未动、bundle 未重建、未重签、
+  任何共享门禁都未放宽**。`audit_repo --strict` 仍按设计判红（rc=1），原文只有一条：
+  `✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=9f58c6e57c5f…`
+  ——发布锚点在 tag 上，HEAD 已往前走；只有真发布（移 tag + 重签）才会让它变绿，
+  那一侧的操作留给业主，不在本轮范围内。
