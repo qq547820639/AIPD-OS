@@ -44,9 +44,18 @@
 （``a·u + b·v = offset``），视线与法向平行的视图不是母视图、剖视图自己不标，
 空剖视不编号也不标符号。
 
-明确**未实现**（不要当成已具备）：局部放大图、爆炸图、多零件装配图；阶梯剖/旋转剖；
+**局部放大图**（``detail_view``）是母视图**已判定可见/隐藏**折线与放大圆的二维裁剪：
+裁剪区间由 ``|a+t(b-a)-c|<=R`` 的一元二次方程闭式解出，所以「裁掉什么」可机器核。
+放大图**不自己量尺寸**——它只继承母视图里测点落在圆内的尺寸（``inherited_from``），
+且保留母视图的特征名，否则按名建立的 CTQ 溯源会整条断掉。总尺寸（``overall_*``）
+一律不继承：裁剪窗的大小不是零件的尺寸。空放大图（圆内什么图线都没有）不编号、
+不在母视图上画圈，与空剖视同一条规矩。
+
+明确**未实现**（不要当成已具备）：爆炸图、多零件装配图；阶梯剖/旋转剖；
 叠加未做三维/角度与分布型统计（Cpk）；GD&T 用的是 drawn 几何
 而非 DXF ``TOLERANCE`` 语义实体（其 ``content`` 转义码无权威来源，见 ``cad.gdt`` docstring）。
+放大图不重投影（FreeCAD TechDraw 走的是「圆柱与实体求交后重新投影」），
+这一取舍的理由与后果见 ``docs/audit/CAD_DETAIL_VIEWS_F-DRAW-01_2026-09-24.md``。
 见 registry 的 ``current_limitation``。
 """
 from __future__ import annotations
@@ -99,6 +108,8 @@ SECTION_LETTERS = "ABCDEFGHJKL"   # 剖切符号字母；按惯例跳过 I
 SECTION_OVERHANG = 4.0            # 剖切线向母视图轮廓两端各伸出的余量（图纸 mm）
 SECTION_TICK = 2.5                # 端部短划长度，指向被保留的一侧
 SECTION_LETTER_HEIGHT = 3.5       # 字母字高
+DETAIL_NUMBER_HEIGHT = 3.5        # 母视图上放大编号的字高
+DETAIL_STATION_TOL = 1e-6         # 「这个测点算不算落在放大圆内」的数值容差
 
 DIMSTYLE = "EZ_M_100_H25_CM"
 DIM_ROW_GAP = 10.0        # 无尺寸链时总体宽尺寸的引出距离
@@ -129,6 +140,10 @@ class ViewGeometry:
     section_letter: str = ""
     label: str = ""
     section_symbols: list[dict[str, Any]] = field(default_factory=list)
+    detail_of: dict[str, Any] | None = None
+    detail_factor: float = 1.0
+    detail_problems: list[str] = field(default_factory=list)
+    detail_markers: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def width(self) -> float:
@@ -505,7 +520,9 @@ def assign_section_letters(views: list[ViewGeometry]) -> dict[str, str]:
         view.section_letter = letter
         view.label = f"{letter}-{letter}"
     for view in views:
-        if view.section_of:
+        if view.section_of or view.detail_of:
+            # 派生视图（剖视、放大图）都不是母视图：在它上面再画一刀的剖切线，
+            # 读图的人会以为那是另一处实体。
             continue
         for sec in views:
             if not sec.section_of or not sec.section_letter:
@@ -615,6 +632,201 @@ def section_view(model: Any, name: str, axis: str, offset: float = 0.0,
                        "kept": f"{SECTION_KEEP_LABEL[axis]}{float(offset):g}",
                        "normal": [n[0], n[1], n[2]]}
     return view
+
+
+def parse_detail_spec(spec: str) -> tuple[str, tuple[float, float], float, float]:
+    """解析 ``--detail "TOP@(-30,0)/12=2"`` = 母视图 @ 圆心 / 半径 = 放大倍数。
+
+    圆心与半径都用**母视图的局部坐标与模型单位**（与证据里 ``center`` 同一套数），
+    所以看图人可以从证据的孔心直接抄一个圆心出来。倍数是**相对母视图印出的比例**，
+    不是绝对比例：``--scale 0.5 --detail ...=2`` 得到的是 1:1 的放大图。
+    """
+    text = str(spec).strip()
+    parent, sep, rest = text.partition("@")
+    parent = parent.strip()
+    if not sep or not parent:
+        raise ValueError(f"局部放大写法必须是 母视图@(u,v)/半径=放大倍数，实得 {spec!r}")
+    circle_part, eq, factor_raw = rest.partition("=")
+    if not eq:
+        raise ValueError(f"局部放大缺放大倍数（如 ...=2）：{spec!r}")
+    centre_part, slash, radius_raw = circle_part.partition("/")
+    if not slash:
+        raise ValueError(f"局部放大缺半径（写法 .../半径=倍数）：{spec!r}")
+    bits = centre_part.strip().strip("()").split(",")
+    if len(bits) != 2:
+        raise ValueError(f"放大圆心要两个数 (u,v)，实得 {centre_part!r}")
+    try:
+        u, v = float(bits[0]), float(bits[1])
+        radius = float(radius_raw.strip())
+        factor = float(factor_raw.strip())
+    except ValueError as exc:
+        raise ValueError(f"局部放大的坐标/半径/倍数都得是数：{spec!r}") from exc
+    if radius <= 0.0:
+        raise ValueError(f"放大圆半径必须大于 0，实得 {radius:g}：{spec!r}")
+    if factor <= 1.0:
+        raise ValueError(f"放大倍数必须大于 1（等于 1 就不叫局部放大），实得 {factor:g}"
+                         f"：{spec!r}")
+    return parent, (u, v), radius, factor
+
+
+def _circle_hit_interval(a: tuple[float, float], b: tuple[float, float],
+                         center: tuple[float, float],
+                         radius: float) -> tuple[float, float] | None:
+    """线段 a→b 落在圆内的参数区间 ``[t0, t1]``；圆外或只碰一点返回 ``None``。
+
+    解 ``|a + t(b-a) - c|² = R²``。判别式 < 0 时整条要么全内要么全外，
+    用**起点到圆心的距离**判是哪一种——不看起点就会把全内的线段整条丢掉。
+    """
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    fx, fy = a[0] - center[0], a[1] - center[1]
+    qa = dx * dx + dy * dy
+    if qa <= 0.0:
+        return None
+    qb = 2.0 * (fx * dx + fy * dy)
+    qc = fx * fx + fy * fy - radius * radius
+    disc = qb * qb - 4.0 * qa * qc
+    if disc < 0.0:
+        return (0.0, 1.0) if qc < 0.0 else None
+    root = math.sqrt(disc)
+    t0 = max(0.0, min(1.0, (-qb - root) / (2.0 * qa)))
+    t1 = max(0.0, min(1.0, (-qb + root) / (2.0 * qa)))
+    if t1 - t0 <= 0.0:
+        return None          # 相切：零长度不算一段
+    return t0, t1
+
+
+def _lerp(a: tuple[float, float], b: tuple[float, float], t: float) -> tuple[float, float]:
+    return (a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]))
+
+
+def clip_polyline_to_circle(poly: list[tuple[float, float]],
+                            center: tuple[float, float],
+                            radius: float) -> list[list[tuple[float, float]]]:
+    """折线 ∩ 圆：按**原顺序**返回圆内的若干段（整圆在内仍闭合）。
+
+    与 ``_chain_loop`` 同一条纪律：只接得住连续段，接不上就另起一段，
+    绝不把两段不相干的线首尾缝成一条。
+    """
+    pieces: list[list[tuple[float, float]]] = []
+    cur: list[tuple[float, float]] = []
+    for i in range(len(poly) - 1):
+        hit = _circle_hit_interval(poly[i], poly[i + 1], center, radius)
+        if hit is None:
+            if len(cur) >= 2:
+                pieces.append(cur)
+            cur = []
+            continue
+        p0 = _lerp(poly[i], poly[i + 1], hit[0])
+        p1 = _lerp(poly[i], poly[i + 1], hit[1])
+        if not cur or not _same(cur[-1], p0):
+            if len(cur) >= 2:
+                pieces.append(cur)
+            cur = [p0]
+        if not _same(cur[-1], p1):
+            cur.append(p1)
+    if len(cur) >= 2:
+        pieces.append(cur)
+    return pieces
+
+
+def _inside(point: tuple[float, float], center: tuple[float, float],
+            radius: float) -> bool:
+    return (math.hypot(point[0] - center[0], point[1] - center[1])
+            <= radius + DETAIL_STATION_TOL)
+
+
+def _inherited_dimensions(parent: ViewGeometry, center: tuple[float, float],
+                          radius: float) -> list[dict[str, Any]]:
+    """母视图里**测点落在放大圆内**的尺寸才带得进来；名字保持 ``TOP.hole_1`` 不变。
+
+    ``overall_width`` / ``overall_height`` 永不继承：放大图量出来的是**裁剪窗**，
+    把它标成零件尺寸就是凭空造一条不存在的尺寸。链尺寸要求两端都落在某个孔心上
+    （以零件边缘为锚的那两段不算），所以边缘段不会跑到放大图上。
+    """
+    stations: dict[float, list[tuple[float, float]]] = {}
+    for c in parent.circles:
+        key = round(float(c["center"][0]), 6)
+        stations.setdefault(key, []).append((float(c["center"][0]),
+                                             float(c["center"][1])))
+    kept: list[dict[str, Any]] = []
+    for dim in parent.dimensions:
+        kind = str(dim.get("kind"))
+        if kind == "hole_diameter":
+            points = [(float(dim["center"][0]), float(dim["center"][1]))]
+        elif kind == "chain":
+            left = stations.get(round(float(dim["from_x"]), 6))
+            right = stations.get(round(float(dim["to_x"]), 6))
+            if not left or not right:
+                continue
+            points = [*left, *right]
+        else:
+            continue
+        if not all(_inside(p, center, radius) for p in points):
+            continue
+        entry = dict(dim)
+        entry["inherited_from"] = parent.name
+        kept.append(entry)
+    return kept
+
+
+def detail_view(parent: ViewGeometry, name: str, center: tuple[float, float],
+                radius: float, factor: float) -> ViewGeometry:
+    """把母视图裁一块放大：二维裁剪**已判定可见/隐藏**的折线，不重新投影。
+
+    放大图用的是母视图同一套视图基（``direction`` / ``up``）与同一套局部坐标，
+    所以圆内几何与母视图逐毫米对得上；孔整圆在内时仍被 ``detect_circles`` 认成孔，
+    被圆边裁成开弧时**不会**（开弧量不出圆心，标出来就是假尺寸）。
+    """
+    center = (float(center[0]), float(center[1]))
+    radius = float(radius)
+    factor = float(factor)
+    visible = [seg for poly in parent.visible
+               for seg in clip_polyline_to_circle(poly, center, radius)]
+    hidden = [seg for poly in parent.hidden
+              for seg in clip_polyline_to_circle(poly, center, radius)]
+    view = ViewGeometry(
+        name=name, direction=parent.direction, up=parent.up, visible=visible,
+        hidden=hidden, circles=detect_circles(visible), bbox=_bbox(visible + hidden),
+        detail_of={"parent": parent.name, "center": [center[0], center[1]],
+                   "radius": radius, "factor": factor},
+        detail_factor=factor)
+    view.dimensions = _inherited_dimensions(parent, center, radius)
+    view.chain_check = _chain_check(view, view.dimensions)
+    if not visible and not hidden:
+        view.detail_problems.append(
+            f"放大圆 ({center[0]:g}, {center[1]:g}) R={radius:g} 在 {parent.name} 上"
+            f"没圈到任何图线（要么圆心写错，要么那处本来没有几何）")
+    return view
+
+
+def _ratio_text(scale: float) -> str:
+    """比例写法：放大就 ``k:1``，缩小就 ``1:k``——把 0.5 印成 "1:2" 而不是 "1:0.5"。"""
+    return f"{_fmt(scale)}:1" if scale >= 1.0 else f"1:{_fmt(1.0 / scale)}"
+
+
+def assign_detail_numbers(views: list[ViewGeometry], scale: float) -> dict[str, int]:
+    """给放大图按出现顺序编号 1、2、…，并在母视图上挂裁剪圈。
+
+    与剖视同一条件：**空放大图不编号、不画圈**——图纸不该声称有一张读得清的详图
+    而它什么都没有。字母给剖视、数字给放大图，两套互不占用。
+    """
+    by_name = {v.name: v for v in views}
+    numbers: dict[str, int] = {}
+    for view in views:
+        if not view.detail_of or view.detail_problems:
+            continue
+        number = len(numbers) + 1
+        numbers[view.name] = number
+        drawn = scale * view.detail_factor
+        view.label = f"DETAIL {number}  {_ratio_text(drawn)}"
+        parent = by_name.get(str(view.detail_of["parent"]))
+        if parent is not None:
+            parent.detail_markers.append({
+                "number": number, "of": view.name,
+                "center": list(view.detail_of["center"]),
+                "radius": float(view.detail_of["radius"]),
+            })
+    return numbers
 
 
 def _polygon_area(poly: list[tuple[float, float]]) -> float:
@@ -884,6 +1096,7 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
 
     gdt_frames, gdt_issues, gdt_unmatched = build_gdt_frames(views, spec)
     section_letters = assign_section_letters(views)
+    detail_numbers = assign_detail_numbers(views, scale)
     width, height = SHEET_SIZES[sheet]
     doc = ezdxf.new("R2010", setup=True)
     # 剖切线惯用点划线；没有 PHANTOM 就用虚线，绝不引用文档里不存在的线型
@@ -896,6 +1109,7 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                             ("GDT", 6, "Continuous"),
                             ("HATCH", 3, "Continuous"),
                             ("SECTION", 1, "Continuous"),
+                            ("DETAIL", 5, "Continuous"),
                             ("FRAME", 7, "Continuous")):
         if name not in doc.layers:
             doc.layers.add(name, color=color)
@@ -915,19 +1129,23 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
         row, col = divmod(idx, per_row)
         ox = MARGIN + 20.0 + col * slot_w
         oy = height - MARGIN - 40.0 - row * 100.0
+        # 放大图按「全局比例 × 自己的倍数」画，其余视图 detail_factor 恒为 1
+        sc = scale * view.detail_factor
         cx = ox + slot_w / 2.0
-        cy = oy - (view.height * scale) / 2.0
-        _draw_view(msp, view, cx, cy, scale,
+        cy = oy - (view.height * sc) / 2.0
+        _draw_view(msp, view, cx, cy, sc,
                    [f for f in gdt_frames if f["view"] == view.name],
                    cut_line_linetype)
-        label = f"{view.name}  1:{_fmt(1.0 / scale)}"
-        msp.add_text(label, dxfattribs={"layer": "TEXT", "height": 4.0}) \
-           .set_placement((cx - 10.0, oy + 6.0))
-        if view.label:      # 剖面标题 «A-A»：看图人靠它把剖视与母视图上的符号对上
+        if not view.detail_of:   # 放大图的比例写在自己的标题里，别拿全局比例贴它
+            msp.add_text(f"{view.name}  1:{_fmt(1.0 / sc)}",
+                         dxfattribs={"layer": "TEXT", "height": 4.0}) \
+               .set_placement((cx - 10.0, oy + 6.0))
+        if view.label:      # 剖面标题 «A-A» / 放大图标题 «DETAIL 1  2:1»
             msp.add_text(view.label, dxfattribs={"layer": "TEXT", "height": 4.0}) \
-               .set_placement((cx - 6.0, oy - view.height * scale - 10.0))
+               .set_placement((cx - 6.0, oy - view.height * sc - 10.0))
         placed.append({"view": view.name, "origin": [round(cx, 2), round(cy, 2)],
-                       "size_mm": [round(view.width * scale, 3), round(view.height * scale, 3)],
+                       "size_mm": [round(view.width * sc, 3), round(view.height * sc, 3)],
+                       "drawn_scale": sc,
                        "visible_polylines": len(view.visible),
                        "hidden_polylines": len(view.hidden),
                        "chain_check": view.chain_check,
@@ -940,6 +1158,9 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                        "section_warnings": list(view.section_warnings),
                        "label": view.label,
                        "section_symbols": [dict(sym) for sym in view.section_symbols],
+                       "detail_of": view.detail_of,
+                       "detail_empty": bool(view.detail_of) and bool(view.detail_problems),
+                       "detail_markers": [dict(m) for m in view.detail_markers],
                        "dimensions": view.dimensions})
 
     _draw_title_block(msp, width, height, part_name, revision, scale, material,
@@ -967,6 +1188,9 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
             "section_issues": sorted({msg for v in placed for msg in v["section_problems"]}),
             "section_letters": section_letters,
             "section_warnings": sorted({m for v in placed for m in v["section_warnings"]}),
+            "detail_numbers": detail_numbers,
+            "detail_issues": sorted({msg for view in views
+                                     for msg in view.detail_problems}),
             "bytes": path.stat().st_size,
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             **spec_stats}
@@ -1069,6 +1293,31 @@ def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float,
             cursor_y += 14.0
 
     _draw_section_symbols(msp, view, place, scale, symbol_linetype)
+    _draw_detail_marks(msp, view, place, scale)
+
+
+def _draw_detail_marks(msp: Any, view: ViewGeometry, place: Any, scale: float) -> None:
+    """放大标记：母视图上的裁剪圈 + 圈外编号，以及放大图自己的边界圈。
+
+    两处都用 ``place``：母视图的圈用母视图的放置（半径 × 母视图比例），放大图的圈用
+    放大图的放置（同一套局部坐标、半径 × 放大后的比例），所以圈与图线**必然**同心同尺——
+    看图人拿尺量母视图那个圈，量出来的就是证据里写的半径。
+    """
+    for mark in view.detail_markers:
+        centre = place([(float(mark["center"][0]), float(mark["center"][1]))])[0]
+        radius = float(mark["radius"]) * scale
+        msp.add_circle(centre, radius, dxfattribs={"layer": "DETAIL", "color": 5})
+        height = DETAIL_NUMBER_HEIGHT * scale
+        msp.add_text(str(mark["number"]), dxfattribs={"layer": "DETAIL",
+                                                      "height": height}) \
+           .set_placement((centre[0] + radius * 0.7071 + height * 0.3,
+                           centre[1] + radius * 0.7071))
+    if view.detail_of and not view.detail_problems:
+        # 空放大图连自己的边界圈都不画：画了就是声称这张详图成立
+        centre = place([(float(view.detail_of["center"][0]),
+                         float(view.detail_of["center"][1]))])[0]
+        msp.add_circle(centre, float(view.detail_of["radius"]) * scale,
+                       dxfattribs={"layer": "DETAIL", "color": 5})
 
 
 def _draw_section_symbols(msp: Any, view: ViewGeometry, place: Any, scale: float,
@@ -1121,12 +1370,16 @@ def generate_drawing(model: Any, out_path: Path | str, *,
                      sheet: str = "A3",
                      provenance: dict[str, Any] | None = None,
                      spec: dict[str, Any] | None = None,
-                     sections: Sequence[str] = ()) -> dict[str, Any]:
+                     sections: Sequence[str] = (),
+                     details: Sequence[str] = ()) -> dict[str, Any]:
     """端到端：模型 -> 视图 -> DXF -> 证据字典（含哈希与实体统计）。
 
     ``spec`` 只用于声明公差（``{"features": [{"feature": "TOP.hole_2",
     "tolerance": {"upper": 0.05, "lower": -0.05}}], "global_tolerance": {...}}``），
     尺寸值一律来自几何测量，spec 不参与测量。
+
+    ``details`` 是局部放大声明（``"TOP@(-30,0)/12=2"``）：圆心/半径用母视图局部坐标，
+    倍数是相对母视图印出比例的放大。母视图名写错直接报错，不静默少一张图。
     """
     path = Path(out_path)
     built: list[ViewGeometry] = []
@@ -1141,6 +1394,16 @@ def generate_drawing(model: Any, out_path: Path | str, *,
         suffix = "" if axis not in seen_axes else f"_{sorted(seen_axes).index(axis) + idx + 1}"
         seen_axes.add(axis)
         built.append(section_view(model, f"SECTION_{axis}{suffix}", axis, offset))
+    by_name = {v.name: v for v in built}
+    for idx, raw in enumerate(details):
+        parent_name, center, radius, factor = parse_detail_spec(raw)
+        parent = by_name.get(parent_name)
+        if parent is None:
+            raise ValueError(f"局部放大的母视图 {parent_name!r} 不在本图里；"
+                             f"可用：{sorted(by_name)}")
+        detail = detail_view(parent, f"DETAIL_{idx + 1}", center, radius, factor)
+        built.append(detail)
+        by_name[detail.name] = detail
     evidence = write_dxf(built, path, part_name=part_name, revision=revision,
                          scale=scale, material=material, sheet=sheet,
                          provenance=provenance, spec=spec)

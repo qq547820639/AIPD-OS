@@ -119,6 +119,10 @@ def _collect_drawings(drawings: Sequence[Path | str], root: Path,
                 tolerance = dim.get("tolerance")
                 if not tolerance:
                     continue
+                if dim.get("inherited_from"):
+                    # 局部放大图上的尺寸是从母视图**继承**的同一处测量：同一处测量
+                    # 印两处算一条覆盖，否则放大图画得越多 gdt 覆盖率越虚高。
+                    continue
                 # 尺寸证据里的 feature 自带视图前缀（F-DRAW-01 第 1 片定的口径）
                 feature = str(dim.get("feature", ""))
                 ref = dim.get("ctq_ref")

@@ -51,10 +51,10 @@ def _plate():
             .hole(6.0).solids().vals()[0])
 
 
-def _drawing(tmp_path, *, spec=None, name="bracket"):
+def _drawing(tmp_path, *, spec=None, name="bracket", details=()):
     out = Path(tmp_path) / f"{name}.dxf"
     generate_drawing(_plate(), out, part_name="bracket", revision="A",
-                     views=("TOP",), spec=spec)
+                     views=("TOP",), spec=spec, details=tuple(details))
     return out
 
 
@@ -192,6 +192,29 @@ class TestGdtGrowsOnlyFromTheDrawing:
         doc = json.loads(path.read_text("utf-8"))
         assert doc["gdt"] == []
         assert payload["blocking"] is True
+
+    def test_a_detail_view_inheriting_the_tolerance_adds_no_second_coverage(
+            self, tmp_path, db):
+        """同一处测量在母视图与放大图上各印一次，只算**一条** gdt 覆盖。
+
+        必须开火的一侧：`_collect_drawings` 若按「视图 × 尺寸」直计，画两张放大图就能
+        把分子刷成 3 处，`gdt_covers_ctq` 的数从此与「真量了几处」脱钩——多印的标注
+        不该换来多一条覆盖凭据。
+        """
+        bom = _seed_bom(db, revision="A")
+        rec = _seed_ctq(db, "hole_Ø6", limits=(5.95, 6.05))
+        dxf = _drawing(tmp_path, spec=_spec_with(rec), name="detail_cover",
+                       details=("TOP@(-30,0)/12=2", "TOP@(30,0)/12=2"))
+        evidence = json.loads(Path(dxf).with_suffix(".evidence.json").read_text("utf-8"))
+        printed = [v["view"] for v in evidence["views"]
+                   for d in v["dimensions"] if d.get("tolerance")]
+        assert printed == ["TOP", "DETAIL_1"], "两处印刷是前提，没有它这条判据不打火"
+        path, payload = _manifest(tmp_path, db, [dxf], bom_id=bom.bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        assert [g["covered_by"] for g in doc["gdt"]] == ["dimension"]
+        assert payload["issues"] == [] and payload["ok"] is True
+        passed, detail = _gate_verdict(path, "gdt_covers_ctq")
+        assert passed, detail
 
     def test_dangling_ctq_ref_is_reported_not_guessed(self, tmp_path, db):
         _seed_ctq(db, "hole_Ø6")

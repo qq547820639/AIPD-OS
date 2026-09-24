@@ -161,7 +161,8 @@ def cmd_drawing(args):
             views=tuple(v.strip() for v in args.views.split(",") if v.strip()),
             scale=args.scale, material=args.material, sheet=args.sheet,
             provenance=provenance, spec=spec,
-            sections=tuple(getattr(args, "section", None) or ()))
+            sections=tuple(getattr(args, "section", None) or ()),
+            details=tuple(getattr(args, "detail", None) or ()))
     except ValueError as exc:
         print(f"出图参数不合法：{exc}")
         return 2
@@ -173,6 +174,7 @@ def cmd_drawing(args):
     limit_issues = list(evidence.get("spec_limit_issues") or [])
     section_issues = list(evidence.get("section_issues") or [])
     section_warnings = list(evidence.get("section_warnings") or [])
+    detail_issues = list(evidence.get("detail_issues") or [])
 
     def prose():
         print(f"已出图：{out}（{evidence['sheet']} 1:{evidence['scale']}，"
@@ -190,6 +192,17 @@ def cmd_drawing(args):
                 print(f"         剖切 {section_of['axis']}={section_of['offset']:g}"
                       f"（保留 {section_of['kept']}）：材料区 {view['cut_regions']} 个 / "
                       f"{view['material_area_mm2']}mm²，剖面线 {view['cut_regions']} 条")
+            detail_of = view.get("detail_of")
+            if detail_of:
+                where = (f"放大 ×{detail_of['factor']:g} ←{detail_of['parent']} "
+                         f"圆({detail_of['center'][0]:g},{detail_of['center'][1]:g})"
+                         f"/R{detail_of['radius']:g}")
+                if view["detail_empty"]:
+                    print(f"         {where}：圈空，未编号未标注")
+                else:
+                    print(f"         {where}：按 {view['drawn_scale']:g} 画，"
+                          f"继承尺寸 {len(view['dimensions'])} 条"
+                          f"（母视图上已画裁剪圈）")
         print(f"公差：声明 {len(evidence.get('spec_declared_features') or [])} 项、"
               f"落到图上 {evidence.get('tolerance_applied', 0)} 处"
               f"（无声明则不写任何公差）")
@@ -236,14 +249,16 @@ def cmd_drawing(args):
             print(f"  剖视未收口：{msg}")
         for msg in section_warnings:
             print(f"  剖视告警：{msg}")
+        for msg in detail_issues:
+            print(f"  放大未收口：{msg}")
         for issue in limit_issues:
             print(f"  合格域未收口：{issue['feature']} 实测 {issue['measured']:g} 不在 "
                   f"CTQ 的 {issue['min']:g}–{issue['max']:g} 内"
                   f"{('（CTQ ' + issue['ctq_ref'] + '）') if issue['ctq_ref'] else ''}")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
-        print("未含阶梯剖/旋转剖与局部放大/爆炸图，"
+        print("未含阶梯剖/旋转剖与爆炸图/装配图，"
               "详见 capability cad.2d_drawings 的 limitation。")
     _emit(args, evidence, prose)
     held = bool(unmatched or evidence.get("stackup_inconsistent") or gdt_issues
-                or gdt_unmatched or section_issues or limit_issues)
+                or gdt_unmatched or section_issues or limit_issues or detail_issues)
     return 4 if held else 0

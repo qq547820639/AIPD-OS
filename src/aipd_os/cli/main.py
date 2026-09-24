@@ -226,6 +226,12 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--section", action="append",
                     help="剖切平面，形如 Y=0（可重复；轴 X/Y/Z，偏移为模型单位）。"
                          "例：aipd drawing generate --part bracket --views TOP --section Y=0")
+    dp.add_argument("--detail", action="append",
+                    help="局部放大，形如 TOP@(-30,0)/12=2（可重复）："
+                         "母视图@(母视图局部坐标 u,v)/放大圆半径=相对母视图的放大倍数（须 >1）。"
+                         "圆心与半径用模型单位，可直接抄证据里的孔心。"
+                         "例：aipd drawing generate --part bracket --views TOP "
+                         "--detail \"TOP@(-30,0)/12=2\"")
     dp.add_argument("--spec", help="公差声明 JSON 路径："
                                    '{"features":[{"feature":"TOP.hole_2",'
                                    '"tolerance":{"upper":0.05,"lower":-0.05},'
