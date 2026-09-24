@@ -130,6 +130,24 @@ TMP=$(mktemp -d) && PYTHONPATH=src .venv/bin/aipd drawing generate --out "$TMP/c
   --part GOLD --views FRONT,TOP --section Y=0 --section Z=2 --json   # rc=0，看 section_letters
 ```
 
-## 八、收尾读数
+## 八、收尾读数（全部来自本轮实跑输出，非记忆）
 
-（清单重算、全量与三门禁跑完后按实际输出填写。）
+- 提交：实现 `28160b5`（CAD: put the section symbol and A-A label on the sheet, split
+  warnings from holds）、产物重锚 `9f621ff`（Release artifacts: re-anchor manifests after
+  the section-symbol slice），本节所在提交是本轮第三个；
+- `regenerate_release_manifest.py --version 5.6.0` → **588 个文件**（587 → 588 = 新增
+  `tests/test_cad_section_symbols.py`）；`release_evidence.py` 按 tag 锚点重写
+  `SOURCE_MANIFEST / BUNDLE_MANIFEST / PROVENANCE`（bundle 未重建、未重签、tag 未动）；
+- 重锚前全量 **1596 passed / 2 failed / 3 skipped**（两条仍是 packaging 清单哈希），
+  重锚后 **1598 passed / 0 failed / 3 skipped**（124.47s）；
+- `production_release_gate --release-ready --tag v5.6.0`（产物提交之后跑）：**rc=0，
+  release_ready true，8/8 全绿**；`skill_quality_audit` **0 项警告 0 项失败**；
+  `state_perf_gate` **PASS**（空闲单跑）。
+
+一处**自己写错又改掉**的记录（留在这里，因为它是可复用的教训）：产物提交信息初稿把重锚后的
+全量写成 `1586 passed`——那是上一轮的数字，我在校对计数前就动了笔。修法是 message-only
+amend，并先记 `git rev-parse HEAD^{tree}`、改后比对（`4a59534…` 前后相同 ⇒ 内容未动），
+树未变、门禁重跑仍 8/8。规矩：**数字要来自刚读到的那行输出，不是上一轮的记忆**。
+
+- 未做且有意不做：不 `git push`、不动 tag、不重建 bundle、不重签、不放宽任何共享门禁；
+  `audit_repo --strict` 仍按设计判红（锚点在 tag 而非 HEAD）。
