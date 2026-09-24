@@ -145,6 +145,7 @@ def _collect_drawings(drawings: Sequence[Path | str], root: Path,
                            f"CTQ {ctq['feature']} 没写上下限，{feature} 的数值一致性"
                            f"不可核（按引用成立计入覆盖）", blocking=False)
                 gdt.append({"feature": ctq["feature"], "drawing_feature": feature,
+                            "ctq_record_id": str(ref),
                             "drawing": rel, "sha256": refs[-1]["sha256"],
                             "tolerance": tolerance, "nominal": dim["value"]})
     if not drawings:

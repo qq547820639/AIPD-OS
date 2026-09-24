@@ -228,11 +228,23 @@ def build_parser() -> argparse.ArgumentParser:
                          "例：aipd drawing generate --part bracket --views TOP --section Y=0")
     dp.add_argument("--spec", help="公差声明 JSON 路径："
                                    '{"features":[{"feature":"TOP.hole_2",'
-                                   '"tolerance":{"upper":0.05,"lower":-0.05}}],'
+                                   '"tolerance":{"upper":0.05,"lower":-0.05},'
+                                   '"limits":{"min":5.95,"max":6.05}}],'
                                    '"global_tolerance":{"upper":0.2,"lower":-0.2}}'
-                                   "；不传则整张图不含公差")
+                                   "；不传则整张图不含公差。这份声明可由 "
+                                   "aipd drawing spec 从 Product Truth 的 CTQ 生成")
     dp.add_argument("--json", action="store_true")
     dp.set_defaults(func=COMMAND_FUNCS["drawing generate"])
+
+    ds = drawing_sub.add_parser("spec", help="从 Product Truth 的 CTQ 生成 --spec 用的公差声明。"
+                                             " Example: aipd drawing spec --db state.db "
+                                             "--out tolerances.json")
+    ds.add_argument("--db", required=True, help="Product Truth 状态库路径")
+    ds.add_argument("--tenant", default="default")
+    ds.add_argument("--project", default="default")
+    ds.add_argument("--out", required=True, help="声明 JSON 输出路径（有缺口则不写）")
+    ds.add_argument("--json", action="store_true")
+    ds.set_defaults(func=COMMAND_FUNCS["drawing spec"])
 
     p_outbox = sub.add_parser("outbox", help="消费对外副作用事件（RFQ 邮件等）。"
                                             " Example: aipd outbox drain --db state.db")

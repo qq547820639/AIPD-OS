@@ -102,6 +102,9 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
     CommandEntry("drawing generate", CommandStatus.PUBLIC, CommandCategory.CAD, "5.10",
                  requires_args=frozenset({"--part"}),
                  description="从 3D 模型出二维工程图 DXF（可见线+隐藏线+尺寸+标题栏）"),
+    CommandEntry("drawing spec", CommandStatus.PUBLIC, CommandCategory.CAD, "5.10",
+                 requires_args=frozenset({"--db", "--out"}),
+                 description="从 Product Truth 的 CTQ 生成 --spec 用的公差声明（缺口即不写文件）"),
 
     # ---- 对外副作用（outbox）----
     CommandEntry("outbox drain", CommandStatus.PUBLIC, CommandCategory.OPERATIONS, "5.10",

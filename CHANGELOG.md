@@ -281,6 +281,34 @@
   并用例钉住「记录宽度 == 图上实际跨度」。12 + 1 条新用例、8 条变异全部打破。证据见
   `docs/audit/CAD_SECTION_VIEWS_F-DRAW-01_2026-09-24.md`；
 
+- **v5.10 F-DRAW-01 第 5 片：公差声明改由产品从 CTQ 长出，并用实测值反查合格域**：
+  前四片之后图纸侧能画、能量、能判叠加与剖视，但声明入口仍是「人手写 JSON、再手抄 `ctq_ref`」
+  （能力行原话：「未与 Product Truth 打通」）——这意味着门禁 `gdt_covers_ctq` 的两条输入
+  出自**同一个人手写的同一个文件**，考的是「抄得对不对」而不是「要求有没有传到图纸」。
+  新增 `src/aipd_os/cad/spec_from_truth.py` 与 `aipd drawing spec`：读 `status="active"` 的
+  CTQ `TruthRecord`，产出与 `--spec` 完全同形状的声明（`tolerance` 由
+  ``upper_limit−nominal`` / ``lower_limit−nominal`` 换算、`ctq_ref` 由产品写）。
+  四条不猜的口径：① 必须有显式 `metadata.drawing_feature`，**不按名字或直径相近猜映射**；
+  ② 缺 `nominal` 不拿图纸实测值当标称、也不按 0 折算，直接点名缺口；③ `"6.0"` 这类脏值
+  按「没给」处理，不硬 `float()`；④ 同一特征被两条 CTQ 认领 ⇒ **连先来的那条也撤回**
+  （保留它等于按遍历顺序挑赢家），上下限颠倒只点名不调头。
+  另加一条**不由需求侧自证**的判据：声明带绝对合格域 `limits{min,max}`，出图时拿
+  **投影实测值**反查，落在域外判 `ctq_window_violation` 并进未收口（退出码 4）；
+  手写 spec 不带 `limits` 时旧路径行为逐字不变，也**绝不**从总宽 CTQ 反推 `global_tolerance`
+  （那会把一条要求贴满每条未声明尺寸）。有缺口时 `drawing spec` **不写文件**——
+  一份「看着能用、其实漏标」的声明比没有声明更危险。`release_manifest` 的每条 gdt 回写
+  `ctq_record_id`（只说「匹配上了」不可审计）。
+  真机跑通时当场抓到一处真实不一致：黄金件孔实测 Ø8，演示 CTQ 写的合格域是 5.95–6.05 ⇒
+  「合格域未收口：TOP.hole_1 实测 8 不在 CTQ 的 5.95–6.05 内」并 `rc=4`；改成 8.0/7.95–8.05
+  后同一命令 `rc=0`、`tolerance_applied: 3`、三条尺寸各带 `ctq_ref`。
+  链级用例把 DB 播种 → `drawing spec` → 出图 → `build_release_manifest` →
+  **真跑**门禁 `--target C5` 接成一条，`gdt_covers_ctq` 判绿且全程无人手写声明。
+  选型：借 QIF（ISO 23952）characteristic 的「标称＋上下限＋显式关联」形状，但本轮
+  **未检索到可 pip 安装的 Python SDK**、官方 SDK 源码未读；STEP AP242 PMI 那条路要换产出物
+  且本环境无法核验（检索命中的厂商帮助页 WebFetch 只取回 JS 壳，正文未获得），均不作依据。
+  18 条新用例、8 条变异全部打破。证据见
+  `docs/audit/DRAWING_SPEC_FROM_TRUTH_F-DRAW-01_2026-09-24.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

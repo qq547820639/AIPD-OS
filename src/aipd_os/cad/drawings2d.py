@@ -96,6 +96,7 @@ DIM_ROW_GAP = 10.0        # 无尺寸链时总体宽尺寸的引出距离
 CHAIN_ROW_GAP = 12.0      # 尺寸链行距零件下沿
 OVERALL_OUTSIDE_GAP = 30.0  # 有链时总体宽尺寸挪到链的外侧，避免两行重叠
 MIN_TOLERANCE_DECIMALS = 2  # 偏差不许因为声明写得粗就被截断显示；只允许显示更多位
+CTQ_WINDOW_TOL = 1e-6  # 实测值与 CTQ 合格域边界之间的数值容差（圆拟合/离散化噪声量级）
 
 
 @dataclass
@@ -691,6 +692,26 @@ def _declared_tolerance(raw: Any, where: str) -> dict[str, float]:
     return {"upper": upper, "lower": lower}
 
 
+def _declared_limits(raw: Any, where: str) -> dict[str, float] | None:
+    """声明里可选的**绝对合格域** ``{"min": …, "max": …}``，用来反查实测值。
+
+    不传就是「这条声明只给偏差、不给绝对域」——不做 ``标称 = 实测`` 的推断，
+    因为那等于让被检对象给自己定基准。
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ValueError(f"{where} 的 limits 必须是 {{'min': …, 'max': …}}，实得 {raw!r}")
+    try:
+        low = float(raw["min"])
+        high = float(raw["max"])
+    except KeyError as exc:
+        raise ValueError(f"{where} 的 limits 缺少 {exc.args[0]}，不做缺省推断") from exc
+    if low > high:
+        raise ValueError(f"{where} 的合格域下限 {low} 大于上限 {high}")
+    return {"min": low, "max": high}
+
+
 def resolve_spec_tolerances(views: list[ViewGeometry],
                             spec: dict[str, Any] | None) -> dict[str, Any]:
     """把 spec 声明的公差贴到实测出来的尺寸上；没声明就一个都不贴。
@@ -710,13 +731,15 @@ def resolve_spec_tolerances(views: list[ViewGeometry],
         # ``ctq_ref`` 是可选的**显式**溯源指针（指向 Product Truth 的 CTQ 记录 id）；
         # 不猜、不按名字模糊匹配——没有它就是"这条公差暂无权威出处"。
         declared[name] = {"tolerance": _declared_tolerance(entry.get("tolerance"), name),
-                          "ctq_ref": entry.get("ctq_ref")}
+                          "ctq_ref": entry.get("ctq_ref"),
+                          "limits": _declared_limits(entry.get("limits"), name)}
         order.append(name)
     glob_raw = (spec or {}).get("global_tolerance")
     glob = _declared_tolerance(glob_raw, "global_tolerance") if glob_raw else None
 
     matched: set[str] = set()
     applied = 0
+    limit_issues: list[dict[str, Any]] = []
     for view in views:
         for dim in view.dimensions:
             entry = declared.get(str(dim["feature"]))
@@ -731,12 +754,23 @@ def resolve_spec_tolerances(views: list[ViewGeometry],
             ref = (entry or {}).get("ctq_ref")
             if ref:
                 dim["ctq_ref"] = str(ref)
+            limits = (entry or {}).get("limits")
+            if limits:
+                # 实测值来自投影几何、合格域来自 CTQ：两者独立，这一判据不是自证。
+                value = float(dim["value"])
+                if not (limits["min"] - CTQ_WINDOW_TOL <= value
+                        <= limits["max"] + CTQ_WINDOW_TOL):
+                    limit_issues.append({
+                        "kind": "ctq_window_violation", "feature": str(dim["feature"]),
+                        "measured": round(value, 6), "min": limits["min"],
+                        "max": limits["max"], "ctq_ref": str(ref or ""), "blocking": True})
             applied += 1
     return {
         "tolerance_applied": applied,
         "spec_declared_features": order,
         "spec_unmatched_features": [n for n in order if n not in matched],
         "global_tolerance_declared": glob is not None,
+        "spec_limit_issues": limit_issues,
     }
 
 

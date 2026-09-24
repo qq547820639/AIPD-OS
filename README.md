@@ -180,6 +180,10 @@ aipd run --project p1 --db state.db              # 继续推进
 aipd manual plan --db state.db                        # 规划手册
 aipd cad preflight --manifest cad_manifest.json      # 图纸发布前检查
 aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket --views FRONT,TOP  # 3D→二维工程图 DXF
+aipd drawing spec --db state.db --project P --out tolerances.json
+#   ↑ 声明的生产者：把 Product Truth 里 status=active 的 CTQ 转成上面 --spec 那份 JSON，
+#     ctq_ref 由产品写而不是人抄。CTQ 必须显式给 metadata.drawing_feature 与 nominal
+#     （不按名字/直径猜映射、缺标称值不拿实测值顶）；有缺口就不落盘并返回 4。
 aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket --spec tolerances.json
 #   ↑ 尺寸链按实测孔心自动给出；公差只认 --spec 声明，格式
 #     {"features":[{"feature":"TOP.hole_2","tolerance":{"upper":0.05,"lower":-0.05}}],
@@ -187,6 +191,8 @@ aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket -
 #     声明的特征在图上找不到时命令返回 4（未收口）而不是静默少标；
 #     同时做一维公差叠加：各段公差带之和超过总宽自己声明的带 ⇒ 判图纸自相矛盾（也返回 4），
 #     任何一环没声明公差则判「不可判定」而不是按 0 折算。
+#   声明条目可带 "limits":{"min":5.95,"max":6.05}（绝对合格域）：出图时拿投影
+#     实测值反查它，落在域外判 ctq_window_violation 并返回 4（图纸与需求不一致）。
 #   spec 条目还可带 "gdt": [{"characteristic": "position", "zone": 0.05,
 #     "diametral": true, "datums": ["A","B"]}]，配顶层 "datums":
 #     [{"id": "A", "feature": "TOP.hole_1"}] ⇒ 画 GD&T 特征控制框，引线挂到实测孔心；

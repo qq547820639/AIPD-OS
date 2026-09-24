@@ -65,6 +65,57 @@ def _external_task_pack(args, reason: str) -> int:
     return 4
 
 
+def cmd_drawing_spec(args):
+    """从 Product Truth 的 CTQ 生成 ``--spec`` 吃的那份公差声明（F-DRAW-01 第 5 片）。
+
+    有缺口就**不写文件**并返回 4：半成品声明看起来和完整的一模一样，
+    差别只在漏标的那几条尺寸上，而漏标正是这套声明要防的事。
+    """
+    from aipd_os.cad.spec_from_truth import spec_from_ctq
+
+    db = Path(args.db)
+    if not db.is_file():
+        print(f"状态库不存在：{db}")
+        return 2
+    out = Path(args.out)
+    try:
+        from aipd_os.product_truth.store import ProductTruthStore
+
+        store = ProductTruthStore(str(db), tenant_id=args.tenant, project_id=args.project)
+        records = store.query(record_type="ctq", status="active")
+    except Exception as exc:      # 读不到权威需求不是「没有需求」
+        print(f"Product Truth 读取失败：{type(exc).__name__}: {exc}")
+        return 2
+
+    spec, gaps = spec_from_ctq(records)
+    held = bool(gaps)
+    result = {"command": "drawing spec", "ok": not held, "ctq_records": len(records),
+              "declared": len(spec["features"]), "gaps": gaps,
+              "spec": None if held else spec, "out": None if held else str(out)}
+
+    def prose():
+        print(f"CTQ 记录 {len(records)} 条 → 声明 {len(spec['features'])} 条"
+              f"（{args.tenant}/{args.project}，只取 status=active）")
+        for entry in spec["features"]:
+            tol = entry["tolerance"]
+            lim = entry["limits"]
+            print(f"  {entry['feature']}: {tol['upper']:+g}/{tol['lower']:+g}"
+                  f"（合格域 {lim['min']:g}–{lim['max']:g}）← CTQ {entry['ctq_ref']}")
+        for gap in gaps:
+            print(f"  未收口：{gap['kind']} — {gap['detail']}")
+        if held:
+            print(f"未写 {out}：{len(gaps)} 条 CTQ 还挂不上图纸，补齐后重跑。")
+        else:
+            print(f"已写 {out}：可直接 aipd drawing generate --spec {out}")
+
+    _emit(args, result, prose)
+    if held:
+        return 4
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(spec, ensure_ascii=False, indent=2), encoding="utf-8")
+    return 0
+
+
 def cmd_drawing(args):
     out = Path(args.out)
     if not args.part:
@@ -108,6 +159,7 @@ def cmd_drawing(args):
     stackups = evidence.get("stackup_check") or {}
     gdt_issues = list(evidence.get("gdt_issues") or [])
     gdt_unmatched = list(evidence.get("gdt_unmatched_features") or [])
+    limit_issues = list(evidence.get("spec_limit_issues") or [])
     section_issues = list(evidence.get("section_issues") or [])
 
     def prose():
@@ -159,10 +211,14 @@ def cmd_drawing(args):
             print(f"  GD&T 未收口：声明了框但图上没有这些特征：{gdt_unmatched}")
         for msg in section_issues:
             print(f"  剖视未收口：{msg}")
+        for issue in limit_issues:
+            print(f"  合格域未收口：{issue['feature']} 实测 {issue['measured']:g} 不在 "
+                  f"CTQ 的 {issue['min']:g}–{issue['max']:g} 内"
+                  f"{('（CTQ ' + issue['ctq_ref'] + '）') if issue['ctq_ref'] else ''}")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
         print("未含剖切符号 A-A/阶梯剖/局部放大/爆炸图，"
               "详见 capability cad.2d_drawings 的 limitation。")
     _emit(args, evidence, prose)
     held = bool(unmatched or evidence.get("stackup_inconsistent") or gdt_issues
-                or gdt_unmatched or section_issues)
+                or gdt_unmatched or section_issues or limit_issues)
     return 4 if held else 0
