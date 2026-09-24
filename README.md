@@ -187,6 +187,10 @@ aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket -
 #     声明的特征在图上找不到时命令返回 4（未收口）而不是静默少标；
 #     同时做一维公差叠加：各段公差带之和超过总宽自己声明的带 ⇒ 判图纸自相矛盾（也返回 4），
 #     任何一环没声明公差则判「不可判定」而不是按 0 折算。
+#   spec 条目还可带 "gdt": [{"characteristic": "position", "zone": 0.05,
+#     "diametral": true, "datums": ["A","B"]}]，配顶层 "datums":
+#     [{"id": "A", "feature": "TOP.hole_1"}] ⇒ 画 GD&T 特征控制框，引线挂到实测孔心；
+#     基准解析不到、特征不存在或类型不认识即判未收口（4），不画半截框。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据

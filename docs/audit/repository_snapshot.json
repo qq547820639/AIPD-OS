@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-24T21:26:14",
-  "source_commit": "8088104534bb12f599fad4524dfa2e47176ee3a6",
+  "generated_at": "2026-09-24T21:48:59",
+  "source_commit": "63f7839f4058514d0702fc31915b73767b4ba9e9",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "8088104534bb12f599fad4524dfa2e47176ee3a6",
-  "latest_commit_time": "2026-09-24 21:14:47 +0800",
+  "latest_commit_sha": "63f7839f4058514d0702fc31915b73767b4ba9e9",
+  "latest_commit_time": "2026-09-24 21:36:57 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 156
+      "tests": 157
     }
   },
   "tags": [
@@ -116,39 +116,36 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 579,
-    "hash_matches": 576,
+    "total_files": 581,
+    "hash_matches": 578,
     "hash_mismatch_count": 3,
     "mismatches": [
       {
         "path": "src/aipd_os/cad/drawings2d.py",
         "reason": "hash_mismatch",
-        "expected": "80c778cb352543c0ce6acd6a97b272878c5d15893f01bca33ad866f309dd84f0",
-        "actual": "b53b485a3c502551c2ddb5aa32ec4d65b77e285bb7f2350aa23e4c6debcdb285"
+        "expected": "b53b485a3c502551c2ddb5aa32ec4d65b77e285bb7f2350aa23e4c6debcdb285",
+        "actual": "a66b34ac122bbf362f2baaf861f631ec0473d16a6b1a2efdb3780ef7493bb477"
       },
       {
         "path": "src/aipd_os/cli/commands_drawing.py",
         "reason": "hash_mismatch",
-        "expected": "b21f17c1652dfe088811ddd536fd801b16bacd390ae30093d9ead4ab532837fb",
-        "actual": "0b1301c7f0431ab23dc2d8db641d203d5ce0326621eea28f798f25c730d9f2ba"
+        "expected": "0b1301c7f0431ab23dc2d8db641d203d5ce0326621eea28f798f25c730d9f2ba",
+        "actual": "67776c70f9b07df650b6f2771e790be7b482954efc3c7cdc307f984a2a9b82cf"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "ed8a17d8a7d011f7c7cb72ce574b869bf4af192b3a653e58fd2ac112bb68aac4",
-        "actual": "7d95a0ee8a0204aa8c3e9576d4d9cee150699de2014fef6c8e5313f330f93361"
+        "expected": "7d95a0ee8a0204aa8c3e9576d4d9cee150699de2014fef6c8e5313f330f93361",
+        "actual": "ca892e571d48ededd9edbcdf469c9a39b701df5e42bae9b9e46871ef49143e9b"
       }
     ]
   },
   "untracked_or_generated": [
-    " M docs/audit/capability_matrix.json",
-    " M docs/audit/capability_matrix.md",
-    " M docs/audit/repository_snapshot.json",
     " M src/aipd_os/cad/drawings2d.py",
     " M src/aipd_os/cli/commands_drawing.py",
     " M src/aipd_os/registry_data.py",
-    "?? src/aipd_os/cad/stackup.py",
-    "?? tests/test_cad_stackup.py",
+    "?? src/aipd_os/cad/gdt.py",
+    "?? tests/test_cad_gdt_frames.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

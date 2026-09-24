@@ -510,6 +510,8 @@ def resolve_spec_tolerances(views: list[ViewGeometry],
     for entry in (spec or {}).get("features") or []:
         if not isinstance(entry, dict) or not entry.get("feature"):
             raise ValueError(f"spec.features 每一项都要有 'feature'，实得 {entry!r}")
+        if "tolerance" not in entry:
+            continue   # 只声明 GD&T 框、不声明尺寸公差的条目：交给 build_gdt_frames 处理
         name = str(entry["feature"])
         if name in declared:
             raise ValueError(f"spec 里特征 {name} 重复声明")
@@ -565,6 +567,9 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
 
     spec_stats = resolve_spec_tolerances(views, spec)
     stackups = {v.name: view_stackup(v.dimensions, v.name) for v in views}
+    from aipd_os.cad.gdt import build_gdt_frames
+
+    gdt_frames, gdt_issues, gdt_unmatched = build_gdt_frames(views, spec)
     width, height = SHEET_SIZES[sheet]
     doc = ezdxf.new("R2010", setup=True)
     msp = doc.modelspace()
@@ -572,6 +577,7 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                             ("HIDDEN", 8, "DASHED"),
                             ("DIMENSION", 3, "Continuous"),
                             ("TEXT", 7, "Continuous"),
+                            ("GDT", 6, "Continuous"),
                             ("FRAME", 7, "Continuous")):
         if name not in doc.layers:
             doc.layers.add(name, color=color)
@@ -593,7 +599,8 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
         oy = height - MARGIN - 40.0 - row * 100.0
         cx = ox + slot_w / 2.0
         cy = oy - (view.height * scale) / 2.0
-        _draw_view(msp, view, cx, cy, scale)
+        _draw_view(msp, view, cx, cy, scale,
+                   [f for f in gdt_frames if f["view"] == view.name])
         label = f"{view.name}  1:{_fmt(1.0 / scale)}"
         msp.add_text(label, dxfattribs={"layer": "TEXT", "height": 4.0}) \
            .set_placement((cx - 10.0, oy + 6.0))
@@ -622,6 +629,10 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
             "stackup_undecidable": sorted(
                 name for name, s in stackups.items()
                 if s["verdict"] in ("insufficient_data", "no_closing_tolerance")),
+            "gdt_frames": gdt_frames,
+            "gdt_issues": gdt_issues,
+            "gdt_issue_kinds": sorted({str(i["kind"]) for i in gdt_issues}),
+            "gdt_unmatched_features": gdt_unmatched,
             "bytes": path.stat().st_size,
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             **spec_stats}
@@ -649,7 +660,8 @@ def _linear_dim(msp: Any, base: tuple[float, float], p1: tuple[float, float],
     dim.render()
 
 
-def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float) -> None:
+def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float,
+               frames: list[dict[str, Any]] | None = None) -> None:
     off_x = cx - (view.width * scale) / 2.0 - view.bbox[0] * scale
     off_y = cy - (view.height * scale) / 2.0 - view.bbox[1] * scale
 
@@ -702,6 +714,17 @@ def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float)
                                    text=f"%%c{_fmt(c['value'])}")
         _set_dim_tolerance(dia, c["tolerance"])
         dia.render()
+
+    if frames:
+        from aipd_os.cad.gdt import draw_frame, frame_width
+
+        cursor_y = off_y + view.bbox[3] * scale + 10.0
+        for frame in frames:
+            origin = (off_x + view.bbox[2] * scale + 10.0, cursor_y)
+            anchor = (frame["attach"][0] * scale + off_x,
+                      frame["attach"][1] * scale + off_y)
+            draw_frame(msp, frame, origin, anchor)
+            cursor_y += frame_width(frame) * 0.0 + 14.0
 
 
 def _draw_title_block(msp: Any, width: float, height: float, part: str, rev: str,

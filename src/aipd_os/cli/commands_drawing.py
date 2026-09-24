@@ -105,6 +105,8 @@ def cmd_drawing(args):
 
     unmatched = list(evidence.get("spec_unmatched_features") or [])
     stackups = evidence.get("stackup_check") or {}
+    gdt_issues = list(evidence.get("gdt_issues") or [])
+    gdt_unmatched = list(evidence.get("gdt_unmatched_features") or [])
 
     def prose():
         print(f"已出图：{out}（{evidence['sheet']} 1:{evidence['scale']}，"
@@ -137,7 +139,20 @@ def cmd_drawing(args):
             print(f"未收口：spec 声明的这些特征在图上找不到 ⇒ 少标了公差：{unmatched}")
         if evidence.get("stackup_inconsistent"):
             print("未收口：叠加判定的矛盾意味着这些公差无法同时达成，需改声明或改标注方案。")
+        for frame in evidence.get("gdt_frames") or []:
+            print(f"  GD&T 框 {frame['view']}→{frame['feature']}："
+                  f"{frame['text']}（挂点 {frame['attach']}，来自实测）")
+        for issue in gdt_issues:
+            datum = issue.get("datum") or issue.get("datum_feature") or ""
+            print(f"  GD&T 未收口：{issue['kind']} {issue.get('feature')}"
+                  f"{(' 基准 ' + datum) if datum else ''}"
+                  f"{(' 特征 ' + issue['datum_feature']) if issue.get('datum_feature') else ''}"
+                  f"{(' 类型 ' + issue['characteristic']) if issue.get('characteristic') else ''}")
+        if gdt_unmatched:
+            print(f"  GD&T 未收口：声明了框但图上没有这些特征：{gdt_unmatched}")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
         print("未含 GD&T 形位公差框/剖视/局部放大，见 capability cad.2d_drawings 的 limitation。")
     _emit(args, evidence, prose)
-    return 4 if (unmatched or evidence.get("stackup_inconsistent")) else 0
+    held = bool(unmatched or evidence.get("stackup_inconsistent") or gdt_issues
+                or gdt_unmatched)
+    return 4 if held else 0
