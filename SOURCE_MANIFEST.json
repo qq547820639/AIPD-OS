@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-24T10:08:40+00:00",
+  "generated_at": "2026-09-24T11:07:37+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 36192,
-      "sha256": "f633f3856584ec3eed21a702fd46332674495973b8bf7c9423821e9d197eb140"
+      "size": 37924,
+      "sha256": "2f106d3661a3e1aa10a8a4475b55fb1aa7346eead491ff2090a3833ef0782ba8"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1007,8 +1007,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_cad.py",
-      "size": 6136,
-      "sha256": "acd6a2cff39eb71d33e80cd7d76df385b622d772f2966c103954e42d88aa90bb"
+      "size": 8216,
+      "sha256": "3cb7dda560c8c744f0a6cec022174cc1f627f0501acdaa6f1bd6d0e1e37d3bc3"
     },
     {
       "path": "src/aipd_os/cli/commands_doctor.py",
@@ -1057,13 +1057,13 @@
     },
     {
       "path": "src/aipd_os/cli/commands_validation.py",
-      "size": 9840,
-      "sha256": "c81cce544226b608ac9631777f14d440103d89e98aad6dfb14db74a26c79614f"
+      "size": 11305,
+      "sha256": "547f53142e2b61403ac7d35721fa446f3e4ebd4bfe551dd275688d38ab50756a"
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 28903,
-      "sha256": "0427548be4d06dc869f78fba206db044f4e820911dec8179cfaab3d6f5419019"
+      "size": 33908,
+      "sha256": "dd2efd032c90cfae4f8c7a469627372ba32e9e1465411626aa59b027c2ba037b"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1537,8 +1537,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 50220,
-      "sha256": "91cedcc85c5e7a695e99e66d3ebfde6637c3e79f04e1fd4da58bd0b3912d0d9c"
+      "size": 51420,
+      "sha256": "7cd0e67c2acd33dcd31694245e51e1dda55813113d707dbbfbdb7c0883261aa5"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -1801,6 +1801,11 @@
       "sha256": "64ddcc6e31bb10d6dfe2ea2457e611835779e00df58a22aa765b522b630ab606"
     },
     {
+      "path": "src/aipd_os/supply_chain/impact.py",
+      "size": 8357,
+      "sha256": "cbd88c900be84cbfef8f92b9a0c47a893ff4689024408e393bf6253eadf5651b"
+    },
+    {
       "path": "src/aipd_os/supply_chain/lab.py",
       "size": 4678,
       "sha256": "7230ff50bbd0ce217c9381ccf85d1157cc302d3aadbf42678d9ad881e5335f89"
@@ -1877,8 +1882,8 @@
     },
     {
       "path": "src/aipd_os/tool_adapters/evt_dvt_pvt_adapter.py",
-      "size": 3554,
-      "sha256": "28915efcf10ac7be0bfa673b2ba30401900341d92141a8730b742c7eb9ffeaf3"
+      "size": 4056,
+      "sha256": "db2f5e709d355e2e5c29a32186222a9e85a4221a70261c02cb297dd1cf5bc4b5"
     },
     {
       "path": "src/aipd_os/tool_adapters/faceted_adapter.py",
@@ -1932,8 +1937,8 @@
     },
     {
       "path": "src/aipd_os/validation/ingestion.py",
-      "size": 12094,
-      "sha256": "6c3378dce3cfc32b0318a3e3595f4e925293a0c0dbe1ccb9883394adeea85703"
+      "size": 12590,
+      "sha256": "515a9baad61b6b52971f962a5a7458ac1c2fe20c58caca7b5bd28e6f6c159e39"
     },
     {
       "path": "src/aipd_os/validation/issues.py",
@@ -2241,9 +2246,14 @@
       "sha256": "4c4cca6b56b59bfa31c239ba47ce4b0dae2114a8c14d12af0af78cccb6fa52b6"
     },
     {
+      "path": "tests/test_cli_validation_surface.py",
+      "size": 6488,
+      "sha256": "3ee4cc0ff5374fbaf8f2cad8b65c0f3b64d2b3ea444af4e623e4c43a75f6efe5"
+    },
+    {
       "path": "tests/test_command_coverage.py",
-      "size": 4554,
-      "sha256": "3dea4771c165d3ea3ecdd8cfed0d9338697df5b394d70440bed2388524dd2e0a"
+      "size": 6928,
+      "sha256": "aebd1a644a0c7f34e538195d55faed9df2387947f34eb931c858c396f3c8075b"
     },
     {
       "path": "tests/test_completion_endpoint.py",
@@ -2444,6 +2454,11 @@
       "path": "tests/test_issue_domain.py",
       "size": 12741,
       "sha256": "a51be890901f6d48ac3e113748cf83ea7515312215c36b840c5f376c68bb44d5"
+    },
+    {
+      "path": "tests/test_lab_impact_propagation.py",
+      "size": 15703,
+      "sha256": "398db419252a6b710213de20491d70126f19b4a2506cbea727e8a85b52bb0b53"
     },
     {
       "path": "tests/test_layout.py",
