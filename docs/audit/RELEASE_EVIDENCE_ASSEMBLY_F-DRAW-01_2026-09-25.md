@@ -127,3 +127,19 @@ cd AIPD-OS
 ```
 
 电池脚本是临时件；**判据以 §一 的表与 §四 的清单为准**，照表重放即可。
+
+## 七、收尾读数（全部来自本轮实跑输出，非记忆）
+
+- 全量：**1698 passed / 0 failed / 3 skipped（总 1701）**；报告锚 `a66040520139…`（v5.6.0 那个提交）。
+- `ruff check src tests`：All checks passed；`mypy src tests`：**no issues in 396 source files**。
+- 变异：本片 **R1-R8 = 8/8 killed**；第 13 片复跑 **17/17 killed**；第 12 片的 12 条本次未复跑
+  （其锚点所在代码片未改动，若要逐字复证请照 §六 与两份表重放）。
+- `production_release_gate --release-ready --tag v5.6.0`：**release_ready true，8/8 全绿**，
+  `test_numbers_from_report | passed=1698 failed=0 total=1701`；`workspace_clean | clean`。
+- `skill_quality_audit`：0 警告 0 失败（rc=0）；`state_perf_gate`：**PASS**（rc=0）；
+  `audit_repo --strict`：**rc=1**，唯一一条发布锚点不匹配（HEAD 已前进，按设计判红）。
+- 提交：`54a5f34` 实现 → `4aee176` 文档 → `09f47c1` 发布件 → `68742f8` 补漏。
+  `09f47c1` 那次 `git add` 我手写成了三个路径，把同一步刚刷新出来的 `RELEASE_MANIFEST.json`
+  落在了工作区（表现为「提交完 yet git status 仍有一个 M」），故有 `68742f8` 这一笔补。
+- 未做且有意不做：不 push、不移 tag、不重建 bundle、不重签、不放宽任何共享门禁；
+  临时目录（含造出来的 state.db / bom.db / DXF）跑完即删。
