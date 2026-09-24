@@ -213,14 +213,37 @@ cd AIPD-OS
 
 ## 十、收尾读数（全部来自本轮实跑输出，非记忆）
 
-- `tests/test_cad_assembly_balloons.py`：**27 passed**。
-- `tests/test_cad_*.py`：**243 passed**（本片前为 237；净增 6 条来自本轮补的用例与 CLI 面）。
+- `tests/test_cad_assembly_balloons.py`：**28 passed**。
+- `tests/test_cad_*.py tests/test_import_cycles.py`：**246 passed**。
 - `tests/test_skill_command_surface.py`：3 passed；契约 public 条目 **48** 条，
   SKILL.md 的「主线共 48 个」由该用例现算核对，deprecated 侧仍 10 条。
-- ruff（`src tests`）：All checks passed。mypy（本片四个文件）：Success, no issues。
-- 变异：**9/9 killed**（先 baseline 绿、node id 失效单独报 INVALID）。
-- 工作区：提交本片实现后 `git status --short` 只剩本文档与 CHANGELOG/README。
-- 未做且不会做在本轮：`git push`、移动 tag、重建 bundle、重签 Ed25519、放宽任何共享发布门禁。
+- `ruff check src tests`：All checks passed；`mypy src tests`：**Success: no issues found
+  in 395 source files**（上轮 393，本片 +2 个文件）。
+- 变异：**12/12 killed**（先 baseline 绿、node id 失效单独报 INVALID-TEST-ID）。
+- 重锚前全量 **1668 passed / 1 failed / 3 skipped**（那一条是 `SOURCE_MANIFEST` 与磁盘的
+  哈希核对，属预期）；重锚 + 重新出报告后全量 **1669 passed / 0 failed / 3 skipped（总 1672）**。
+- `RELEASE_MANIFEST.json` **593 个文件**（591 → 593：`+assembly.py`、`+新测试文件`）；
+  `SOURCE_MANIFEST.json` 同步到 **593**，`source_commit` 仍锚 `a66040520139…`（v5.6.0 那个提交），
+  没有挪到 HEAD。
+- `production_release_gate --release-ready --tag v5.6.0`（工作区干净后跑，`PATH` 前置 venv）：
+  **`release_ready: true`，8/8 全绿**，其中
+  `test_numbers_from_report | passed=1669 failed=0 total=1672 source_commit=a66040520139…`；
+  `workspace_clean | clean`、`source_manifest_zero_diff | zero diff`、
+  `bundle_manifest_zero_diff | zero diff`、`signature_verifiable | Ed25519 signature verified`、
+  `no_secrets`、`no_unacknowledged_cve | pip-audit: no unacknowledged CVE`。
+  （判据读的是 `--json-out` 落的那份 JSON，不是管道尾部的 `$?`——管道会把 tail 的退出码
+  冒充成门禁的退出码。）
+- `skill_quality_audit`：**0 项警告，0 项失败**；`state_perf_gate`：**性能门禁 PASS**（空闲单跑，
+  `nested_txn_marginal_us` 中位 17.57us、`batch_over_autocommit_ratio` 中位 0.0452）。
+- `audit_repo --strict`：**rc=1**（用 `> file; rc=$?` 取的真实退出码），唯一一条
+  `✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=300013cba04d…`
+  ——发布锚点在 tag 上而 HEAD 已前进，按设计判红；改绿需要移 tag + 重签，属业主侧动作。
+- 提交序列：`46515d7` 实现 → `9f0eb9d`/`6fa71ba` 文档 → `bc4bc8b` 依赖反转 →
+  `588b8bb` 文档同步 → `2323c02` RELEASE_MANIFEST → `300013c` SOURCE/PROVENANCE/报告。
+- 未做且有意不做：不 `git push`、不动 tag、不重建 bundle、不重签、不放宽任何共享门禁
+  （包括给无环门禁加白名单）。留在下一轮的同类缺口：球标↔BOM 交叉核对与数量/材料列、
+  爆炸图与装配约束（`cq.Assembly.solve/constrain` 是记下的入口）、
+  `StalePropagationService` 仍 0 产品调用点、`gate.commit_snapshot` 仍不可从 CLI 触达。
 
 ## 十一、第二个由全量回归抓出来的问题：我给图纸模块装了一条反向依赖
 
