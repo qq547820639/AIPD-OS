@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 22522,
-      "sha256": "3fd2fb4f7eae5851667ee751198d6094d6c62918883d3993a63feb46fd77f455"
+      "size": 23308,
+      "sha256": "d2c0ccfdc073209de5d57ccc51f1a46ac26882c0e4f701408bc0a2f91675aa45"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -947,8 +947,8 @@
     },
     {
       "path": "src/aipd_os/bom/store.py",
-      "size": 15560,
-      "sha256": "d270eab74ff4b41cb8c29d46bac03946883675bcb179fdb66bdea76c829bd9e6"
+      "size": 15816,
+      "sha256": "5621d8a8dde393ff5e704ff4dfc36062f0b4815476b1afe7f50fa00b5eaaf798"
     },
     {
       "path": "src/aipd_os/cad/__init__.py",
@@ -1132,8 +1132,8 @@
     },
     {
       "path": "src/aipd_os/execution/closure_core.py",
-      "size": 25708,
-      "sha256": "67915096916d590dedf9de4bbaf6d04b4ba89b462d54817c045279f04f32950a"
+      "size": 25774,
+      "sha256": "7e6940a2db111b8e5ebe6c36f995cd0288c17cecbac19db464a0a44c12b5857d"
     },
     {
       "path": "src/aipd_os/execution/decision_policy.py",
@@ -1167,8 +1167,8 @@
     },
     {
       "path": "src/aipd_os/execution/runs.py",
-      "size": 12271,
-      "sha256": "5b56ca35bced325e9b94ef7e6cf8e5bfa4d8baeb117f970060d84fd6cba853bc"
+      "size": 12337,
+      "sha256": "55b10e9e2565853234e66794aa4f6dbad3dffb6141a175c26a3dad97ebb9576a"
     },
     {
       "path": "src/aipd_os/experience/__init__.py",
@@ -1482,8 +1482,8 @@
     },
     {
       "path": "src/aipd_os/product_truth/store.py",
-      "size": 16360,
-      "sha256": "7a00df543e36ac61c4a1ab4214cd28f4b801c1ae9516180f29101d6670df4c06"
+      "size": 16426,
+      "sha256": "3cc75916a58fcb189b7982103c2dc407510091df133dd5062e45bb45f0f0104d"
     },
     {
       "path": "src/aipd_os/providers/__init__.py",
@@ -1692,8 +1692,8 @@
     },
     {
       "path": "src/aipd_os/state/migrations/runner.py",
-      "size": 4271,
-      "sha256": "667e0a51b4a5b77316b804a71b88389b0b937cd57fee0f507155861af9e6c461"
+      "size": 4257,
+      "sha256": "7e1edfeb2cc47416ab60f21bc173ea5c7a382105436a4d5b05d8f3783990a613"
     },
     {
       "path": "src/aipd_os/state/migrations/schema.py",
@@ -1752,8 +1752,8 @@
     },
     {
       "path": "src/aipd_os/supervisor/supervisor.py",
-      "size": 34660,
-      "sha256": "61e0b61b8546a110e8c57230406bfb3dc4839568e296277b129dd203fc611e18"
+      "size": 34725,
+      "sha256": "67efcf1d25a826db9d8610b581dc8c83b8d8783b6ee4de2d479962316604165a"
     },
     {
       "path": "src/aipd_os/supply_chain/__init__.py",
@@ -2239,6 +2239,11 @@
       "path": "tests/test_crypto.py",
       "size": 2811,
       "sha256": "e1beac253de2e1d9a79d5bebde958875cf031aa04e44d55a97af6ec468fa6c32"
+    },
+    {
+      "path": "tests/test_ddl_transaction_atomicity.py",
+      "size": 4181,
+      "sha256": "d1db2071e8602bef17ea1a5f4f15f51b5a17e7dd624c476d5915060c536b384f"
     },
     {
       "path": "tests/test_decision_policy.py",
