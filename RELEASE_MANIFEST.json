@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 54001,
-      "sha256": "2562dd7d8a93ff146e3321d6874e1cb113433cd3e2497cb0db7e9ad888dd2118"
+      "size": 56333,
+      "sha256": "f41a488515435eabb85f4c124eae65962a6d848c3a36ef3b5f753ae3fa10cbbc"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 17021,
-      "sha256": "107e2567d37238721b6ef92429734394efade51460e3b0d75b0e5dedf80b20c4"
+      "size": 17341,
+      "sha256": "5585d089e9b13ccead3ad9b55add4b0859c73a1ba387f43c66bbd32a2dfa28a7"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -977,8 +977,8 @@
     },
     {
       "path": "src/aipd_os/cad/gdt.py",
-      "size": 9444,
-      "sha256": "358df73ca082c4d9bd9697a0a64c68f4ba80a02c3dd64440ddc1af261000d941"
+      "size": 12643,
+      "sha256": "4edaa279b5e5dcf354bef6e1d3fe6d97c6ddd41d7a3618512fc7f169f6f7aa83"
     },
     {
       "path": "src/aipd_os/cad/maturity.py",
@@ -1032,8 +1032,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 11014,
-      "sha256": "c8cffa0a12eb282ea7c03332cb82cfdc01225688ff6d56ee8f41f40bbf6c2cff"
+      "size": 11677,
+      "sha256": "f730b7404bc3bd1755dfb8a7d82c650ec267e725c8d40c6bb4934ea5d205c723"
     },
     {
       "path": "src/aipd_os/cli/commands_legacy.py",
@@ -1552,13 +1552,13 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 55675,
-      "sha256": "050b4eab06d2263b900b619e71124765fb69564ea7e10dfb9690108128d549a8"
+      "size": 56400,
+      "sha256": "bd55b67ff9617dcb97d85c58912a6ca9e76629999e7b8cccbf3bc122a4c73d48"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
-      "size": 15428,
-      "sha256": "1b51992fe45e0e6e929d7b223d0448175ffcd8b6851025286e3a8c0ef209af44"
+      "size": 16464,
+      "sha256": "62598c729b5f0246b1897a77c4acb500004b29857bcefc3cb5ac08eaa673707e"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -2214,6 +2214,11 @@
       "path": "tests/test_cad_drawings_chain_tolerance.py",
       "size": 17857,
       "sha256": "15c69bbb989026760dc54c70a3e8df19fa31693252fad605288d29a6636d580a"
+    },
+    {
+      "path": "tests/test_cad_gdt_deviation.py",
+      "size": 13194,
+      "sha256": "9af25cda3981429879b7901983b7a09164b4aa348b48f7bdfd36372003a017c9"
     },
     {
       "path": "tests/test_cad_gdt_frames.py",
