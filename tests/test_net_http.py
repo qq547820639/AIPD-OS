@@ -54,6 +54,8 @@ class _Handler(BaseHTTPRequestHandler):
             return self._send(404, b'{"error":"nope"}')
         if self.path == "/notjson":
             return self._send(200, b"<html>not json</html>")
+        if self.path == "/big":
+            return self._send(200, b"x" * 100)
         if self.path == "/slow":
             time.sleep(1.5)
             return self._send(200, b"{}")
@@ -181,3 +183,44 @@ def test_retry_after_http_date_is_relative_to_now():
     header = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(future))
     got = H.retry_after_seconds(header)
     assert got is not None and 3.0 <= got <= 6.5
+
+
+class TestBodyCap:
+    """响应体上限必须**响亮失败**，不能静默截断（F-NET-02）。
+
+    截断只对下游造成两种后果：JSON 解析报「不是 JSON」（把尺寸问题伪装成格式问题），
+    或者更糟——把半张 PNG 当完整图片写盘并记进证据。上限因此只能在读的一刻判定。
+    """
+
+    def test_over_cap_raises_rather_than_truncating(self, base):
+        with pytest.raises(H.HttpError) as exc:
+            H.request(base + "/big", max_bytes=64)
+        assert "64" in str(exc.value), str(exc.value)
+
+    def test_at_cap_is_not_truncated(self, base):
+        """边界两个方向都要钉：正好等于上限是完整读取，不是溢出。"""
+        resp = H.request(base + "/big", max_bytes=100)
+        assert resp.content == b"x" * 100
+
+    def test_one_byte_below_cap_still_raises(self, base):
+        with pytest.raises(H.HttpError):
+            H.request(base + "/big", max_bytes=99)
+
+    def test_error_bodies_obey_the_same_cap(self, base):
+        """404 的正文也不能绕过上限——它同样会被解码/展示。"""
+        resp = H.request(base + "/notfound", max_bytes=64)
+        assert resp.status == 404
+        with pytest.raises(H.HttpError):
+            H.request(base + "/notfound", max_bytes=5)
+
+    def test_default_cap_is_resolved_at_call_time(self, base, monkeypatch):
+        """默认上限走模块常量，且必须在**调用时**读取。
+
+        若默认值绑在 def 行（``max_bytes=MAX_BODY_READ_BYTES``），调常量就无效——
+        而调用方（图像下载等）从来不显式传参，只能靠这个常量。
+        """
+        monkeypatch.setattr(H, "MAX_BODY_READ_BYTES", 64)
+        with pytest.raises(H.HttpError):
+            H.request(base + "/big")
+        monkeypatch.setattr(H, "MAX_BODY_READ_BYTES", 100)
+        assert H.request(base + "/big").content == b"x" * 100

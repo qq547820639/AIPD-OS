@@ -211,3 +211,42 @@ test_report source_commit a7fa402… != a660405… (tag v5.6.0): report STALE, c
 | ruff / mypy | 0 / 0（365 文件） |
 | 工作树 | `git status --short` 空；提交未 push、tag 未动 |
 
+
+---
+
+# 第二部分 F-NET-02 · 响应体上限会静默截断
+
+日期同为 2026-09-24（接在 F-EXEC-05 之后）。
+
+## 缺陷
+
+`request()` 用 `resp.read(MAX_BODY_READ_BYTES)` 防「一个巨大的响应体吃光内存」。
+这个防是有效的，但失败方向错了：`read(n)` **最多读 n 字节就正常返回**，所以超限得到的是
+**被截断的前缀**，调用方无从分辨。两条真实后果（都是读代码得出的形状，不是假想）：
+
+| 消费点 | 截断后发生什么 |
+| --- | --- |
+| `request_json()` / `.json()` | 半截 JSON → `json.loads` 抛 `ValueError` → 报「response is not JSON」。**尺寸问题被伪装成格式问题**，排查方向从第一行就错。 |
+| `imggen/providers.py` 的 URL 下载（先 `PNG` 签名校验，再写盘） | PNG 头部完好、尾部缺失 ⇒ **签名校验通过**，半张图被当作完整图像写盘并记进证据。这是本轮最严重的一条：它绕过的正是那个「不伪造产物」的门禁。 |
+
+## 修法
+
+- `read_capped(stream, max_bytes, url)`：读 `cap + 1` 字节判溢出，超限
+  `raise HttpError("response body exceeds N bytes …")`，**绝不返回半截字节**。
+  多读 1 字节而不是信 `Content-Length`：响应可以分块传输而没有该头。
+- 非 2xx 分支同样受限（错误正文也会被解码/展示），且 `except HttpError: raise`
+  排在兜底 `except Exception` 之前——否则超限会被当成「读不出正文」咽成空 body。
+- 上限在**调用时**解析（`max_bytes: int | None = None` ⇒ 读模块常量）。默认值若绑在
+  `def` 行，调常量就静默无效，而所有消费点都不传参；用例
+  `test_default_cap_is_resolved_at_call_time` 专门钉这条。
+
+## 读数
+
+| 项 | 值 |
+| --- | --- |
+| 新增用例 | 5（`TestBodyCap`：超限红、正好等于上限绿、差 1 字节红、错误正文同限、默认上限按常量解析） |
+| `tests/test_net_http.py` | 20 passed（原 15） |
+| 依赖方回归 | llm / visual / imggen / adapters 57 passed；ruff 0；mypy 0（371 文件） |
+
+诚实边界：**没有真的拉取过 >32MiB 的图像**（默认上限不变，测试用小上限 + monkeypatch
+常量驱动）。截断路径在客户端层被证明，图像消费点只做了代码路径推导。

@@ -119,7 +119,14 @@
   少 1（实测 public=39），补为 40 并新增 `tests/test_skill_command_surface.py`
   做同源核对 + 两条注入反证（`skill_quality_audit` 只查「有没有声明」，不查总数）；
   证据与未证范围见 `docs/audit/EXEC_OUTBOX_WIRING_F-EXEC-02_2026-09-24.md`；
-- **v5.10 修复 F-EXEC-05：接线的后果自己也有洞——「结果未知」必须可见**：
+- **v5.10 修复 F-NET-02：响应体上限静默截断，半张 PNG 能过签名校验**：统一出口的
+  `read(MAX_BODY_READ_BYTES)` 只保证「不超过」，超限时返回的是**前缀**而非错误 ⇒
+  JSON 侧报「不是 JSON」（尺寸问题伪装成格式问题），图像下载侧 `PNG` 头部完好、
+  尾部缺失，签名校验通过后半张图被当完整文件写盘并记进证据。改为 `read_capped()`：
+  多读 1 字节判溢出（不信 `Content-Length`，可分块传输），超限直接 `HttpError`，
+  绝不返回半截字节；非 2xx 正文同受此限，且 `except HttpError: raise` 必须排在
+  兜底 `except Exception` 之前；上限改为**调用时**解析（绑在 `def` 行会让调常量静默无效）。
+  5 条新用例（含「正好等于上限」与「差 1 字节」两个边界方向）；- **v5.10 修复 F-EXEC-05：接线的后果自己也有洞——「结果未知」必须可见**：
   `mark_unknown` 给事件置 `completed_at`（必须如此，否则超时=可重投=两封信），代价是
   这些行从所有 `completed_at IS NULL` 查询里消失——实测一次超时后
   `sent=0 / deduped=0 / pending=0` 三个读数全部「正常」。台账一边有状态机、有

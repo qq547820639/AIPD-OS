@@ -84,6 +84,23 @@ def retry_after_seconds(value: str | None) -> float | None:
         return max(0.0, when.timestamp() - time.time())
 
 
+def read_capped(stream: Any, max_bytes: int, *, url: str = "") -> bytes:
+    """读取响应体，超出上限就抛错——**不返回半截字节**。
+
+    以前是 ``read(MAX_BODY_READ_BYTES)``：超限会静默截断，于是 JSON 侧得到
+    「response is not JSON」（把尺寸问题伪装成格式问题），图像下载侧把半张 PNG
+    当完整文件写盘并记进证据。多读 1 字节来区分「正好等于上限」与「真的超了」，
+    所以等于上限是完整读取，不是溢出。
+    """
+    cap = max(1, int(max_bytes))
+    data = stream.read(cap + 1) or b""
+    if len(data) > cap:
+        raise HttpError(
+            f"response body exceeds {cap} bytes{' for ' + url if url else ''}"
+            " (未截断返回：半截响应体既不是有效 JSON，也不是有效文件)")
+    return data
+
+
 def check_url(url: str) -> str:
     """scheme 白名单：不发请求就拒掉 file/ftp/data 之类。"""
     scheme = urllib.parse.urlparse(url).scheme.lower()
@@ -104,10 +121,12 @@ def request(
     backoff_base: float = DEFAULT_BACKOFF_BASE_S,
     backoff_cap: float = DEFAULT_BACKOFF_CAP_S,
     sleep: Callable[[float], None] = time.sleep,
+    max_bytes: int | None = None,
 ) -> HttpResponse:
     """发一次（至多 ``max_attempts`` 次）HTTP 请求。
 
-    :raises HttpError: scheme 不合法、传输层失败，或 ``json_body`` 无法序列化
+    :raises HttpError: scheme 不合法、传输层失败、``json_body`` 无法序列化，
+        或响应体超过 ``max_bytes``
     """
     check_url(url)
     payload = body
@@ -116,6 +135,9 @@ def request(
         payload = json.dumps(json_body, ensure_ascii=False).encode("utf-8")
         sent_headers.setdefault("Content-Type", "application/json")
 
+    # 上限在调用时解析，不在定义时绑定：默认值一旦在 def 行求值，
+    # 任何按常量（或按环境）调上限的做法都会静默失效。
+    cap = MAX_BODY_READ_BYTES if max_bytes is None else int(max_bytes)
     attempts = max(1, int(max_attempts))
     last: HttpResponse | None = None
     for attempt in range(1, attempts + 1):
@@ -125,10 +147,13 @@ def request(
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return HttpResponse(status=resp.getcode(),
                                     headers=resp.headers,
-                                    content=resp.read(MAX_BODY_READ_BYTES))
+                                    content=read_capped(resp, cap, url=url))
         except urllib.error.HTTPError as exc:      # 非 2xx：带状态码返回
             try:
-                content = exc.read(MAX_BODY_READ_BYTES)
+                content = read_capped(exc, cap, url=url)
+            except HttpError:
+                # 超限不是「读不出正文」，不能退化成空 body 把尺寸问题咽掉
+                raise
             except Exception:  # noqa: BLE001 - 响应体读不出也要如实返回状态
                 content = b""
             last = HttpResponse(status=exc.code, headers=exc.headers,
@@ -170,6 +195,7 @@ __all__ = [
     "HttpError",
     "HttpResponse",
     "check_url",
+    "read_capped",
     "request",
     "request_json",
     "retry_after_seconds",
