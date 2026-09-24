@@ -156,7 +156,11 @@ class ProductDefinitionGate(GateCriteriaEvaluator):
 
     def record_gate(self, actor: str = "system",
                     snapshot_id: str | None = None) -> dict[str, Any]:
-        """把 Gate 结果写入 gates 表（auditable）+ gate_evaluations 表。"""
+        """把 Gate 评价写入 `gate_evaluations`（含 snapshot_id/hash）+ 审计。
+
+        注意：**不写** `gates` 表——那张表是供应链回写用的 PASS/HOLD 台账
+        （`AIPDStateDB.add_gate`），没有 snapshot 绑定，两者不要混用。
+        """
         if snapshot_id is None:
             latest = self._snapshots.latest_snapshot(self._tenant,
                                                      self._project)

@@ -92,6 +92,17 @@
   等人工核对，与「UNKNOWN ≠ FAILED」的既有 doctrine 一致；
   用例 `tests/test_execution_idempotency.py` 第 7 组 5 条（实现前 2 红 3 绿）。
   未做：`OutboxDispatcher` 仍无产品调用点（机制齐备但未接线，属遗留清单）；
+- **v5.10 修复 F-GATE-01：Gate 评的是「项目里最后一个想法」而不是本快照的想法**：
+  `gate_evaluations` 的 snapshot/hash 绑定本来就在，但**评的对象**是猜的——
+  `create_snapshot()` 用 `ideas[-1].idea_id`（选中机会自带的 `Opportunity.idea_id`
+  被忽略），四处判据（成熟度 / 关键 claim 评估 / contradiction / upstream basis）
+  和 `is_stale()` 各自再取一次 `ideas[-1]`。单想法项目上看不出来；项目里出现
+  第二个想法后，快照被归给不相干的想法，且**已 READY 的定义会凭空变 BLOCKED**
+  （变异反证实测）。现统一按 `snap.idea_id` 解析（`_target_idea`），
+  解析不到按「无法证明」判 FAIL（矛盾检查按既有 doctrine 记 n/a），不退回猜测；
+  无需迁移（旧行的 idea 与 basis 是同一猜测写下的，读回自己即可自洽）。
+  另修 `record_gate` docstring 不实：它只写 `gate_evaluations`，不写没有快照绑定的
+  `gates` 台账；用例 `tests/test_snapshot_idea_lineage.py`（5 条）；
 - **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归

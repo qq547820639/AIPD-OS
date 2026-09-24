@@ -320,12 +320,46 @@ CLI 的 idea.decompose 路径硬传了 `encryption_key=""` ⇒ 空串被当成�
 本轮不做——`OutboxDispatcher` 仍无产品调用点，这条遗留保持原状并已核实在
 §7 记录，不在这里假装已接。
 
+### 8.6 F-GATE-01：Gate 评的是「项目里最后一个想法」，不是这份快照的想法
+
+P2 遗留写的「Gate 绑定 `snap.idea_id`」这句太含糊，所以先量清事实再动手：
+
+- 绑定其实**已经存在**：`gate_evaluations` 落 `snapshot_id` + `snapshot_hash`
+  + `evaluator_version` + `policy_version`，Owner 决策也绑 snapshot/hash；
+- 但**评的对象**是猜的：`create_snapshot()` 用 `ideas[-1].idea_id` 当快照的
+  `idea_id`（`Opportunity.idea_id` 明明就在手上），而四处判据
+  （成熟度 / 关键 claim 评估 / contradiction / upstream basis）
+  各自再取一次 `ideas[-1]`；`is_stale()` 复算 upstream basis 时同样取 `ideas[-1]`。
+
+于是单想法项目一切正常，项目里出现第二个想法后：
+
+| 现象 | 实测（变异反证） |
+|------|------------------|
+| 快照把整份定义归给不相干的想法 | `snapshot.idea_id == IDEA-002`，选中机会声明 `IDEA-001` |
+| **已 READY 的定义凭空变 BLOCKED** | 判据退回 `ideas[-1` 后：「仅因新增无关想法，门结论从 READY 变成 BLOCKED」 |
+| 冻结件被误判 stale | 同上原因复算 basis 时算到另一个想法的 lineage 上 |
+
+改法：`create_snapshot` 取 `opp.idea_id`；判据与 `is_stale` 统一经
+`_target_idea(snap)` / `snap.idea_id` 解析，**解析不到就按「无法证明」判 FAIL**
+（矛盾检查按既有 doctrine 记 n/a，不作 blocker），不再退回猜测。
+不需要迁移：旧行的 `idea_id` 与 `upstream_basis_hash` 是同一套猜测写下的，
+改成读回自己记录的值后两侧自洽。
+
+顺带修一处文档不实：`record_gate` 的 docstring 写「写入 gates 表 +
+gate_evaluations 表」，代码只写后者——`gates` 是供应链回写的 PASS/HOLD 台账、
+没有 snapshot 绑定，两者混用会得到无绑定的门结论。
+
+用例：`tests/test_snapshot_idea_lineage.py` 5 条（判据跟随、快照/hash 绑定、
+单想法反向控制、假 stale、门结论不变），另有上面的变异反证跑（判据退回旧写法
+⇒ 该用例红，且红因正是 READY→BLOCKED；跑完按字节恢复）。
+
 ## 9. 复算入口
 
 ```bash
 .venv/bin/python -m pytest -q tests/test_cad_drawings2d.py tests/test_cad_golden_loop.py \
   tests/test_ddl_transaction_atomicity.py tests/test_connection_reentrancy.py \
-  tests/test_crypto.py tests/test_runtime.py tests/test_migration.py
+  tests/test_crypto.py tests/test_runtime.py tests/test_migration.py \
+  tests/test_snapshot_idea_lineage.py
 .venv/bin/python scripts/capability_matrix.py --repo . --out docs/audit
 .venv/bin/python scripts/skill_quality_audit.py
 .venv/bin/python -m aipd_os.cli.main drawing generate \

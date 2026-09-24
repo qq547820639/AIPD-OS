@@ -180,12 +180,28 @@ class GateCriteriaEvaluator:
         self._snapshots = ProductDefinitionSnapshotService(db)
 
     # ------------------------------------------------------------- criteria
-    def _crit_idea(self) -> CriterionResult:
-        ideas = self._ideas.list(self._tenant, self._project)
-        if not ideas:
-            return _criterion(CRITERION_IDEA_MATURITY, CRIT_FAIL, SEV_HARD,
-                              "no canonical Idea exists")
-        idea = ideas[-1]
+    def _target_idea(self, snap: ProductDefinitionSnapshot):
+        """Gate 评的是**这份快照所属的那个想法**。
+
+        此前四处判据都取「项目里最后一个 idea」：一个项目可以有多个想法，
+        于是门可能拿一个跟本快照无关的想法的证据来判 READY。解析不到
+        （snapshot.idea_id 为空或该想法已被移出项目）时返回 None，由调用方
+        按「无法证明」处理——不退回猜测。
+        """
+        if not snap.idea_id:
+            return None
+        for idea in self._ideas.list(self._tenant, self._project):
+            if idea.idea_id == snap.idea_id:
+                return idea
+        return None
+
+    def _crit_idea(self, snap: ProductDefinitionSnapshot) -> CriterionResult:
+        idea = self._target_idea(snap)
+        if idea is None:
+            return _criterion(
+                CRITERION_IDEA_MATURITY, CRIT_FAIL, SEV_HARD,
+                f"snapshot idea {snap.idea_id or '(empty)'} not resolvable; "
+                "maturity cannot be proven")
         maturity = IdeaMaturity.evaluate(idea, self._graph)
         # 按枚举声明顺序比较成熟度（此前用字符串 "<" 依赖字典序，脆弱）
         order = list(IdeaMaturity)
@@ -202,12 +218,13 @@ class GateCriteriaEvaluator:
                           f"Idea maturity {maturity.value} >= I2",
                           [idea.idea_id])
 
-    def _crit_assessments(self) -> CriterionResult:
-        ideas = self._ideas.list(self._tenant, self._project)
-        if not ideas:
+    def _crit_assessments(self, snap: ProductDefinitionSnapshot) -> CriterionResult:
+        idea = self._target_idea(snap)
+        if idea is None:
             return _criterion(CRITERION_KEY_CLAIM_ASSESSMENT, CRIT_FAIL,
-                              SEV_HARD, "no Idea to assess")
-        idea = ideas[-1]
+                              SEV_HARD,
+                              f"snapshot idea {snap.idea_id or '(empty)'} "
+                              "not resolvable; claims cannot be assessed")
         data = self._graph.compute_idea_evidence(self._tenant, self._project,
                                                  idea.idea_id)
         not_searched = data["counts"]["not_searched_claims"]
@@ -219,14 +236,16 @@ class GateCriteriaEvaluator:
         return _criterion(CRITERION_KEY_CLAIM_ASSESSMENT, CRIT_PASS, SEV_HARD,
                           "all key claims assessed")
 
-    def _crit_contradictions(self) -> CriterionResult:
+    def _crit_contradictions(self, snap: ProductDefinitionSnapshot) -> CriterionResult:
         """P0-01：0 contradiction → INFO（不是 blocker）；>0 → 按
         criticality/review/waiver 分类（有隐藏 contradiction 时 conditional）。"""
-        ideas = self._ideas.list(self._tenant, self._project)
-        if not ideas:
+        idea = self._target_idea(snap)
+        if idea is None:
+            # 与「没有想法」同属 n/a：矛盾检查无从谈起，但 n/a 不是 blocker。
             return _criterion(CRITERION_CRITICAL_CONTRADICTIONS, CRIT_INFO,
-                              SEV_INFO, "no Idea; contradiction check n/a")
-        idea = ideas[-1]
+                              SEV_INFO,
+                              f"snapshot idea {snap.idea_id or '(empty)'} not "
+                              "resolvable; contradiction check n/a")
         data = self._graph.compute_idea_evidence(self._tenant, self._project,
                                                  idea.idea_id)
         contradicted = data["counts"]["contradicted"]
@@ -413,9 +432,7 @@ class GateCriteriaEvaluator:
                               SEV_HARD, f"active set invalid: {exc}",
                               [snap.snapshot_id])
         active["_pi"] = self._pi
-        ideas = self._ideas.list(self._tenant, self._project)
-        idea_id = ideas[-1].idea_id if ideas else ""
-        current = compute_upstream_basis(self._db, idea_id, self._tenant,
+        current = compute_upstream_basis(self._db, snap.idea_id, self._tenant,
                                          self._project, active)
         if current != snap.upstream_basis_hash:
             return _criterion(CRITERION_SNAPSHOT_UPSTREAM_BASIS, CRIT_FAIL,
@@ -450,9 +467,9 @@ class GateCriteriaEvaluator:
         """对具体 snapshot 逐条评估全部 criteria（§10 只读 snapshot view）。"""
         view = ProductDefinitionSnapshotView(self._db, snap)
         results: list[CriterionResult] = [
-            self._crit_idea(),
-            self._crit_assessments(),
-            self._crit_contradictions(),
+            self._crit_idea(snap),
+            self._crit_assessments(snap),
+            self._crit_contradictions(snap),
             self._crit_opportunity(view),
             self._crit_principles(view),
             self._crit_principles_bound(view),

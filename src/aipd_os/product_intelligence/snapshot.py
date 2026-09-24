@@ -319,8 +319,10 @@ class ProductDefinitionSnapshotService:
         requirements = active["requirements"]
         features = active["features"]
 
-        ideas = _ideas(self._db, tenant_id, project_id)
-        idea_id = ideas[-1].idea_id if ideas else ""
+        # idea 归属跟着**选中的机会**走。项目里可能已有多个想法，取「列表里最后
+        # 一个」会把整份定义（以及继承 snapshot_id/hash 的 Gate 评价与 Owner 回执）
+        # 归给一个不相干的想法，还会让下面 is_stale 的 upstream basis 校验算错对象。
+        idea_id = opp.idea_id if opp else ""
 
         snap = ProductDefinitionSnapshot(
             snapshot_id="", tenant_id=tenant_id, project_id=project_id,
@@ -478,10 +480,10 @@ class ProductDefinitionSnapshotService:
         if snap.upstream_basis_hash:
             active_basis = dict(live_active)
             active_basis["_pi"] = self._pi
-            ideas = _ideas(self._db, tenant_id, project_id)
-            idea_id = ideas[-1].idea_id if ideas else ""
+            # 用快照**自己记录的** idea 复算 basis：项目里后加的无关想法不得改变
+            # 判定结果（此前取「列表最后一个」，多想法项目会出现假 stale / 假新鲜）。
             current_basis = compute_upstream_basis(
-                self._db, idea_id, tenant_id, project_id, active_basis)
+                self._db, snap.idea_id, tenant_id, project_id, active_basis)
             if current_basis != snap.upstream_basis_hash:
                 reasons.append("upstream basis changed "
                                "(claim/relation/insight lineage)")
@@ -504,11 +506,6 @@ class ProductDefinitionSnapshotService:
                                       "reason": reason})
         snap.lifecycle_status = SNAPSHOT_STALE
         return snap
-
-
-def _ideas(db: AIPDStateDB, tenant_id: str, project_id: str) -> list[Any]:
-    from aipd_os.idea.service import IdeaService
-    return IdeaService(db).list(tenant_id, project_id)
 
 
 def _find_by_id(objs: list[Any], obj_id: str) -> Any | None:
