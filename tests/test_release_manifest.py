@@ -651,3 +651,77 @@ class TestProcessIsReportedApartFromMaterial:
         assert kinds == ["material_missing"], kinds
         cov = _coverage(doc, 0)
         assert (cov["with_material"], cov["with_process"]) == (0, 2), cov
+
+
+class TestExplodedViewIsJudged:
+    """爆炸视图的第三条判据：摆开了就得说清谁从哪儿来（证据里要有连接线）。
+
+    生产者不会产出不一致的证据，但 sidecar 可能是**手改的或旧版本留下的**——
+    门禁吃的是证据文件，所以这条必须能红（变异电池里它就是靠改 sidecar 验的）。
+    """
+
+    def _exploded(self, tmp_path, name="blown"):
+        import cadquery as cq
+
+        from aipd_os.cad.assembly import generate_assembly_drawing
+
+        steps = {}
+        for letter in "ab":
+            box = cq.Workplane("XY").box(40.0, 20.0, 10.0).solids().vals()[0]
+            steps[letter] = tmp_path / f"{letter}.step"
+            cq.exporters.export(box, str(steps[letter]), exportType="STEP")
+        man = tmp_path / f"{name}.json"
+        man.write_text(json.dumps({"parts": [
+            {"name": "支架", "step": str(steps["a"]), "balloon": 1,
+             "offset": [0, 0, 0], "explode": [60, 0, 0], "bom_item": "BRACKET-01"},
+            {"name": "压板", "step": str(steps["b"]), "balloon": 2,
+             "offset": [0, 0, 5], "explode": [-60, 0, 0], "bom_item": "PLATE-02"}]},
+            ensure_ascii=False), encoding="utf-8")
+        out = tmp_path / f"{name}.dxf"
+        bom = tmp_path / "bom.db"
+        store = BomStore(str(bom))
+        header = store.create_bom(T, P, "爆炸 BOM", revision="A")
+        for item in ("BRACKET-01", "PLATE-02"):
+            store.add_line(BomLine(line_id="", bom_id=header.bom_id, tenant_id=T,
+                                   project_id=P, item=item, quantity=2.0, unit="pcs",
+                                   material="6061-T6", process="CNC 铣削"))
+        generate_assembly_drawing(out, manifest=str(man), part_name=f"ASSY-{name}",
+                                  revision="A", views=("TOP",), explode=True,
+                                  bom_lines=store.list_lines(T, P, header.bom_id))
+        return out, header.bom_id
+
+    def test_a_consistent_exploded_drawing_raises_nothing(self, tmp_path, db):
+        _seed_ctq(db)
+        dxf, bom_id = self._exploded(tmp_path)
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        assert [i["kind"] for i in doc["issues"]] == [], doc["issues"]
+        assert doc["ok"] is True
+
+    def test_connectors_stripped_from_the_evidence_is_a_hold(self, tmp_path, db):
+        """手改/旧 sidecar 会留下「说了爆炸却没有连线」的证据——这条判据就是为它建的。"""
+        _seed_ctq(db)
+        dxf, bom_id = self._exploded(tmp_path, name="stripped")
+        sidecar = dxf.with_suffix(".evidence.json")
+        ev = json.loads(sidecar.read_text("utf-8"))
+        assert ev["views"][0]["connectors"], "前提：真出的图每条连接都在"
+        ev["views"][0]["connectors"] = []
+        sidecar.write_text(json.dumps(ev, ensure_ascii=False), encoding="utf-8")
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        hits = [i for i in doc["issues"] if i["kind"] == "explode_unconnected"]
+        assert hits and hits[0]["blocking"] is True, doc["issues"]
+        # 视图名要真在文案里：证据里那个键叫 view 而不是 name，取错键只会印出 None，
+        # 读的人就不知道是一张图上的哪个视图没连线。
+        assert "ASSY_TOP" in hits[0]["detail"], hits[0]["detail"]
+        assert doc["ok"] is False
+
+    def test_a_view_that_is_not_exploded_is_not_judged(self, tmp_path, db):
+        """没爆炸就不该被爆炸判据管：没有 connectors 这一项缺席才是正常形状。"""
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(tmp_path, name="flat")
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        kinds = [i["kind"] for i in doc["issues"]]
+        assert "explode_unconnected" not in kinds, kinds
+        assert doc["evidence"]["drawings"][0]["kind"] == "assembly"

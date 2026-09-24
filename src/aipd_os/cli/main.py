@@ -267,6 +267,9 @@ def build_parser() -> argparse.ArgumentParser:
     da.add_argument("--views", default="FRONT,TOP",
                     help="逗号分隔装配视图：FRONT/TOP/RIGHT/REAR/LEFT/BOTTOM。"
                          "球标只标在**第一个**请求的视图上（装配图惯例）")
+    da.add_argument("--explode", action="store_true",
+                    help="按 manifest 里每个零件声明的 explode 位移出爆炸视图；"
+                         "有一个零件没声明就直接拒绝（不画摆开一半的爆炸图）")
     da.add_argument("--scale", type=float, default=1.0, help="比例（1 表示 1:1）")
     da.add_argument("--material", default="-", help="标题栏材料")
     da.add_argument("--sheet", default="A3", choices=["A3", "A4"], help="图纸幅面")

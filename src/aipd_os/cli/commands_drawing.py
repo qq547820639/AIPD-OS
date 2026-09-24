@@ -336,7 +336,7 @@ def cmd_drawing_assembly(args):
             out, manifest=str(manifest), part_name=args.part, revision=args.revision,
             views=tuple(v.strip() for v in args.views.split(",") if v.strip()),
             scale=args.scale, material=args.material, sheet=args.sheet,
-            provenance=provenance, bom_lines=bom_lines)
+            provenance=provenance, bom_lines=bom_lines, explode=args.explode)
     except ValueError as exc:
         print(f"装配声明不合法：{exc}")
         return 2
@@ -364,6 +364,11 @@ def cmd_drawing_assembly(args):
                       f"{view['overlap_area_mm2']}mm²")
             else:
                 print("      本视图不标球标（装配图只在一个视图上编号）")
+        exploded = [v for v in evidence.get("views") or [] if v.get("exploded")]
+        if exploded:
+            total = sum(len(v.get("connectors") or []) for v in exploded)
+            print(f"  爆炸视图：{len(exploded)} 个视图、{total} 条装配位→爆炸位连接线"
+                  "（位移由 manifest 的 explode 声明，本命令不算拆卸方向）")
         listed = evidence.get("parts_list") or {}
         bound = evidence.get("bom")
         print(f"明细表：{len(listed.get('rows') or [])} 行，列 {listed.get('columns')}，"
@@ -388,7 +393,8 @@ def cmd_drawing_assembly(args):
         for msg in warnings:
             print(f"  装配告警：{msg}")
         print("  没有做的事：干涉检查（只报包络投影重叠，不做实体求交）、"
-              "爆炸图/装配约束、多工序工艺路线（工艺只有那一格，工序顺序/工时/工序成本不建模）。")
+              "装配约束/配合、爆炸位移的自动求解（要装配约束与无碰撞路径两样前提，本仓都没有）、"
+              "多工序工艺路线（工艺只有那一格，工序顺序/工时/工序成本不建模）。")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
     _emit(args, evidence, prose)
     return 4 if issues else 0

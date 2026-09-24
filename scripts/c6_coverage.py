@@ -58,8 +58,13 @@ MAPPING: dict[str, dict[str, Any]] = {
                   "tests/test_cad_detail_views.py"],
         "note": "正投影 + 剖视 + 局部放大 + 尺寸/公差/GD&T 框 + 标题栏。"},
     "爆炸图": {
-        "verdict": "absent", "capabilities": [], "producers": [], "tests": [],
-        "note": "全仓只有「未做」这句话（registry/CLI/模块 docstring），没有任何生产者或用例。"},
+        "verdict": "producer", "capabilities": ["cad.2d_drawings"],
+        "producers": ["src/aipd_os/cad/assembly.py", "src/aipd_os/cad/drawings2d.py"],
+        "tests": ["tests/test_cad_assembly_explode.py", "tests/test_release_manifest.py"],
+        "note": "位移**由作者声明**（manifest 的 explode，每件一条装配位→爆炸位连接线），"
+                "不自动求拆卸方向——那要装配约束与无碰撞路径两样前提，本仓都没有；"
+                "缺声明直接拒绝出图。sidecar 被手改出「说爆炸却没连线」的形状由 "
+                "release manifest 的 explode_unconnected 判阻断。"},
     "BOM": {
         "verdict": "producer", "capabilities": ["industrialize.bom_model_cost",
                                                 "industrialize.quote_to_bom_cost",
@@ -283,6 +288,11 @@ def render(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _an_absent_item() -> str:
+    """取一项当前判为零实现的，用于「档位与所列文件矛盾」这条注入。"""
+    return next(k for k, v in MAPPING.items() if v["verdict"] == "absent")
+
+
 def _self_test(root: Path) -> int:
     """四条注入反证：每条都必须让 audit 红，否则这条判据是摆设。"""
     cases = [
@@ -292,7 +302,9 @@ def _self_test(root: Path) -> int:
             "note": "注入"}}), "stale_mapping"),
         ("生产者路径不存在", lambda: MAPPING["BOM"]["producers"].append(
             "src/aipd_os/bom/nope.py"), "producer_missing"),
-        ("档位与所列文件矛盾", lambda: MAPPING["爆炸图"].update(
+        # 注入对象按**当前档位**动态挑，不钉死某一项：那一项哪天升档，这条反证就会
+        # 静默变成等价注入（本来就该允许列文件），判据看着没红而已。
+        ("档位与所列文件矛盾", lambda: MAPPING[_an_absent_item()].update(
             {"producers": ["src/aipd_os/cad/assembly.py"]}), "verdict_inconsistent"),
         ("能力行 id 不存在", lambda: MAPPING["BOM"]["capabilities"].append("no.such.row"),
          "unknown_capability"),

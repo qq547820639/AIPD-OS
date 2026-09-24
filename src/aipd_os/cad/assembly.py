@@ -33,8 +33,12 @@ ERPNext v15 用子表 BOM Operation），所以这里不承载顺序、工时与
 冻结，而供应商是商务事实（本仓契约把它归在「供应链开发清单」，BOM 侧也只叫「候选供应商」，
 见 ``references/deliverable-contracts.md``），把供应商印到受控技术文件上等于让图纸携带
 一个未取证就绪的采购承诺。要改这条需要先给理由，别当默认值。
+爆炸视图**已经**能做，但位移**一律由作者声明**（manifest 的 ``explode``）：文献里的自动
+求法（JCAD《智能装配规划中的拆卸方向计算》）要对装配约束做离散球面搜索、并为一件零件
+找到一条**无碰撞路径**才定全局拆卸方向，而本仓两样前提都没有（没有约束数据，也不做实体
+求交），硬算等于画一张没证过的拆卸顺序。缺声明就拒绝出图，不画摆开一半的爆炸图。
 明确**未实现**（不要当成已具备）：干涉/碰撞检查（只报**包络投影重叠**面积，不是实体求交）；
-爆炸图、装配约束/配合；多工序工艺路线（一格一个字符串，工序成本/工时无处安放）；
+装配约束/配合；爆炸位移的自动求解；多工序工艺路线（一格一个字符串，工序成本/工时无处安放）；
 同一 item 在 BOM 里出现多行时判歧义而不是合并（本仓还没有合并口径，就不猜）。
 """
 from __future__ import annotations
@@ -111,8 +115,30 @@ def parse_assembly_manifest(path: str | Path) -> list[dict[str, Any]]:
         except (TypeError, ValueError) as exc:
             raise ValueError(f"零件 {name} 的 offset 都得是数：{offset!r}") from exc
         out.append({"name": name, "step": str(step), "balloon": int(number),
-                    "offset": vec, "bom_item": _bom_item(raw, name)})
+                    "offset": vec, "bom_item": _bom_item(raw, name),
+                    "explode": _explode(raw, name)})
     return out
+
+
+def _explode(raw: dict[str, Any], name: str) -> list[float] | None:
+    """作者声明的爆炸位移；没写就是 ``None``，**不折成 [0,0,0]**。
+
+    两者在图上同形（都在原位），含义完全不同：一个是「这一件不参与爆炸」，
+    一个是「我还没说它该去哪」。位移不算本模块的活——自动求拆卸方向要有装配约束与
+    无碰撞路径校验两样前提，本仓都没有（模块 docstring 与文件头写了），所以外推
+    等于画一张没证过的拆卸顺序。
+    """
+    if "explode" not in raw:
+        return None
+    value = raw["explode"]
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        raise ValueError(f"零件 {name} 的 explode 必须是三个数 [x,y,z]（沿哪个方向移多远"
+                         f"由你说），实得 {value!r}")
+    try:
+        vec = [float(v) for v in value]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"零件 {name} 的 explode 都得是数：{value!r}") from exc
+    return vec
 
 
 def _bom_item(raw: dict[str, Any], name: str) -> str | None:
@@ -198,30 +224,52 @@ def _rect_overlap(a: list[float], b: list[float]) -> float:
 def build_assembly_view(parts: list[dict[str, Any]], view_name: str,
                         direction: tuple[float, float, float],
                         up: tuple[float, float, float],
-                        with_balloons: bool = True) -> Any:
+                        with_balloons: bool = True,
+                        explode: bool = False) -> Any:
     """逐件投影 → 叠成一张装配视图，并算出球标、包络与包络投影重叠。
 
     ``with_balloons=False`` 用于副视图：一套编号在每个投影方向都圈一遍是重复标注，
     装配图惯例是**只在一个视图上标球标**（这里是第一个请求的方向）。
+    ``explode=True`` 时按每个零件**声明**的 ``explode`` 位移把它摆开：平行投影下
+    「先平移实体再投影」与「投影后在视图里平移折线」逐位等价（每件各自做 HLR，
+    件与件之间不互相遮挡），所以这里走后者——省一次内核投影，且不引入新的几何假设。
+    零件沿视线方向摆开时在这个视图上**看不出分离**，那是告警不是错误（图没错，
+    但读者得不到信息，换一个视图看）。
     """
     from aipd_os.cad.drawings2d import ViewGeometry, _bbox, classify_view, view_basis
 
     per_part: list[dict[str, Any]] = []
     segments: list[dict[str, Any]] = []
     all_polys: list[list[tuple[float, float]]] = []
+    connectors: list[dict[str, Any]] = []
     issues: list[str] = []
     for part in parts:
         name = str(part["name"])
         if part.get("shape") is None:
             issues.append(str(part.get("empty_reason") or f"零件 {name} 没有几何"))
             continue
+        shift = part.get("explode")
+        if explode and not shift:
+            raise ValueError(f"零件 {name} 没声明 explode 位移：爆炸视图里它该摆去哪无从可知")
         basis = view_basis(direction, up)
         vis, hid = classify_view(part["shape"], basis)
+        assembled = [round(v, 6) for v in _polyline_centroid(vis)]
+        if shift and explode:
+            dx = _dot3(shift, basis["right"])
+            dy = _dot3(shift, basis["up"])
+            vis = [[(x + dx, y + dy) for x, y in poly] for poly in vis]
+            hid = [[(x + dx, y + dy) for x, y in poly] for poly in hid]
         bbox = _bbox(vis + hid)
+        centroid = [round(v, 6) for v in _polyline_centroid(vis)]
         per_part.append({"part": name, "balloon": int(part["balloon"]),
                          "bbox": [round(b, 6) for b in bbox],
                          "visible_polylines": len(vis), "hidden_polylines": len(hid),
-                         "centroid": [round(v, 6) for v in _polyline_centroid(vis)]})
+                         "centroid": centroid, "assembled_centroid": assembled,
+                         "explode": list(shift) if shift else None})
+        if explode:
+            # 一件一条：两头一个是装配位、一个是爆炸位，读者才知道它是从哪儿摆开的
+            connectors.append({"part": name, "balloon": int(part["balloon"]),
+                               "from": assembled, "to": centroid})
         for poly in vis:
             segments.append({"part": name, "kind": "visible"})
             all_polys.append(poly)
@@ -275,7 +323,15 @@ def build_assembly_view(parts: list[dict[str, Any]], view_name: str,
          "unit": "mm", "tolerance": None,
          "source": "union bbox of placed parts (projected geometry)"}
         for key in _ENVELOP_KEYS]
+    if explode and connectors:
+        still = [c for c in connectors
+                 if math.dist(c["from"], c["to"]) < 1e-6]
+        if len(still) == len(connectors):
+            anchor_warnings.append(
+                f"{view_name}：所有爆炸位移都与视线平行，这个视图上看不出分离"
+                "（图没错，但爆炸要换一个能看出摆开的视图）")
     view.assembly = {"parts": per_part, "segments": segments, "balloons": balloons,
+                     "exploded": bool(explode), "connectors": connectors,
                      # 明写「本视图是不是编号视图」：否则 balloons=[] 既可能是作者
                      # 只标一个视图的惯例，也可能是发号这一步出了问题，读证据的人分不出
                      "balloon_view": bool(with_balloons),
@@ -288,6 +344,11 @@ def build_assembly_view(parts: list[dict[str, Any]], view_name: str,
     # drawings2d import 本模块，是为了保持依赖单向（装配 → 图纸）。
     view.render_overlay = render_assembly
     return view
+
+
+def _dot3(vec: Sequence[float], axis: tuple[float, float, float]) -> float:
+    """三维向量在视图基轴上的分量（= 平移量投到这个视图的 2D 位移）。"""
+    return float(vec[0]) * axis[0] + float(vec[1]) * axis[1] + float(vec[2]) * axis[2]
 
 
 def _bom_text(line: Any, name: str) -> str | None:
@@ -448,6 +509,12 @@ def render_assembly(msp: Any, view: Any, scale: float, place: Any = None) -> Non
             return list(poly)
     attribs = {"layer": "BALLOON", "color": 4}
 
+    for one in data.get("connectors") or []:
+        start = place([(float(one["from"][0]), float(one["from"][1]))])[0]
+        end = place([(float(one["to"][0]), float(one["to"][1]))])[0]
+        msp.add_line(start, end, dxfattribs={"layer": "EXPLODE", "color": 8,
+                                             "linetype": "DASHED"})
+
     for one in data.get("balloons") or []:
         centre = place([(float(one["x"]), float(one["y"]))])[0]
         anchor = place([(float(one["anchor"][0]), float(one["anchor"][1]))])[0]
@@ -468,7 +535,8 @@ def generate_assembly_drawing(out_path: Path | str, *, manifest: str, part_name:
                               scale: float = 1.0, material: str = "-",
                               sheet: str = "A3",
                               provenance: dict[str, Any] | None = None,
-                              bom_lines: Sequence[Any] | None = None) -> dict[str, Any]:
+                              bom_lines: Sequence[Any] | None = None,
+                              explode: bool = False) -> dict[str, Any]:
     """端到端出装配图：清单 -> 逐件投影 -> DXF -> 证据字典。
 
     放在装配这一侧、由它 import 图纸模块，而不是在 ``generate_drawing`` 里加分支：
@@ -486,6 +554,13 @@ def generate_assembly_drawing(out_path: Path | str, *, manifest: str, part_name:
             raise ValueError(f"未知视图 {name}；可用：{sorted(STANDARD_VIEWS)}")
     path = Path(out_path)
     parts = load_assembly_parts(parse_assembly_manifest(manifest))
+    if explode:
+        missing = sorted(str(p["name"]) for p in parts if not p.get("explode"))
+        if missing:
+            raise ValueError(
+                "爆炸视图要求每个零件都声明 explode 位移；缺的是：" + "、".join(missing)
+                + "。摆开一半的爆炸图会让读者把「没动」当成「就该在那儿」——"
+                  "那是图纸在替作者说一个他没说的装配顺序")
 
     rows = parts_list_rows(parts)
     binding_issues: list[str] = []
@@ -501,7 +576,7 @@ def generate_assembly_drawing(out_path: Path | str, *, manifest: str, part_name:
         return {"parts_list": draw_parts_list(msp, rows, sheet_wh, bom_evidence)}
 
     built = [build_assembly_view(parts, f"ASSY_{name}", *STANDARD_VIEWS[name],
-                                 with_balloons=(idx == 0))
+                                 with_balloons=(idx == 0), explode=explode)
              for idx, name in enumerate(views)]
     evidence = write_dxf(built, path, part_name=part_name, revision=revision,
                          scale=scale, material=material, sheet=sheet,

@@ -232,7 +232,7 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     只报「包络投影重叠面积」，**不是干涉判定**（本轮不做实体求交）；
 #     装配视图上 `--section/--detail` 直接拒绝（2），爆炸图与装配约束仍未做。
 aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 \
-                      --db state.db --bom BOM-001 --project P       # 接上 BOM 的数量
+                      --db state.db --bom BOM-001 --project P --explode   # 接上 BOM + 爆炸视图
 #   ↑ 给 --db/--bom 就交叉核对球标↔BOM 行，明细表长出 QTY/UNIT/MATERIAL/PROCESS 四列；不给就维持
 #     ITEM/PART 两列、一个猜测值都不印。对应关系**只认 manifest 里声明的 bom_item**：
 #     {"parts":[{"name":"支架","step":"a.step","balloon":1,"bom_item":"BRACKET-01"}]}。
@@ -255,6 +255,11 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     编号写错会当场 rc=2，而不是被当成空 BOM 报成一堆「每行都找不到」。
 #     注意 --db 指的是**状态库**：BOM 按产品口径取同目录的 bom.db（不给权威状态库加表，
 #     状态库迁移已冻结）。读不到那个文件就报错，不顺手建一个空库。
+#     --explode 出爆炸视图：位移**由作者声明**（每件一个 "explode": [x,y,z]），
+#     图上一条装配位→爆炸位连线（EXPLODE 层），编号仍只认你写的 balloon。
+#     有一个零件没声明就直接 rc=2——摆开一半的爆炸图会让读者把「没动」当成「就该在那儿」。
+#     不自动求拆卸方向：文献那套（离散球面搜索 + 无碰撞路径校验）要装配约束与实体求交两样
+#     本仓没有的前提，硬算就是画一张没证过的装配顺序。位移与视线平行时告警「看不出分离」。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。

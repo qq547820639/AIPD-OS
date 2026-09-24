@@ -1190,6 +1190,11 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                                     if view.assembly else None),
                        "overlap_area_mm2": (view.assembly["overlap_area_mm2"]
                                             if view.assembly else None),
+                       # 爆炸事实：不给 exploded 就分不出「没摆开」与「摆了但看不出」
+                       "exploded": (bool(view.assembly["exploded"])
+                                    if view.assembly else None),
+                       "connectors": ([dict(c) for c in view.assembly["connectors"]]
+                                      if view.assembly else None),
                        "dimensions": view.dimensions})
 
     assembly_views = [v for v in views if v.assembly]

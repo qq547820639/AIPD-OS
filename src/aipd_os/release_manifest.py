@@ -122,6 +122,19 @@ def _check_assembly(rel: str, evidence: dict[str, Any], bom_id: str | None,
         _issue(issues, "assembly_bom_mismatch",
                f"{rel}：图上的数量取自 BOM {bound}，本份证据核的是 BOM {bom_id}；"
                "两边不是同一张表，计数一致性不成立", blocking=True)
+    # 爆炸事实单独判一条： exploded=true 却没有把每件从装配位连回来的线，
+    # 就是一张「零件被摆开了但没人知道谁从哪儿来」的图——证据来自手改或旧版本时正好是这形状。
+    for view in evidence.get("views") or []:
+        if not view.get("exploded"):
+            continue
+        parts = view.get("assembly_parts") or []
+        cons = view.get("connectors") or []
+        if len(cons) < len(parts):
+            _issue(issues, "explode_unconnected",
+                   f"{rel}：视图 {view.get('view') or view.get('name')} "
+                   f"标了爆炸视图，但 {len(parts)} 个零件"
+                   f"只有 {len(cons)} 条装配位→爆炸位连接线：摆开的位置没有出处，"
+                   "读图的人分不出谁从哪儿移开", blocking=True)
     rows = list((evidence.get("parts_list") or {}).get("rows") or [])
     for row in rows:
         if row.get("bom_line_id") is None:
