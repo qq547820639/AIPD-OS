@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 25874,
-      "sha256": "de59d5f0290ff82f0f974f5b30e1622f5abad5920097110069ba8319a4ac7d0e"
+      "size": 26874,
+      "sha256": "43cbe70fa6f40a4f885ea5e38b56f0998aed7721b851b26622d0ec6b5f2390d9"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1142,8 +1142,8 @@
     },
     {
       "path": "src/aipd_os/execution/execution_router.py",
-      "size": 15726,
-      "sha256": "7a215a421d79e67dedd045f2dd79e89c712d21493ef86f62c2a9153a9e4d5d53"
+      "size": 17506,
+      "sha256": "f62bb75eecb63030610f8ada1ab74ff609b797023f3200eb91e77e982371ab08"
     },
     {
       "path": "src/aipd_os/execution/limits.py",
@@ -1512,8 +1512,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 48537,
-      "sha256": "bd90927292211341a8dd659f221d396d2094924fbfeb91efd0206970e6215a23"
+      "size": 48674,
+      "sha256": "3f666e5f59356ab7729d6baf58d0750e5084c845ed7147dee1c639cdce18a7ce"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -2302,8 +2302,8 @@
     },
     {
       "path": "tests/test_execution_idempotency.py",
-      "size": 10894,
-      "sha256": "1bb729a651ad0cd069ed47f3912c63fdc52553cc239c8a13c63a009b1aa0263c"
+      "size": 14851,
+      "sha256": "7d7a91b6ec6927059481c93c2a3e09627c1ea44bad7a5ef60937d8cc6ac9615f"
     },
     {
       "path": "tests/test_execution_idempotency_scope.py",
