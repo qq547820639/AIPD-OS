@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-24T08:21:29+00:00",
+  "generated_at": "2026-09-24T08:29:31+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 31654,
-      "sha256": "a62f849c085754b68055d7c6c3daa9ec610d6a9e662c16c1a77efd1605526a22"
+      "size": 32063,
+      "sha256": "3288da7067b2150fffb4b1c62d1cba85a95a51a68bf245bb3f4e5b694ce4eab2"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -177,8 +177,8 @@
     },
     {
       "path": "SKILL.md",
-      "size": 2901,
-      "sha256": "ea9254c14b622379fe64e28f2da01e3dba47b7145a417a6f2bff0ed533c2d0dd"
+      "size": 2949,
+      "sha256": "15e8434be6b686c43a8c4ebd08574b601f39ebbe31273d2a6c2f0cb449184277"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -2552,8 +2552,8 @@
     },
     {
       "path": "tests/test_outbox_rfq_wiring.py",
-      "size": 14771,
-      "sha256": "44e76fdc38dd2e1bd8dd9315c6505764a1bbca8da5439da0822196c1cf3ba517"
+      "size": 15139,
+      "sha256": "3a5587fd941fd678ca496a50a3aca869318dba1da329e3a5f11f0833bbcff329"
     },
     {
       "path": "tests/test_owner_ux.py",
@@ -2734,6 +2734,11 @@
       "path": "tests/test_server_local.py",
       "size": 4712,
       "sha256": "dbb4ab1e7ae34bc39d9774a319ddaf7556108ba59d2aac4e45792dad161cadae"
+    },
+    {
+      "path": "tests/test_skill_command_surface.py",
+      "size": 2286,
+      "sha256": "9ee79402b79702a8379b7f1375d852abdb59e377d40028b65e7c43dbeadf83eb"
     },
     {
       "path": "tests/test_snapshot_idea_lineage.py",
