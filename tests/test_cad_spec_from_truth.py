@@ -125,7 +125,7 @@ def _plate():
             .hole(6.0).solids().vals()[0])
 
 
-def _generate(tmp_path, spec, name="spec"):
+def _generate(tmp_path, spec=None, name="spec"):
     out = Path(tmp_path) / f"{name}.dxf"
     ev = generate_drawing(_plate(), out, part_name="plate", revision="A",
                           views=("TOP",), spec=spec)
@@ -269,3 +269,185 @@ class TestCliProducerAndGate:
         entry = next(c for c in json.loads(proc.stdout)["evidence_checks"]
                      if c["check"] == "gdt_covers_ctq")
         assert entry["passed"], entry["detail"]
+
+
+FLATNESS = [{"characteristic": "flatness", "zone": 0.02}]
+
+
+def _stripped(decls):
+    """去掉生产者加的 ctq_ref 引用后比较声明本体。"""
+    return [{k: v for k, v in d.items() if k != "ctq_ref"} for d in decls]
+
+
+class TestGdtAndDatumsFromCtq:
+    def test_a_gdt_only_ctq_declares_a_frame_without_inventing_a_size(self):
+        spec, gaps = spec_from_ctq([_ctq("g1", {
+            "feature": "面轮廓要求", "drawing_feature": "TOP.hole_1", "gdt": FLATNESS})])
+        assert gaps == []
+        entry = spec["features"][0]
+        assert "tolerance" not in entry, "只声明形位的 CTQ 不该被塞进一个尺寸公差"
+        assert _stripped(entry["gdt"]) == FLATNESS, "形位声明原样透传，另加一条引用"
+        assert entry["gdt"][0]["ctq_ref"] == "g1"
+
+    def test_size_and_gdt_can_come_from_one_record(self):
+        spec, gaps = spec_from_ctq([_hole_ctq(extra={"gdt": FLATNESS})])
+        assert gaps == []
+        entry = spec["features"][0]
+        assert entry["tolerance"] == {"upper": 0.05, "lower": -0.05}
+        assert _stripped(entry["gdt"]) == FLATNESS
+        assert entry["ctq_ref"] == "c1" and entry["gdt"][0]["ctq_ref"] == "c1"
+
+    def test_a_datum_record_becomes_the_datum_scheme_without_needing_a_size(self):
+        spec, gaps = spec_from_ctq([_ctq("d1", {
+            "feature": "基准A面", "datum_id": "A", "drawing_feature": "TOP.hole_4"})])
+        assert gaps == []
+        assert spec["datums"] == [{"id": "A", "feature": "TOP.hole_4", "ctq_ref": "d1"}]
+        assert spec["features"] == []
+
+    def test_two_records_claiming_one_datum_letter_produce_neither(self):
+        spec, gaps = spec_from_ctq([
+            _ctq("d1", {"feature": "基准A", "datum_id": "A", "drawing_feature": "TOP.hole_1"}),
+            _ctq("d2", {"feature": "基准A备份", "datum_id": "A",
+                        "drawing_feature": "TOP.hole_2"})])
+        assert spec.get("datums", []) == []
+        assert [g["kind"] for g in gaps] == ["datum_id_conflict"]
+
+    def test_a_record_declaring_neither_size_geometry_nor_datum_is_named(self):
+        spec, gaps = spec_from_ctq([_ctq("e1", {"feature": "看一眼",
+                                                "drawing_feature": "TOP.hole_1"})])
+        assert spec["features"] == [] and spec.get("datums", []) == []
+        assert [g["kind"] for g in gaps] == ["ctq_declares_nothing"]
+
+    def test_generated_datums_resolve_for_a_position_frame(self):
+        """基准来自需求侧记录，框才能解析基准字母——解析不到就该判未收口而不是画半截。"""
+        spec, gaps = spec_from_ctq([
+            _ctq("d1", {"feature": "基准A面", "datum_id": "A",
+                        "drawing_feature": "TOP.hole_1"}),
+            _ctq("g2", {"feature": "孔位置度", "drawing_feature": "TOP.hole_2",
+                        "gdt": [{"characteristic": "position", "zone": 0.05,
+                                 "diametral": True, "datums": ["A"]}]})])
+        assert gaps == []
+        assert "datums" in spec and len(spec["features"]) == 1
+
+    def test_the_drawn_frame_records_which_ctq_it_answers(self, tmp_path):
+        spec, gaps = spec_from_ctq([_ctq("g1", {
+            "feature": "面轮廓要求", "drawing_feature": "TOP.hole_1", "gdt": FLATNESS})])
+        assert gaps == []
+        ev, _ = _generate(tmp_path, spec, name="frame")
+        assert ev["gdt_issues"] == [] and ev["gdt_unmatched_features"] == []
+        frames = [f for f in ev["gdt_frames"] if f["feature"] == "TOP.hole_1"]
+        assert frames and frames[0]["ctq_ref"] == "g1", \
+            "框要能回指它答的是哪条需求，否则门禁只能按名字猜"
+        assert frames[0]["text"] == "⏥|0.02"
+
+    def test_a_hand_written_frame_keeps_working_without_a_ref(self, tmp_path):
+        ev, _ = _generate(tmp_path, {"features": [{"feature": "TOP.hole_1",
+                                                   "gdt": FLATNESS}]}, name="noref")
+        assert ev["gdt_frames"][0]["ctq_ref"] == ""
+
+    def test_a_gdt_only_ctq_is_covered_by_the_frame_for_the_gate(self, tmp_path, db):
+        """需求侧只声明形位（没有尺寸公差）时，画上去的框就是覆盖凭据。"""
+        from aipd_os.cli.main import main
+        from aipd_os.release_manifest import build_release_manifest
+
+        rid = _seed(db, {"feature": "面轮廓要求", "drawing_feature": "TOP.hole_1",
+                         "gdt": FLATNESS, "inspection_method": "平板+塞尺"})[0]
+        spec_file = tmp_path / "gdt.json"
+        assert main(["drawing", "spec", "--db", str(db), "--project", P,
+                     "--out", str(spec_file)]) == 0
+        _, dxf = _generate(tmp_path, json.loads(spec_file.read_text("utf-8")),
+                           name="gdt_chain")
+        path = tmp_path / "gdt-evidence.json"
+        build_release_manifest(db_path=db, tenant_id=T, project_id=P, drawings=[dxf],
+                               out_path=path)
+        doc = json.loads(path.read_text("utf-8"))
+        covered = [g for g in doc["gdt"] if g["ctq_record_id"] == rid]
+        assert covered and covered[0]["covered_by"] == "feature_control_frame"
+        proc = subprocess.run([sys.executable, str(GATE), "--manifest", str(path),
+                               "--target", "C5"], capture_output=True, text=True)
+        entry = next(c for c in json.loads(proc.stdout)["evidence_checks"]
+                     if c["check"] == "gdt_covers_ctq")
+        assert entry["passed"], entry["detail"]
+
+    def test_a_gdt_only_ctq_with_no_frame_drawn_stays_uncovered(self, tmp_path, db):
+        """另一极：声明了形位但图上没画框 ⇒ 不能算覆盖，门禁必须开火。"""
+        from aipd_os.cli.main import main
+        from aipd_os.release_manifest import build_release_manifest
+
+        _seed(db, {"feature": "面轮廓要求", "drawing_feature": "TOP.hole_1",
+                   "gdt": FLATNESS, "inspection_method": "平板+塞尺"})
+        spec_file = tmp_path / "gdt2.json"
+        assert main(["drawing", "spec", "--db", str(db), "--project", P,
+                     "--out", str(spec_file)]) == 0
+        _, dxf = _generate(tmp_path, name="no_frame")      # 不传 spec ⇒ 图上没有框
+        path = tmp_path / "gdt2-evidence.json"
+        build_release_manifest(db_path=db, tenant_id=T, project_id=P, drawings=[dxf],
+                               out_path=path)
+        doc = json.loads(path.read_text("utf-8"))
+        assert doc["gdt"] == []
+        proc = subprocess.run([sys.executable, str(GATE), "--manifest", str(path),
+                               "--target", "C5"], capture_output=True, text=True)
+        entry = next(c for c in json.loads(proc.stdout)["evidence_checks"]
+                     if c["check"] == "gdt_covers_ctq")
+        assert not entry["passed"], "只登记了要求、图上什么都没画，不能判已覆盖"
+
+
+class TestDatumAndSizeOnOneRecord:
+    def test_one_record_can_be_a_datum_and_a_size_requirement(self):
+        """基准常常就是某个带公差的特征：同一条记录既登记字母又声明合格域时，两样都要出。"""
+        spec, gaps = spec_from_ctq([_ctq("d2", {
+            "feature": "基准A面（板宽）", "datum_id": "A",
+            "drawing_feature": "TOP.overall_height",
+            "nominal": 50.0, "lower_limit": 49.9, "upper_limit": 50.1})])
+        assert gaps == []
+        assert spec["datums"] == [{"id": "A", "feature": "TOP.overall_height",
+                                   "ctq_ref": "d2"}]
+        entry = spec["features"][0]
+        assert entry["tolerance"] == {"upper": 0.1, "lower": -0.1}
+        assert entry["ctq_ref"] == "d2"
+
+    def test_a_pure_datum_ctq_is_covered_once_its_datum_role_is_used_by_a_frame(self,
+                                                                                tmp_path):
+        """基准字母被画上去的框引用时，它就已经上图了——但**引用它的框必须真存在**。"""
+        spec, _ = spec_from_ctq([
+            _ctq("d2", {"feature": "基准A面", "datum_id": "A",
+                        "drawing_feature": "TOP.overall_height", "nominal": 50.0,
+                        "lower_limit": 49.9, "upper_limit": 50.1}),
+            _ctq("g3", {"feature": "孔位置度", "drawing_feature": "TOP.hole_2",
+                        "gdt": [{"characteristic": "position", "zone": 0.05,
+                                 "diametral": True, "datums": ["A"]}]}),
+        ])
+        ev, _ = _generate(tmp_path, spec, name="datum_used")
+        frame = next(f for f in ev["gdt_frames"] if f["feature"] == "TOP.hole_2")
+        assert frame["ctq_ref"] == "g3"
+        assert [d["id"] for d in frame["datums"]] == ["A"]
+        assert frame["datums"][0]["feature"] == "TOP.overall_height"
+
+
+class TestOneRequirementCountsOnce:
+    def test_a_record_covered_by_both_a_dimension_and_a_frame_counts_once(self,
+                                                                         tmp_path, db):
+        """同一条需求既标了尺寸公差又画了框 ⇒ 只算一条覆盖，且要说是按哪一半算的。
+
+        重复计一条会让「覆盖了几条 CTQ」这种计数虚高——正是 `gdt_covers_ctq` 要防的反面。
+        """
+        from aipd_os.cli.main import main
+        from aipd_os.release_manifest import build_release_manifest
+
+        rid = _seed(db, {"feature": "孔（尺寸+位置度）", "drawing_feature": "TOP.hole_1",
+                         "nominal": 6.0, "lower_limit": 5.95, "upper_limit": 6.05,
+                         "gdt": FLATNESS, "inspection_method": "CMM"})[0]
+        spec_file = tmp_path / "both.json"
+        assert main(["drawing", "spec", "--db", str(db), "--project", P,
+                     "--out", str(spec_file)]) == 0
+        _, dxf = _generate(tmp_path, json.loads(spec_file.read_text("utf-8")), name="both")
+        ev = json.loads(dxf.with_suffix(".evidence.json").read_text("utf-8"))
+        assert ev["gdt_frames"], "前提：框真画上去了"
+        path = tmp_path / "both-evidence.json"
+        build_release_manifest(db_path=db, tenant_id=T, project_id=P, drawings=[dxf],
+                               out_path=path)
+        doc = json.loads(path.read_text("utf-8"))
+        hits = [g for g in doc["gdt"] if g["ctq_record_id"] == rid]
+        assert len(hits) == 1, f"一条需求被计了 {len(hits)} 次覆盖"
+        assert hits[0]["covered_by"] == "dimension", \
+            "尺寸与框同时成立时按尺寸记，框不重复计"

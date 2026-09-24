@@ -145,9 +145,33 @@ def _collect_drawings(drawings: Sequence[Path | str], root: Path,
                            f"CTQ {ctq['feature']} 没写上下限，{feature} 的数值一致性"
                            f"不可核（按引用成立计入覆盖）", blocking=False)
                 gdt.append({"feature": ctq["feature"], "drawing_feature": feature,
-                            "ctq_record_id": str(ref),
+                            "ctq_record_id": str(ref), "covered_by": "dimension",
                             "drawing": rel, "sha256": refs[-1]["sha256"],
                             "tolerance": tolerance, "nominal": dim["value"]})
+        # GD&T 框也算覆盖凭据：只声明形位、不声明尺寸公差的 CTQ，画上去的框就是它上图的证据。
+        # 这一半只核「框真在图上 + 挂在实测特征上」，**不核形位偏差实测值**（本仓还不测形位偏差）。
+        covered = {str(g["ctq_record_id"]) for g in gdt}
+        for frame in evidence.get("gdt_frames") or []:
+            ref = str(frame.get("ctq_ref") or "")
+            feature = str(frame.get("feature") or "")
+            if not ref:
+                _issue(issues, "frame_unlinked",
+                       f"{feature} 画了形位框但没有 ctq_ref，无法计入 gdt 覆盖",
+                       blocking=False, feature=feature)
+                continue
+            ctq = ctq_by_id.get(ref)
+            if ctq is None:
+                _issue(issues, "unknown_ctq_ref",
+                       f"{feature} 的框 ctq_ref={ref!r} 在 Product Truth 里不存在"
+                       f"（不做名字模糊匹配）", blocking=True, feature=feature)
+                continue
+            if ref in covered:
+                continue      # 同一条需求已由尺寸覆盖，不重复计第二条
+            covered.add(ref)
+            gdt.append({"feature": ctq["feature"], "drawing_feature": feature,
+                        "ctq_record_id": ref, "covered_by": "feature_control_frame",
+                        "frame": frame.get("text"), "drawing": rel,
+                        "sha256": refs[-1]["sha256"]})
     if not drawings:
         _issue(issues, "no_drawings", "没有传入任何图纸：图纸侧产不出 gdt，"
                                      "发布就绪不成立", blocking=True)

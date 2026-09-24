@@ -94,13 +94,24 @@ def cmd_drawing_spec(args):
               "spec": None if held else spec, "out": None if held else str(out)}
 
     def prose():
-        print(f"CTQ 记录 {len(records)} 条 → 声明 {len(spec['features'])} 条"
+        datum_count = len(spec.get("datums") or [])
+        print(f"CTQ 记录 {len(records)} 条 → 尺寸/形位声明 {len(spec['features'])} 条"
+              f" + 基准 {datum_count} 个"
               f"（{args.tenant}/{args.project}，只取 status=active）")
+        for datum in spec.get("datums") or []:
+            print(f"  基准 {datum['id']} → {datum['feature']}（CTQ {datum['ctq_ref']}）")
         for entry in spec["features"]:
-            tol = entry["tolerance"]
-            lim = entry["limits"]
-            print(f"  {entry['feature']}: {tol['upper']:+g}/{tol['lower']:+g}"
-                  f"（合格域 {lim['min']:g}–{lim['max']:g}）← CTQ {entry['ctq_ref']}")
+            bits = []
+            tol = entry.get("tolerance")
+            if tol:
+                lim = entry["limits"]
+                bits.append(f"{tol['upper']:+g}/{tol['lower']:+g}"
+                            f"（合格域 {lim['min']:g}–{lim['max']:g}）")
+            for decl in entry.get("gdt") or []:
+                bits.append(f"形位 {decl.get('characteristic')} 带 {decl.get('zone')}")
+            refs = sorted({str(r) for r in [entry.get("ctq_ref")]
+                           + [d.get("ctq_ref") for d in entry.get("gdt") or []] if r})
+            print(f"  {entry['feature']}: {'；'.join(bits)} ← CTQ {'、'.join(refs)}")
         for gap in gaps:
             print(f"  未收口：{gap['kind']} — {gap['detail']}")
         if held:

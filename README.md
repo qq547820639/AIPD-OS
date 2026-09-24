@@ -184,6 +184,9 @@ aipd drawing spec --db state.db --project P --out tolerances.json
 #   ↑ 声明的生产者：把 Product Truth 里 status=active 的 CTQ 转成上面 --spec 那份 JSON，
 #     ctq_ref 由产品写而不是人抄。CTQ 必须显式给 metadata.drawing_feature 与 nominal
 #     （不按名字/直径猜映射、缺标称值不拿实测值顶）；有缺口就不落盘并返回 4。
+#     记录还可带 "gdt": [{"characteristic": "position", "zone": 0.05,
+#     "diametral": true, "datums": ["A"]}] 与 "datum_id": "A" ⇒ 形位框与基准
+#     方案同样从需求侧长出；同一特征上「一条尺寸 + 一条形位」合并声明，同类重复则两条都撤回。
 aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket --spec tolerances.json
 #   ↑ 尺寸链按实测孔心自动给出；公差只认 --spec 声明，格式
 #     {"features":[{"feature":"TOP.hole_2","tolerance":{"upper":0.05,"lower":-0.05}}],

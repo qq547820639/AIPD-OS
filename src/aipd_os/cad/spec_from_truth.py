@@ -46,18 +46,44 @@ def _num(value: Any) -> float | None:
     return float(value)
 
 
+_SIZE_KEYS = ("nominal", "lower_limit", "upper_limit")
+
+
 def spec_from_ctq(records: Iterable[Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """CTQ 记录 → ``(spec, gaps)``；spec 的形状与手写 ``--spec`` 完全一致。
 
     ``records`` 直接收 ``ProductTruthStore.query(record_type='ctq', status='active')``
     的返回值（用 ``record_id`` 与 ``metadata`` 两个字段）。
+
+    一条记录可以声明三件事之一或组合：尺寸合格域（``nominal`` + 上下限）、
+    形位公差（``gdt`` 列表）、基准字母（``datum_id``）。同一个图纸特征上
+    「一条给尺寸、一条给形位」是正常工程实践，不冲突；**同类**重复声明才冲突
+    （两条尺寸抢同一个特征、两个字母抢同一个基准、同一特征上重复同一几何特征）。
     """
-    features: list[dict[str, Any]] = []
     gaps: list[dict[str, Any]] = []
-    claimed: dict[str, str] = {}
+    by_target: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    datums: dict[str, dict[str, Any]] = {}
+    datum_owner: dict[str, str] = {}
+    size_owner: dict[str, str] = {}
+    gdt_owner: dict[tuple[str, str], str] = {}
+
+    def _entry(target: str) -> dict[str, Any]:
+        if target not in by_target:
+            by_target[target] = {"feature": target}
+            order.append(target)
+        return by_target[target]
+
+    def _drop_if_empty(target: str) -> None:
+        entry = by_target.get(target)
+        if entry and "tolerance" not in entry and not entry.get("gdt"):
+            by_target.pop(target, None)
+            if target in order:
+                order.remove(target)
+
     for rec in records:
         meta = getattr(rec, "metadata", None) or {}
-        rid = getattr(rec, "record_id", "?")
+        rid = str(getattr(rec, "record_id", "?"))
         feature = meta.get("feature")
         target = meta.get("drawing_feature")
         if not target:
@@ -67,16 +93,49 @@ def spec_from_ctq(records: Iterable[Any]) -> tuple[dict[str, Any], list[dict[str
                 f"无法确定它约束图上的哪条尺寸（本模块不按名字/直径猜映射）"))
             continue
         target = str(target)
-        if target in claimed:
+        datum_id = meta.get("datum_id")
+        gdt_decl = meta.get("gdt")
+        has_size = any(key in meta for key in _SIZE_KEYS)
+        if not (datum_id or gdt_decl or has_size):
             gaps.append(ctq_gap(
-                "ctq_duplicate_drawing_feature", rid,
-                f"CTQ {target} 与 CTQ {claimed[target]} 认领同一个图纸特征，"
-                f"两条公差不能同时成立，先解决冲突再出声明"))
-            # 连先来的那条也撤回：留下它等于「按遍历顺序挑一个赢家」
-            features[:] = [f for f in features if f["feature"] != target]
-            del claimed[target]
+                "ctq_declares_nothing", rid,
+                f"CTQ {feature or rid} 既没给尺寸上下限、也没给形位公差或基准字母，"
+                f"图上没有任何东西能对应它"))
             continue
 
+        if datum_id:
+            letter = str(datum_id)
+            if letter in datum_owner:
+                gaps.append(ctq_gap(
+                    "datum_id_conflict", rid,
+                    f"基准字母 {letter} 被 CTQ {datum_owner[letter]} 与 {rid} 同时占用"))
+                datums.pop(letter, None)
+                datum_owner.pop(letter, None)
+            else:
+                datum_owner[letter] = rid
+                datums[letter] = {"id": letter, "feature": target, "ctq_ref": rid}
+
+        for raw in (gdt_decl or []):
+            item = raw if isinstance(raw, dict) else {}
+            characteristic = str(item.get("characteristic") or "")
+            key = (target, characteristic)
+            if key in gdt_owner:
+                gaps.append(ctq_gap(
+                    "gdt_characteristic_conflict", rid,
+                    f"特征 {target} 上的「{characteristic or '未命名'}」被 CTQ "
+                    f"{gdt_owner[key]} 与 {rid} 重复声明，两条不能同时成立"))
+                entry = _entry(target)
+                entry["gdt"] = [g for g in entry.get("gdt", [])
+                                if str(g.get("characteristic") or "") != characteristic]
+                gdt_owner.pop(key, None)
+                _drop_if_empty(target)
+                continue
+            gdt_owner[key] = rid
+            entry = _entry(target)
+            entry["gdt"] = list(entry.get("gdt") or []) + [dict(item, ctq_ref=rid)]
+
+        if not has_size:
+            continue
         nominal = _num(meta.get("nominal"))
         low = _num(meta.get("lower_limit"))
         high = _num(meta.get("upper_limit"))
@@ -95,21 +154,35 @@ def spec_from_ctq(records: Iterable[Any]) -> tuple[dict[str, Any], list[dict[str
                 f"CTQ {feature or rid} 的下限 {low:g} 大于上限 {high:g}，"
                 f"这不是一个可判定的合格域"))
             continue
+        if target in size_owner:
+            gaps.append(ctq_gap(
+                "ctq_duplicate_drawing_feature", rid,
+                f"CTQ {target} 与 CTQ {size_owner[target]} 认领同一个图纸尺寸，"
+                f"两条公差不能同时成立，先解决冲突再出声明"))
+            # 连先来的那条也撤回：留下它等于「按遍历顺序挑一个赢家」
+            entry = _entry(target)
+            entry.pop("tolerance", None)
+            entry.pop("limits", None)
+            entry.pop("ctq_ref", None)
+            size_owner.pop(target, None)
+            _drop_if_empty(target)
+            continue
 
-        claimed[target] = str(rid)
-        entry: dict[str, Any] = {
-            "feature": target,
+        size_owner[target] = rid
+        # 绝对合格域原样带上：出图时拿**实测值**去比它，才知道模型满不满足这条 CTQ
+        _entry(target).update({
             "tolerance": {"upper": round(high - nominal, 9),
                           "lower": round(low - nominal, 9)},
-            # 绝对合格域原样带上：出图时拿**实测值**去比它，才知道模型满不满足这条 CTQ
             "limits": {"min": low, "max": high, "nominal": nominal},
-            "ctq_ref": str(rid),
-        }
-        if feature:
-            entry["ctq_feature"] = str(feature)
-        features.append(entry)
+            "ctq_ref": rid,
+            **({"ctq_feature": str(feature)} if feature else {}),
+        })
 
+    features = [by_target[t] for t in order if t in by_target]
+    spec: dict[str, Any] = {"features": features, "generated_from": "product_truth.ctq"}
+    if datums:
+        spec["datums"] = [datums[k] for k in sorted(datums)]
     # 不推 global_tolerance：`global_tolerance` 会贴到**每一条**没单独声明的尺寸上，
     # 把「封闭环的 CTQ」当全局公差就是给没人声明的特征凭空造公差。
-    return {"features": features, "generated_from": "product_truth.ctq"}, gaps
+    return spec, gaps
 

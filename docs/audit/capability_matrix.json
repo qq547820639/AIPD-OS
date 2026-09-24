@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-24T23:28:41",
+  "generated_at": "2026-09-25T00:01:43",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "b03ea0cb0e51a297ade051aeeffbc0fc862b1595",
-  "source_commit": "b03ea0cb0e51a297ade051aeeffbc0fc862b1595",
+  "latest_commit_sha": "06008a3046472b641f19e4ef24a74aa6822fc444",
+  "source_commit": "06008a3046472b641f19e4ef24a74aa6822fc444",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
@@ -1037,7 +1037,7 @@
           "unit_test": "tests/test_cad_drawings2d.py; tests/test_cad_drawings_chain_tolerance.py; tests/test_cad_stackup.py; tests/test_cad_gdt_frames.py; tests/test_cad_section_views.py; tests/test_cad_spec_from_truth.py",
           "integration_test": "tests/test_cad_drawings2d.py::TestDxfOutput",
           "e2e_evidence": "命令行出图：公差声明落到 DXF 并可读回（tests/test_cad_drawings_chain_tolerance.py::TestCliSpecSurface）",
-          "current_limitation": "出图为 DXF 三视图 + 投影测量的总体尺寸/孔径 + 由实测孔心排出的尺寸链（闭合差写进 dimension_chain_check）；公差只能来自 --spec 声明，未声明则不写任何公差，声明落空会判未收口（退出码 4）。隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。一维公差叠加已给出「各段公差带之和 vs 封闭环公差带」的自相矛盾判定（缺任何一环声明即判不可判定，不按 0 折算，也不猜功能限值），但三维/角度叠加与统计分布（Cpk）未做。GD&T 特征控制框（FCF）可按声明绘制并回读：分格框线 + 每格 TEXT + 引线，挂点取实测特征圆心，基准解析不了/特征不存在/类型不认识一律判未收口而不是画半截框；但用的是 drawn 几何而非 DXF TOLERANCE 语义实体——其 content 转义码本轮未找到权威来源核实，故不宣称在各查看器里渲染一致。剖视已能真做（半空间布尔切割 + 剖面材料区量积 + DXF HATCH 填充，切不到材料/边界接不成闭合环/含内环都如实报且不静默填错多边形，切不到材料还判未收口（退出码 4）），但未做剖切符号 A-A 与阶梯剖；仍未实现：局部放大、爆炸图、装配图；尺寸公差声明已有生产者：`aipd drawing spec` 把 Product Truth 里 status=active 的 CTQ 转成 --spec 那份 JSON（必须显式写 metadata.drawing_feature 与 nominal，缺则点名不产出、且缺口未收口时不写文件），出图时还会拿投影实测值反查 CTQ 的绝对合格域（落在域外判 ctq_window_violation 并退出码 4）；但 GD&T 框与叠加声明仍只吃手写 JSON、不按名字自动映射，剖切符号/局部放大/爆炸图/装配图未做，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。",
+          "current_limitation": "出图为 DXF 三视图 + 投影测量的总体尺寸/孔径 + 由实测孔心排出的尺寸链（闭合差写进 dimension_chain_check）；公差只能来自 --spec 声明，未声明则不写任何公差，声明落空会判未收口（退出码 4）。隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。一维公差叠加已给出「各段公差带之和 vs 封闭环公差带」的自相矛盾判定（缺任何一环声明即判不可判定，不按 0 折算，也不猜功能限值），但三维/角度叠加与统计分布（Cpk）未做。GD&T 特征控制框（FCF）可按声明绘制并回读：分格框线 + 每格 TEXT + 引线，挂点取实测特征圆心，基准解析不了/特征不存在/类型不认识一律判未收口而不是画半截框；但用的是 drawn 几何而非 DXF TOLERANCE 语义实体——其 content 转义码本轮未找到权威来源核实，故不宣称在各查看器里渲染一致。剖视已能真做（半空间布尔切割 + 剖面材料区量积 + DXF HATCH 填充，切不到材料/边界接不成闭合环/含内环都如实报且不静默填错多边形，切不到材料还判未收口（退出码 4）），但未做剖切符号 A-A 与阶梯剖；仍未实现：局部放大、爆炸图、装配图；尺寸公差声明已有生产者：`aipd drawing spec` 把 Product Truth 里 status=active 的 CTQ 转成 --spec 那份 JSON（必须显式写 metadata.drawing_feature 与 nominal，缺则点名不产出、且缺口未收口时不写文件），出图时还会拿投影实测值反查 CTQ 的绝对合格域（落在域外判 ctq_window_violation 并退出码 4）；GD&T 形位框与基准方案也已能从同一条记录长出（metadata.gdt / metadata.datum_id，同一个特征上「一条给尺寸、一条给形位」合并成一条声明、同类重复则两条都撤回）；仍只吃手写 JSON 的是尺寸链各段与 global_tolerance（CTQ 上一般没有分段要求），且全程不按名字自动映射；剖切符号/局部放大/爆炸图/装配图未做，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -1168,7 +1168,7 @@
           "unit_test": "tests/test_release_manifest.py; tests/test_cad_spec_from_truth.py",
           "integration_test": "tests/test_release_manifest.py::TestGdtGrowsOnlyFromTheDrawing",
           "e2e_evidence": "门禁真判据：tests/test_release_manifest.py 直接跑 production_release_gate 读 gdt_covers_ctq",
-          "current_limitation": "只做证据装配与显式溯源：图纸特征与 CTQ 的对应关系可由 aipd drawing spec 从 metadata.drawing_feature 生成 ctq_ref（仍不按名字自动映射，linkage 由需求侧显式写），证据里的每条 gdt 都回写 ctq_record_id 指明是对着哪条记录成立的；模型侧只支持从 STEP 数实体，读不到就不写 model_part_count（不折算成 0）；approval_status 由属主填、缺省 unapproved，生产者不代为置 approved；版本不一致只如实记录不对齐；GD&T 形位公差框已可绘制（见 cad.2d_drawings），但叠加/形位声明的自动生成仍未接入；尺寸实测值是否落在 CTQ 合格域内由图纸侧判（cad.2d_drawings 的 spec_limit_issues），本模块不重复判。",
+          "current_limitation": "只做证据装配与显式溯源：每条 gdt 覆盖都带 covered_by（dimension 或 feature_control_frame）与 ctq_record_id，形位框按「真画上去了 + 挂在实测特征上」计入覆盖，**不**声称核过形位偏差数值（本仓还不测形位偏差）；同一条需求被尺寸与框同时命中时只计一次。图纸特征与 CTQ 的对应关系可由 aipd drawing spec 从 metadata.drawing_feature 生成 ctq_ref（仍不按名字自动映射，linkage 由需求侧显式写），证据里的每条 gdt 都回写 ctq_record_id 指明是对着哪条记录成立的；模型侧只支持从 STEP 数实体，读不到就不写 model_part_count（不折算成 0）；approval_status 由属主填、缺省 unapproved，生产者不代为置 approved；版本不一致只如实记录不对齐；GD&T 形位公差框已可绘制（见 cad.2d_drawings），但叠加/形位声明的自动生成仍未接入；尺寸实测值是否落在 CTQ 合格域内由图纸侧判（cad.2d_drawings 的 spec_limit_issues），本模块不重复判。",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,

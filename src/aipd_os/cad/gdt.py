@@ -170,6 +170,9 @@ def build_gdt_frames(views: Sequence[Any], spec: dict[str, Any] | None
                 "text": "|".join(comps),
                 "height_mm": COMPARTMENT_HEIGHT,
                 "width_mm": sum(compartment_width(c) for c in comps),
+                # 这一格答的是哪条需求：优先取 gdt 条目自带的引用（由 CTQ 生产者写入），
+                # 手写声明没有就留空——空引用只是「不可溯源」，不等于无主，别硬凑一个。
+                "ctq_ref": str(entry.get("ctq_ref") or decl.get("ctq_ref") or ""),
             })
     return frames, issues, unmatched
 
