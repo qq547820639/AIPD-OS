@@ -254,6 +254,6 @@ grep -rn "build_rfq_dispatcher\|OutboxQueue(" src/aipd_os | grep -v "side_effect
 | 门禁 | 读数 |
 | --- | --- |
 | 全量 `pytest -q --json-report` | **1426 passed / 0 failed / 3 skipped** |
-| 本轮新增/改写用例 | 12（reconciliation 8 + duration 4；并把 1 条恒真断言换成可失败形状） |
+| 本轮新增/改写用例 | 14（`test_outbox_reconciliation.py` 10 + 耗时 4，`--collect-only` 现算）；另有 1 条恒真断言换成可失败形状 |
 | `ruff` / `mypy` | 0 / 0（371 文件） |
 | `production_release_gate --release-ready --tag v5.6.0` | 见本部分末尾（8/8 = v5.6.0 那棵树，非本轮树） |
