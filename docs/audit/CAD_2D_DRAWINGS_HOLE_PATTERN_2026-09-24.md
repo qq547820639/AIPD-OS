@@ -16,9 +16,11 @@
 | 全能力分布 | fully 36 / partially 28 / external 13 / 其余 0（共 77） | `docs/audit/capability_matrix.json` |
 | 图纸用例 | 27 passed | `tests/test_cad_drawings2d.py` |
 | CAD 黄金闭环用例 | 18 passed（新增 6 条） | `tests/test_cad_golden_loop.py` |
-| 全量回归 | **1323 passed / 0 failed / 3 skipped**（清单重算后复跑） | 重算前那 2 条哈希失败见 §6 |
+| 全量回归 | **1336 passed / 0 failed / 3 skipped** | 收尾复跑（清单重算后） |
 | F-CAD-01 | 已修 + 已入门禁 + 已配反证 | §5 |
-| ruff（`src tests state_service`）/ mypy（359 文件） | 0 项 | CI 作用域 |
+| F-STATE-05 | 已复现（5 处）+ 已修 + 配对对照（11 passed） | §8 |
+| ruff（`src tests state_service`）/ mypy（360 文件） | 0 项 | CI 作用域 |
+| 发布门 / 性能门 / skill 自审 | 8/8 绿 · PASS（比值 0.0161） · 0 警告 0 失败 | §6、§9 命令 |
 
 ---
 
@@ -203,7 +205,8 @@ BOM 数量与模具摊销/成本核算跟着错，图纸也是错图的忠实投
 ## 9. 复算入口
 
 ```bash
-.venv/bin/python -m pytest -q tests/test_cad_drawings2d.py tests/test_cad_golden_loop.py
+.venv/bin/python -m pytest -q tests/test_cad_drawings2d.py tests/test_cad_golden_loop.py \
+  tests/test_ddl_transaction_atomicity.py
 .venv/bin/python scripts/capability_matrix.py --repo . --out docs/audit
 .venv/bin/python scripts/skill_quality_audit.py
 .venv/bin/python -m aipd_os.cli.main drawing generate \
