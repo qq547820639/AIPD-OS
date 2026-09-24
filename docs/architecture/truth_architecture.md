@@ -47,6 +47,17 @@ trust_level / effective_at / expires_at / version / status / metadata），
 沿同一条血缘图计算。诚实性约束：没有执行器时不返回假成功
 （`run_rework(rework_fn=None)` → `blocked`，绝不 bump 版本）。
 
+**可达性现状（2026-09-25，F-TRUTH-PROP-01）**：传播这一半已从产品面走得到——
+`aipd truth propagate --db <state.db> --project <p> --upstream <id>` 调
+`on_upstream_changed`（标 stale + 生成 `rework_tasks` 有界任务 + 产出 owner 可读四段
+变更说明），`aipd truth tasks` 只读列待办。返工的**执行**（`run_rework`）仍然没有任何
+产品调用点，因为本仓没有真实返工执行器；这不是遗漏而是刻意选择——一条在没有执行器时
+唯一可能输出的就是 `blocked` 的命令，比没有命令更容易被读成「返工跑过了」。该缺口由
+`tests/test_truth_propagate_cli.py::TestUnwiredHalfStaysVisible` 以 AST 扫描钉住
+（接上执行器那一轮它必须变红，并连同本节与登记里的 `current_limitation` 一起改判）。
+另一处现状：血缘边目前只有 `product_intelligence/gate.commit_snapshot` 会写，所以
+CTQ/图纸/BOM 之间那一段今天传播不到。
+
 ## 2.1 Idea Truth 是 projection，不是第二 Store（v5.8 Commit 14）
 
 `src/aipd_os/idea/projections.py` 的 `IdeaTruthProjection` 是**查询组合**，

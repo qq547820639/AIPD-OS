@@ -87,6 +87,12 @@ B 的诚实性 + A 的实现性；新增第四个未声明的死适配器会被
 - `unresolved` 只报告，不自动创建 deliverable（造出来就是假证据）；
 - `product_truth/PropagationEngine` 仍是 0 调用点：本条走的是 deliverable + fact 这条
   已经接线、且有 CAS 的路，没有把返工预算（`backoff_until`）那套引进来；
+  **带日期的更正（2026-09-25，F-TRUTH-PROP-01）**：「0 调用点」这半句已失效——传播
+  已从 `aipd truth propagate` / `aipd truth tasks` 可达（登记行
+  `product_truth.impact_propagation`）。但这半句的后半**仍然成立**：本条 lab-impact
+  路径走的是 deliverable + fact，并没有改走 truth 的 `rework_tasks`/`backoff_until`
+  预算，两套机制并存这件事本轮也没变。见
+  `docs/audit/TRUTH_PROPAGATION_WIRED_F-TRUTH-PROP-01_2026-09-25.md`；
 - 10 个适配器里 3 个连测试都不引用（`manual.layout` / `supply.supplier-files` /
   `validation.import-evt-dvt-pvt`），本轮只把它们**写进声明表**使其可见，
   没有删除，也没有把它们接进 router（删除属破坏性动作，留给属主裁决）；

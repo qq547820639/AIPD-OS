@@ -420,6 +420,42 @@
   本轮未自行开工。同时更正上一轮收尾时「第 8 片已同步 limitation」这句记录——以 diff 为准。
   证据见 `docs/audit/CAD_DETAIL_VIEWS_F-DRAW-01_2026-09-24.md`；
 
+- **v5.11 F-TRUTH-PROP-01：失效传播从产品面走得到，返工执行刻意仍不可达**：
+  `PropagationEngine`（`product_truth/propagation.py:33`）写了很久但**产品侧 0 调用点**——
+  9 处构造全在测试里，于是「上游需求变了 ⇒ 下游哪些产物要返工」这条链在软件上并不存在，
+  而登记读起来像它存在。声明门禁看不见这类缺口：`registry.py:244` 只验入口字符串能解析成
+  callable，`:287-290` 还明写「入口可调用性不作为降级门槛」，`run_command` 全程没人执行。
+  新增 `aipd truth propagate --db --project --upstream [--reason] [--max-attempts]` 与只读的
+  `aipd truth tasks`：沿血缘标 stale、生成 `rework_tasks` 有界任务、产出 owner 可读四段变更说明
+  （改了什么/为何影响/修复计划/需要批准什么），有下游待返工即 `rc=4`。
+  **`run_rework` 刻意不接**：本仓没有真实返工执行器，引擎在无执行器时唯一产出就是 `blocked`
+  （其 "refusing fake success" 分支），一条永远不会成功的命令比没有命令更容易被读成
+  「返工跑过了」；这一半缺口由 AST 级可达性断言钉住（扫代码引用而非子串——docstring 与
+  `--help` 都要提到这个名字，子串扫描会把「写清楚了没接」误判成「已经接了」，而这两种情况
+  的处置正好相反）。触发位置三选一时排除了「挂 `gate.commit_snapshot`」：它自己在产品侧也是
+  0 调用点（`src/aipd_os/cli/` 命中 0），挂上去只是把不可达上移一层，而让它可从 CLI 触达要动
+  「AI 不自批」那条批准不变量。外部只真读了一页（阿里云 Flink 物化表：刷新分 continuous /
+  工作流定时 / 人工 Trigger Update，不谈 stale 标记），据此取「人工显式触发」那一档；
+  另两轮检索（ECN affected items、OpenLineage 下游失效）只拿到术语表与营销页，无可复用实现，
+  如实记下。
+  「本次新置 stale」与「此前已 stale」分两栏报：引擎的 `stale` 只含新置的，第二次传播时空列表
+  若原样转述就等于把「早就过期、还欠返工」说成「没影响」；`ok` 只对完全没有下游待返工为真。
+  顺手量到并修掉引擎一个真实缺陷：`rework_tasks.task_id` 是全局主键，而 `_next_task_id` 原先按
+  tenant/project 取 max ⇒ 两个项目各自算出同一个 `RW-001`，第二条插入撞 `UNIQUE constraint`
+  （跨项目实跑撞到，正是作用域用例先发现的）；改为按整表分配，作用域隔离仍由两列负责。
+  读-算-插之间没有加锁，多进程并发仍可能撞号——这一半没做，登记行的 `current_limitation`
+  与本文件都写明「本仓按单写者假设运行」。
+  18 条新用例 `tests/test_truth_propagate_cli.py`；12 条变异里 **T9 首轮幸存**
+  （`truth tasks` 被改成顺手推进任务状态却测不出，因为断言写的是「列两次结果相同」——
+  两次都读到被推进后的值），补成「库里绝对状态仍是 pending」后被杀；其余 11 条各由点名用例杀掉。
+  同一趟把描述这件事的散文全部改完（第 9 片刚记下的教训）：登记新行
+  `product_truth.impact_propagation`、改 `industrialize.physical_writeback` 里那句「仍是 0 调用点」、
+  `docs/architecture/truth_architecture.md` 补可达性现状、两份审计加带日期的更正指针，并修掉
+  `docs/audit/P0_VERIFICATION_MATRIX.md` 里指向已删除符号 `_default_rework` 的失效行号引用。
+  同类缺口还剩一处本轮未动：`state/stale_propagation.py:43` 的 `StalePropagationService`
+  依然 0 产品调用点（唯一使用者是 `scripts/state_perf_gate.py:237`）。
+  证据见 `docs/audit/TRUTH_PROPAGATION_WIRED_F-TRUTH-PROP-01_2026-09-25.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

@@ -55,6 +55,11 @@
 ### P0-10 禁止默认 rework 假成功 — **CONFIRMED**
 - `PropagationEngine._default_rework`(propagation.py:193-194) 恒 `return True`；`run_rework`(132-191) 未传 `rework_fn` 时即 bump 版本 + 标 succeeded——没有真实执行却报告成功。现有测试均显式传 `_ok`/`_failing`，不依赖默认行为。
 - 修复：Change Set 6（无 executor → 立即 blocked + 明确原因，绝不假成功）。
+- **指针更正（2026-09-25）**：上面引用的 `_default_rework`(propagation.py:193-194) 与
+  `run_rework`(132-191) 是**修复前**的位置；`_default_rework` 这个符号后来被整体删掉
+  （见 `FOUNDATION_STABILIZATION_REPORT.md` 的「删 _default_rework 假成功」），现在
+  `propagation.py:177-185` 是「无执行器 → blocked + `refusing fake success`」那条分支。
+  本条作为历史判定保留，引文行号以此次更正为准。
 
 ### P0-11 Manual demo truth 隔离 — **CONFIRMED**
 - `scripts/manual_chain.py _build_defn`(:140-220) 在 facts 缺失时回退到**外骨骼硬编码事实**：产品名「外骨骼助力系统」(:158)、CMF「金属灰/工程橙/铝合金6061/阳极氧化」(:164,198-201)、工作原理/模块/场景(:175-194)、**伪造性能曲线数据点**(:206-207)、QA(:210-212)、结语(:215-217)。这些是「看起来合理」的产品事实而非 TBD。

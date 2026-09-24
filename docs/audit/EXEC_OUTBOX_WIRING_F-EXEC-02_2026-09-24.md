@@ -193,6 +193,14 @@ grep -rn "build_rfq_dispatcher\|OutboxQueue(" src/aipd_os | grep -v "side_effect
 5. **`PropagationEngine`（带 `backoff_until` 的持久化返工预算）产品侧 0 调用点**：
    `grep` 实测只有它自己 `__init__.py` 的再导出。这是与 outbox 同一类的第四条
    未跟踪遗留，先登记不做。
+   **后续（2026-09-25，F-TRUTH-PROP-01）**：这一条已经落了——传播那半条链从
+   `aipd truth propagate` / `aipd truth tasks` 可达，并新登记为
+   `product_truth.impact_propagation`；`run_rework`（返工的执行）当时判断依然成立：
+   没有真实执行器就刻意不接，缺口由
+   `tests/test_truth_propagate_cli.py::TestUnwiredHalfStaysVisible` 钉住。
+   本轮还顺手量到该引擎一个真实缺陷：`_next_task_id` 原先按 tenant/project 作用域取
+   max，而 `task_id` 是全局主键 ⇒ 两个项目各自算出同一个 `RW-001`，第二条直接撞
+   `UNIQUE constraint failed`（跨项目实跑撞到，已改为按整表分配并补常驻用例）。
 
 ## 10. 修法
 

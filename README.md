@@ -219,6 +219,13 @@ aipd drawing generate --out out/bracket.dxf --part bracket --views TOP --detail 
 #     圆内没有图线 ⇒ 不编号、不画圈，判「放大未收口」并返回 4；母视图名写错直接报错（2）。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
+aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"
+#   ↑ 失效传播：沿血缘把下游 truth 标 stale、生成有界返工任务（rework_tasks，默认上限 3 次），
+#     并给出 owner 可读的四段变更说明（改了什么/为何影响/修复计划/需要批准什么）。
+#     本次新置 stale 与此前已 stale 分两栏报——空的那一栏不等于「没影响」。
+#     有下游待返工即退出码 4。返工的**执行**（run_rework）本仓刻意未接：没有真实执行器时
+#     引擎只判 blocked，绝不伪造成功。
+aipd truth tasks --db state.db --project P [--status pending]     # 只读列返工待办
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据
 aipd validate --manifest manifest.json --target C5    # 验证是否达到目标成熟度
 ```

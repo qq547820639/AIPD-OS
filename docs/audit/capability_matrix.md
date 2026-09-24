@@ -1,10 +1,10 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-25T00:56:52`
+- 生成时间：`2026-09-25T02:30:09`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`c7e4fde2c61d32274d690fb0e6bfd454c4ee8ed6`
+- 默认分支：`main`；HEAD：`a8a68791564b815114e4d151537a66b38124076e`
 - 版本：`5.6.0`
-- 能力总数：`79`
+- 能力总数：`80`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
 
 ## 分类统计
@@ -12,7 +12,7 @@
 | 分类 | 数量 | 说明 |
 | --- | --- | --- |
 | `fully_implemented` | 35 | 完整实现（有真实运行工件与测试证据） |
-| `partially_implemented` | 31 | 部分实现（核心路径可用，边界/证据不全） |
+| `partially_implemented` | 32 | 部分实现（核心路径可用，边界/证据不全） |
 | `protocol_only` | 0 | 仅协议/接口（无真实执行） |
 | `template_only` | 0 | 仅模板/示例（无真实执行） |
 | `external_dependency` | 13 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
@@ -34,6 +34,12 @@
 | stale传播 | `partially_implemented` | references/supervisor-operating-model.md | scripts/aipd_supervisor.py | aipd_supervisor.Supervisor._mark_stale | `aipd run --project <id>` | tests/test_supervisor_execution.py | 仅写 invalidates 血缘标记，不重建/不重排下游工件 |
 | 自动返工 | `partially_implemented` | references/supervisor-operating-model.md | scripts/aipd_supervisor.py | aipd_supervisor.Supervisor.run_supervisor | `aipd run --project <id>` | tests/test_supervisor_execution.py | 复用旧工作项重试，不新建独立返工项，且无返工次数上限 |
 | 只在必要决策时暂停 | `fully_implemented` | references/decision-policy.md | scripts/aipd_supervisor.py | aipd_supervisor.Supervisor.run_supervisor | `aipd run --project <id> --until-decision` | tests/test_execution_router.py; tests/test_decision_policy.py |  |
+
+## 产品事实
+
+| 能力 | 分类 | 声明文件 | 实现文件 | 入口 | 运行命令 | 单元测试 | 当前限制 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 事实失效传播与有界返工 | `partially_implemented` | docs/architecture/truth_architecture.md | src/aipd_os/cli/commands_truth.py | aipd_os.cli.commands_truth.cmd_truth_propagate | `aipd truth propagate --db <state.db> --project <p> --upstream <id>` | tests/test_truth_propagate_cli.py; tests/test_product_truth_propagation.py; tests/test_product_truth_scoping.py | 只接了「传播」这半条链：返工的执行 PropagationEngine.run_rework 在 src/ 里仍是 0 调用点，因为没有真实返工执行器——引擎自身在无执行器时只判 blocked（其 refusing fake success 分支），本仓刻意不提供一条永远不会成功的命令，该缺口由 tests/test_truth_propagate_cli.py::TestUnwiredHalfStaysVisible 钉成断言，接上执行器那一轮必须连同该断言极性一起改判；血缘边目前也只有 product_intelligence/gate.commit_snapshot 会写（PI 需求 -> truth 记录），CTQ/图纸/BOM 之间没有生产者，所以链条更长的那一段今天传播不到；任务号按整表分配（task_id 是全局主键，按 tenant/project 作用域取 max 会让两个项目各自算出同一个 RW-001 并撞唯一约束，本轮跨项目实跑撞到），但读-算-插之间没加锁，多进程并发仍可能撞号，本仓按单写者假设运行；与主管侧 supervisor.auto_rework 是两套机制：那边复用工作项重试且无上限，这边是 truth 侧带 attempts/max_attempts/backoff 的有界返工 |
 
 ## 理论研究
 
@@ -84,7 +90,7 @@
 | DFM/DFA | `fully_implemented` | references/cad-engineering-readiness.md | templates/cad_engineering_manifest.json; scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 公差链 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | GD&T | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
-| 二维图纸 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/cad/drawings2d.py | aipd_os.cli.commands_drawing.cmd_drawing | `aipd drawing generate` | tests/test_cad_drawings2d.py; tests/test_cad_drawings_chain_tolerance.py; tests/test_cad_stackup.py; tests/test_cad_gdt_frames.py; tests/test_cad_section_views.py; tests/test_cad_spec_from_truth.py; tests/test_cad_gdt_deviation.py; tests/test_cad_section_symbols.py | 出图为 DXF 三视图 + 投影测量的总体尺寸/孔径 + 由实测孔心排出的尺寸链（闭合差写进 dimension_chain_check）；公差只能来自 --spec 声明，未声明则不写任何公差，声明落空会判未收口（退出码 4）。隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。一维公差叠加已给出「各段公差带之和 vs 封闭环公差带」的自相矛盾判定（缺任何一环声明即判不可判定，不按 0 折算，也不猜功能限值），但三维/角度叠加与统计分布（Cpk）未做。GD&T 特征控制框（FCF）可按声明绘制并回读：分格框线 + 每格 TEXT + 引线，挂点取实测特征圆心，基准解析不了/特征不存在/类型不认识一律判未收口而不是画半截框；位置度类框已能**数值核对**：声明带 basic（理论精确位置）时拿投影实测圆心算偏差，超带判 position_deviation_exceeded 并退出码 4，没给 basic 则点名 position_basic_missing 而不拿实测当理论；形状/方向类（平面度/垂直度等）需要整面采样，本仓不做，一律标 verified=presence_only 不假称核过。但用的是 drawn 几何而非 DXF TOLERANCE 语义实体——其 content 转义码本轮未找到权威来源核实，故不宣称在各查看器里渲染一致。剖视已能真做（半空间布尔切割 + 剖面材料区量积 + DXF HATCH 填充，切不到材料/边界接不成闭合环/含内环都如实报且不静默填错多边形，切不到材料还判未收口（退出码 4）），但未做剖切符号 A-A 与阶梯剖；仍未实现：局部放大、爆炸图、装配图；尺寸公差声明已有生产者：`aipd drawing spec` 把 Product Truth 里 status=active 的 CTQ 转成 --spec 那份 JSON（必须显式写 metadata.drawing_feature 与 nominal，缺则点名不产出、且缺口未收口时不写文件），出图时还会拿投影实测值反查 CTQ 的绝对合格域（落在域外判 ctq_window_violation 并退出码 4）；GD&T 形位框与基准方案也已能从同一条记录长出（metadata.gdt / metadata.datum_id，同一个特征上「一条给尺寸、一条给形位」合并成一条声明、同类重复则两条都撤回）；仍只吃手写 JSON 的是尺寸链各段与 global_tolerance（CTQ 上一般没有分段要求），且全程不按名字自动映射；剖切符号/局部放大/爆炸图/装配图未做，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。 |
+| 二维图纸 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/cad/drawings2d.py | aipd_os.cli.commands_drawing.cmd_drawing | `aipd drawing generate` | tests/test_cad_drawings2d.py; tests/test_cad_drawings_chain_tolerance.py; tests/test_cad_stackup.py; tests/test_cad_gdt_frames.py; tests/test_cad_section_views.py; tests/test_cad_spec_from_truth.py; tests/test_cad_gdt_deviation.py; tests/test_cad_section_symbols.py; tests/test_cad_detail_views.py | 出图为 DXF 三视图 + 投影测量的总体尺寸/孔径 + 由实测孔心排出的尺寸链（闭合差写进 dimension_chain_check）；公差只能来自 --spec 声明，未声明则不写任何公差，声明落空会判未收口（退出码 4）。隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。一维公差叠加已给出「各段公差带之和 vs 封闭环公差带」的自相矛盾判定（缺任何一环声明即判不可判定，不按 0 折算，也不猜功能限值），但三维/角度叠加与统计分布（Cpk）未做。GD&T 特征控制框（FCF）可按声明绘制并回读：分格框线 + 每格 TEXT + 引线，挂点取实测特征圆心，基准解析不了/特征不存在/类型不认识一律判未收口而不是画半截框；位置度类框已能**数值核对**：声明带 basic（理论精确位置）时拿投影实测圆心算偏差，超带判 position_deviation_exceeded 并退出码 4，没给 basic 则点名 position_basic_missing 而不拿实测当理论；形状/方向类（平面度/垂直度等）需要整面采样，本仓不做，一律标 verified=presence_only 不假称核过。但用的是 drawn 几何而非 DXF TOLERANCE 语义实体——其 content 转义码本轮未找到权威来源核实，故不宣称在各查看器里渲染一致。剖视已能真做（半空间布尔切割 + 剖面材料区量积 + DXF HATCH 填充，切不到材料/边界接不成闭合环/含内环都如实报且不静默填错多边形，切不到材料还判未收口（退出码 4））；剖切符号（母视图上的剖切线 + 指向保留侧的短划 + 两端字母 + 剖面标题 A-A）已按「剖切平面在母视图投影面上的交线」算出并真画，空剖视不编号也不画符号；局部放大图已能出（--detail TOP@(-30,0)/12=2：放大圆与母视图**已判定可见/隐藏**的折线做解析式二维裁剪，母视图上画裁剪圈 + 编号，放大图按「全局比例 × 倍数」画并带 DETAIL n 与比例标题；尺寸只从母视图继承测点落在圆内的那些且保留原名（inherited_from），总尺寸与以零件边缘为锚的链段一律不带入；圆内没有图线即判未收口（退出码 4）且不编号不画圈；它是母视图几何的放大而非重新投影，故母视图的可见/隐藏判定与相切边界原样带过去，母视图允许是剖视但材料区不参与裁剪（从剖视放大的图有线无剖面线），形位框仍只贴在母视图上（框按视图前缀名解析），同一处公差在母视图与放大图各印一次只算一条覆盖凭据）；未做阶梯剖/旋转剖；仍未实现：爆炸图、装配图；尺寸公差声明已有生产者：`aipd drawing spec` 把 Product Truth 里 status=active 的 CTQ 转成 --spec 那份 JSON（必须显式写 metadata.drawing_feature 与 nominal，缺则点名不产出、且缺口未收口时不写文件），出图时还会拿投影实测值反查 CTQ 的绝对合格域（落在域外判 ctq_window_violation 并退出码 4）；GD&T 形位框与基准方案也已能从同一条记录长出（metadata.gdt / metadata.datum_id，同一个特征上「一条给尺寸、一条给形位」合并成一条声明、同类重复则两条都撤回）；仍只吃手写 JSON 的是尺寸链各段与 global_tolerance（CTQ 上一般没有分段要求），且全程不按名字自动映射；爆炸图/装配图未做（需多零件装配模型），剖视的阶梯剖/旋转剖未做，放大图不做重新投影与局部剖，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。 |
 | BOM一致性 | `fully_implemented` | references/manual-to-cad-digital-thread.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 检验计划 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 生产发布门 | `fully_implemented` | references/gate-model.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m> --target <level>` | tests/test_production_release_gate.py |  |
@@ -102,7 +108,7 @@
 | EVT/DVT/PVT数据导入 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/lab.py; src/aipd_os/validation/ingestion.py | aipd_os.supply_chain.lab.import_lab_csv | `aipd validation import --db <state.db> --project <p> --stage dvt --file <csv>（或 aipd industrialize --lab-data <csv>）` | tests/test_supply_chain.py; tests/test_validation_ingestion.py | 导入格式范围有限（PDF/DOCX 报告走 external_blocked 不虚构）；tool_adapters 里的 ValidationDataAdapter 未被产品侧排产，产品面是这两条命令 |
 | 测试失败根因 | `fully_implemented` | references/end-to-end-closure-model.md | src/aipd_os/supply_chain/analysis.py | aipd_os.supply_chain.analysis.analyze_stage | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py |  |
 | 纠正任务 | `fully_implemented` | references/end-to-end-closure-model.md | src/aipd_os/supply_chain/analysis.py | aipd_os.supply_chain.analysis.create_correction_tasks | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py |  |
-| 实体数据回写 | `partially_implemented` | references/end-to-end-closure-model.md; docs/audit/LAB_IMPACT_PROPAGATION_F-SUPPLY-03_2026-09-24.md | src/aipd_os/supply_chain/impact.py; src/aipd_os/cli/commands_validation.py | aipd_os.supply_chain.impact.propagate_lab_impact | `aipd validation import --db <state.db> --project <p> --stage dvt --file <lab.csv>` | tests/test_lab_impact_propagation.py | 匹配按 BOM 行 item 归一化全等，不做子串或父子链推断；未关联 deliverable 的行只如实报告 unresolved（不代造制品），此时命令 exit 4 不静默通过；released/archived 制品不被回溯改写，返工范围由人决定；product_truth 的 PropagationEngine 仍是 0 调用点，本条走的是 deliverable+fact 这条已接线的路 |
+| 实体数据回写 | `partially_implemented` | references/end-to-end-closure-model.md; docs/audit/LAB_IMPACT_PROPAGATION_F-SUPPLY-03_2026-09-24.md | src/aipd_os/supply_chain/impact.py; src/aipd_os/cli/commands_validation.py | aipd_os.supply_chain.impact.propagate_lab_impact | `aipd validation import --db <state.db> --project <p> --stage dvt --file <lab.csv>` | tests/test_lab_impact_propagation.py | 匹配按 BOM 行 item 归一化全等，不做子串或父子链推断；未关联 deliverable 的行只如实报告 unresolved（不代造制品），此时命令 exit 4 不静默通过；released/archived 制品不被回溯改写，返工范围由人决定；product_truth 的失效传播已从 aipd truth propagate / aipd truth tasks 可达（见 product_truth.impact_propagation），但返工的执行 run_rework 仍是 0 调用点；本条走的是 deliverable+fact 这条已接线的路 |
 | 认证状态 | `partially_implemented` | references/quality-and-claim-governance.md | src/aipd_os/supply_chain/certification.py | aipd_os.supply_chain.certification.CertificationRegistry | `aipd industrialize` | tests/test_certification.py | 状态机确定性实现，证书真实性仍需外部权威核验 |
 
 ## 跨会话与用户体验
