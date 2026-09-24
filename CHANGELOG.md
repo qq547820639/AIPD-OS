@@ -34,7 +34,8 @@
   可见线 + 隐藏线（逐点射线遮挡，实测本 OCCT 构建的 `HCompound()` 恒空）、
   尺寸与孔径全部由投影几何测量（Kåsa 圆拟合 + 角向覆盖判整圆），带标题栏与
   `<name>.evidence.json` 证据 sidecar；内核缺失时返回 HOLD 外部任务包不外推。
-  边界与未实现项（GD&T/尺寸链/剖视/爆炸图/装配图、相切轮廓单侧）见
+  边界与未实现项（**改前**：GD&T/尺寸链/剖视/爆炸图/装配图、相切轮廓单侧；前三项的后续进度见
+  本文件 F-DRAW-01 第 1/2/3/4 片，剖视已交付但剖切符号 A-A/阶梯剖与局部放大/爆炸图/装配图仍未做）见
   `docs/audit/CAD_2D_DRAWINGS_HOLE_PATTERN_2026-09-24.md`；
 - **v5.10 修复 F-CAD-01：孔阵参数未实现**：`Workplane.center()` 相对当前笔位偏移且
   `hole()` 不重置笔位，逐点循环使偏移累加——黄金件声明 `hole_count=4` 实测只钻出
@@ -254,6 +255,31 @@
   （4 框 + 4 文字 + 1 引线）、``gdt_issues=[]``；同次运行里 ``rc=4`` 来自叠加矛盾，
   两类门禁互不冒充。11 条新用例、8 条变异全部打破。证据见
   `docs/audit/CAD_GDT_FRAMES_F-DRAW-01_2026-09-24.md`；
+
+- **v5.10 F-DRAW-01 第 4 片：剖视图真做布尔切割，剖面用真 `HATCH` 实体**：改前出图只有六个
+  外部正视图，孔内壁被外壁挡住 ⇒ 一张图看不出孔是不是通孔、壁厚多少。新增
+  `section_view()`：用 `cq.Solid.makeBox` 造半空间切刀做 `solid.cut()`，再走已有的射线遮挡投影，
+  把切出来的材料面投影成闭合多边形并用 `msp.add_hatch()` +
+  `paths.add_polyline_path(..., is_closed=True)` + `set_pattern_fill("ANSI31")` 填成**真 DXF 实体**。
+  两道筛选缺一不可：只按法向平行筛面，会把 `y=10` 的后外壁（实测 100×10=1000mm²）当成剖面、
+  凭空多出一块材料，所以再加「面心到剖切平面的距离 ≤ `SECTION_PLANE_TOL`」。
+  三条不静默的口径：① 接不成闭合环就不填并点名（OCP 的 `wire.Edges()` **无序**，实测顺次拼接
+  会得到自交折线、shoelace 面积算成 0 或半值，故 `_chain_loop` 按端点接环，接不上返回
+  `(部分, False)`）；② 切不到材料 ⇒ `section_empty` + `section_issues` + 未收口（exit 4），
+  不交空白剖视当成果；③「切到了面但边界全断」与「没切到材料」两套措辞分开，原因不能说反。
+  含内环的材料区本轮只填外边界并明说面积会被高估（没做带孔净面积）。
+  取证（本机实装包源码 + 实测，非记忆）：`set_pattern_fill` 实际定义在
+  `ezdxf/entities/polygon.py:270`（`Hatch` 类自己**没有**这个方法）、`add_polyline_path` 在
+  `entities/boundary_paths.py:212`、ANSI31 定义在 `tools/_iso_pattern.py:76`；最小文档实测
+  存盘标签含 `2=ANSI31`、`70=0`、`91=1`、`93=4`、**`75=1`（pattern line 确实写入）**、
+  `45=-2.2450640303` ⇒ 填的是图案线定义而不是一个图案名。检索到的 OCC HLR/布尔与 ezdxf
+  资料均为博客级、ezdxf 文档页 fetch 返回 404，未作为实现依据；
+  真机（黄金件 `--section Y=0 --section Z=50`）：`SECTION_Y` 材料区 5 个 / **676.0mm²**，
+  DXF 读回 `HATCH` 5 个全为 ANSI31、边界面积逐条 `[120,120,120,158,158]` 与证据**逐字一致**、
+  `recover` audit **0 错 0 修**；`Z=50` 那一刀打印「剖切平面 Z=50 没切到任何材料」并 `rc=4`。
+  顺带把 GD&T 格宽公式收成一处（`compartment_width`，框证据新增 `width_mm`），
+  并用例钉住「记录宽度 == 图上实际跨度」。12 + 1 条新用例、8 条变异全部打破。证据见
+  `docs/audit/CAD_SECTION_VIEWS_F-DRAW-01_2026-09-24.md`；
 
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），

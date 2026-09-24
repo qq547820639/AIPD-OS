@@ -191,6 +191,10 @@ aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket -
 #     "diametral": true, "datums": ["A","B"]}]，配顶层 "datums":
 #     [{"id": "A", "feature": "TOP.hole_1"}] ⇒ 画 GD&T 特征控制框，引线挂到实测孔心；
 #     基准解析不到、特征不存在或类型不认识即判未收口（4），不画半截框。
+aipd drawing generate --out out/bracket.dxf --part bracket --views FRONT,TOP --section Y=0
+#   ↑ 剖视是真做的布尔切割：`--section X|Y|Z=偏移` 保留 ≥ 偏移的一侧，切出的材料面
+#     用 DXF `HATCH`（ANSI31 图案线）填剖面线，`material_area_mm2` 由内核量得；
+#     切不到材料/边界接不成闭合环 ⇒ 明说原因并判未收口（4），不交空白剖视当成果。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据

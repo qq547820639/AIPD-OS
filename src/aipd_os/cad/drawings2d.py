@@ -31,8 +31,17 @@
 - **公差只来自声明**：没有 spec 就一个公差不写；spec 里写了但图上没有的特征进
   ``spec_unmatched_features`` 点名，绝不静默少标。
 
-明确**未实现**（不要当成已具备）：GD&T 形位公差框、公差叠加分析（链已给出但只做
-闭合核对、不做统计叠加）、剖视与局部放大、爆炸图、多零件装配图。
+- **GD&T 特征控制框**按 ``--spec`` 声明绘制（见 ``cad.gdt``）：分格框线 + 每格 TEXT +
+  引线，引线终点取**实测**孔心；基准解析不了就点名并判未收口，不画半截框。
+- **一维公差叠加**（见 ``cad.stackup``）：各段公差带之和超过封闭环自己声明的带 ⇒ 图纸
+  自相矛盾。缺任何一环声明判「不可判定」，不按 0 折算，也不猜功能限值。
+- **剖视**走真布尔切割（``section_view``：半空间 cut + 剖面材料区量积 + DXF ``HATCH``
+  ANSI31）。剖面区只取「法向平行 **且** 面心落在剖切平面上」的面——实测只筛法向会把
+  后外壁（100×10=1000mm²）当成剖面，凭空多出一块材料。
+
+明确**未实现**（不要当成已具备）：局部放大图、爆炸图、多零件装配图；剖视未做剖切符号
+（A-A 箭头）与阶梯剖；叠加未做三维/角度与分布型统计（Cpk）；GD&T 用的是 drawn 几何
+而非 DXF ``TOLERANCE`` 语义实体（其 ``content`` 转义码无权威来源，见 ``cad.gdt`` docstring）。
 见 registry 的 ``current_limitation``。
 """
 from __future__ import annotations
@@ -40,6 +49,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -68,6 +78,19 @@ OCCLUSION_EPS = 1e-4             # 射线起点沿视线方向外推，避免自
 HIDDEN_LINE_METHOD = ("ray-occlusion classification over projected edges; "
                       "OCCT HCompound returned no hidden set in this build")
 
+# 剖视：轴向 -> (保留侧的单位法向, 观察方向=指向观察者, 图纸上的「上」)。
+# 约定：切去 ``dot(p,n) < offset`` 的一侧，观察者站在被切掉那一侧看剖面，
+# 因此 ``normal`` 指向观察者时正好是剖面的外法向（``SECTION_BASIS[axis]`` 的
+# 观察方向 = -n）。实测：Y 轴剖切与 FRONT 用同一组基 ⇒ 剖面无缩短。
+SECTION_AXIS_NORMAL = {"X": (1.0, 0.0, 0.0), "Y": (0.0, 1.0, 0.0), "Z": (0.0, 0.0, 1.0)}
+SECTION_BASIS = {
+    "X": ((-1.0, 0.0, 0.0), (0.0, 0.0, 1.0)),
+    "Y": ((0.0, -1.0, 0.0), (0.0, 0.0, 1.0)),
+    "Z": ((0.0, 0.0, 1.0), (0.0, 1.0, 0.0)),
+}
+SECTION_PLANE_TOL = 1e-6       # 判定「这个面就落在剖切平面上」
+SECTION_KEEP_LABEL = {"X": "x>=", "Y": "y>=", "Z": "z>="}
+
 DIMSTYLE = "EZ_M_100_H25_CM"
 DIM_ROW_GAP = 10.0        # 无尺寸链时总体宽尺寸的引出距离
 CHAIN_ROW_GAP = 12.0      # 尺寸链行距零件下沿
@@ -88,6 +111,10 @@ class ViewGeometry:
     bbox: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)  # minx, miny, maxx, maxy
     chain_check: dict[str, Any] = field(default_factory=dict)
     dimensions: list[dict[str, Any]] = field(default_factory=list)
+    cut_regions: list[list[tuple[float, float]]] = field(default_factory=list)
+    section_of: dict[str, Any] | None = None
+    nested_region_wires: int = 0
+    section_problems: list[str] = field(default_factory=list)
 
     @property
     def width(self) -> float:
@@ -400,6 +427,171 @@ def build_view(model: Any, name: str,
     return view
 
 
+def parse_section_spec(spec: str) -> tuple[str, float]:
+    """解析 ``--section "Y=0"``；轴不认识或偏移不是数就抛 ValueError（不外推）。"""
+    axis, sep, raw = str(spec).partition("=")
+    axis = axis.strip().upper()
+    if not sep or axis not in SECTION_AXIS_NORMAL:
+        raise ValueError(f"剖切写法必须是 X/Y/Z=偏移，实得 {spec!r}")
+    try:
+        offset = float(raw.strip() or "0.0")
+    except ValueError as exc:
+        raise ValueError(f"剖切偏移不是数：{spec!r}") from exc
+    return axis, offset
+
+
+def section_view(model: Any, name: str, axis: str, offset: float = 0.0,
+                 include_hidden: bool = True) -> ViewGeometry:
+    """真做半空间布尔切割，再按剖切面方向投影，并量出剖面上的材料区。
+
+    材料区 = **既满足法向平行、又满足面心落在剖切平面上**的那些面的外环投影。
+    只按法向筛会把与剖面平行的外壁（实测本件 100×10=1000mm²）当成剖面，
+    凭空多出一块材料 —— 所以第二道距离筛选不能省。
+    """
+    import cadquery as cq
+
+    axis = str(axis).strip().upper()
+    if axis not in SECTION_AXIS_NORMAL:
+        raise ValueError(f"未知剖切轴 {axis!r}；可用：{sorted(SECTION_AXIS_NORMAL)}")
+    n = SECTION_AXIS_NORMAL[axis]
+    direction, up = SECTION_BASIS[axis]
+
+    shape = _topo_shape(model)
+    solid = shape if isinstance(shape, cq.Solid) else cq.Solid(shape)
+    bb = solid.BoundingBox()
+    diag = max(math.sqrt(bb.xlen ** 2 + bb.ylen ** 2 + bb.zlen ** 2), 1.0)
+    big = 10.0 * diag
+    idx = {"X": 0, "Y": 1, "Z": 2}[axis]
+    low = [bb.xmin, bb.ymin, bb.zmin]
+    high = [bb.xmax, bb.ymax, bb.zmax]
+    corner = list(low)
+    corner[idx] = offset - big
+    size = [2.0 * big, 2.0 * big, 2.0 * big]
+    size[idx] = big
+    for k in (0, 1, 2):
+        if k != idx:
+            pad = (high[k] - low[k]) + 2.0 * big
+            corner[k] = low[k] - big
+            size[k] = pad
+    cutter = cq.Solid.makeBox(size[0], size[1], size[2], cq.Vector(*corner))
+    cut = solid.cut(cutter)
+
+    basis = view_basis(direction, up)
+    right, upv = basis["right"], basis["up"]
+
+    def project(p: Any) -> tuple[float, float]:
+        x, y, z = (p[0], p[1], p[2]) if isinstance(p, tuple) else (p.x, p.y, p.z)
+        return (x * right[0] + y * right[1] + z * right[2],
+                x * upv[0] + y * upv[1] + z * upv[2])
+
+    view = build_view(cut, name, direction, up, include_hidden=include_hidden)
+    regions: list[list[tuple[float, float]]] = []
+    problems: list[str] = []
+    nested = 0
+    matched = 0
+    for face in cut.Faces():
+        normal = face.normalAt()
+        parallel = abs(normal.x * n[0] + normal.y * n[1] + normal.z * n[2])
+        centre_along = (face.Center().x * n[0] + face.Center().y * n[1]
+                        + face.Center().z * n[2])
+        if parallel < 1.0 - SECTION_PLANE_TOL or abs(centre_along - offset) > SECTION_PLANE_TOL:
+            continue
+        wires = face.Wires()
+        if not wires:
+            continue
+        matched += 1
+        projected = [(_projected_wire(w, project), w) for w in wires]
+        outer_pair, _ = max(projected, key=lambda pair: _polygon_area(pair[0][0]))
+        poly, closed = outer_pair
+        if not closed:
+            centre = face.Center()
+            problems.append(f"材料区（面心 ({centre.x:g}, {centre.y:g}, {centre.z:g})）"
+                            f"的边界接不成闭合环，已跳过填充")
+            continue
+        regions.append(poly)
+        if len(wires) > 1:
+            nested += len(wires) - 1
+            problems.append(f"材料区含 {len(wires) - 1} 个内环，本轮只填外边界，"
+                            f"孔/槽面积会被高估")
+
+    if not regions:
+        if matched:
+            problems.append(f"剖切平面 {axis}={offset:g} 切到 {matched} 个材料面，"
+                            f"但边界都接不成闭合环，未填剖面线")
+        else:
+            problems.append(f"剖切平面 {axis}={offset:g} 没切到任何材料")
+    view.cut_regions = regions
+    view.nested_region_wires = nested
+    view.section_problems = problems
+    view.section_of = {"axis": axis, "offset": float(offset),
+                       "kept": f"{SECTION_KEEP_LABEL[axis]}{float(offset):g}",
+                       "normal": [n[0], n[1], n[2]]}
+    return view
+
+
+def _polygon_area(poly: list[tuple[float, float]]) -> float:
+    if len(poly) < 3:
+        return 0.0
+    total = 0.0
+    for i in range(len(poly)):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % len(poly)]
+        total += x1 * y2 - x2 * y1
+    return abs(total) / 2.0
+
+
+def _same(a: tuple[float, float], b: tuple[float, float]) -> bool:
+    return abs(a[0] - b[0]) < 1e-6 and abs(a[1] - b[1]) < 1e-6
+
+
+def _chain_loop(segments: list[list[tuple[float, float]]]
+                ) -> tuple[list[tuple[float, float]], bool]:
+    """把无序的边段接成一条闭合环。
+
+    OCP 给的 wire.Edges() **不是**按绕行顺序排的（实测第 1 条边终点接不上第 2 条边起点），
+    直接顺次拼接会得到自交的折线、shoelace 面积算出 0 或半值。接不上就返回 ``(部分, False)``，
+    由调用方如实报「这一区没填」，不静默填一个错多边形。
+    """
+    segs = [s for s in segments if len(s) >= 2]
+    if not segs:
+        return [], False
+    loop = list(segs[0])
+    rest = segs[1:]
+    while rest:
+        for i, seg in enumerate(rest):
+            if _same(seg[0], loop[-1]):
+                loop.extend(seg[1:])
+            elif _same(seg[-1], loop[-1]):
+                loop.extend(list(reversed(seg))[1:])
+            elif _same(seg[-1], loop[0]):
+                loop = seg[:-1] + loop
+            elif _same(seg[0], loop[0]):
+                loop = list(reversed(seg))[:-1] + loop
+            else:
+                continue
+            rest.pop(i)
+            break
+        else:
+            return loop, False
+    out: list[tuple[float, float]] = []
+    for pt in loop:
+        if out and _same(out[-1], pt):
+            continue
+        out.append(pt)
+    if len(out) >= 3 and not _same(out[0], out[-1]):
+        out.append(out[0])
+    return out, len(out) >= 4
+
+
+def _projected_wire(wire: Any, project: Any) -> tuple[list[tuple[float, float]], bool]:
+    segments = []
+    for edge in wire.Edges():
+        pts = [project(p) for p in _discretize(edge.wrapped, DEFAULT_DEFLECTION)]
+        if len(pts) >= 2:
+            segments.append(pts)
+    return _chain_loop(segments)
+
+
 def _measure_dimensions(view: ViewGeometry) -> list[dict[str, Any]]:
     """尺寸来自投影几何的测量值：总体宽/高 + 检出孔的直径 + 由孔心排出的尺寸链。
 
@@ -578,6 +770,7 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                             ("DIMENSION", 3, "Continuous"),
                             ("TEXT", 7, "Continuous"),
                             ("GDT", 6, "Continuous"),
+                            ("HATCH", 3, "Continuous"),
                             ("FRAME", 7, "Continuous")):
         if name not in doc.layers:
             doc.layers.add(name, color=color)
@@ -609,6 +802,12 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                        "visible_polylines": len(view.visible),
                        "hidden_polylines": len(view.hidden),
                        "chain_check": view.chain_check,
+                       "section_of": view.section_of,
+                       "cut_regions": len(view.cut_regions),
+                       "material_area_mm2": round(sum(_polygon_area(r)
+                                                      for r in view.cut_regions), 6),
+                       "section_empty": bool(view.section_of) and not view.cut_regions,
+                       "section_problems": list(view.section_problems),
                        "dimensions": view.dimensions})
 
     _draw_title_block(msp, width, height, part_name, revision, scale, material,
@@ -633,6 +832,7 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
             "gdt_issues": gdt_issues,
             "gdt_issue_kinds": sorted({str(i["kind"]) for i in gdt_issues}),
             "gdt_unmatched_features": gdt_unmatched,
+            "section_issues": sorted({msg for v in placed for msg in v["section_problems"]}),
             "bytes": path.stat().st_size,
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             **spec_stats}
@@ -715,8 +915,15 @@ def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float,
         _set_dim_tolerance(dia, c["tolerance"])
         dia.render()
 
+    for poly in view.cut_regions:
+        pts = place(poly)
+        if len(pts) >= 3:
+            hatch = msp.add_hatch(dxfattribs={"layer": "HATCH", "color": 7})
+            hatch.paths.add_polyline_path(pts, is_closed=True)
+            hatch.set_pattern_fill("ANSI31", scale=1.0)
+
     if frames:
-        from aipd_os.cad.gdt import draw_frame, frame_width
+        from aipd_os.cad.gdt import draw_frame
 
         cursor_y = off_y + view.bbox[3] * scale + 10.0
         for frame in frames:
@@ -724,7 +931,7 @@ def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float,
             anchor = (frame["attach"][0] * scale + off_x,
                       frame["attach"][1] * scale + off_y)
             draw_frame(msp, frame, origin, anchor)
-            cursor_y += frame_width(frame) * 0.0 + 14.0
+            cursor_y += 14.0
 
 
 def _draw_title_block(msp: Any, width: float, height: float, part: str, rev: str,
@@ -753,7 +960,8 @@ def generate_drawing(model: Any, out_path: Path | str, *,
                      scale: float = 1.0, material: str = "-",
                      sheet: str = "A3",
                      provenance: dict[str, Any] | None = None,
-                     spec: dict[str, Any] | None = None) -> dict[str, Any]:
+                     spec: dict[str, Any] | None = None,
+                     sections: Sequence[str] = ()) -> dict[str, Any]:
     """端到端：模型 -> 视图 -> DXF -> 证据字典（含哈希与实体统计）。
 
     ``spec`` 只用于声明公差（``{"features": [{"feature": "TOP.hole_2",
@@ -767,6 +975,12 @@ def generate_drawing(model: Any, out_path: Path | str, *,
             raise ValueError(f"未知视图 {name}；可用：{sorted(STANDARD_VIEWS)}")
         direction, up = STANDARD_VIEWS[name]
         built.append(build_view(model, name, direction, up))
+    seen_axes: set[str] = set()
+    for idx, raw in enumerate(sections):
+        axis, offset = parse_section_spec(raw)
+        suffix = "" if axis not in seen_axes else f"_{sorted(seen_axes).index(axis) + idx + 1}"
+        seen_axes.add(axis)
+        built.append(section_view(model, f"SECTION_{axis}{suffix}", axis, offset))
     evidence = write_dxf(built, path, part_name=part_name, revision=revision,
                          scale=scale, material=material, sheet=sheet,
                          provenance=provenance, spec=spec)

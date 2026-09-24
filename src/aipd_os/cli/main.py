@@ -223,6 +223,9 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--scale", type=float, default=1.0, help="比例（1 表示 1:1）")
     dp.add_argument("--material", default="-", help="标题栏材料")
     dp.add_argument("--sheet", default="A3", choices=["A3", "A4"], help="图纸幅面")
+    dp.add_argument("--section", action="append",
+                    help="剖切平面，形如 Y=0（可重复；轴 X/Y/Z，偏移为模型单位）。"
+                         "例：aipd drawing generate --part bracket --views TOP --section Y=0")
     dp.add_argument("--spec", help="公差声明 JSON 路径："
                                    '{"features":[{"feature":"TOP.hole_2",'
                                    '"tolerance":{"upper":0.05,"lower":-0.05}}],'

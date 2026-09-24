@@ -182,3 +182,21 @@ class TestCliHolds:
         assert rc == 4
         printed = capsys.readouterr().out
         assert "GD&T" in printed and "基准 Q" in printed
+
+
+class TestWidthIsOneFormula:
+    def test_recorded_width_matches_the_drawn_compartments(self, tmp_path):
+        """证据里的 ``width_mm`` 必须等于图上四格实际占的横向跨度。
+
+        格宽公式若在「记录」和「绘制」两处各写一份，改一处就会出现「证据说框宽 40mm、
+        图上新框只有 30mm」这类看不出问题的漂移；本用例让这种漂移立刻失败。
+        """
+        ev, out = _gen(tmp_path, _spec(POSITION), name="width")
+        frame = _frames(ev)[0]
+        _, polys, _ = _texts(out)
+        rects = [pl for pl in polys if pl.dxf.layer == "GDT"]
+        xs = [p[0] for pl in rects for p in pl.get_points("xy")]
+        assert frame["width_mm"] == pytest.approx(max(xs) - min(xs), abs=1e-6)
+        per_cell = [max(p[0] for p in pl.get_points("xy"))
+                    - min(p[0] for p in pl.get_points("xy")) for pl in rects]
+        assert sum(per_cell) == pytest.approx(frame["width_mm"], abs=1e-6)

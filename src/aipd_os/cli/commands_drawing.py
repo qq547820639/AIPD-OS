@@ -98,7 +98,8 @@ def cmd_drawing(args):
             model, out, part_name=args.part, revision=args.revision,
             views=tuple(v.strip() for v in args.views.split(",") if v.strip()),
             scale=args.scale, material=args.material, sheet=args.sheet,
-            provenance=provenance, spec=spec)
+            provenance=provenance, spec=spec,
+            sections=tuple(getattr(args, "section", None) or ()))
     except ValueError as exc:
         print(f"出图参数不合法：{exc}")
         return 2
@@ -107,6 +108,7 @@ def cmd_drawing(args):
     stackups = evidence.get("stackup_check") or {}
     gdt_issues = list(evidence.get("gdt_issues") or [])
     gdt_unmatched = list(evidence.get("gdt_unmatched_features") or [])
+    section_issues = list(evidence.get("section_issues") or [])
 
     def prose():
         print(f"已出图：{out}（{evidence['sheet']} 1:{evidence['scale']}，"
@@ -119,6 +121,11 @@ def cmd_drawing(args):
                 print(f"         尺寸链 {check['segments']} 段，"
                       f"各段之和 {check['sum']} vs 总体宽 {check['overall_width']}，"
                       f"闭合差 {check['delta']}")
+            section_of = view.get("section_of")
+            if section_of:
+                print(f"         剖切 {section_of['axis']}={section_of['offset']:g}"
+                      f"（保留 {section_of['kept']}）：材料区 {view['cut_regions']} 个 / "
+                      f"{view['material_area_mm2']}mm²，剖面线 {view['cut_regions']} 条")
         print(f"公差：声明 {len(evidence.get('spec_declared_features') or [])} 项、"
               f"落到图上 {evidence.get('tolerance_applied', 0)} 处"
               f"（无声明则不写任何公差）")
@@ -150,9 +157,12 @@ def cmd_drawing(args):
                   f"{(' 类型 ' + issue['characteristic']) if issue.get('characteristic') else ''}")
         if gdt_unmatched:
             print(f"  GD&T 未收口：声明了框但图上没有这些特征：{gdt_unmatched}")
+        for msg in section_issues:
+            print(f"  剖视未收口：{msg}")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
-        print("未含 GD&T 形位公差框/剖视/局部放大，见 capability cad.2d_drawings 的 limitation。")
+        print("未含剖切符号 A-A/阶梯剖/局部放大/爆炸图，"
+              "详见 capability cad.2d_drawings 的 limitation。")
     _emit(args, evidence, prose)
     held = bool(unmatched or evidence.get("stackup_inconsistent") or gdt_issues
-                or gdt_unmatched)
+                or gdt_unmatched or section_issues)
     return 4 if held else 0

@@ -169,13 +169,18 @@ def build_gdt_frames(views: Sequence[Any], spec: dict[str, Any] | None
                 "compartments": comps,
                 "text": "|".join(comps),
                 "height_mm": COMPARTMENT_HEIGHT,
+                "width_mm": sum(compartment_width(c) for c in comps),
             })
     return frames, issues, unmatched
 
 
+def compartment_width(comp: Any) -> float:
+    """一格多宽：文字宽度与最小格宽取大者。格宽公式**只有这一处**。"""
+    return max(MIN_COMPARTMENT_WIDTH, CHAR_WIDTH * len(str(comp)))
+
+
 def frame_width(frame: dict[str, Any]) -> float:
-    return sum(max(MIN_COMPARTMENT_WIDTH, CHAR_WIDTH * len(str(c)))
-               for c in frame["compartments"])
+    return sum(compartment_width(c) for c in frame["compartments"])
 
 
 def draw_frame(msp: Any, frame: dict[str, Any], origin: tuple[float, float],
@@ -188,7 +193,7 @@ def draw_frame(msp: Any, frame: dict[str, Any], origin: tuple[float, float],
 
     x, y = origin
     for comp in frame["compartments"]:
-        width = max(MIN_COMPARTMENT_WIDTH, CHAR_WIDTH * len(str(comp)))
+        width = compartment_width(comp)
         msp.add_lwpolyline([(x, y), (x + width, y), (x + width, y + COMPARTMENT_HEIGHT),
                             (x, y + COMPARTMENT_HEIGHT)], close=True,
                            dxfattribs={"layer": "GDT"})
