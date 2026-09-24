@@ -14,12 +14,12 @@ Semantic Scholar Graph API 公开搜索端点**无需 key**；``AIPD_RESEARCH_AP
 from __future__ import annotations
 
 import json
-import urllib.error
 import urllib.parse
-import urllib.request
 from typing import Any, cast
 
 from aipd_os.execution.adapter import ToolAdapter, external_blocked_error
+from aipd_os.net.http import HttpError
+from aipd_os.net.http import request as http_request
 from aipd_os.tool_adapters._common import env, meta, token_meta
 
 _API_KEY_ENV = "AIPD_RESEARCH_API_KEY"
@@ -77,10 +77,12 @@ class ResearchAdapter(ToolAdapter):
         if api_key:
             # 配置语义 == 网络调用语义：key 真实用于请求头（私有/高配额端点）。
             headers["x-api-key"] = api_key
-        req = urllib.request.Request(url, headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=_REQUEST_TIMEOUT_S) as resp:
-                raw = resp.read().decode("utf-8")
+            resp = http_request(url, headers=headers, timeout=_REQUEST_TIMEOUT_S,
+                                max_attempts=2)
+            if not 200 <= resp.status < 300:
+                raise HttpError(f"HTTP {resp.status}: {resp.text[:200]}")
+            raw = resp.text
         except Exception as exc:  # noqa: BLE001 - HTTP/超时/网络错误统一转 external_blocked
             raise external_blocked_error(
                 self.capability_id(),

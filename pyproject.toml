@@ -35,6 +35,9 @@ server = [
 full = [
     "pillow",
     "reportlab",
+    # requests：自 F-NET-01 起 src/ 侧 HTTP 出口已收敛到标准库
+    # `aipd_os.net.http`，本项仅供 scripts/research/ 的连接器使用
+    # （它要给第三方自有的 requests.Session 挂超时与重试策略）。
     "requests",
     "pyyaml",
 ]

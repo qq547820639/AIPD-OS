@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-24T14:15:59",
+  "generated_at": "2026-09-24T15:15:26",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "f8e614864bd56d1d2e9c2a6a1d89b4f18023feb3",
-  "source_commit": "f8e614864bd56d1d2e9c2a6a1d89b4f18023feb3",
+  "latest_commit_sha": "1ed5eeb17502c13dbc8e116e87c2e3db26a3b556",
+  "source_commit": "1ed5eeb17502c13dbc8e116e87c2e3db26a3b556",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",

@@ -167,7 +167,8 @@ def _default_http_client(cfg: ModelEvalConfig) -> ClientFn:
     """
 
     def caller(sample: str, cfg_: ModelEvalConfig) -> dict[str, Any]:
-        import requests  # type: ignore[import-untyped]
+        from aipd_os.net.http import HttpError
+        from aipd_os.net.http import request as http_request
 
         url = cfg_.base_url.rstrip("/")
         if not url.endswith("/chat/completions"):
@@ -177,9 +178,11 @@ def _default_http_client(cfg: ModelEvalConfig) -> ClientFn:
             "messages": [{"role": "user", "content": sample}],
             "stream": False,
         }
-        headers = {"Authorization": f"Bearer {cfg_.api_key}", "Content-Type": "application/json"}
-        resp = requests.post(url, json=payload, headers=headers, timeout=cfg_.timeout)
-        resp.raise_for_status()
+        headers = {"Authorization": f"Bearer {cfg_.api_key}"}
+        resp = http_request(url, method="POST", json_body=payload,
+                            headers=headers, timeout=cfg_.timeout)
+        if not 200 <= resp.status < 300:
+            raise HttpError(f"HTTP {resp.status}: {resp.text[:500]}")
         data = resp.json()
         usage = data.get("usage") or {}
         content = data["choices"][0]["message"]["content"]

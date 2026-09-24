@@ -5,17 +5,17 @@
 本模块提供与业务无关的 ``/chat/completions`` 调用能力，供 product
 intelligence 与 idea decompose 的 LLM Provider 复用。
 
-仅使用标准库 ``urllib.request``，不新增任何第三方运行时依赖。
+仅使用标准库（经 ``aipd_os.net.http`` 这一统一出口），不新增任何第三方运行时依赖。
 
 诚实原则：endpoint 或 api_key 为空时，:meth:`LlmClient.complete` 抛
 :class:`LlmNotConfiguredError`（诚实标记外部依赖），绝不伪造输出。
 """
 from __future__ import annotations
 
-import json
-import urllib.error
-import urllib.request
 from typing import Any
+
+from aipd_os.net.http import HttpError
+from aipd_os.net.http import request as http_request
 
 # 模型名未显式配置时的合理默认（OpenAI 兼容的轻量模型名）。
 DEFAULT_MODEL = "gpt-4o-mini"
@@ -34,11 +34,13 @@ class LlmClient:
         api_key: str,
         model: str,
         timeout: float = 60.0,
+        max_attempts: int = 1,
     ) -> None:
         self.endpoint = endpoint
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
+        self.max_attempts = max_attempts
 
     @property
     def configured(self) -> bool:
@@ -51,6 +53,8 @@ class LlmClient:
         :param messages: ``[{"role": ..., "content": ...}, ...]`` 消息列表
         :raises LlmNotConfiguredError: endpoint 或 api_key 为空
         :raises RuntimeError: 非 200 / 网络异常 / 响应无法解析
+
+        endpoint 的 scheme 由 :mod:`aipd_os.net.http` 统一校验（只允许 http/https）。
         """
         if not self.endpoint or not self.api_key:
             raise LlmNotConfiguredError(
@@ -62,39 +66,25 @@ class LlmClient:
             "messages": messages,
             "temperature": 0.2,
         }
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        request = urllib.request.Request(
-            self.endpoint,
-            data=body,
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as resp:
-                status = resp.getcode()
-                raw = resp.read().decode("utf-8", errors="replace")
-        except urllib.error.HTTPError as exc:
-            try:
-                raw = exc.read().decode("utf-8", errors="replace")
-            except Exception:  # noqa: BLE001 - 响应体读取失败也诚实报错
-                raw = ""
-            raise RuntimeError(
-                f"模型端点返回 HTTP {exc.code}: {raw[:500]}") from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"调用模型端点失败: {exc.reason}") from exc
-        except Exception as exc:  # noqa: BLE001 - 网络/IO 异常统一诚实上抛
+            # 计费的外部调用：默认不自动重试（本仓 EXTERNAL_SIDE_EFFECT 同一口径），
+            # 需要时由调用方显式放宽 max_attempts。
+            resp = http_request(
+                self.endpoint, method="POST", json_body=payload,
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                timeout=self.timeout, max_attempts=self.max_attempts)
+        except HttpError as exc:
             raise RuntimeError(f"调用模型端点失败: {exc}") from exc
 
-        if status != 200:
-            raise RuntimeError(f"模型端点返回 HTTP {status}: {raw[:500]}")
+        if resp.status != 200:
+            raise RuntimeError(f"模型端点返回 HTTP {resp.status}: {resp.text[:500]}")
 
         try:
-            data = json.loads(raw)
+            data = resp.json()
             content = data["choices"][0]["message"]["content"]
-        except (ValueError, KeyError, IndexError, TypeError) as exc:
+        except ValueError as exc:
+            raise RuntimeError(f"无法解析模型端点响应: {exc}") from exc
+        except (KeyError, IndexError, TypeError) as exc:
             raise RuntimeError(f"无法解析模型端点响应: {exc}") from exc
         if not isinstance(content, str):
             raise RuntimeError(

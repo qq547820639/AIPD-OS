@@ -18,10 +18,12 @@ import base64
 import json
 import os
 import time
-import urllib.request
 import uuid
 from pathlib import Path
 from typing import cast
+
+from aipd_os.net.http import HttpError
+from aipd_os.net.http import request as http_request
 
 
 class VisionAuditUnavailable(RuntimeError):
@@ -92,18 +94,16 @@ class VisionAuditProvider:
             "context": context or {},
             "response_format": {"type": "json_object"},
         }
-        body = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(self._endpoint(), data=body, method="POST")
-        req.add_header("Content-Type", "application/json")
-        if self.api_key:
-            req.add_header("Authorization", f"Bearer {self.api_key}")
-
+        headers = {} if not self.api_key else {"Authorization": f"Bearer {self.api_key}"}
         trace_id = f"vision-{uuid.uuid4().hex[:12]}"
         t0 = time.monotonic()
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310 - 用户配置的可信端点
-            raw = resp.read()
-            http_status = getattr(resp, "status", 200)
+        resp = http_request(self._endpoint(), method="POST", json_body=payload,
+                            headers=headers, timeout=self.timeout)
         latency_ms = int((time.monotonic() - t0) * 1000)
+        raw = resp.content
+        http_status = resp.status
+        if not 200 <= http_status < 300:
+            raise HttpError(f"HTTP {http_status}: {resp.text[:200]}")
 
         obj = json.loads(raw.decode("utf-8", "replace"))
         usage = obj.get("usage") or {}

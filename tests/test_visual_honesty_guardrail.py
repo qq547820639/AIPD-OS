@@ -139,7 +139,10 @@ def test_vision_provider_rejects_non_bool_passed(tmp_path):
     import urllib.request
 
     class _Resp:
-        status = 200
+        """忠实于真实 urlopen 响应：有 getcode()/headers，read() 接受字节上限。"""
+
+        status: int = 200
+        headers: dict[str, str] = {}
 
         def __enter__(self):
             return self
@@ -147,7 +150,10 @@ def test_vision_provider_rejects_non_bool_passed(tmp_path):
         def __exit__(self, *exc):
             return False
 
-        def read(self) -> bytes:
+        def getcode(self) -> int:
+            return self.status
+
+        def read(self, *_: object) -> bytes:
             return _json.dumps({
                 "choices": [{"message": {"content":
                     _json.dumps({"passed": "false", "score": 0.9})}}],

@@ -48,6 +48,9 @@ class _FakeResponse:
     def __init__(self, status: int = 200, body: bytes = b"") -> None:
         self._status = status
         self._body = body
+        # 真实 urlopen 响应总是带 .headers，且 read() 接受字节数上限；
+        # 夹具必须同形，否则测的是替身而不是契约。
+        self.headers: dict[str, str] = {}
 
     def __enter__(self) -> _FakeResponse:
         return self
@@ -58,7 +61,7 @@ class _FakeResponse:
     def getcode(self) -> int:
         return self._status
 
-    def read(self) -> bytes:
+    def read(self, *_: Any) -> bytes:
         return self._body
 
 

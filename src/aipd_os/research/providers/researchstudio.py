@@ -30,9 +30,7 @@ from __future__ import annotations
 import abc
 import json
 import re
-import urllib.error
 import urllib.parse
-import urllib.request
 from collections.abc import Iterable
 from typing import Any
 
@@ -40,6 +38,10 @@ from aipd_os.idea.research_provider import (
     ResearchCapabilityUnavailable,
     ResearchProvider,
 )
+from aipd_os.net.http import HttpError
+from aipd_os.net.http import request as http_request
+
+_USER_AGENT = "aipd-os-researchstudio/1.0 (+https://arxiv.org/help/api)"
 
 # 本模块改编自 ResearchStudio（MIT License, Copyright (c) 2026 Happy）
 MIT_ATTRIBUTION = (
@@ -90,17 +92,27 @@ class ResearchStudioEngine(abc.ABC):
 
 
 class _HttpEngine(ResearchStudioEngine):
-    """基于 urllib 的引擎骨架（超时 + HTTPError 抛出，由 provider 局部降级）。"""
+    """基于统一 HTTP 出口的引擎骨架（非 2xx 上抛，由 provider 局部降级）。
+
+    公开文献 API 普遍限流，这里对瞬态状态开 3 次重试并尊重 ``Retry-After``；
+    网络异常仍立即上抛，不在坏对端上打转。
+    """
 
     timeout: int = 30
+    max_attempts: int = 3
 
     def __init__(self, timeout: int = 30) -> None:
         self.timeout = timeout
 
+    def _get(self, url: str, headers: dict[str, str] | None = None) -> bytes:
+        resp = http_request(url, headers=headers or {}, timeout=self.timeout,
+                            max_attempts=self.max_attempts)
+        if not 200 <= resp.status < 300:
+            raise HttpError(f"HTTP {resp.status} from {url}")
+        return resp.content
+
     def _get_json(self, url: str, headers: dict[str, str] | None = None) -> Any:
-        req = urllib.request.Request(url, headers=headers or {})
-        with urllib.request.urlopen(req, timeout=self.timeout) as r:
-            return json.loads(r.read().decode("utf-8"))
+        return json.loads(self._get(url, headers).decode("utf-8"))
 
 
 class ArxivEngine(_HttpEngine):
@@ -116,10 +128,7 @@ class ArxivEngine(_HttpEngine):
         params = {"search_query": f"all:{query}", "sortBy": "relevance",
                   "sortOrder": "descending", "max_results": max_results}
         url = f"{self.api}?{urllib.parse.urlencode(params)}"
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "aipd-os-researchstudio/1.0 (+https://arxiv.org/help/api)"})
-        with urllib.request.urlopen(req, timeout=self.timeout) as r:
-            body = r.read()
+        body = self._get(url, {"User-Agent": _USER_AGENT})
         root = ET.fromstring(body)
 
         def _text(entry: Any, tag: str) -> str:

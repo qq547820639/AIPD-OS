@@ -58,13 +58,21 @@ def test_research_available_real_sources(monkeypatch):
     assert a.discover()["available"] is True
 
     class FakeResp:
+        """忠实于 urlopen 响应形状：getcode() / headers / read(上限字节)。"""
+
+        status: int = 200
+        headers: dict[str, str] = {}
+
         def __enter__(self):
             return self
 
         def __exit__(self, *exc):
             return False
 
-        def read(self):
+        def getcode(self) -> int:
+            return self.status
+
+        def read(self, *_: object):
             return json.dumps({"data": [
                 {"title": "Real Paper", "authors": [{"name": "Alice"}],
                  "year": 2023, "url": "https://api.semanticscholar.org/paper/1",
@@ -115,13 +123,21 @@ def test_research_api_key_sent_as_header(monkeypatch):
     seen_headers = {}
 
     class FakeResp:
+        """忠实于 urlopen 响应形状：getcode() / headers / read(上限字节)。"""
+
+        status: int = 200
+        headers: dict[str, str] = {}
+
         def __enter__(self):
             return self
 
         def __exit__(self, *exc):
             return False
 
-        def read(self):
+        def getcode(self) -> int:
+            return self.status
+
+        def read(self, *_: object):
             return json.dumps({"data": [
                 {"title": "P", "authors": [], "year": 2023, "url": "https://x/y"},
             ]}).encode("utf-8")

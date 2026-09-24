@@ -1,16 +1,20 @@
 """``aipd_os.net.http`` —— src/ 侧唯一的 HTTP 出口（标准库 urllib）。
 
-收敛背景（此前 8 处各写一遍）：5 处 ``urllib.request.urlopen``
-（llm / researchstudio / research_adapter / imggen / visual_audit）、
-2 处 ``requests.post``（两条 eval 路径）、1 处脚本内 ``requests``+urllib3 适配器。
-分散实现导致同一件事有 8 个版本：超时口径不一、没有退避、
-`scheme` 白名单靠三处 `# noqa: S310` 注释手工豁免。
+收敛背景：迁移前 HEAD 上 src/ 共 **9 个 HTTP 出口调用点**（由 ``git grep`` 现算，
+分布在 7 个模块）——7 处 ``urllib.request.urlopen``（llm 1、researchstudio 2、
+research_adapter 1、imggen 2、visual_audit 1）、2 处 ``requests.post``
+（``evals/runner.py`` 与 ``evals_runner/completion.py``），另有 1 处脚本内
+``requests``+urllib3 适配器。分散实现导致同一件事有 8 个版本：超时口径不一、
+没有退避、`scheme` 白名单靠三处 `# noqa: S310` 注释手工豁免。
 
-选型（比较过的候选）：
+选型（**事后补记**的候选比较，完整六维表见
+docs/audit/NET_EGRESS_CONVERGENCE_2026-09-24.md §3）：
 * 标准库 urllib —— 不新增运行时依赖，与「默认安装保持最小」的既有约束一致 ✅ 选用
 * ``requests`` + urllib3 ``Retry``（脚本连接器仍用它）—— 功能更全，但
-  ``requests`` 在本仓是 **optional extra**，把它变成核心 LLM 路径的硬依赖不划算
-* ``httpx`` —— 未安装，且同样是新依赖
+  ``requests`` 在本仓是 **optional extra**（``pyproject`` 的 ``full`` extra；
+  本机实测 ``requests==2.32.5``、``urllib3==2.6.3``），把它变成核心 LLM 路径的
+  硬依赖不划算——`evals_runner/completion.py` 迁移前正因如此要求 `full` 才跑得动
+* ``httpx`` —— 本机未安装（实测 ``PackageNotFoundError``），且同样是新依赖
 
 保留的语义（与脚本连接器一致，便于两条路径行为可比）：
 - 只对**瞬态 HTTP 状态**重试（429/5xx），网络异常立即上抛——
@@ -72,14 +76,12 @@ def retry_after_seconds(value: str | None) -> float | None:
     try:
         return max(0.0, float(value))
     except ValueError:
-        pass
-    try:
-        when = parsedate_to_datetime(value)
-    except (TypeError, ValueError):
-        return None
-    if when is None:
-        return None
-    return max(0.0, when.timestamp() - time.time())
+        # 合法值有两种形态（纯秒数 / HTTP-date）：前者解析失败不算错误，继续按日期解析
+        try:
+            when = parsedate_to_datetime(value)
+        except (TypeError, ValueError):
+            return None
+        return max(0.0, when.timestamp() - time.time())
 
 
 def check_url(url: str) -> str:

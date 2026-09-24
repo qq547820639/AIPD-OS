@@ -143,34 +143,24 @@ class EnvCompletionProvider(CompletionProvider):
                 f"{self.endpoint_env}/{self.key_env} 未配置，无法真实调用模型；"
                 "用例应诚实标记为 external_dependency，不得伪造输出。"
             )
-        try:
-            import requests  # type: ignore[import-untyped]  # 延迟导入：仅真实端点路径需要
-        except ImportError as exc:  # pragma: no cover - 依赖缺失时诚实报外部依赖
-            raise ModelNotConfiguredError(
-                "缺少 requests 依赖，无法真实调用模型端点"
-            ) from exc
+        # 走统一标准库出口：真实端点路径不再需要 optional extra `requests`
+        from aipd_os.net.http import HttpError
+        from aipd_os.net.http import request as http_request
 
         payload: dict[str, Any] = {
             "model": self._model_version,
             "messages": messages,
             "temperature": 0.2,
         }
-        headers = {
-            "Authorization": f"Bearer {self._key}",
-            "Content-Type": "application/json",
-        }
+        headers = {"Authorization": f"Bearer {self._key}"}
         try:
-            resp = requests.post(
-                self._endpoint,
-                json=payload,
-                headers=headers,
-                timeout=self.timeout,
-            )
-        except requests.RequestException as exc:
+            resp = http_request(self._endpoint, method="POST", json_body=payload,
+                                headers=headers, timeout=self.timeout)
+        except HttpError as exc:
             raise RuntimeError(f"调用模型端点失败: {exc}") from exc
-        if resp.status_code != 200:
+        if resp.status != 200:
             raise RuntimeError(
-                f"模型端点返回 HTTP {resp.status_code}: {resp.text[:500]}"
+                f"模型端点返回 HTTP {resp.status}: {resp.text[:500]}"
             )
         try:
             data = resp.json()

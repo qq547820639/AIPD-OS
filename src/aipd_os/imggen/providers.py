@@ -21,7 +21,6 @@ import json
 import os
 import random
 import time
-import urllib.request
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -32,6 +31,8 @@ from PIL import Image, ImageDraw
 
 from aipd_os.imggen.adapter import ImageGenUnavailable
 from aipd_os.layout.fonts import load_font
+from aipd_os.net.http import HttpError
+from aipd_os.net.http import request as http_request
 
 FIG_SIZE = (1024, 1024)
 FONT_PATH_DEFAULT = "/System/Library/Fonts/STHeiti Medium.ttc"
@@ -301,18 +302,17 @@ class RealImageGenProvider(ImageGenProvider):
 
     def _send(self, payload: dict) -> tuple:
         """发送真实 HTTP POST 并返回 (raw_bytes, http_status, content_type, latency_ms)。"""
-        body = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(self._endpoint(), data=body, method="POST")
-        req.add_header("Content-Type", "application/json")
-        if self.api_key:
-            req.add_header("Authorization", f"Bearer {self.api_key}")
+        headers = {} if not self.api_key else {"Authorization": f"Bearer {self.api_key}"}
         t0 = time.monotonic()
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:  # noqa: S310 - 用户配置的可信端点
-            raw = resp.read()
-            status = getattr(resp, "status", 200)
-            content_type = resp.headers.get("Content-Type", "")
+        # scheme 白名单由 aipd_os.net.http 统一执行，取代此处对 urlopen 的裸调用
+        # 与 S310 手工豁免。生成是计费调用：不自动重试（同 LLM 客户端口径）。
+        resp = http_request(self._endpoint(), method="POST", json_body=payload,
+                            headers=headers, timeout=self.timeout)
         latency_ms = int((time.monotonic() - t0) * 1000)
-        return raw, status, content_type, latency_ms
+        if not 200 <= resp.status < 300:
+            raise HttpError(f"HTTP {resp.status}: {resp.text[:200]}")
+        return (resp.content, resp.status,
+                resp.header("Content-Type"), latency_ms)
 
     @staticmethod
     def _decode_image(raw: bytes, content_type: str) -> tuple:
@@ -339,8 +339,10 @@ class RealImageGenProvider(ImageGenProvider):
                     return base64.b64decode(b64), "PNG", "b64_json"
                 url_ = first.get("url")
                 if url_:
-                    with urllib.request.urlopen(url_, timeout=60) as r:  # noqa: S310
-                        return r.read(), "PNG", "url"
+                    fetched = http_request(url_, timeout=60.0)
+                    if not 200 <= fetched.status < 300:
+                        raise HttpError(f"HTTP {fetched.status} downloading image")
+                    return fetched.content, "PNG", "url"
             raise ImageGenUnavailable(
                 "image endpoint response has no data[].b64_json/url; "
                 "no image bytes fabricated")

@@ -103,6 +103,19 @@
   无需迁移（旧行的 idea 与 basis 是同一猜测写下的，读回自己即可自洽）。
   另修 `record_gate` docstring 不实：它只写 `gate_evaluations`，不写没有快照绑定的
   `gates` 台账；用例 `tests/test_snapshot_idea_lineage.py`（5 条）；
+- **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
+  **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
+  超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与
+  `Retry-After` 的只有脚本连接器那一套 urllib3 策略）、scheme 白名单靠 3 处 `# noqa: S310` 写成
+  约定，且 `requests`（本仓 `full` **optional extra**）泄漏进两条 eval 真实端点路径
+  ——最小安装下只能以「缺少 requests 依赖」报错兜底。现统一走
+  `aipd_os.net.http`（发请求前拒非 http/https、只重试 429/5xx、`Retry-After`
+  双形态、退避封顶、默认 `max_attempts=1` 使付费端点不重复计费、非 2xx 带正文返回）。
+  守卫：`tests/test_net_egress_convergence.py`（AST 扫描 + 分母前提 + 5 形态注入反证）。
+  顺带修三处假绿：打桩 `requests.post` 的用例迁移后成为空操作（实测把请求发到开发者
+  机器代理），改本地真 HTTP 服务；两处 `FakeResp` 缺 `getcode()/headers`；新客户端
+  自身被本仓异常卫生门禁判红。`scripts/research/_http_runtime.py` 保留 requests——
+  它要给第三方自有的 `requests.Session` 挂策略，标准库做不到；
 - **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归

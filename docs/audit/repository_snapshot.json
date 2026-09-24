@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-24T14:15:57",
-  "source_commit": "f8e614864bd56d1d2e9c2a6a1d89b4f18023feb3",
+  "generated_at": "2026-09-24T15:15:25",
+  "source_commit": "1ed5eeb17502c13dbc8e116e87c2e3db26a3b556",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "f8e614864bd56d1d2e9c2a6a1d89b4f18023feb3",
-  "latest_commit_time": "2026-09-24 13:59:55 +0800",
+  "latest_commit_sha": "1ed5eeb17502c13dbc8e116e87c2e3db26a3b556",
+  "latest_commit_time": "2026-09-24 14:44:15 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 142
+      "tests": 145
     }
   },
   "tags": [
@@ -116,43 +116,114 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 558,
-    "hash_matches": 554,
-    "hash_mismatch_count": 4,
+    "total_files": 559,
+    "hash_matches": 545,
+    "hash_mismatch_count": 14,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "de59d5f0290ff82f0f974f5b30e1622f5abad5920097110069ba8319a4ac7d0e",
-        "actual": "43cbe70fa6f40a4f885ea5e38b56f0998aed7721b851b26622d0ec6b5f2390d9"
+        "expected": "450fce5c4e5561a4603da50e33a3d9d8c465bf3c8e16285a170c3881097086ac",
+        "actual": "e356ada4e032a1e4151bea63bc06467bf23e0d91f9a6f8aeb1dce92f8b20ce94"
       },
       {
-        "path": "src/aipd_os/execution/execution_router.py",
+        "path": "docs/architecture/import_architecture.md",
         "reason": "hash_mismatch",
-        "expected": "7a215a421d79e67dedd045f2dd79e89c712d21493ef86f62c2a9153a9e4d5d53",
-        "actual": "f62bb75eecb63030610f8ada1ab74ff609b797023f3200eb91e77e982371ab08"
+        "expected": "d8ecaa510cb2a1de6ce59c74d9dac98a8929109979a844ebaef87ceb1fa25a80",
+        "actual": "eb6b8cac037c754b1fe721fa1c76781ec8e12a184055f5d75ffb6bfd0a4db5e4"
       },
       {
-        "path": "src/aipd_os/registry_data.py",
+        "path": "pyproject.toml",
         "reason": "hash_mismatch",
-        "expected": "bd90927292211341a8dd659f221d396d2094924fbfeb91efd0206970e6215a23",
-        "actual": "3f666e5f59356ab7729d6baf58d0750e5084c845ed7147dee1c639cdce18a7ce"
+        "expected": "d81bacc9841cce349c61fb9a281144178f9d0f10b0ad85ecec227b0194c37118",
+        "actual": "93becd9738374e7a8b2bce419aa4489b5c2951156dcc7735a7ead2fbdd63a3b2"
       },
       {
-        "path": "tests/test_execution_idempotency.py",
+        "path": "src/aipd_os/evals/runner.py",
         "reason": "hash_mismatch",
-        "expected": "1bb729a651ad0cd069ed47f3912c63fdc52553cc239c8a13c63a009b1aa0263c",
-        "actual": "7d7a91b6ec6927059481c93c2a3e09627c1ea44bad7a5ef60937d8cc6ac9615f"
+        "expected": "32b9fc5395b6e1216360c2d02c8ae651d4374b272601333ec3dbbfeab34a9247",
+        "actual": "4720960be4f5e323890fb48c7108b1346bf87d4db9e203bf8306cee729036818"
+      },
+      {
+        "path": "src/aipd_os/evals_runner/completion.py",
+        "reason": "hash_mismatch",
+        "expected": "ee593571e8c4ab89774a496c3ff912e60f177a02c0a43f6f2100f673022c7723",
+        "actual": "08794ab9a61a241e0e4385240001145b4149ea540d45e66d3d8e94dd195b14bc"
+      },
+      {
+        "path": "src/aipd_os/imggen/providers.py",
+        "reason": "hash_mismatch",
+        "expected": "8c3b2aab1678183f86ad554d2064de69ce54981076dadd8871cb7121a6f8b248",
+        "actual": "d03426f74c779feb89b7ae94cc6ea06118208fc2b96edfa7b587ddc7d863a2b8"
+      },
+      {
+        "path": "src/aipd_os/llm/client.py",
+        "reason": "hash_mismatch",
+        "expected": "de1e7d8af41bedfabdf956dd738062dd3b7a591d59d78fea3076c26693150948",
+        "actual": "6e6db16d83ff12b645bb0336cab988cd91b871e6f8655c96d63caaa3ca22f91b"
+      },
+      {
+        "path": "src/aipd_os/research/providers/researchstudio.py",
+        "reason": "hash_mismatch",
+        "expected": "763d506e25619a63dd01949c0ba17f31be7a81e8ca2df639b934f727da041ab1",
+        "actual": "b07cf66ac7d420482cee1bb3f26da86c13e0496f9bc64b5b8e42a927777b66b1"
+      },
+      {
+        "path": "src/aipd_os/tool_adapters/research_adapter.py",
+        "reason": "hash_mismatch",
+        "expected": "cdb2066b68f77e0bba9750b276e2ce3c3387d9eb068bf8605e21363190dd7777",
+        "actual": "9b729011047d9a3055c6a88905c4b71a071a8efec9dcd87587fa68f6af6f0415"
+      },
+      {
+        "path": "src/aipd_os/visual_audit/providers.py",
+        "reason": "hash_mismatch",
+        "expected": "3ef5930fd7fe2efddfc911cada46039c86ffde2d31f465d534148314aec2f7c8",
+        "actual": "75e9528cbe1e3ad5ccfc88a6686ea6b3510ac8c377cb4f401a06bb12ef9dc1fe"
+      },
+      {
+        "path": "tests/test_adapters.py",
+        "reason": "hash_mismatch",
+        "expected": "e00e96dd7cca63cdb3831b29f5c1a6a6dc113176c79ef417c434eab200c48363",
+        "actual": "9b0d695acd2c7ba18ffab507c9ba877837f5db5b472b3706029ff1ef4ef8ad98"
+      },
+      {
+        "path": "tests/test_completion_endpoint.py",
+        "reason": "hash_mismatch",
+        "expected": "65c8fefc918420ab1d4a951b41879397aaea278237006aa5338c9ad10e725a1f",
+        "actual": "a3f1b78d5f82a2699ad5152e4eee7693b48b69f92249cde865dcf4b57fb518d1"
+      },
+      {
+        "path": "tests/test_llm_providers.py",
+        "reason": "hash_mismatch",
+        "expected": "af1b152215c6a84b3ce1af5a43eb4e16216fc1a6c5cdf3fe4464ab91d0c78758",
+        "actual": "8548c31e5d99e46c899f2e9529fb7fe091610280b6d0fb216f48295c728bbdda"
+      },
+      {
+        "path": "tests/test_visual_honesty_guardrail.py",
+        "reason": "hash_mismatch",
+        "expected": "b06b1c604999e85c3bc81ed7eb21f17f0793aa6ac556dff03a9ddedd8c13f225",
+        "actual": "7ebc121e2f958551e2df22808b76ef8ce24100a530671024d5e968dbb5d6ccd9"
       }
     ]
   },
   "untracked_or_generated": [
     " M CHANGELOG.md",
-    " M docs/audit/CAD_2D_DRAWINGS_HOLE_PATTERN_2026-09-24.md",
-    " M docs/audit/P2_M10_STATE_PERF_CLOSURE_2026-09-24.md",
-    " M src/aipd_os/execution/execution_router.py",
-    " M src/aipd_os/registry_data.py",
-    " M tests/test_execution_idempotency.py",
+    " M docs/architecture/import_architecture.md",
+    " M pyproject.toml",
+    " M src/aipd_os/evals/runner.py",
+    " M src/aipd_os/evals_runner/completion.py",
+    " M src/aipd_os/imggen/providers.py",
+    " M src/aipd_os/llm/client.py",
+    " M src/aipd_os/net/http.py",
+    " M src/aipd_os/research/providers/researchstudio.py",
+    " M src/aipd_os/tool_adapters/research_adapter.py",
+    " M src/aipd_os/visual_audit/providers.py",
+    " M tests/test_adapters.py",
+    " M tests/test_completion_endpoint.py",
+    " M tests/test_llm_providers.py",
+    " M tests/test_visual_honesty_guardrail.py",
+    "?? docs/audit/NET_EGRESS_CONVERGENCE_2026-09-24.md",
+    "?? tests/test_net_egress_convergence.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],
