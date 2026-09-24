@@ -91,7 +91,7 @@
   （`failed` 且分类不是 `external_blocked`）的重驱动挂起为 `unknown_outcome`
   等人工核对，与「UNKNOWN ≠ FAILED」的既有 doctrine 一致；
   用例 `tests/test_execution_idempotency.py` 第 7 组 5 条（实现前 2 红 3 绿）。
-  未做：`OutboxDispatcher` 仍无产品调用点（机制齐备但未接线，属遗留清单）；
+  未做（当时）：`OutboxDispatcher` 仍无产品调用点（机制齐备但未接线，属遗留清单）——该遗留已于同日被 F-EXEC-02 闭合，见下条；
 - **v5.10 修复 F-GATE-01：Gate 评的是「项目里最后一个想法」而不是本快照的想法**：
   `gate_evaluations` 的 snapshot/hash 绑定本来就在，但**评的对象**是猜的——
   `create_snapshot()` 用 `ideas[-1].idea_id`（选中机会自带的 `Opportunity.idea_id`
@@ -103,6 +103,18 @@
   无需迁移（旧行的 idea 与 basis 是同一猜测写下的，读回自己即可自洽）。
   另修 `record_gate` docstring 不实：它只写 `gate_evaluations`，不写没有快照绑定的
   `gates` 台账；用例 `tests/test_snapshot_idea_lineage.py`（5 条）；
+- **v5.10 修复 F-EXEC-02/03/04：外部副作用事件化接线（outbox → dispatcher → 台账）**：
+  P2-M5 交付的 outbox 机制**产品侧零调用点**（实测 `src/`、`scripts/` grep 为 0，
+  `external_operations` 更是无人写入——dispatcher 只 import 了仓储却从不调用），
+  且带着三个会真咬人的洞：`max_attempts` 从未被读（一次 `drain()` 内毒事件实测被重试
+  20/20 次）、handler 抛 `TimeoutError` 走的是「释放租约重投」而超时不证明没送达
+  （⇒ 给同一供应商发第二封信）却自称 `UNKNOWN_OUTCOME`、`run_once()` 无条件 `commit()`
+  会把调用方未提交的领域写一起提交（F-STATE-05 同形状）。现：RFQ 适配器带队列时
+  **不再内联发送**，改为在状态库落事件（外层有事务则并入）；`aipd outbox drain` 显式驱动；
+  handler 先占 `external_operations` 幂等键再投递，同内容重放只发一次（v16 部分唯一索引
+  首次被用例经过），超时落 `UNKNOWN_OUTCOME` 并离开可领集合；claim 改为单条
+  `WITH … UPDATE … RETURNING *`（带租约返回）；口令不入事件载荷。
+  证据与未证范围见 `docs/audit/EXEC_OUTBOX_WIRING_F-EXEC-02_2026-09-24.md`；
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

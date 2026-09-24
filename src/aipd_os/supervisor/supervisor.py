@@ -515,7 +515,9 @@ class Supervisor:
         from aipd_os.execution.runs import RunStore
         from aipd_os.tool_adapters.builtin import build_registry
         if adapter_registry is None:
-            adapter_registry = build_registry()
+            # 传状态库 ⇒ 外部副作用适配器把投递写成 outbox 事件（F-EXEC-02），
+            # 而不是在 router 里内联对外发送。
+            adapter_registry = build_registry(state_db=str(self.path))
         if router is None:
             _store = RunStore(str(self.path.parent / "execution_runs.db"))
             router = ExecutionRouter(

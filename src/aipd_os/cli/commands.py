@@ -65,6 +65,7 @@ from .commands_legacy import (
 )
 from .commands_manual import cmd_manual_generate, cmd_manual_plan
 from .commands_manufacturing import cmd_bom, cmd_cost
+from .commands_outbox import cmd_outbox
 from .commands_owner import (
     cmd_dashboard,
     cmd_onboard,
@@ -504,6 +505,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "cad preflight": cmd_cad_preflight,
     "cad build": cmd_cad_build,
     "drawing generate": cmd_drawing,
+    "outbox drain": cmd_outbox,
     "industrialize": cmd_industrialize,
     "validate": cmd_validate,
     "audit": cmd_audit,

@@ -24,7 +24,15 @@ REPO = Path(__file__).resolve().parent.parent
 SKIP_DIRS = {'.git', '.venv', '.pytest_cache', '__pycache__', '.trae', 'tests', '.pytest'}
 EXTS = {'.py', '.json', '.md', '.yaml', '.yml', '.txt', '.html'}
 # 机器生成的测试报告（含测试 nodeid 字符串）不属于产品源码，跳过以免误报。
+# 按**属性**判定而不是记住文件名：归档报告（pytest-report-v5.6.0.json）与
+# 轮级报告是同一类产物，靠字面名单会一个一个漏进来。
 REPORT_NAMES = {'pytest-report.json', 'lastreport.json'}
+
+
+def _is_generated_test_report(path: Path) -> bool:
+    name = path.name
+    return name in REPORT_NAMES or (
+        name.startswith('pytest-report') and name.endswith('.json'))
 PATTERN = re.compile(r'CAD-L\d')
 # Faceted BREP 最高 C1：任何与 C2 及以上成熟度关联的表述均视为过度声称。
 # faceted 大小写不敏感；层级 C[2-9] 保持大小写敏感以免命中哈希中的小写十六进制。
@@ -33,7 +41,7 @@ FACETED_OVERCLAIM = re.compile(
 )
 # 否定/拦截语境的关键词：出现则说明该语句是在否认 faceted 可达 C2+，而非过度声称。
 NEGATION_HINTS = (
-    'cannot', "can't", 'incorrectly', 'not reach', 'not achieve',
+    'cannot', "can't", 'incorrectly', 'never', 'not reach', 'not achieve',
     'block', 'blocked', '阻止', '降级', '不能', '不可', '无法', '达不到',
     '无法达到', '不能达到', '不可用于', '不得用于', '仅', '仅有', 'only',
 )
@@ -45,7 +53,7 @@ def iter_text_files(root: Path):
             continue
         if any(part in SKIP_DIRS for part in p.parts):
             continue
-        if p.name in REPORT_NAMES:
+        if _is_generated_test_report(p):
             continue
         if p.suffix in EXTS:
             yield p
@@ -111,6 +119,7 @@ def test_scan_flags_faceted_over_c1_conflicts():
         "Faceted 工具链可达 CAD-L3",
         "faceted 可达 C2",
         "faceted_brep 可达 C3",
+        "faceted_brep_reaches_C2",           # 与上一行只差 never：必须仍判红
         "Faceted BREP 成熟度 C5",
         "faceted 工具链可达到 C4",
         "Faceted BREP 可用于 C2 及以上的正式图纸",
@@ -127,7 +136,19 @@ def test_scan_allows_faceted_at_or_below_c1():
         "faceted_brep runtime caps at C1",        # 否定/封顶语境
         "仅有Faceted BREP，目标C3",                # 拦截语境
         "faceted fallback cannot become engineering CAD",  # 否定语境
+        "faceted_brep_never_reaches_C2",     # 测试 nodeid：断言的是「到不了 C2」
         "Faceted BREP 不可用于 C2 及以上的正式图纸",  # 否定语境
     ]
     flagged = [p for p in allowed if _flagged_as_overclaim(p)]
     assert not flagged, f"scan falsely flagged legitimate faceted statement: {flagged}"
+
+
+def test_generated_report_exclusion_is_property_based():
+    """排除项必须按属性生效，且不得扩大到非报告文件（否则又变成一个静默豁免）。"""
+    assert _is_generated_test_report(Path('docs/audit/pytest-report.json'))
+    assert _is_generated_test_report(
+        Path('docs/audit/pytest-report-v5.6.0.json'))
+    assert _is_generated_test_report(Path('lastreport.json'))
+    # 反向：同一个前缀但不是机器报告（散文/断言文件）必须仍在语料里
+    assert not _is_generated_test_report(Path('docs/pytest-report-notes.md'))
+    assert not _is_generated_test_report(Path('docs/audit/capability_matrix.json'))

@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-24T15:15:26`
+- 生成时间：`2026-09-24T16:12:41`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`1ed5eeb17502c13dbc8e116e87c2e3db26a3b556`
+- 默认分支：`main`；HEAD：`315cb775dc2b19de3cfd7ad4517b25cea460003a`
 - 版本：`5.6.0`
 - 能力总数：`77`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -94,7 +94,7 @@
 | 能力 | 分类 | 声明文件 | 实现文件 | 入口 | 运行命令 | 单元测试 | 当前限制 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | RFQ | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/tool_adapters/mail_rfq_adapter.py | aipd_os.tool_adapters.mail_rfq_adapter.MailRfqAdapter | `aipd industrialize` | tests/test_supply_chain.py | 真实邮件发送依赖外部邮件通道 |
-| 邮件执行 | `external_dependency` | references/tool-and-physical-boundaries.md | src/aipd_os/tool_adapters/mail_rfq_adapter.py | mail_rfq_adapter.send | `aipd industrialize` |  | 依赖外部 Gmail/邮件通道，未接入时诚实等待；同一内容的重驱动按内容幂等拦截，结果未知（transient/tool_error）的失败挂起等人工核对，不自动重发 |
+| 邮件执行 | `external_dependency` | references/tool-and-physical-boundaries.md | src/aipd_os/execution/side_effects.py; src/aipd_os/tool_adapters/mail_rfq_adapter.py | aipd_os.execution.side_effects.rfq_send_handler | `aipd outbox drain` | tests/test_outbox_rfq_wiring.py | 真实投递仍依赖外部 SMTP/Gmail 通道，未配置时诚实 external_blocked；投递由 outbox 事件 + dispatcher 驱动（aipd outbox drain）；同一内容的重驱动按内容幂等拦截，结果未知（transient/tool_error）的失败挂起等人工核对，不自动重发 |
 | 报价解析 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/quotes.py | aipd_os.supply_chain.quotes.normalize_quote | `aipd industrialize --quote <file>` | tests/test_supply_chain.py | 附件格式解析范围有限 |
 | 供应商资质 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/suppliers.py | aipd_os.supply_chain.suppliers.SupplierRegistry | `aipd industrialize` | tests/test_supply_chain.py | 证书真实性需人工/外部核验 |
 | EVT/DVT/PVT数据导入 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/lab.py; tool_adapters/evt_dvt_pvt_adapter.py | aipd_os.supply_chain.lab.import_lab_csv | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py | 导入格式范围有限 |

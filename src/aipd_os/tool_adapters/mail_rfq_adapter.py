@@ -1,9 +1,13 @@
 """RFQ 邮件适配器（'supply.rfq'）。
 
 未配置真实 SMTP（``AIPD_SMTP_HOST`` / ``AIPD_MAILPIT_SMTP_HOST``）时，诚实写出
-外部任务包并抛出 ``external_blocked``，绝不声称邮件已发送。配置了真实 SMTP 时
-经 ``aipd_os.mail.client.send_email`` 真实发送，``sent`` 仅在真实投递成功后为
-True（发送失败上抛 external_blocked，不伪装已发送）。
+外部任务包并抛出 ``external_blocked``，绝不声称邮件已发送。配置了真实 SMTP 时：
+
+- 带 ``queue``（产品装配：状态库存在）时**不内联发送**，而是把这次投递写成 outbox
+  事件，交给 ``aipd outbox drain`` / dispatcher 执行，并由
+  ``external_operations`` 台账保证「同一内容只对外发一次」（F-EXEC-02）；
+- 不带 ``queue`` 时保持旧的内联发送行为，``sent`` 仅在真实投递成功后为 True
+  （发送失败上抛 external_blocked，不伪装已发送）。
 """
 
 from __future__ import annotations
@@ -16,7 +20,11 @@ from aipd_os.tool_adapters._common import env, meta, token_meta
 
 class MailRfqAdapter(ToolAdapter):
     provider = "local"
-    version = "1.1"
+    version = "1.2"
+
+    def __init__(self, queue: Any = None) -> None:
+        """:param queue: ``execution.side_effects.OutboxQueue``；None 时内联发送。"""
+        self._queue = queue
 
     def capability_id(self) -> str:
         return "supply.rfq"
@@ -70,6 +78,38 @@ class MailRfqAdapter(ToolAdapter):
             f"请提供报价、交期与最小起订量。\n\n此致敬礼\nAIPD-OS 采购"
         )
         draft = {"subject": subject, "body": body, "to": supplier, "part": part}
+
+        if self._queue is not None:
+            from aipd_os.execution.side_effects import rfq_idempotency_key  # noqa: PLC0415
+            project_id = input.get("project_id") or ""
+            idempotency_key = rfq_idempotency_key(
+                project_id=project_id, supplier=supplier, part=part, quantity=qty)
+            event_id = self._queue.enqueue_rfq_send(
+                tenant_id=input.get("tenant_id") or "default",
+                project_id=project_id,
+                work_id=input.get("work_id") or "",
+                idempotency_key=idempotency_key,
+                message={
+                    "host": smtp_host,
+                    "port": int(env("AIPD_SMTP_PORT")
+                                or env("AIPD_MAILPIT_SMTP_PORT") or 587),
+                    "from_addr": env("AIPD_SMTP_FROM") or "aipd@local.aipd-os.dev",
+                    "to_addrs": [supplier],
+                    "subject": subject,
+                    "body": body,
+                    "username": env("AIPD_SMTP_USER") or "",
+                })
+            # sent=False 是有意的：此刻还没对外发过，投递结果由台账与事件状态回答。
+            return {
+                "rfq_draft": draft,
+                "provider": "outbox",
+                "sent": False,
+                "queued": True,
+                "event_id": event_id,
+                "idempotency_key": idempotency_key,
+                "_meta": token_meta(subject + body),
+            }
+
         # 真实发送：成功才 sent=True；任何失败诚实上抛 external_blocked
         try:
             from aipd_os.mail.client import send_email  # noqa: PLC0415

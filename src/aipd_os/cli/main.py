@@ -226,6 +226,17 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--json", action="store_true")
     dp.set_defaults(func=COMMAND_FUNCS["drawing generate"])
 
+    p_outbox = sub.add_parser("outbox", help="消费对外副作用事件（RFQ 邮件等）。"
+                                            " Example: aipd outbox drain --db state.db")
+    outbox_sub = p_outbox.add_subparsers(dest="outbox_cmd", required=True)
+    op = outbox_sub.add_parser("drain", help="领一批 outbox 事件并执行，打印每台操作结果。"
+                                             " Example: aipd outbox drain --db state.db --limit 20")
+    op.add_argument("--db", required=True)
+    op.add_argument("--limit", type=int, default=10)
+    op.add_argument("--worker-id", default="cli-outbox")
+    op.add_argument("--json", action="store_true")
+    op.set_defaults(func=COMMAND_FUNCS["outbox drain"])
+
     p = sub.add_parser("industrialize", help="供应链 + 验证执行（报价登记/阶段分析/纠偏任务；无数据则如实报告不虚构）。"  # noqa: E501
                                              " Example: aipd industrialize --db state.db --quote quotes.csv --stage dvt --lab-data lab.csv")  # noqa: E501
     p.add_argument("--db")

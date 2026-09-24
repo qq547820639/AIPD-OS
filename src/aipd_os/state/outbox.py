@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 
@@ -88,45 +88,75 @@ class OutboxRepository:
         limit: int = 10,
         lease_seconds: int = 300,
     ) -> list[dict[str, Any]]:
-        """Claim 可用事件（原子操作）。
+        """Claim 可用事件（**单条语句**，返回已写入租约后的行）。
 
-        使用 claimed_by + claim_expires_at 实现真正的 claim lease。
+        必须是「一条」而不是「先 SELECT 再逐行 UPDATE」：后者在两次语句之间留有
+        窗口，第二个 worker 的无条件 `UPDATE ... WHERE event_id=?` 会把别人的租约
+        覆盖掉 ⇒ 同一事件被两份处理（对外就是两封邮件）。写入侧再带一次可领谓词，
+        使这条语句即使被将来的人拆成两段也不会静默退化。
+
         lease_seconds: 默认 5 分钟。
         """
         now = _now()
-        from datetime import datetime, timedelta, timezone
         expires = (datetime.now(timezone.utc) +
                    timedelta(seconds=lease_seconds)).isoformat()
+        claimable = ("(claimed_at IS NULL OR claim_expires_at IS NULL "
+                     "OR claim_expires_at < ?)")
         rows = self._conn.execute(
-            "SELECT * FROM outbox_events "
-            "WHERE completed_at IS NULL "
-            "AND (claimed_at IS NULL "
-            "     OR claim_expires_at IS NULL "
-            "     OR claim_expires_at < ?) "
-            "ORDER BY available_at LIMIT ?",
-            (now, limit)).fetchall()
-        claimed = []
-        for row in rows:
-            self._conn.execute(
-                "UPDATE outbox_events SET claimed_at=?, "
-                "claimed_by=?, claim_expires_at=? "
-                "WHERE event_id=? AND tenant_id=? AND project_id=?",
-                (now, worker_id, expires,
-                 row["event_id"], row["tenant_id"], row["project_id"]))
-            claimed.append(dict(row))
-        return claimed
+            "WITH due AS ("
+            "  SELECT rowid AS rid FROM outbox_events"
+            "  WHERE completed_at IS NULL AND " + claimable +
+            "  ORDER BY available_at LIMIT ?)"
+            " UPDATE outbox_events"
+            " SET claimed_at=?, claimed_by=?, claim_expires_at=?"
+            " WHERE rowid IN (SELECT rid FROM due)"
+            "   AND completed_at IS NULL AND " + claimable +
+            " RETURNING *",
+            (now, limit, now, worker_id, expires, now)).fetchall()
+        return [dict(row) for row in rows]
 
-    def mark_completed(self, event_id: str, tenant_id: str, project_id: str) -> None:
+    def mark_completed(self, event_id: str, tenant_id: str, project_id: str,
+                       note: str = "") -> None:
+        """完成事件。``note`` 用于留下「为什么这条没有真的对外做」的读得懂的痕迹
+        （典型是幂等去重）；不传时保持 ``last_error`` 原样。"""
+        if note:
+            self._conn.execute(
+                "UPDATE outbox_events SET completed_at=?, last_error=?, "
+                "attempt_count=attempt_count+1 "
+                "WHERE event_id=? AND tenant_id=? AND project_id=?",
+                (_now(), note, event_id, tenant_id, project_id))
+            return
         self._conn.execute(
-            "UPDATE outbox_events SET completed_at=?, attempt_count=attempt_count+1 "
+            "UPDATE outbox_events SET completed_at=?, last_error='', "
+            "attempt_count=attempt_count+1 "
             "WHERE event_id=? AND tenant_id=? AND project_id=?",
             (_now(), event_id, tenant_id, project_id))
 
     def mark_retry(self, event_id: str, tenant_id: str, project_id: str, error: str) -> None:
+        """可重试失败：立即释放租约，让事件重新可领。
+
+        调用方**必须**先看 `attempt_count` 是否已到 `max_attempts`——这里不做预算
+        判断，否则毒事件会在一次 `drain()` 里无限循环（曾经如此）。
+        """
         self._conn.execute(
             "UPDATE outbox_events SET claimed_at=NULL, last_error=?, "
             "attempt_count=attempt_count+1 WHERE event_id=? AND tenant_id=? AND project_id=?",
             (error, event_id, tenant_id, project_id))
+
+    def mark_unknown(self, event_id: str, tenant_id: str, project_id: str,
+                     error: str) -> None:
+        """对外调用**结果未知**（典型是超时）：离开可领集合，等人工核对。
+
+        与 `mark_retry` 的区别是本条存在的全部理由：超时不证明没送达，自动重投
+        就是第二次对外发送。与 `mark_terminal` 一样置 `completed_at`，但
+        `last_error` 以 `UNKNOWN_OUTCOME:` 开头，供核对侧区分「失败终止」与
+        「结果未知」。
+        """
+        self._conn.execute(
+            "UPDATE outbox_events SET completed_at=?, claimed_at=NULL, "
+            "last_error=?, attempt_count=attempt_count+1 "
+            "WHERE event_id=? AND tenant_id=? AND project_id=?",
+            (_now(), f"UNKNOWN_OUTCOME: {error}", event_id, tenant_id, project_id))
 
     def mark_terminal(self, event_id: str, tenant_id: str, project_id: str, error: str) -> None:
         self._conn.execute(
@@ -173,11 +203,22 @@ class ExternalOperationRepository:
         return dict(row) if row else None
 
     def find_by_idempotency_key(self, tenant_id: str, project_id: str,
-                                 provider: str, idempotency_key: str) -> dict[str, Any] | None:
-        row = self._conn.execute(
-            "SELECT * FROM external_operations "
-            "WHERE tenant_id=? AND project_id=? AND provider=? AND idempotency_key=?",
-            (tenant_id, project_id, provider, idempotency_key)).fetchone()
+                                 provider: str, idempotency_key: str,
+                                 operation_kind: str = "") -> dict[str, Any] | None:
+        """按幂等键查操作台账。
+
+        ``operation_kind`` 必须能参与过滤：v16 的部分唯一索引键是
+        ``(tenant, project, provider, operation_kind, idempotency_key)``，查询少了
+        这一列就会在不同种类之间串键，命中哪一条取决于 SQLite 的返回顺序。
+        """
+        sql = ("SELECT * FROM external_operations "
+               "WHERE tenant_id=? AND project_id=? AND provider=?"
+               " AND idempotency_key=?")
+        params: list[Any] = [tenant_id, project_id, provider, idempotency_key]
+        if operation_kind:
+            sql += " AND operation_kind=?"
+            params.append(operation_kind)
+        row = self._conn.execute(sql, params).fetchone()
         return dict(row) if row else None
 
     def transition_status(self, operation_id: str, tenant_id: str, project_id: str,

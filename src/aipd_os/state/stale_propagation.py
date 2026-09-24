@@ -71,7 +71,7 @@ class StalePropagationService:
             reason=f"BOM material change: {', '.join(sorted(changed_material))}",
             target_types=("cost_snapshot",),
         )
-        # Append propagation event to outbox
+        # 记录传播事件（写 changes 表，不是 outbox_events）
         self._append_propagation_event(
             tenant_id, project_id, "bom", bom_id,
             "bom_material_change", changed_material, affected,

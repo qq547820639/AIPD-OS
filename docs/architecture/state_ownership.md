@@ -29,7 +29,7 @@
 | F1: ClosureStore missing tenant_id | HIGH | ✅ FIXED (P2-M2) | All 6 tables have tenant_id + project_id |
 | F2: Manual JSON has no scope | HIGH | ✅ FIXED (P2-M4) | ManualStateRepository with canonical + legacy import |
 | F3: No unified connection policy | MEDIUM | ✅ FIXED (P2-M1) | ConnectionFactory + transaction context manager |
-| F4: No outbox for external side effects | HIGH | ✅ FIXED (P2-M5) | OutboxRepository + ExternalOperationRepository with state machine |
+| F4: No outbox for external side effects | HIGH | ✅ FIXED (P2-M5 机制 / F-EXEC-02 接线) | OutboxRepository + ExternalOperationRepository with state machine；RFQ 邮件已走事件化路径（`aipd outbox drain`） |
 | F5: `ConnectionFactory.transaction()` 重入即自死锁 | **CRITICAL** | ✅ FIXED (P2-M10) | 重入改为复用外层连接 + SAVEPOINT；`run_supervisor` 此前整体退化为 internal_rework |
 | F6: stale 传播写 `changes` 用了不存在的列 | HIGH | ✅ FIXED (P2-M10) | `entity_type/entity_id/change_type/change_data` → `object_type/object_id/action/after_json/reason` |
 | F7: 热读路径缺索引（changes scope / outbox claim 排序） | MEDIUM | ✅ FIXED (v17) | 两条索引；写放大实测不可测出 |
@@ -98,7 +98,7 @@ Manual JSON (*.manual.json)     ← LEGACY_STATE: Being migrated
 | P2-M2 | ClosureStore / ExecutionRuns 的 tenant/project scope | ✅ 完成 |
 | P2-M3 | Repository facade（上层不再直连 SQLite） | ✅ 完成（5 个 store 迁移到 ConnectionFactory） |
 | P2-M4 | Manual JSON → canonical DB | ✅ 完成 |
-| P2-M5 | Outbox + external operation ledger | ✅ 完成（含 lease + dispatcher runtime） |
+| P2-M5 | Outbox + external operation ledger | ✅ 机制完成（含 lease + dispatcher runtime）；**产品调用点 0**（当时）→ 已由 F-EXEC-02 接线：RFQ 邮件经 outbox 事件 + 台账去重 |
 | P2-M6 | 统一 stale / dependency 传播 | ✅ 完成（cost_snapshot 分支在 P2-M10 修复，见 F6） |
 | P2-M7 | Readiness snapshot + ruleset 版本化 | ✅ 完成 |
 | P2-M8 | Migration modularization | ✅ 完成（导入环在 P2-M10 断开，见 F8） |

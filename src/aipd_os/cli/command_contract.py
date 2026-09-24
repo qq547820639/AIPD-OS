@@ -103,6 +103,11 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                  requires_args=frozenset({"--part"}),
                  description="从 3D 模型出二维工程图 DXF（可见线+隐藏线+尺寸+标题栏）"),
 
+    # ---- 对外副作用（outbox）----
+    CommandEntry("outbox drain", CommandStatus.PUBLIC, CommandCategory.OPERATIONS, "5.10",
+                 requires_args=frozenset({"--db"}),
+                 description="消费 outbox 事件：真发外部副作用并按幂等台账去重"),
+
     # ---- 产品定义 ----
     CommandEntry("product show", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.9",
                  description="查看产品定义"),
