@@ -69,6 +69,18 @@
   改为按真值判断、调用点不再硬传该参数；回归
   `tests/test_runtime.py::TestEncryptionKeyResolution` 三条
   （配了密钥必须密文、显式密钥优先、未配置仍明文——末条为反向控制）；
+- **v5.10 修复 F-STATE-08：字段加密改用带盐 PBKDF2 派生（migration v18）**：
+  密钥派生原是 `sha256(口令)`——单轮无盐，库文件外泄后口令可离线穷举
+  （server 模式只校验长度 ≥16 与三个字面弱值，不保证熵），同口令还可跨安装预计算。
+  新格式 `f2:<iterations>:<b64salt>:<fernet token>`：PBKDF2-HMAC-SHA256、
+  600k 轮（本机实测 129ms）、轮数与盐随密文存储；盐**每库一份**存于
+  v18 新增的 `db_meta`，派生结果按 (口令,盐,轮数) 进程内缓存，
+  避免把 129ms 摊进每次字段读写。低于 `MIN_KDF_ITERATIONS` 的 token 拒绝解密
+  （防静默降级）；`f1:`/`x1:` 旧密文保持可读、不再新写。
+  落选方案与实测：`hashlib.scrypt` 在本机 Python 3.9 不存在、
+  `cryptography` 的 scrypt 挂在可选依赖上、Argon2 需新增 C 扩展；
+  回归 `tests/test_crypto.py`（7 新）、`TestStateFieldEncryption`（e2e 盐稳定性）、
+  `tests/test_migration.py::test_v18_db_meta_up_and_down`；
 - **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归

@@ -1,6 +1,6 @@
 # State Inventory — AIPD-OS P2
 
-> Updated: 2026-09-24 (P2-M10 收口；schema HEAD = v17)
+> Updated: 2026-09-24 (P2-M10 收口 + F-STATE-08；schema HEAD = v18)
 > Purpose: P2 State Ownership Convergence — complete persistence point audit
 
 ## Physical Stores
@@ -51,8 +51,11 @@
 | 报告 | `docs/audit/state_perf_report.json` | 最近一次完整测量输出 |
 | 确定性门禁 | `tests/test_state_perf_gates.py` | EXPLAIN QUERY PLAN、连接复用计数、claim 互斥、语句数线性度 |
 
-Schema 版本：HEAD = **v17**（v17 = 两条热读路径索引 `idx_changes_scope_time`、
-`idx_outbox_due`，见 `state_infrastructure.md` §6.1）。
+Schema 版本：HEAD = **v18**。真值是 `state/migrations/definitions.py` 的
+`MIGRATIONS` 末项（不是本表）；`tests/test_migration.py` 与
+`tests/test_state_perf_gates.py` 分别钉住 v18 与 v17 的 up/down。
+v17 = 两条热读路径索引 `idx_changes_scope_time`、`idx_outbox_due`
+（见 `state_infrastructure.md` §6.1）；v18 = `db_meta`（字段加密的每库盐）。
 
 ## Migration 版本清单
 
@@ -62,6 +65,7 @@ Schema 版本：HEAD = **v17**（v17 = 两条热读路径索引 `idx_changes_sco
 | v15 | readiness_snapshots |
 | v16 | outbox_lease_and_manual_workflows |
 | v17 | hot_read_perf_indexes |
+| v18 | db_meta_table |
 
 ## Direct sqlite3.connect Classification
 

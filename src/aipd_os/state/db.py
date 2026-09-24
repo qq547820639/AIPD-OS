@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import secrets
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -350,6 +351,7 @@ class AIPDStateDB:
     def __init__(self, db_path: str, encryption_key: str = ""):
         self.path = Path(db_path)
         self._encryption_key = encryption_key
+        self._salt: bytes | None = None
         self.path.parent.mkdir(parents=True, exist_ok=True)
         from aipd_os.state.connection import ConnectionFactory
         self._factory = ConnectionFactory(self.path)
@@ -429,10 +431,34 @@ class AIPDStateDB:
             raise OptimisticLockError(f"{table} optimistic-lock conflict (version mismatch)")
         return cur.rowcount
 
+    def _crypto_salt(self) -> bytes:
+        """每库一份随机盐（存在 ``db_meta``），字段加密密钥 = PBKDF2(口令, 此盐)。
+
+        盐放在库里而不是每条密文里：600k 轮 PBKDF2 实测 ≈129ms，
+        每条各派生一次会把代价摊进每次字段读写。密文自带 ``f2:<轮数>:<盐>:``
+        前缀，因此跨库读取不依赖本函数（见 crypto 模块）。
+        """
+        if self._salt is None:
+            with self.connect() as c:
+                row = c.execute(
+                    "SELECT value FROM db_meta WHERE key='crypto_salt'").fetchone()
+                if row is None:
+                    value = secrets.token_hex(16)
+                    c.execute(
+                        "INSERT INTO db_meta(key, value, created_at) VALUES(?,?,?)",
+                        ("crypto_salt", value, now_iso()))
+                else:
+                    value = row[0] if not isinstance(row[0], bytes) else row[0].decode()
+            self._salt = bytes.fromhex(value)
+        return self._salt
+
     def _store_value(self, key: str, value: Any) -> str:
         global _plaintext_warned
         if self._encryption_key and key in SENSITIVE_KEYS:
-            return _json({"__encrypted__": True, "data": encrypt_secret(_json(value), self._encryption_key)})  # noqa: E501
+            # 带盐 PBKDF2 派生（f2 格式）；无盐的 f1 只读不再新写，见 crypto 模块。
+            return _json({"__encrypted__": True,
+                          "data": encrypt_secret(_json(value), self._encryption_key,
+                                                 self._crypto_salt())})
         if key in SENSITIVE_KEYS and not _plaintext_warned:
             # 无 encryption_key 时敏感字段明文落库：fail-open 仅限本地/dev 模式，
             # 生产 server 模式已在 StateService 层 fail-closed。

@@ -84,7 +84,9 @@ class TestQueryPlanGates:
             created = {"idx_changes_scope_time", "idx_outbox_due"}
             assert created <= indexes(c), created - indexes(c)
         rolled = mig.rollback(str(db.path), 16)
-        assert rolled == [17]
+        # 本用例只管 v17 的两条索引；回滚链会把 v17 之上后来新增的版本一起退掉，
+        # 所以断言「v17 在回滚清单里」而不是「v17 恰好是链尾」。
+        assert 17 in rolled, rolled
         with db.connect() as c:
             assert not (created & indexes(c))
             mig.migrate(str(db.path))  # 复位，fixture 仍可继续使用

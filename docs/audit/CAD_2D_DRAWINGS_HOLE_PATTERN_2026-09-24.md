@@ -16,10 +16,12 @@
 | 全能力分布 | fully 36 / partially 28 / external 13 / 其余 0（共 77） | `docs/audit/capability_matrix.json` |
 | 图纸用例 | 27 passed | `tests/test_cad_drawings2d.py` |
 | CAD 黄金闭环用例 | 18 passed（新增 6 条） | `tests/test_cad_golden_loop.py` |
-| 全量回归 | **1337 passed / 0 failed / 3 skipped** | 收尾复跑（清单重算后） |
+| 全量回归 | **1349 passed / 0 functional failed / 3 skipped**（另 2 条为清单哈希，重算后转绿） | 收尾复跑 |
 | F-CAD-01 | 已修 + 已入门禁 + 已配反证 | §5 |
 | F-STATE-05 | 已复现（5 处）+ 已修 + 配对对照（11 passed） | §8.1 |
 | F-STATE-06 | 跨库串连接已复现 + 登记表收敛为一（3 条回归） | §8.2 |
+| F-STATE-07 | 空串吞掉已配置密钥，已修 + 3 条解析回归 | §8.3 |
+| F-STATE-08 | 无盐单轮 KDF → 带盐 PBKDF2（`f2:`，migration v18） | §8.4 |
 | ruff（`src tests state_service`）/ mypy（360 文件） | 0 项 | CI 作用域 |
 | 发布门 / 性能门 / skill 自审 | 8/8 绿 · PASS（比值 0.0161） · 0 警告 0 失败 | §6、§9 命令 |
 
@@ -258,11 +260,41 @@ CLI 的 idea.decompose 路径硬传了 `encryption_key=""` ⇒ 空串被当成�
 遗留（本条未覆盖）：`crypto._derive_key()` 仍是**无盐单轮 SHA-256**，
 16 字节的口令式密钥在拿到库文件后可被离线穷举；见 §8.4。
 
+### 8.4 F-STATE-08：字段加密的密钥是无盐单轮 SHA-256（已改为带盐 PBKDF2）
+
+`crypto._derive_key()` 是 `sha256(口令)`：单轮、无盐。库文件一旦外泄，
+口令可以被离线穷举（server 模式只要求长度 ≥16、排除三个字面弱值，
+不保证熵），同一口令还能跨安装用预计算表。
+
+候选与实测（本机 2026-09-24，同一口令同一盐）：
+
+| 方案 | 可用性 | 实测代价 | 判定 |
+|------|--------|----------|------|
+| PBKDF2-HMAC-SHA256（`hashlib`，600k 轮） | stdlib，恒可用 | 200k=50.6ms · 600k=**129.4ms** · 1M=216.7ms | ✅ 选（与 `state/auth.py` 的口令哈希同一族，仓内已有先例） |
+| `hashlib.scrypt` | **本机 Python 3.9 无此属性**（`AttributeError`） | — | ✗ 支持矩阵不齐 |
+| `cryptography` 的 scrypt/hkdf | 可用（v50.0.0），但 `cryptography` 是可选依赖 | — | ✗ 不能把主密钥路径挂在可选包上；HKDF 本身是快 KDF，不适合低熵口令 |
+| Argon2（`argon2-cffi`） | 未安装 | — | ✗ 新增 C 扩展依赖，收益不值 |
+
+落地：新格式 `f2:<iterations>:<b64salt>:<fernet token>`——轮数与盐都写进密文，
+将来上调轮数不必迁数据；`f1:`/`x1:` 仍可解（旧数据不丢）。
+**盐每库一份**（migration v18 新增 `db_meta` 表）+ 进程内按 (口令,盐,轮数) 缓存：
+129ms 只付一次，否则每条字段读写都要付。缓存换盐必须重派生，
+由用例钉住（防止两库的密钥被缓存混成一把）。
+
+护栏：`MIN_KDF_ITERATIONS = 100_000`，手改成低轮数的密文**拒绝解密**而不是照解
+（否则「上调轮数」这个决策可被静默降级）；`test_derived_key_is_cached_per_salt`
+与 `test_salt_actually_enters_the_key` 分别锁住代价与语义。
+
+回归：`tests/test_crypto.py`（7 新）+ `TestStateFieldEncryption`（e2e：写进去是
+`f2:`、库里读不到明文、重开库盐不变、两库盐不同）+
+`tests/test_migration.py::test_v18_db_meta_up_and_down`（up/down 双向）。
+
 ## 9. 复算入口
 
 ```bash
 .venv/bin/python -m pytest -q tests/test_cad_drawings2d.py tests/test_cad_golden_loop.py \
-  tests/test_ddl_transaction_atomicity.py
+  tests/test_ddl_transaction_atomicity.py tests/test_connection_reentrancy.py \
+  tests/test_crypto.py tests/test_runtime.py tests/test_migration.py
 .venv/bin/python scripts/capability_matrix.py --repo . --out docs/audit
 .venv/bin/python scripts/skill_quality_audit.py
 .venv/bin/python -m aipd_os.cli.main drawing generate \

@@ -75,10 +75,19 @@ ConnectionFactory 后，`run_supervisor` 的 execute 阶段因此整体退化为
 **禁止**：Repository 方法在自己的事务内调用另一个 store 的事务型方法
 而不走 `transaction()` 重入——那会绕开保存点语义。
 
-### 4.2 边界
+### 4.2 字段加密的密钥派生必须带盐（F-STATE-08）
 
-跨库（例如 `state.db` 与 `*.bom.db`）不共享登记表：不同文件的不同连接
-本就允许并存，但**不保证原子性**（见 §7）。
+`crypto.encrypt_secret(plaintext, key, salt)` 的新写入格式是
+`f2:<iterations>:<b64salt>:<fernet token>`：PBKDF2-HMAC-SHA256，
+`PBKDF2_ITERATIONS = 600_000`（本机实测 ≈129ms/次派生），轮数与盐都随密文存储。
+
+- **盐每库一份**，存在 `db_meta('crypto_salt')`（migration v18）；派生结果按
+  (口令, 盐, 轮数) 进程内缓存。不要改成每条密文一个盐：那会把 129ms 摊进
+  每一次敏感字段读写。
+- 解密低于 `MIN_KDF_ITERATIONS` 的 token 直接报错，防止静默降级。
+- `f1:`（无盐单轮 SHA-256）与 `x1:`（insecure dev mode 的 XOR）**只读**，
+  不再作为新写入格式；`encrypt_secret` 不传 salt 才会落 `f1:`，
+  `AIPDStateDB` 总是传盐。
 
 ### 4.3 建表/DDL 不许用 `executescript()`（F-STATE-05）
 
@@ -90,6 +99,11 @@ ConnectionFactory 后，`run_supervisor` 的 execute 阶段因此整体退化为
 （拆分后逐条 `execute`，不隐式提交）。`store.__init__` 里建表也在其内——
 五个 store 都曾命中该形状。反证与配对对照见
 `tests/test_ddl_transaction_atomicity.py`。
+
+### 4.4 边界
+
+跨库（例如 `state.db` 与 `*.bom.db`）不共享登记表：不同文件的不同连接
+本就允许并存，但**不保证原子性**（见 §7）。
 
 ## 5. Error Taxonomy
 

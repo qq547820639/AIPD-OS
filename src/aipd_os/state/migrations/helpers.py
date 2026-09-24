@@ -535,3 +535,21 @@ def _v17_perf_indexes(conn: sqlite3.Connection) -> None:
 def _v17_drop_perf_indexes(conn: sqlite3.Connection) -> None:
     conn.execute("DROP INDEX IF EXISTS idx_changes_scope_time")
     conn.execute("DROP INDEX IF EXISTS idx_outbox_due")
+
+
+def _v18_db_meta(conn: sqlite3.Connection) -> None:
+    """v18 up：库级元数据表。
+
+    存字段加密用的盐（F-STATE-08）。盐必须是**每库一份且稳定**：
+    每条密文各派生一次 PBKDF2 会把 129ms 的代价摊到每个字段读写上。
+    """
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS db_meta ("
+        " key TEXT PRIMARY KEY,"
+        " value TEXT NOT NULL,"
+        " created_at TEXT)"
+    )
+
+
+def _v18_drop_db_meta(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP TABLE IF EXISTS db_meta")

@@ -128,3 +128,20 @@ def test_split_statements_handles_semicolon_in_literal():
     assert len(stmts) == 2
     assert stmts[0].startswith("CREATE TABLE")
     assert "x;y" in stmts[1]
+
+
+def test_v18_db_meta_up_and_down(tmp_path):
+    """v18：`db_meta` 建得出也退得掉（字段加密的每库盐住在这里）。"""
+    from aipd_os.state.migrations import current_version, migrate, rollback
+
+    path = str(tmp_path / "v18.db")
+    migrate(path)
+    assert current_version(path) == 18
+    with sqlite3.connect(path) as c:
+        assert c.execute("SELECT name FROM sqlite_master WHERE type='table' "
+                         "AND name='db_meta'").fetchone() is not None
+    assert rollback(path, 17) == [18]
+    with sqlite3.connect(path) as c:
+        assert c.execute("SELECT name FROM sqlite_master WHERE type='table' "
+                         "AND name='db_meta'").fetchone() is None
+    assert current_version(path) == 17

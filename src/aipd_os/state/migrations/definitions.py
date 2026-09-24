@@ -40,6 +40,8 @@ from .helpers import (
     _v16_upgrade_outbox,
     _v17_drop_perf_indexes,
     _v17_perf_indexes,
+    _v18_db_meta,
+    _v18_drop_db_meta,
 )
 from .schema import V1_INITIAL_SCHEMA
 
@@ -536,6 +538,17 @@ MIGRATIONS: list[dict[str, Any]] = [
         ],
         "down": [
             _v17_drop_perf_indexes,
+        ],
+    },
+    # v18: F-STATE-08 字段加密改带盐 KDF，需要一处每库稳定的盐
+    {
+        "version": 18,
+        "name": "db_meta_table",
+        "up": [
+            _v18_db_meta,
+        ],
+        "down": [
+            _v18_drop_db_meta,
         ],
     },
 ]
