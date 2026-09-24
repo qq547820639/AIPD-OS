@@ -21,7 +21,7 @@ def _now() -> str:
 @contextmanager
 def _conn(db_path: str):
     conn = sqlite3.connect(db_path)
-    conn.executescript("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA foreign_keys = ON")
     try:
         yield conn
         conn.commit()
@@ -66,7 +66,7 @@ def migrate(db_path: str) -> list[int]:
     applied: list[int] = []
     conn = sqlite3.connect(db_path, timeout=30)
     try:
-        conn.executescript("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("BEGIN IMMEDIATE")
         _ensure_schema_migrations(conn)
         done = {r[0] for r in conn.execute(

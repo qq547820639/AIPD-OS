@@ -85,8 +85,12 @@ class BomStore:
     def __init__(self, db_path: str | Path) -> None:
         self.path = Path(db_path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        # 不用 executescript：它会先隐式 COMMIT，把调用方在同一库同一线程上
+        # 尚未提交的写一起提交掉（tests/test_ddl_transaction_atomicity.py）。
+        from aipd_os.state.migrations.sqlsplit import exec_script
+
         with self.connect() as c:
-            c.executescript(SCHEMA)
+            exec_script(c, SCHEMA)
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:

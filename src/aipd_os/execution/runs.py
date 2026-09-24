@@ -87,8 +87,10 @@ class RunStore:
     def __init__(self, db: str) -> None:
         self.path = Path(db)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        from aipd_os.state.migrations.sqlsplit import exec_script
+
         with self.connect() as c:
-            c.executescript(_SCHEMA)
+            exec_script(c, _SCHEMA)
             _ensure_columns(c)
 
     @contextmanager

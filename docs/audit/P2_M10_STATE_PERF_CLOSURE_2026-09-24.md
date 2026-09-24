@@ -285,14 +285,24 @@ PASS no_unacknowledged_cve      pip-audit: no unacknowledged CVE
 
 ## 9. 未做 / 下一步
 
-- **`executescript()` 与重入事务不兼容（本轮定位，当前不可达）**：
+- **`executescript()` 与重入事务不兼容（本轮定位；后续轮次已复现并修复）**：
   Python 的 `Cursor.executescript()` 执行前隐式 COMMIT，所以
   `with factory.transaction() as c: c.executescript(...)` 之后的语句
   已不在该事务内；此时若再嵌套 `transaction()`，`SAVEPOINT`/`RELEASE`
-  会自成一个小事务并提前提交。产品代码目前只在 `Supervisor.__init__`
-  建表处使用 `executescript`，且该处无重入调用，故不触发。
-  修法：DDL 也走 `migrations/sqlsplit.exec_script()`（拆分后逐条 execute，
-  不隐式提交）。
+  会自成一个小事务并提前提交。
+  > **本轮的两处判断都错了，2026-09-24 同日更正**：①「产品代码只在
+  > `Supervisor.__init__` 使用」不实——`grep executescript src/` 实得 **5 处**
+  > store 构造（`supervisor`、`execution/runs.RunStore`、
+  > `execution/closure_core.ClosureStore`、`product_truth.ProductTruthStore`、
+  > `bom.BomStore`），另有 `migrations/runner.py` 两处对 PRAGMA 的用法；
+  > ②「不可达」也不实——`tests/test_ddl_transaction_atomicity.py` 在同一库
+  > 同一线程的外层事务里构造这些 store，**调用方未提交的写被建表动作静默提交**，
+  > 5 条用例全红（先红后绿，不是推演）。
+  修法已按本节建议落地：DDL 改走 `migrations/sqlsplit.exec_script()`
+  （拆分后逐条 execute，不隐式提交），配配对对照（同样的两条脚本，
+  `executescript` 留下第一张表、`exec_script` 全回滚）。
+  教训：**「不可达」是可达性命题，要用一个真能触发的最小用例来判，
+  而不是用「当前调用图里没看到」来判**——后者是 grep 面积，不是证据。
 - `OutboxDispatcher` 在 `src/`、`scripts/` 内**无任何产品调用点**（实测 grep），
   目前只有测试与量具消费它。M5 交付的是机制，接线尚未发生。
 - 两套事务登记表（`AIPDStateDB` 与 `ConnectionFactory`）未统一，见 §2 遗留风险。

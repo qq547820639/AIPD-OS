@@ -111,8 +111,10 @@ class ProductTruthStore:
         self.tenant_id = tenant_id
         self.project_id = project_id
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        from aipd_os.state.migrations.sqlsplit import exec_script
+
         with self.connect() as c:
-            c.executescript(SCHEMA)
+            exec_script(c, SCHEMA)
             self._ensure_columns(c)
 
     @staticmethod

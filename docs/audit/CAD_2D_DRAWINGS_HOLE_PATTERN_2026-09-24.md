@@ -179,7 +179,28 @@ BOM 数量与模具摊销/成本核算跟着错，图纸也是错图的忠实投
 - 调研顺序不合规（§2）：功能已实现后才补的候选对比。影响后续纪律：**较大技术方案
   先出候选表再动手**，本轮把它写进本文档而不是事后修改成「当初就查过」。
 
-## 8. 复算入口
+## 8. 同日续做：F-STATE-05（store 建表把调用方事务静默提交）
+
+图纸这轮跑完后回到 P2 遗留清单，第一条就是 `executescript()`。P2 记的是
+「只在 `Supervisor.__init__`、当前不可达」——两句都由本轮实测证伪：
+
+- `grep -n executescript src/` 实得 **5 处 store 构造**（`supervisor`、
+  `execution/runs.RunStore`、`execution/closure_core.ClosureStore`、
+  `product_truth.ProductTruthStore`、`bom.BomStore`）+ `migrations/runner.py`
+  两处 PRAGMA 用法；
+- **可达性用最小用例判，不用调用图判**：在同一库、同一线程的外层事务里构造
+  store，外层的 `INSERT` 被建表的隐式 COMMIT 提交掉，回滚后仍在——
+  5 条用例先全红，改完（DDL 走 `sqlsplit.exec_script()`，逐条 execute）全绿。
+  另配配对对照：同样的两条脚本，`executescript` 留下第一张表，
+  `exec_script` 一张都不留（原子）。
+
+证据与更正写在 `docs/audit/P2_M10_STATE_PERF_CLOSURE_2026-09-24.md` §9；
+用例落在 `tests/test_ddl_transaction_atomicity.py`（11 passed）。
+
+教训（进本仓量具纪律）：**「不可达」是可达性命题，判它需要一个能触发的用例，
+不是一次 grep 面积**。同一形状的失误在 §4（圆心的包围盒中点法）已经犯过一次。
+
+## 9. 复算入口
 
 ```bash
 .venv/bin/python -m pytest -q tests/test_cad_drawings2d.py tests/test_cad_golden_loop.py

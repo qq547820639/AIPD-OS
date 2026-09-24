@@ -124,13 +124,15 @@ class Supervisor:
         self._tenant_id = tenant_id or "default"
         self._project_id = project_id
         self._state_db = state_db
+        from aipd_os.state.migrations.sqlsplit import exec_script
+
         with self.connect() as c:
-            c.executescript(SCHEMA)
+            exec_script(c, SCHEMA)
             _ensure_supervisor_columns(c)
             if self._state_db is None:
                 # Supervisor-only 旧 DB：确保 legacy decisions 表存在（幂等，
                 # 已存在的历史表不受影响；canonical 库中为 no-op）。
-                c.executescript(SUPERVISOR_LEGACY_DECISIONS_SCHEMA)
+                exec_script(c, SUPERVISOR_LEGACY_DECISIONS_SCHEMA)
 
     @contextmanager
     def connect(self):

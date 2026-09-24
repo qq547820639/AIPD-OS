@@ -513,8 +513,10 @@ class ClosureStore:
     def __init__(self, db: str) -> None:
         self.path = Path(db)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        from aipd_os.state.migrations.sqlsplit import exec_script
+
         with self.connect() as c:
-            c.executescript(_CLOSURE_SCHEMA)
+            exec_script(c, _CLOSURE_SCHEMA)
             # P2-M2: 幂等补齐 tenant_id/project_id 列（历史 closure DB 无此列）
             _migrate_closure_tenant_scope(c)
 

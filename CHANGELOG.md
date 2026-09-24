@@ -42,6 +42,15 @@
   `_hole_pattern()` 单源，并新增「声明参数 ↔ 实体几何」对账门
   （`geometry_validity_check` 的 `declared_features`，配 n=4 判红 / n=1 判绿双向反证）。
   体积/面数派生量受影响，故 BOM 与成本核算输入此前在多孔件上不可信；
+- **v5.10 修复 F-STATE-05：store 建表把调用方事务静默提交**：五个 store
+  （`Supervisor` / `RunStore` / `ClosureStore` / `ProductTruthStore` / `BomStore`）
+  的 `__init__` 在 `ConnectionFactory.transaction()` 内调 `executescript()`，
+  而它在执行前隐式 COMMIT——在同一库同一线程的外层事务里构造 store 时，
+  外层尚未提交的写会被一起提交、回滚失效，DDL 脚本自身也不再原子。
+  P2 曾把这条记为「当前不可达」，本轮用一个最小触发用例证伪（5 条先红后绿）。
+  统一改走 `state/migrations/sqlsplit.exec_script()`（逐条 execute，不隐式提交），
+  用例见 `tests/test_ddl_transaction_atomicity.py`（含 `executescript` 与
+  `exec_script` 的配对对照）；
 - **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归
