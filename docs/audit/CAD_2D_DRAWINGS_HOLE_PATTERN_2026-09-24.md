@@ -16,9 +16,10 @@
 | 全能力分布 | fully 36 / partially 28 / external 13 / 其余 0（共 77） | `docs/audit/capability_matrix.json` |
 | 图纸用例 | 27 passed | `tests/test_cad_drawings2d.py` |
 | CAD 黄金闭环用例 | 18 passed（新增 6 条） | `tests/test_cad_golden_loop.py` |
-| 全量回归 | **1336 passed / 0 failed / 3 skipped** | 收尾复跑（清单重算后） |
+| 全量回归 | **1337 passed / 0 failed / 3 skipped** | 收尾复跑（清单重算后） |
 | F-CAD-01 | 已修 + 已入门禁 + 已配反证 | §5 |
-| F-STATE-05 | 已复现（5 处）+ 已修 + 配对对照（11 passed） | §8 |
+| F-STATE-05 | 已复现（5 处）+ 已修 + 配对对照（11 passed） | §8.1 |
+| F-STATE-06 | 跨库串连接已复现 + 登记表收敛为一（3 条回归） | §8.2 |
 | ruff（`src tests state_service`）/ mypy（360 文件） | 0 项 | CI 作用域 |
 | 发布门 / 性能门 / skill 自审 | 8/8 绿 · PASS（比值 0.0161） · 0 警告 0 失败 | §6、§9 命令 |
 
@@ -181,7 +182,9 @@ BOM 数量与模具摊销/成本核算跟着错，图纸也是错图的忠实投
 - 调研顺序不合规（§2）：功能已实现后才补的候选对比。影响后续纪律：**较大技术方案
   先出候选表再动手**，本轮把它写进本文档而不是事后修改成「当初就查过」。
 
-## 8. 同日续做：F-STATE-05（store 建表把调用方事务静默提交）
+## 8. 同日续做：状态层两处事务安全（F-STATE-05 / F-STATE-06）
+
+### 8.1 F-STATE-05：store 建表把调用方事务静默提交
 
 图纸这轮跑完后回到 P2 遗留清单，第一条就是 `executescript()`。P2 记的是
 「只在 `Supervisor.__init__`、当前不可达」——两句都由本轮实测证伪：
@@ -201,6 +204,40 @@ BOM 数量与模具摊销/成本核算跟着错，图纸也是错图的忠实投
 
 教训（进本仓量具纪律）：**「不可达」是可达性命题，判它需要一个能触发的用例，
 不是一次 grep 面积**。同一形状的失误在 §4（圆心的包围盒中点法）已经犯过一次。
+
+### 8.2 F-STATE-06：跨库事务串连接（写进别人的库）
+
+顺着同一条遗留清单看到 `AIPDStateDB` 的事务登记：它把活动连接放在
+**模块级单个** `_db_tls.tx_conn` 里，**不按库路径分键**。于是危险形状不是
+P2 记的「同一个文件用两套接口」，而是**任意两个不同库的事务一嵌套就串**：
+
+```
+with A.transaction() as ca:
+    with B.transaction() as cb:     # cb is ca —— 拿到的是 A 的连接
+        cb.execute(INSERT ...)      # 写进 A，B 里连表都没有
+```
+
+实测复现（本轮探针）：`same connection object? True`；A.db 里出现了那条
+`'written-by-B-txn'`，B.db 报 `no such table`。这是多租户/多项目库面上的
+**跨库写错位置**，性质比死锁更糟（死锁会报错，这个不报）。
+
+修法：`connect()/transaction()` 委托给实例内的 `ConnectionFactory`，
+`active_transaction()` 暴露同一张按 **(解析后库路径, 线程)** 的登记表——
+两套合一套，P2 记的那条「未统一」遗留同时关闭。`connect()` 保留
+「事务外每条自动 commit」的原语义（改成工厂的 `connection()` 会静默丢写）。
+
+回归：`tests/test_connection_reentrancy.py::TestOneRegistryAcrossEntries`
+3 条（异库不串连接 + 数据各归各库；同库跨入口两个方向都复用外层连接），
+修复前 3 条全红、修复后全绿；全量 **1337 passed / 0 failed**（清单哈希除外）。
+
+性能没有变差（同一台机、与已提交基线比，`state_perf_gate` PASS）：
+
+| 指标 | 本轮 | 基线口径 |
+|------|------|----------|
+| `fact_batched_ops_s` | 21268.7 ops/s | 18.4k–22.2k 带内 |
+| `nested_txn_marginal_us` | 18.94 µs | P2 记 36–52 µs（变便宜：少了一次 `sqlite3.connect`） |
+| `changes_recent_100_ms` | 0.154 ms | v17 索引后亚毫秒 |
+| `outbox_claim_batch_ms` | 0.760 ms | 有序部分索引 |
 
 ## 9. 复算入口
 

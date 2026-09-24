@@ -63,6 +63,17 @@ SQLite 写锁按连接持有，因此同一线程「外层事务未提交 + 内�
 `execution/runs.py`、`supervisor/supervisor.py`，均为独立 db 文件；
 `validation/readiness.py` 与 `state/stale_propagation.py` 走 `AIPDStateDB.connect()`。
 
+> **2026-09-24 同日更新（F-STATE-06，已修）**：上面这段「实测当前不可达」低估了问题。
+> `_db_tls.tx_conn` 是**模块级单个槽位、不按库路径分键**，所以危险形状不是
+> 「同一文件两套接口」，而是**任意两个不同库的事务嵌套**：
+> 在 A 库事务里调 `B.transaction()` 拿到的是 A 的连接，
+> 于是本该写进 B 的语句落进 A，B 里连表都不存在（本轮实测复现）。
+> 收法：`AIPDStateDB.connect()/transaction()` 改为委托
+> `ConnectionFactory`（`active_transaction()` 公开同一张按 **(库路径, 线程)**
+> 的登记表），两套合一套；回归用例
+> `tests/test_connection_reentrancy.py::TestOneRegistryAcrossEntries`（3 条，
+> 修复前全红、修复后全绿）。
+
 ## 3. F6 stale 传播写入不存在的列
 
 `StalePropagationService._mark_downstream_stale` 的 cost_snapshot 分支向
@@ -305,7 +316,8 @@ PASS no_unacknowledged_cve      pip-audit: no unacknowledged CVE
   而不是用「当前调用图里没看到」来判**——后者是 grep 面积，不是证据。
 - `OutboxDispatcher` 在 `src/`、`scripts/` 内**无任何产品调用点**（实测 grep），
   目前只有测试与量具消费它。M5 交付的是机制，接线尚未发生。
-- 两套事务登记表（`AIPDStateDB` 与 `ConnectionFactory`）未统一，见 §2 遗留风险。
+- ~~两套事务登记表（`AIPDStateDB` 与 `ConnectionFactory`）未统一~~ **已统一**
+  （2026-09-24 F-STATE-06，见 §2 更新块）。
 - WAL 仍未全局开启（量具可复测，属于需要跨平台验证的独立决策）。
 - 版本号双轨制（pyproject 5.6.0 vs 功能 v5.10）仍留待正式发布统一。
 - 概览文档 `overview.md`（工作区根，仓外）已同步到本轮。

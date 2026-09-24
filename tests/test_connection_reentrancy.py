@@ -125,3 +125,53 @@ class TestRegistryHygiene:
 
         assert box["same"] is False
         assert box["visible"] == 0, "外层未提交的写不得被另一线程的连接看到（非同一连接）"
+
+
+class TestOneRegistryAcrossEntries:
+    """P2 遗留项收口：`AIPDStateDB` 与 `ConnectionFactory` 必须共用一套活动事务登记。
+
+    回归背景：`AIPDStateDB` 早先把活动连接放在**模块级单个** thread-local 槽里
+    （不按库路径分键），于是「在 A 库的事务里开 B 库的事务」会把 A 的连接交给 B，
+    写进 A、B 里连表都没有；同时它与 `ConnectionFactory` 的登记表互不可见，
+    同库跨入口嵌套时仍会与自己的写锁互等（本文件上面那条 F5 的同形问题）。
+    """
+
+    def test_two_databases_never_share_a_transaction_connection(self, tmp_path):
+        from aipd_os.state.db import AIPDStateDB
+
+        a = AIPDStateDB(str(tmp_path / "A.db"))
+        b = AIPDStateDB(str(tmp_path / "B.db"))
+        with a.transaction() as ca:
+            ca.execute("CREATE TABLE marker(which TEXT)")
+            with b.transaction() as cb:
+                assert cb is not ca, "B 库的事务拿到了 A 库的连接"
+                cb.execute("CREATE TABLE marker(which TEXT)")
+                cb.execute("INSERT INTO marker VALUES ('B')")
+        with a.connect() as c:
+            assert [r[0] for r in c.execute("SELECT which FROM marker")] == []
+        with b.connect() as c:
+            assert [r[0] for r in c.execute("SELECT which FROM marker")] == ["B"]
+
+    def test_state_db_and_factory_share_one_registry_same_file(self, tmp_path):
+        path = tmp_path / "shared.db"
+        from aipd_os.state.db import AIPDStateDB
+
+        state = AIPDStateDB(str(path))
+        factory = ConnectionFactory(path)
+        with state.transaction() as outer, factory.transaction() as inner:
+            assert inner is outer, (
+                "同库同线程跨入口嵌套必须复用外层连接，"
+                "否则内层 BEGIN IMMEDIATE 会与自己的写锁互等 5s")
+
+    def test_factory_outer_and_state_db_inner_reuse_connection(self, tmp_path):
+        path = tmp_path / "shared2.db"
+        from aipd_os.state.db import AIPDStateDB
+
+        state = AIPDStateDB(str(path))
+        factory = ConnectionFactory(path)
+        with factory.transaction() as outer:
+            with state.transaction() as inner:
+                assert inner is outer
+            outer.execute("CREATE TABLE IF NOT EXISTS probe(id INTEGER)")
+        with factory.connection() as c:
+            assert c.execute("SELECT count(*) FROM probe").fetchone()[0] == 0

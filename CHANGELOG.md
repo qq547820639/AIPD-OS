@@ -51,6 +51,16 @@
   统一改走 `state/migrations/sqlsplit.exec_script()`（逐条 execute，不隐式提交），
   用例见 `tests/test_ddl_transaction_atomicity.py`（含 `executescript` 与
   `exec_script` 的配对对照）；
+- **v5.10 修复 F-STATE-06：跨库事务串连接 + 事务登记表收敛为一**：
+  `AIPDStateDB` 的活动事务放在模块级**单个** thread-local 槽里、不按库路径分键，
+  因此「A 库事务中开 B 库事务」会把 A 的连接交给 B —— 本该写进 B 的语句落进 A，
+  且不报任何错（多租户/多项目库面上的写错位置）。同时它与 `ConnectionFactory`
+  的登记表互不可见，同库跨入口嵌套仍会与自己的写锁互等。
+  现 `connect()/transaction()` 委托 `ConnectionFactory`，全状态层共用一张
+  按 (库路径, 线程) 的登记表；回归
+  `tests/test_connection_reentrancy.py::TestOneRegistryAcrossEntries`
+  （修复前 3 条全红）。同库嵌套边际成本 18.9µs（P2 记 36–52µs），
+  `state_perf_gate` 与全量回归均 PASS；
 - **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归

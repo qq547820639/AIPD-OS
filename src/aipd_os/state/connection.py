@@ -63,6 +63,14 @@ class ConnectionFactory:
             conn.execute(pragma)
         return conn
 
+    def active_transaction(self) -> sqlite3.Connection | None:
+        """本 (库, 线程) 当前活动事务的连接；无活动事务则 None。
+
+        给「自己管 commit 语义」的老入口（``AIPDStateDB.connect``）复用同一张
+        登记表——否则同库会出现两个互不可见的活动事务，各自与自己的写锁互等。
+        """
+        return _active_conn(self._key)
+
     @contextmanager
     def transaction(self) -> Generator[sqlite3.Connection, None, None]:
         """事务上下文管理器，同一 (库, 线程) 上可重入。

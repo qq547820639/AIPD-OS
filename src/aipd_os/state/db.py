@@ -17,7 +17,6 @@ import hashlib
 import json
 import logging
 import sqlite3
-import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -334,9 +333,6 @@ class TenantNotFoundError(Exception):
 
 
 # 事务上下文（thread-local；connect 在事务内复用活动连接）
-_db_tls = threading.local()
-
-
 class AIPDStateDB:
     """多租户多项目 SQLite 状态存储。
 
@@ -344,28 +340,33 @@ class AIPDStateDB:
     schema authority** —— 新建库/既有库升级统一走 ``migrations.migrate()``
     （v1..v5 全链），不再旁路 ``executescript(SCHEMA)``。
     ``db.SCHEMA`` 仅作为「目标 schema 参考」保留（不再被 __init__ 执行）。
+
+    v5.10（F-STATE-06）：活动事务登记收敛到 ``ConnectionFactory`` 一张表
+    （按 **(解析后的库路径, 线程)** 为键）。此前这里是模块级单个
+    thread-local 槽，谁先 BEGIN 谁就被后来者复用——在 A 库事务里开 B 库
+    事务会把 A 的连接交给 B，写进 A、B 里连表都没有。
     """
 
     def __init__(self, db_path: str, encryption_key: str = ""):
         self.path = Path(db_path)
         self._encryption_key = encryption_key
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        from aipd_os.state.connection import ConnectionFactory
+        self._factory = ConnectionFactory(self.path)
         # 唯一 schema authority：迁移 runner（v1..v5 全链；幂等）
         from .migrations import migrate
         migrate(str(self.path))
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
-        # v5.9.1：事务内复用活动连接（不 commit/close）—— 同一事务的所有
-        # 语句（含 helper 内部 connect）落在同一连接上，保证原子性且无
-        # SQLite 写锁自死锁（历史 add_edge→add_audit 锁问题的根因修复）。
-        active = getattr(_db_tls, "tx_conn", None)
+        # 事务内复用活动连接（不 commit/close）——同一事务的所有语句
+        # （含 helper 内部 connect）落在同一连接上，保证原子性且无
+        # SQLite 写锁自死锁。登记表与 ConnectionFactory 共用（F-STATE-06）。
+        active = self._factory.active_transaction()
         if active is not None:
             yield active
             return
-        conn = sqlite3.connect(str(self.path))
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
+        conn = self._factory.connect()
         try:
             yield conn
             conn.commit()
@@ -379,8 +380,8 @@ class AIPDStateDB:
     def transaction(self) -> Iterator[sqlite3.Connection]:
         """显式事务上下文（v5.9.1，P0-05/19）。
 
-        - 顶层事务：BEGIN → 所有经 :meth:`connect` 的语句复用同一连接 →
-          COMMIT；异常 → ROLLBACK（任何失败 = 无部分写入）；
+        - 顶层事务：``BEGIN IMMEDIATE`` → 所有经 :meth:`connect` 的语句复用
+          同一连接 → COMMIT；异常 → ROLLBACK（任何失败 = 无部分写入）；
         - 嵌套事务：SAVEPOINT（不重复 BEGIN）；
         - 禁止在内部 helper 偷偷 commit 破坏原子性（connect 在事务内
           不 commit）。
@@ -391,39 +392,8 @@ class AIPDStateDB:
                 c.execute(...)           # 直接 SQL
                 db.add_audit(...)        # helper（复用活动连接）
         """
-        active = getattr(_db_tls, "tx_conn", None)
-        if active is not None:
-            # 嵌套：SAVEPOINT
-            depth = _db_tls.tx_depth
-            _db_tls.tx_depth = depth + 1
-            conn = active
-            conn.execute(f"SAVEPOINT sp_{depth}")
-            try:
-                yield conn
-                conn.execute(f"RELEASE SAVEPOINT sp_{depth}")
-            except Exception:
-                conn.execute(f"ROLLBACK TO SAVEPOINT sp_{depth}")
-                raise
-            finally:
-                _db_tls.tx_depth = depth
-            return
-        conn = sqlite3.connect(str(self.path))
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.isolation_level = None  # autocommit；显式 BEGIN/COMMIT/ROLLBACK
-        conn.execute("BEGIN")
-        _db_tls.tx_conn = conn
-        _db_tls.tx_depth = 0
-        try:
+        with self._factory.transaction() as conn:
             yield conn
-            conn.execute("COMMIT")
-        except Exception:
-            conn.execute("ROLLBACK")
-            raise
-        finally:
-            conn.close()
-            _db_tls.tx_conn = None
-            _db_tls.tx_depth = 0
 
     # ------------------------------------------------------------------ helper
     def next_sequence(self, name: str, prefix: str,

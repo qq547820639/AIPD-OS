@@ -57,8 +57,13 @@ Repository 方法不应在每个 INSERT 后自行 commit。
 - 登记表以「解析后的绝对路径 + 线程 ident」为 key，而非以工厂实例为 key。
   原因：`Supervisor.connect()` 每次调用都新建一个 `ConnectionFactory`，
   实例级状态看不见外层事务。
-- `AIPDStateDB.connect()/transaction()`（v5.9.1 起）与
-  `ConnectionFactory`（P2-M10 起）现在共用同一形状。
+- `AIPDStateDB.connect()/transaction()` 自 **F-STATE-06** 起委托
+  `ConnectionFactory`，与所有 store **真的共用这一张表**。
+  在此之前本文档写的是「共用同一形状」，而实现是两张互不可见的表，
+  且 `AIPDStateDB` 的活动连接放在**模块级单个** thread-local 槽里、
+  不按库路径分键 —— 结果是「A 库事务里开 B 库事务」会把 A 的连接交给 B，
+  本该写进 B 的语句落进 A（不报错）。三条契约由
+  `tests/test_connection_reentrancy.py::TestOneRegistryAcrossEntries` 锁住。
 
 **为什么这是硬约束**：写锁按连接持有。若重入时另开连接再 `BEGIN IMMEDIATE`，
 它会与自己的外层写锁互等，`busy_timeout` 到点后抛 `database is locked`——
@@ -74,6 +79,17 @@ ConnectionFactory 后，`run_supervisor` 的 execute 阶段因此整体退化为
 
 跨库（例如 `state.db` 与 `*.bom.db`）不共享登记表：不同文件的不同连接
 本就允许并存，但**不保证原子性**（见 §7）。
+
+### 4.3 建表/DDL 不许用 `executescript()`（F-STATE-05）
+
+`sqlite3` 的 `Cursor.executescript()` 在执行前先**隐式 COMMIT**。因此
+「在 `transaction()` 里 `executescript()` 建表」会把调用方在同一库同一线程上
+尚未提交的写一起提交掉（回滚失效），DDL 脚本自身也不再原子（中途失败留半个 schema）。
+
+规则：多语句 DDL 一律走 `state/migrations/sqlsplit.exec_script(conn, script)`
+（拆分后逐条 `execute`，不隐式提交）。`store.__init__` 里建表也在其内——
+五个 store 都曾命中该形状。反证与配对对照见
+`tests/test_ddl_transaction_atomicity.py`。
 
 ## 5. Error Taxonomy
 
