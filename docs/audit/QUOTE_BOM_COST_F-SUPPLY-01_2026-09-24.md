@@ -126,7 +126,28 @@ heredoc 里的改码头脚本会静默不执行，"变异后仍全绿"是假读�
   仍留待属主裁决（前几轮普查的第 4 候选，维持不动）；
 - 本轮未触碰：外部邮件真实投递、WAL 启用、版本双轨、tag/签名重锚、`releases/golden-projects/**`。
 
-## 7. 复算入口
+## 7. 收尾读数（本轮）
+
+- 全量回归：**1449 passed / 0 failed / 3 skipped**（`-p no:randomly`，重锚清单后复跑）；
+- `ruff check src tests state_service` 0、`mypy src tests` 0（374 文件）；
+- `production_release_gate --release-ready --tag v5.6.0`：**8/8 绿**（认证的是 v5.6.0
+  那棵树的 1096 passed 报告，与本轮树的 1449 不可互换引用）；
+- `skill_quality_audit`：0 警告 / 0 失败；
+- `state_perf_gate`：**红一项** `fact_batched_ops_s`，判为**机器负载**而非本轮回归，
+  证据是同机 A/B（新旧两棵树交替各测两轮，`git worktree` 到 `1c8a505` 后删除）：
+
+  | 轮 | 本轮树 (15b7dca) | 改动前树 (1c8a505) |
+  |---|---|---|
+  | r1 | 7220.67 ops/s | 6455.64 ops/s |
+  | r2 | 7323.43 ops/s | 6884.97 ops/s |
+
+  两对读数同一量级、且本轮树两次都**更快**，而基线 18424.7 是安静机器下采的；期间
+  `uptime` 负载从 6.12 涨到 8.70，最后一次同场景复测已掉到 5314.24。裁决：
+  **不动 `data/state_perf_baseline.json`**（在负载 8.7 下 `--update-baseline` 等于把
+  劣化读数钉成新的"正常"），关闭条件是机器安静时复跑该门并回到容差内。
+  本轮改动不涉及 `add_fact` 批量路径（未改 `state/db.py`），A/B 也印证了这一点。
+
+## 8. 复算入口
 
 ```bash
 export PATH="$PWD/.venv/bin:$PATH"
@@ -134,6 +155,12 @@ python -m pytest tests/test_quote_to_cost_chain.py tests/test_bom.py \
                  tests/test_supply_chain.py tests/test_cli.py -q -p no:randomly
 python -m pytest tests/test_skill_command_surface.py tests/test_command_coverage.py -q
 python scripts/capability_matrix.py --repo . --out docs/audit   # 矩阵含新能力行
+# 性能门红时的同机 A/B（证明是负载还是回归）：
+git worktree add /tmp/aipd-prev HEAD~2
+.venv/bin/python scripts/state_perf_gate.py --only fact_batched_ops_s
+(cd /tmp/aipd-prev && /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/bin/python \
+    scripts/state_perf_gate.py --only fact_batched_ops_s); git worktree remove /tmp/aipd-prev
+
 # 手工看一条链（临时库，不碰开发者数据）：
 D=$(mktemp -d); python -m aipd_os.cli.main init --db "$D/state.db" \
   --project P-1 --name 支架 --goal 量产 >/dev/null
