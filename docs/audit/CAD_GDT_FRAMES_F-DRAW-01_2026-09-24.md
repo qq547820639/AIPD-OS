@@ -74,3 +74,17 @@
 - 不做基准坐标系/最大实体条件（MMC/LMC）修饰符、不做复合框（多行 FCF）、
   不做 profile 的真实包络几何（只画框与文字）；
 - 剖视与局部放大仍未做；`--spec` 仍只吃 JSON 文件。
+
+## 七、收尾读数
+
+- 全量回归：**1527 passed / 0 failed / 3 skipped**（本轮 +11 条）；
+- `ruff check src tests state_service` 0；`mypy src tests` 0（**385** 文件）；
+- `production_release_gate --release-ready --tag v5.6.0` 退出码 0（8/8）；
+  `skill_quality_audit` 0/0；`state_perf_gate` **PASS**（load 4.12：
+  `fact_batched_ops_s` 21333.9 ops/s、批处理比 0.0464、`nested_txn_marginal_us` 21.93µs）；
+- 清单 **583 文件**（+2：`gdt.py` 与新用例），`SOURCE_MANIFEST.source_commit` 仍钉
+  `a6604052`（v5.6.0 tag），未移 tag、未重建/重签 bundle、未 push；
+- 提交：`fb6d467`（FCF 落图 + 用例 + 文档）/ `0016e46`（清单重锚）。
+- 本轮自查抓到并改掉的两处自己的错：证据文档 §四 的行号是按记忆写的，逐条重新解析后修正
+  （24→26、78→82、169→181、553→555、511→513、132→142）；CHANGELOG 锚点第一次没匹配上，
+  先 grep 取到真实行再插条目，没有盲改。
