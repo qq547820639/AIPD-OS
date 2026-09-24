@@ -279,6 +279,23 @@ class TestWhatGoesOnTheSheet:
         assert _view(ev, "DETAIL_1")["section_symbols"] == []
         assert [s["letter"] for s in _view(ev, "TOP")["section_symbols"]] == ["A"]
 
+    def test_a_section_may_be_a_parent_but_its_hatching_is_not_cropped(self, tmp_path):
+        """母视图允许是剖视，但本轮**只裁折线、不裁材料区**：放大出来的剖视有线无剖面线。
+
+        这条用例是把边界钉成机器可读的事实，不是宣称「剖视放大已完整」。补上裁剪
+        ``cut_regions`` 的那一轮，必须连同这里的两条断言一起改判（`cut_regions == 0`
+        那条要翻成 `> 0`），别让它悄悄变成永久基线。
+        """
+        ev, _ = _gen(tmp_path, views=("TOP",), sections=("Y=0",),
+                     details=("SECTION_Y@(-30,0)/12=2",), name="sec_parent")
+        sec, det = _view(ev, "SECTION_Y"), _view(ev, "DETAIL_1")
+        assert sec["cut_regions"] > 0 and det["cut_regions"] == 0
+        assert det["detail_of"]["parent"] == "SECTION_Y"
+        assert det["visible_polylines"] > 0 and det["detail_empty"] is False
+        # 剖视里没有整圆孔（筒壁投成两条竖线）⇒ 没有可继承的测点，尺寸一条都不该带进来
+        assert det["dimensions"] == []
+        assert ev["detail_numbers"] == {"DETAIL_1": 1} and ev["detail_issues"] == []
+
 
 class TestNothingIsClaimedWithoutGeometry:
     def test_a_circle_that_catches_nothing_is_not_numbered_and_holds_the_sheet(
