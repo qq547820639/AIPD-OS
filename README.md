@@ -186,9 +186,11 @@ aipd validate --manifest manifest.json --target C5    # 验证是否达到目标
 
 ### 场景 5：准备开模物料清单与成本
 ```bash
-aipd bom add --db state.db --part 外壳 --material ABS --supplier Acme --unit-cost 10
-aipd bom show --db state.db --project p1              # 物料清单 + 发布检查
+aipd bom add --db state.db --part 外壳 --material ABS --quantity 1
+aipd quote apply --db state.db --file quotes.csv      # 报价 → quote.* 事实 → 该行单价
+aipd bom show --db state.db --tooling 50000 --quantity 1000 --margin 20   # 汇总 + 发布检查
 aipd cost calc --db state.db --tooling 50000 --quantity 1000 --margin 20   # 成本核算
+aipd bom release --db state.db                        # 清单全过才置 released，否则 exit 4
 ```
 
 ### 场景 6：发布前自查
@@ -257,7 +259,7 @@ AIPD 的**一键命令**（`aipd <cmd>`；权威清单是 `src/aipd_os/cli/comma
 - 图纸：`cad preflight` / `cad build` / `drawing generate`
 - 产品定义：`product show` / `product gate`
 - 工业化：`industrialize` / `validate`
-- 制造就绪：`bom show` / `bom add` / `cost calc`
+- 制造就绪：`bom show` / `bom add` / `bom release` / `quote apply` / `cost calc`
 - 审计与发布：`audit` / `release check` / `test` / `eval` / `package`
 - 运维体检：`doctor` / `version --verbose`
 

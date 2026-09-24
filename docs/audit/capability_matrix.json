@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-24T16:57:58",
+  "generated_at": "2026-09-24T17:59:57",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "a731d82022af362e4671ee6f224b9ea4df7ebcc4",
-  "source_commit": "a731d82022af362e4671ee6f224b9ea4df7ebcc4",
+  "latest_commit_sha": "1c8a50565848464226da97be83f5c04eefc38ea7",
+  "source_commit": "1c8a50565848464226da97be83f5c04eefc38ea7",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
@@ -27,10 +27,10 @@
     "not_verifiable": "无法验证（缺证据/缺环境）"
   },
   "summary": {
-    "total_capabilities": 77,
+    "total_capabilities": 78,
     "by_classification": {
       "fully_implemented": 36,
-      "partially_implemented": 28,
+      "partially_implemented": 29,
       "protocol_only": 0,
       "template_only": 0,
       "external_dependency": 13,
@@ -1168,7 +1168,28 @@
           "unit_test": "tests/test_supply_chain.py",
           "integration_test": null,
           "e2e_evidence": "报价解析与归一化",
-          "current_limitation": "附件格式解析范围有限",
+          "current_limitation": "附件格式解析范围有限；解析本身不动钱，落到 BOM 由 industrialize.quote_to_bom_cost 承担",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": false
+          }
+        },
+        {
+          "id": "industrialize.quote_to_bom_cost",
+          "name": "报价→BOM→成本闭环",
+          "domain": "工业化与验证",
+          "classification": "partially_implemented",
+          "external_dependency": false,
+          "declaration_file": "references/tool-and-physical-boundaries.md; docs/audit/QUOTE_BOM_COST_F-SUPPLY-01_2026-09-24.md",
+          "implementation_file": "src/aipd_os/supply_chain/apply.py; src/aipd_os/cli/commands_supply.py",
+          "entry_point": "aipd_os.supply_chain.apply.apply_quotes_to_bom",
+          "run_command": "aipd quote apply --db <state.db> --file <quotes.csv>",
+          "input_output": "official 报价 -> quote.* 事实(V) + bom_lines.unit_cost/supplier/quote_ref(status=quoted) -> compute_bom_cost -> bom release 检查清单",
+          "unit_test": "tests/test_quote_to_cost_chain.py",
+          "integration_test": null,
+          "e2e_evidence": "真实 CLI 入口串联：quote apply → bom show(检查清单) → bom release(未过即 exit 4)；同文件重放为零新事实/零改价（TestProductPath、TestApplyIsReproducible）",
+          "current_limitation": "报价文件表头无币种列，币种必须由 --currency 显式声明并逐行核对；draft/superseded 报价与作废行一律拒绝改价；跨币种折算未实现",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,

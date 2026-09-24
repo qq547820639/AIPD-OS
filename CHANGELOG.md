@@ -126,7 +126,8 @@
   多读 1 字节判溢出（不信 `Content-Length`，可分块传输），超限直接 `HttpError`，
   绝不返回半截字节；非 2xx 正文同受此限，且 `except HttpError: raise` 必须排在
   兜底 `except Exception` 之前；上限改为**调用时**解析（绑在 `def` 行会让调常量静默无效）。
-  5 条新用例（含「正好等于上限」与「差 1 字节」两个边界方向）；- **v5.10 修复 F-EXEC-05：接线的后果自己也有洞——「结果未知」必须可见**：
+  5 条新用例（含「正好等于上限」与「差 1 字节」两个边界方向）；
+- **v5.10 修复 F-EXEC-05：接线的后果自己也有洞——「结果未知」必须可见**：
   `mark_unknown` 给事件置 `completed_at`（必须如此，否则超时=可重投=两封信），代价是
   这些行从所有 `completed_at IS NULL` 查询里消失——实测一次超时后
   `sent=0 / deduped=0 / pending=0` 三个读数全部「正常」。台账一边有状态机、有
@@ -137,6 +138,24 @@
   `execution_runs.duration_ms` 从 5 处硬编码 0 改为 `elapsed_ms()` 单点派生，并把恒真的
   `assert duration_ms >= 0` 收紧为 `> 0` + 50ms sleep 下界用例；`--db` 路径不存在时
   exit 2 并说明，绝不替用户建库；
+
+- **v5.10 修复 F-SUPPLY-01 / F-BOM-01 / F-COST-01：询价 → 报价 → BOM → 成本这条商业主链从来没有闭合过**：
+  接线前实测（`git grep HEAD`）——`SupplyChainStore.persist_quote` 全仓 **0 个产品调用点**
+  （唯一调用者在 `tests/test_supply_chain.py:455`）；`set_bom_status` 同样 **0 个产品调用点**
+  （只有 2 处测试）⇒ `release_checklist` 的 `bom_released` 在产品路径上永假；
+  `bom show` 调 `release_checklist` 时不传 `cost_inputs`（HEAD `commands_manufacturing.py:60`）
+  ⇒ `cost_calculated` 永假；全仓唯一写 `bom_lines.unit_cost` 的地方是 CLI 手填的
+  `--unit-cost`。也就是说「开模可用物料清单」这个门禁既不可能满足、报价也从来没有
+  变成过成本。现补 `aipd_os.supply_chain.apply`（只有 official 报价能改价、对不上行即
+  `unmatched`、币种逐行核对、作废行不接受报价、重复应用不推高版本）+ 两条新命令
+  `aipd quote apply`（解析→登记→落 `quote.*` 事实(V)→写 BOM 单价）与
+  `aipd bom release`（清单未过即 exit 4 并点名未过项，过了才置 released）；
+  `compute_bom_cost` 此前把 USD 与 CNY 直接相加、还把 `obsolete` 行算进材料小计，
+  现分别改为多币种即 `CostCurrencyError` 与按 `OBSOLETE_STATUS` 排除（`rollup` 同口径）；
+  `industrialize --quote` 增加自陈「仅解析、未落库、未改价」并指向 `quote apply`。
+  接线后自己又量出一处（**F-SUPPLY-02**）：同文件二次 `quote apply` 崩在 `UNIQUE constraint failed: facts…key, facts.version`——版本号取自进程内注册表（每次从 v1 起）而事实按项目持久；state.db 与 bom.db 之间没有跨库原子性，「重放即修复」因此不是便利而是唯一收口手段。现版本号以库为准：内容相同即复用既有那版（零新事实、零改价），改价才出新版本且旧版 `V` 事实随即转 `R`。
+  16 条新用例（全部走 `main(argv)` 真实入口，不手搓 args 副本）+ 4 组变异对照开火。
+  证据与未证范围见 `docs/audit/QUOTE_BOM_COST_F-SUPPLY-01_2026-09-24.md`；
 
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），

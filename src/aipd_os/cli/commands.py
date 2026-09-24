@@ -81,6 +81,7 @@ from .commands_release import (
     cmd_release_check,
     cmd_test,
 )
+from .commands_supply import cmd_quote
 from .commands_validation import (
     cmd_issue_list,
     cmd_issue_resolve,
@@ -531,6 +532,8 @@ COMMAND_FUNCS: dict[str, Any] = {
     # v5.10 制造就绪（BOM 物料清单 / 成本核算）
     "bom show": cmd_bom,
     "bom add": cmd_bom,
+    "bom release": cmd_bom,
+    "quote apply": cmd_quote,
     "cost calc": cmd_cost,
     # v5.10 Validation / Issue / Readiness
     "validation plan": cmd_validation_plan,

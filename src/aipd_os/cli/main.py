@@ -405,12 +405,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     # ---- v5.10 制造就绪（bom 物料清单 / cost 成本核算）----
     p_bom = sub.add_parser(
-        "bom", help="物料清单（show 汇总+发布检查 / add 添加行）。"
+        "bom", help="物料清单（show 汇总+发布检查 / add 添加行 / release 检查后发布）。"
                     " Example: aipd bom add --db state.db --part 外壳 --quantity 1")
     bom_sub = p_bom.add_subparsers(dest="bom_cmd", required=True)
     bp = bom_sub.add_parser("show", help="BOM 汇总 + 开模可用物料清单发布检查清单。")
     bp.add_argument("--db", required=True)
     bp.add_argument("--project")
+    bp.add_argument("--tooling", type=float, default=0.0, help="模具费（检查口径）")
+    bp.add_argument("--quantity", type=int, default=1000, help="目标生产数量")
+    bp.add_argument("--amortize-over", type=int, help="摊销数量（缺省=quantity）")
+    bp.add_argument("--nre", type=float, default=0.0)
+    bp.add_argument("--margin", type=float, default=0.0)
     bp.add_argument("--json", action="store_true")
     bp.set_defaults(func=COMMAND_FUNCS["bom show"])
     bp = bom_sub.add_parser("add", help="给最新 BOM 添加一行（自动创建 BOM）。")
@@ -431,6 +436,35 @@ def build_parser() -> argparse.ArgumentParser:
                     choices=["planned", "quoted", "released", "obsolete"])
     bp.add_argument("--json", action="store_true")
     bp.set_defaults(func=COMMAND_FUNCS["bom add"])
+
+    # bom release：与 show 同一套成本口径 + 发布检查清单，未过即拒绝（exit 4）
+    bp = bom_sub.add_parser(
+        "release", help="按发布检查清单校验后置为 released（未过则拒绝）。")
+    bp.add_argument("--db", required=True)
+    bp.add_argument("--project")
+    bp.add_argument("--reason", default="", help="发布依据（如首件确认）")
+    bp.add_argument("--tooling", type=float, default=0.0, help="模具费（检查口径）")
+    bp.add_argument("--quantity", type=int, default=1000, help="目标生产数量")
+    bp.add_argument("--amortize-over", type=int, help="摊销数量（缺省=quantity）")
+    bp.add_argument("--nre", type=float, default=0.0)
+    bp.add_argument("--margin", type=float, default=0.0)
+    bp.add_argument("--json", action="store_true")
+    bp.set_defaults(func=COMMAND_FUNCS["bom release"])
+
+    # quote apply：报价文件 → Product Truth 事实 → BOM 行单价（F-SUPPLY-01）
+    p_quote = sub.add_parser(
+        "quote", help="询价/报价链（apply：把报价文件落到 BOM 上）。"
+                      " Example: aipd quote apply --db state.db --file quotes.csv")
+    quote_sub = p_quote.add_subparsers(dest="quote_cmd", required=True)
+    qp = quote_sub.add_parser(
+        "apply", help="解析报价 → 登记版本 → 写 quote.* 事实 → 写入 BOM 单价。")
+    qp.add_argument("--db", required=True)
+    qp.add_argument("--project")
+    qp.add_argument("--file", required=True, help="报价 CSV/JSON 文件")
+    qp.add_argument("--currency", default="CNY",
+                    help="报价单价的币种（报价文件表头无币种列，必须显式声明）")
+    qp.add_argument("--json", action="store_true")
+    qp.set_defaults(func=COMMAND_FUNCS["quote apply"])
 
     p_cost = sub.add_parser(
         "cost", help="成本核算（BOM 材料 + 模具摊销 + NRE + 毛利，写回 Product Truth）。"

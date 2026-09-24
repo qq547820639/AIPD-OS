@@ -128,6 +128,12 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                  description="查看 BOM 物料清单"),
     CommandEntry("bom add", CommandStatus.PUBLIC, CommandCategory.MANUFACTURING, "5.10",
                  description="添加 BOM 条目"),
+    CommandEntry("bom release", CommandStatus.PUBLIC, CommandCategory.MANUFACTURING, "5.10",
+                 requires_args=frozenset({"--db"}),
+                 description="把 BOM 置为 released；发布检查清单未过则拒绝并非零退出"),
+    CommandEntry("quote apply", CommandStatus.PUBLIC, CommandCategory.MANUFACTURING, "5.10",
+                 requires_args=frozenset({"--db", "--file"}),
+                 description="报价文件登记→落 Product Truth→写入 BOM 行单价"),
     CommandEntry("cost calc", CommandStatus.PUBLIC, CommandCategory.MANUFACTURING, "5.10",
                  description="成本核算"),
 

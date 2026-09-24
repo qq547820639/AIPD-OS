@@ -70,6 +70,12 @@ def cmd_industrialize(args):
                 "supplier": q.supplier, "part": q.part, "quote_id": q.quote_id,
                 "unit_price": q.data["unit_price"], "status": q.status,
             })
+        # 注册表是命令内的临时对象：这条路径只归一化、不落库也不改 BOM 的价。
+        # 不说清就会被读成"报价已入账"（F-SUPPLY-01 的同一种误读）。
+        quotes_note = (
+            f"以上 {len(official_quotes)} 条报价仅完成解析与版本登记（临时注册表，"
+            "本次运行结束即丢弃）：未写入 Product Truth，也未改 BOM 单价。"
+            "要让报价成为成本，请用 aipd quote apply --db <state.db> --file <报价文件>")
     else:
         quotes_note = "未收到报价数据，未登记任何官方报价（不发散、不虚构）。"
 

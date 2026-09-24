@@ -37,12 +37,75 @@ def _latest_bom_or_create(store: Any, tenant: str, project: str) -> Any:
 
 
 def cmd_bom(args: Any) -> int:
-    """bom 命令分发（show / add）。"""
+    """bom 命令分发（show / add / release）。"""
     if args.bom_cmd == "show":
         return _bom_show(args)
     if args.bom_cmd == "add":
         return _bom_add(args)
+    if args.bom_cmd == "release":
+        return _bom_release(args)
     raise ValueError(f"unknown bom subcommand: {args.bom_cmd}")
+
+
+def _cost_inputs(args: Any) -> Any:
+    """`bom show` / `bom release` 的成本口径：与 `cost calc` 同一套参数与默认值。
+
+    两个子命令的 parser 都声明了这五个 flag，因此直接取属性；``--amortize-over``
+    缺省是 None（= 按目标数量摊销），不是 0。
+    """
+    from aipd_os.bom import CostInputs
+
+    return CostInputs(
+        tooling_fee=float(args.tooling),
+        target_quantity=int(args.quantity),
+        amortize_over=int(args.amortize_over) if args.amortize_over else None,
+        nre=float(args.nre),
+        margin_pct=float(args.margin))
+
+
+def _bom_release(args: Any) -> int:
+    """把 BOM 头置为 released——但只在其余检查项已经全过时允许。
+
+    没有这道闸，「发布检查清单」就只是事后统计：release 一个自己就说不清的 BOM
+    会让 checklist 的 release_ready 变成一句可以随意勾选的话。
+    """
+    from aipd_os.bom import BomStore, release_checklist
+    from aipd_os.state.db import AIPDStateDB
+
+    db = AIPDStateDB(args.db)
+    pid = _resolve_project(db, getattr(args, "project", None))
+    store = BomStore(str(_bom_store_path(args.db)))
+    header = store.get_bom(DEFAULT_TENANT, pid)
+    if header is None:
+        result = {"command": "bom release", "ok": False, "status": "HOLD",
+                  "project": pid, "reason": "尚无 BOM，无从发布"}
+        _emit(args, result, lambda: print(result["reason"]))
+        return 4
+
+    checklist = release_checklist(store, DEFAULT_TENANT, pid, bom_id=header.bom_id,
+                                  cost_inputs=_cost_inputs(args))
+    blocking = [name for name, passed in checklist["checks"].items()
+                if not passed and name != "bom_released"]
+    if blocking:
+        result = {"command": "bom release", "ok": False, "status": "HOLD",
+                  "project": pid, "bom_id": header.bom_id,
+                  "blocking_checks": sorted(blocking), "checklist": checklist,
+                  "reason": "发布检查清单未过，拒绝置为 released"}
+        _emit(args, result,
+              lambda: print("拒绝发布，未过项：" + ", ".join(sorted(blocking)))
+              )
+        return 4
+
+    updated = store.set_bom_status(DEFAULT_TENANT, pid, header.bom_id, "released",
+                                   expected_version=header.version_no)
+    result = {"command": "bom release", "ok": True, "status": "DONE",
+              "project": pid, "bom_id": updated.bom_id,
+              "bom_status": updated.status, "version_no": updated.version_no,
+              "reason": getattr(args, "reason", "") or "release"}
+    _emit(args, result,
+          lambda: print(f"BOM {updated.bom_id} 已置为 {updated.status}"
+                        f"（version {updated.version_no}）"))
+    return 0
 
 
 def _bom_show(args: Any) -> int:
@@ -57,7 +120,11 @@ def _bom_show(args: Any) -> int:
         "command": "bom show", "ok": True, "project": pid,
         "bom": header.to_dict() if header else None,
         "rollup": rollup(store, DEFAULT_TENANT, pid),
-        "checklist": release_checklist(store, DEFAULT_TENANT, pid),
+        # 不传 cost_inputs 时 cost_calculated 永远是 False（F-BOM-01：这个清单在产品
+        # 路径上根本不可能满足）。这里显式带上核算口径，并把口径 itself 打进结果里。
+        "checklist": release_checklist(store, DEFAULT_TENANT, pid,
+                                       cost_inputs=_cost_inputs(args)),
+        "cost_inputs": _cost_inputs(args).__dict__,
     }
 
     def prose():

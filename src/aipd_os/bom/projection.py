@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .cost import CostInputs, CostResult, compute_bom_cost
+from .cost import OBSOLETE_STATUS, CostInputs, CostResult, compute_bom_cost
 from .store import BomStore
 
 
@@ -21,7 +21,12 @@ def rollup(store: BomStore, tenant_id: str, project_id: str,
     missing_cost = []
     orphans = []
     roots = []
+    obsolete: list[str] = []
     for line in lines:
+        if line.status == OBSOLETE_STATUS:
+            # 与成本核算同一口径：作废行留在清单里可追溯，但不参与完整性判定
+            obsolete.append(line.item)
+            continue
         if line.supplier:
             suppliers[line.supplier] = suppliers.get(line.supplier, 0) + 1
         if line.unit_cost is None or not line.supplier:
@@ -35,6 +40,7 @@ def rollup(store: BomStore, tenant_id: str, project_id: str,
         "line_count": len(lines),
         "root_items": sorted(roots),
         "suppliers": suppliers,
+        "obsolete_items": sorted(set(obsolete)),
         "missing_cost_items": sorted(set(missing_cost)),
         "orphan_parents": sorted(set(orphans)),
         "cost_complete": not missing_cost,

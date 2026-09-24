@@ -12,6 +12,13 @@ from typing import Any
 
 from .models import BomLine
 
+#: 作废行不参与成本：它留在 BOM 里可追溯，但钱不按它算。
+OBSOLETE_STATUS = "obsolete"
+
+
+class CostCurrencyError(ValueError):
+    """一个 BOM 里出现多种币种 ⇒ 求和得到的「总价」没有含义，拒绝出数。"""
+
 
 @dataclass
 class CostInputs:
@@ -53,10 +60,14 @@ class CostResult:
     line_count: int
     missing_cost_lines: list[str] = field(default_factory=list)
     cost_complete: bool = False
+    currency: str | None = None
+    obsolete_excluded: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "material_subtotal": round(self.material_subtotal, 4),
+            "currency": self.currency,
+            "obsolete_excluded": list(self.obsolete_excluded),
             "tooling_fee": round(self.tooling_fee, 4),
             "tooling_per_unit": round(self.tooling_per_unit, 6),
             "nre": round(self.nre, 4),
@@ -79,11 +90,22 @@ def compute_bom_cost(lines: list[BomLine], inputs: CostInputs) -> CostResult:
     """
     material_subtotal = 0.0
     missing: list[str] = []
+    obsolete: list[str] = []
+    priced: dict[str, None] = {}
     for line in lines:
+        if line.status == OBSOLETE_STATUS:
+            obsolete.append(line.item)
+            continue
         if line.unit_cost is None or not line.supplier:
             missing.append(f"{line.item}(line {line.line_id})")
             continue
+        priced[line.currency] = None
         material_subtotal += line.quantity * line.unit_cost
+
+    if len(priced) > 1:
+        raise CostCurrencyError(
+            f"BOM 含多种币种 {sorted(priced)}，不能相加为一个 unit_cost；"
+            "请拆 BOM 或先统一币种后再核算")
 
     amortize = inputs.amortize_quantity()
     tooling_per_unit = inputs.tooling_fee / amortize
@@ -92,6 +114,8 @@ def compute_bom_cost(lines: list[BomLine], inputs: CostInputs) -> CostResult:
     unit_price = unit_cost * (1.0 + inputs.margin_pct / 100.0)
     return CostResult(
         material_subtotal=material_subtotal,
+        currency=next(iter(priced)) if priced else None,
+        obsolete_excluded=obsolete,
         tooling_fee=inputs.tooling_fee,
         tooling_per_unit=tooling_per_unit,
         nre=inputs.nre,
