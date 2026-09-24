@@ -79,6 +79,7 @@ from .commands_release import (
     cmd_eval,
     cmd_package,
     cmd_release_check,
+    cmd_release_manifest,
     cmd_test,
 )
 from .commands_supply import cmd_quote
@@ -512,6 +513,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "validate": cmd_validate,
     "audit": cmd_audit,
     "release check": cmd_release_check,
+    "release manifest": cmd_release_manifest,
     "test": cmd_test,
     "eval": cmd_eval,
     "package": cmd_package,

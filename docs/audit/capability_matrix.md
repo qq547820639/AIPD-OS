@@ -1,10 +1,10 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-24T20:08:23`
+- 生成时间：`2026-09-24T20:56:09`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`54b08dd84430b8cbf87e608de91dfedabb0b674b`
+- 默认分支：`main`；HEAD：`4691174441f8e63bd203dc5a4cb6bc0a219b4ab9`
 - 版本：`5.6.0`
-- 能力总数：`78`
+- 能力总数：`79`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
 
 ## 分类统计
@@ -12,7 +12,7 @@
 | 分类 | 数量 | 说明 |
 | --- | --- | --- |
 | `fully_implemented` | 35 | 完整实现（有真实运行工件与测试证据） |
-| `partially_implemented` | 30 | 部分实现（核心路径可用，边界/证据不全） |
+| `partially_implemented` | 31 | 部分实现（核心路径可用，边界/证据不全） |
 | `protocol_only` | 0 | 仅协议/接口（无真实执行） |
 | `template_only` | 0 | 仅模板/示例（无真实执行） |
 | `external_dependency` | 13 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
@@ -95,6 +95,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | RFQ | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/tool_adapters/mail_rfq_adapter.py | aipd_os.tool_adapters.mail_rfq_adapter.MailRfqAdapter | `aipd industrialize` | tests/test_supply_chain.py | 真实邮件发送依赖外部邮件通道 |
 | 邮件执行 | `external_dependency` | references/tool-and-physical-boundaries.md | src/aipd_os/execution/side_effects.py; src/aipd_os/tool_adapters/mail_rfq_adapter.py | aipd_os.execution.side_effects.rfq_send_handler | `aipd outbox drain` | tests/test_outbox_rfq_wiring.py | 真实投递仍依赖外部 SMTP/Gmail 通道，未配置时诚实 external_blocked；投递由 outbox 事件 + dispatcher 驱动（aipd outbox drain）；同一内容的重驱动按内容幂等拦截，结果未知（transient/tool_error）的失败挂起等人工核对，不自动重发 |
+| 发布就绪证据装配 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/release_manifest.py | aipd_os.cli.commands_release.cmd_release_manifest | `aipd release manifest` | tests/test_release_manifest.py | 只做证据装配与显式溯源：CTQ 与图纸特征靠 spec 里的 ctq_ref 人工挂，不做按名字自动映射；模型侧只支持从 STEP 数实体，读不到就不写 model_part_count（不折算成 0）；approval_status 由属主填、缺省 unapproved，生产者不代为置 approved；版本不一致只如实记录不对齐；GD&T 形位公差框与公差叠加分析仍未实现。 |
 | 报价解析 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/quotes.py | aipd_os.supply_chain.quotes.normalize_quote | `aipd industrialize --quote <file>` | tests/test_supply_chain.py | 附件格式解析范围有限；解析本身不动钱，落到 BOM 由 industrialize.quote_to_bom_cost 承担 |
 | 报价→BOM→成本闭环 | `partially_implemented` | references/tool-and-physical-boundaries.md; docs/audit/QUOTE_BOM_COST_F-SUPPLY-01_2026-09-24.md | src/aipd_os/supply_chain/apply.py; src/aipd_os/cli/commands_supply.py | aipd_os.supply_chain.apply.apply_quotes_to_bom | `aipd quote apply --db <state.db> --file <quotes.csv>` | tests/test_quote_to_cost_chain.py | 报价文件表头无币种列，币种必须由 --currency 显式声明并逐行核对；draft/superseded 报价与作废行一律拒绝改价；跨币种折算未实现 |
 | 供应商资质 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/suppliers.py | aipd_os.supply_chain.suppliers.SupplierRegistry | `aipd industrialize` | tests/test_supply_chain.py | 证书真实性需人工/外部核验 |

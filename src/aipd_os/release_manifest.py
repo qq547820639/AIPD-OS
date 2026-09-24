@@ -1,0 +1,277 @@
+"""发布就绪证据文档的**生产者**。
+
+命令 ``aipd release manifest``，能力行 ``industrialize.release_evidence``。
+
+门禁 `scripts/production_release_gate.py` 早就把 `gdt_covers_ctq` / `ctq_has_inspection`
+写成 fail-closed，但本轮实测：全仓 `ctq`/`gdt` 两个数组只出现在测试夹具里
+（`tests/test_production_release_gate.py:44`、`tests/test_cli.py:336`），`src/` 内零生产点
+——即 C5/C6 的证据只能靠人手写 JSON，写什么就是什么。本模块把这些字段改成**现取**：
+
+- BOM 行数 / 版本：`BomStore`（bom 库按产品口径放在 state.db 同目录的 ``bom.db``）；
+- CTQ：Product Truth 的 ``record_type="ctq"`` 记录（``metadata.feature`` 是必填出处）；
+- GD&T：**只从图纸证据长出来**——一条 gdt 项要求「图纸上真的标了公差」+「该声明显式带
+  ``ctq_ref``」+「偏差与该 CTQ 的上下限数值一致」三条同时成立。CTQ 侧永远产不出 gdt，
+  所以「有 CTQ 没画上」必然判未覆盖，不给空真通过的机会；
+- 版本一致性：``bom_version`` 取 BOM 头修订、``drawings_version`` 取图纸标题栏修订、
+  ``model_version`` 取模型文件内容哈希——三个互相独立的来源。不一致时**如实留在文档里**
+  让门禁去判红，绝不为过门禁把三者填成同一个串（那正是 ``drawing_cad_same_revision``
+  要抓的东西）。
+
+不做的事：按名字模糊匹配 CTQ 与图纸特征（那是装饰性接线）；没有模型时编造
+``model_part_count``；把 ``approval_status`` 默认写成 "approved"。
+"""
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+from collections.abc import Sequence
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+DEFAULT_TENANT = "default"
+
+
+def _issue(issues: list[dict[str, Any]], kind: str, detail: str, *, blocking: bool,
+           feature: str | None = None) -> None:
+    """一条问题项；涉及图纸特征时带上 ``feature``，让下游能按特征机读而不是解析中文。"""
+    item: dict[str, Any] = {"kind": kind, "detail": detail, "blocking": blocking}
+    if feature:
+        item["feature"] = feature
+    issues.append(item)
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _evidence_path(dxf: Path) -> Path:
+    return dxf.with_suffix(".evidence.json")
+
+
+def _collect_ctq(truth: Any, issues: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """CTQ 记录 → {record_id: 条目}；缺 feature 的逐条点名（不静默少一条）。"""
+    by_id: dict[str, dict[str, Any]] = {}
+    for rec in truth.query(record_type="ctq", status="active"):
+        meta = rec.metadata or {}
+        feature = meta.get("feature")
+        if not feature:
+            _issue(issues, "ctq_missing_feature",
+                   f"CTQ {rec.record_id}（{rec.content!r}）缺 metadata.feature，"
+                   f"无法与图纸特征核对", blocking=True)
+            continue
+        inspection = meta.get("inspection_method") or meta.get("test_method")
+        if not inspection:
+            _issue(issues, "ctq_missing_inspection",
+                   f"CTQ {feature}（{rec.record_id}）没有检验方法，"
+                   f"门禁 ctq_has_inspection 会判红", blocking=True)
+        by_id[str(rec.record_id)] = {
+            "record_id": str(rec.record_id),
+            "feature": str(feature),
+            "inspection_method": inspection,
+            "lower_limit": meta.get("lower_limit"),
+            "upper_limit": meta.get("upper_limit"),
+            "trust_level": rec.trust_level,
+        }
+    if not by_id:
+        _issue(issues, "no_ctq", "Product Truth 里没有 active 的 ctq 记录；"
+                                 "门禁 gdt_covers_ctq / ctq_has_inspection 都会 fail-closed",
+               blocking=True)
+    return by_id
+
+
+def _agrees_with_ctq(declared: dict[str, float], nominal: float,
+                     ctq: dict[str, Any]) -> bool | None:
+    """图纸偏差 vs CTQ 绝对上下限。CTQ 没写限值时返回 None（不可核，不是通过）。"""
+    lo, hi = ctq.get("lower_limit"), ctq.get("upper_limit")
+    if lo is None or hi is None:
+        return None
+    return (abs(float(declared["upper"]) - (float(hi) - nominal)) <= 1e-9
+            and abs(float(declared["lower"]) - (float(lo) - nominal)) <= 1e-9)
+
+
+def _collect_drawings(drawings: Sequence[Path | str], root: Path,
+                      ctq_by_id: dict[str, dict[str, Any]],
+                      issues: list[dict[str, Any]]) -> tuple[list[dict[str, Any]],
+                                                             list[dict[str, Any]],
+                                                             list[str]]:
+    """读每张图的证据 sidecar，产出 (文件引用, gdt 项, 修订号)。"""
+    refs: list[dict[str, Any]] = []
+    gdt: list[dict[str, Any]] = []
+    revisions: list[str] = []
+    for raw in drawings:
+        path = Path(raw)
+        if not path.is_file():
+            _issue(issues, "drawing_missing", f"图纸文件不存在：{path}", blocking=True)
+            continue
+        sidecar = _evidence_path(path)
+        if not sidecar.is_file():
+            _issue(issues, "drawing_evidence_missing",
+                   f"{path.name} 没有 {sidecar.name}，图纸内容无法核验", blocking=True)
+            continue
+        evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+        rel = path.relative_to(root).as_posix() if path.parent == root else str(path)
+        refs.append({"path": rel, "sha256": _sha256(path)})
+        revisions.append(str(evidence.get("revision", "")))
+        for view in evidence.get("views", []):
+            for dim in view.get("dimensions", []):
+                tolerance = dim.get("tolerance")
+                if not tolerance:
+                    continue
+                # 尺寸证据里的 feature 自带视图前缀（F-DRAW-01 第 1 片定的口径）
+                feature = str(dim.get("feature", ""))
+                ref = dim.get("ctq_ref")
+                if not ref:
+                    _issue(issues, "tolerance_unlinked",
+                           f"{feature} 标了公差但没有 ctq_ref，无法计入 gdt 覆盖",
+                           blocking=False, feature=feature)
+                    continue
+                ctq = ctq_by_id.get(str(ref))
+                if ctq is None:
+                    _issue(issues, "unknown_ctq_ref",
+                           f"{feature} 的 ctq_ref={ref!r} 在 Product Truth 里不存在"
+                           f"（不做名字模糊匹配）", blocking=True, feature=feature)
+                    continue
+                verdict = _agrees_with_ctq(tolerance, float(dim["value"]), ctq)
+                if verdict is False:
+                    _issue(issues, "tolerance_mismatch",
+                           f"{feature} 图纸标 ±{tolerance} 但 CTQ {ctq['feature']} 的限值"
+                           f"是 [{ctq['lower_limit']}, {ctq['upper_limit']}]",
+                           blocking=True, feature=feature)
+                    continue
+                if verdict is None:
+                    _issue(issues, "ctq_limits_missing",
+                           f"CTQ {ctq['feature']} 没写上下限，{feature} 的数值一致性"
+                           f"不可核（按引用成立计入覆盖）", blocking=False)
+                gdt.append({"feature": ctq["feature"], "drawing_feature": feature,
+                            "drawing": rel, "sha256": refs[-1]["sha256"],
+                            "tolerance": tolerance, "nominal": dim["value"]})
+    if not drawings:
+        _issue(issues, "no_drawings", "没有传入任何图纸：图纸侧产不出 gdt，"
+                                     "发布就绪不成立", blocking=True)
+    return refs, gdt, revisions
+
+
+def _collect_bom(db_path: Path, tenant_id: str, project_id: str, bom_id: str | None,
+                 issues: list[dict[str, Any]]) -> dict[str, Any]:
+    from aipd_os.bom.store import BomStore
+
+    store = BomStore(db_path.parent / "bom.db")
+    fields: dict[str, Any] = {}
+    lines = store.list_lines(tenant_id, project_id, bom_id)
+    if not lines:
+        _issue(issues, "no_bom_lines",
+               f"BOM 里没有行（bom_id={bom_id or '全部'}），计数一致性无从谈起", blocking=True)
+        return fields
+    fields["bom_line_count"] = len(lines)
+    if bom_id is None:
+        _issue(issues, "bom_not_bound",
+               "未指定 --bom，bom_version 取不到唯一来源，本轮不写该字段", blocking=False)
+        return fields
+    header = store.get_bom(tenant_id, project_id, bom_id)
+    if header is None:
+        _issue(issues, "bom_missing", f"bom {bom_id!r} 不存在", blocking=True)
+        return fields
+    fields["bom_version"] = header.revision
+    return fields
+
+
+def _model_fields(model: Path | str | None, issues: list[dict[str, Any]]) -> dict[str, Any]:
+    """模型侧只有真给了文件才产字段；没给就留 source 说明，不编数。"""
+    if model is None:
+        return {"model_version": {"source": "not_given"}}
+    path = Path(model)
+    if not path.is_file():
+        _issue(issues, "model_missing", f"模型文件不存在：{path}", blocking=True)
+        return {"model_version": {"source": "missing"}}
+    out: dict[str, Any] = {"model_version": {"source": "content_sha256",
+                                             "value": _sha256(path)[:12]}}
+    try:
+        if path.suffix.lower() != ".step":
+            raise ValueError("目前只支持从 STEP 数实体（原生源需执行其构建脚本，未做）")
+        import cadquery as cq
+
+        # 实测：``importStep().val()`` 返回的是 cadquery 的 Solid 包装而不是
+        # TopoDS_Shape，直接喂给 TopExp_Explorer 会 TypeError；用 cq 自己的选择器数。
+        imported = cq.importers.importStep(str(path))
+        out["model_part_count"] = imported.solids().size()
+    except Exception as exc:  # 读不动模型不等于 0 个零件
+        _issue(issues, "model_unreadable",
+               f"{path.name}: {type(exc).__name__}: {exc}；不折算成 part 数", blocking=False)
+    return out
+
+
+def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENANT,
+                           project_id: str = DEFAULT_TENANT,
+                           drawings: Sequence[Path | str] = (),
+                           bom_id: str | None = None, model: Path | str | None = None,
+                           units: str = "mm", datum_scheme: str = "unspecified",
+                           approval_status: str = "unapproved",
+                           out_path: Path | str | None = None,
+                           now: datetime | None = None) -> dict[str, Any]:
+    """装配门禁可消费的发布就绪证据文档；返回同一份文档并附生产者判定。
+
+    ``ok`` 只由「阻断类问题」决定，不看门禁脸色——文档写什么，磁盘上就是什么。
+    """
+    db = Path(db_path)
+    root = Path(out_path).parent if out_path else db.parent
+    issues: list[dict[str, Any]] = []
+
+    from aipd_os.product_truth.store import ProductTruthStore
+
+    truth = ProductTruthStore(str(db), tenant_id=tenant_id, project_id=project_id)
+    ctq_by_id = _collect_ctq(truth, issues)
+    refs, gdt, revisions = _collect_drawings(list(drawings), root, ctq_by_id, issues)
+    doc: dict[str, Any] = {
+        "runtime": "native_brep" if importlib.util.find_spec("cadquery") else "faceted_brep",
+        "units": units,
+        "datum_scheme": datum_scheme,
+        "approval_status": approval_status,
+        "timestamp": (now or datetime.now(timezone.utc)).isoformat().replace("+00:00", "Z"),
+        "ctq": list(ctq_by_id.values()),
+        "gdt": gdt,
+        "drawing_count": len(refs),
+    }
+    doc.update(_collect_bom(db, tenant_id, project_id, bom_id, issues))
+    model_fields = _model_fields(model, issues)
+    if "model_part_count" in model_fields:
+        doc["model_part_count"] = model_fields["model_part_count"]
+    if "value" in model_fields["model_version"]:
+        doc["model_version"] = model_fields["model_version"]["value"]
+    if revisions:
+        doc["drawings_version"] = revisions[0]
+        if len(set(revisions)) > 1:
+            _issue(issues, "drawing_revision_split",
+                   f"多张图修订不一致：{sorted(set(revisions))}", blocking=True)
+    if "bom_version" in doc and "drawings_version" in doc \
+            and doc["bom_version"] != doc["drawings_version"]:
+        _issue(issues, "version_split",
+               f"bom_version={doc.get('bom_version')} vs "
+               f"drawings_version={doc.get('drawings_version')}（不代为对齐）",
+               blocking=False)
+
+    versions = {k: doc[k] for k in ("model_version", "bom_version", "drawings_version")
+                if k in doc}
+    doc["producer"] = {
+        "model_version": model_fields["model_version"],
+        "version_parity": {"values": versions,
+                           "consistent": len(set(map(str, versions.values()))) <= 1
+                           and len(versions) >= 2},
+        "drawings_referenced": len(refs),
+    }
+    doc["evidence"] = {"drawings": refs,
+                       "ctq_source": "product_truth",
+                       "gdt_source": "drawing_evidence"}
+    blocking = any(i["blocking"] for i in issues)
+    doc["issues"] = issues
+    doc["blocking"] = blocking
+    doc["ok"] = not blocking
+
+    if out_path:
+        target = Path(out_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n",
+                          encoding="utf-8")
+        doc["manifest_path"] = str(target)
+    return doc

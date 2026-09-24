@@ -185,6 +185,8 @@ aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket -
 #     {"features":[{"feature":"TOP.hole_2","tolerance":{"upper":0.05,"lower":-0.05}}],
 #      "global_tolerance":{"upper":0.2,"lower":-0.2}}；不传则图上不含任何公差，
 #     声明的特征在图上找不到时命令返回 4（未收口）而不是静默少标。
+aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
+#   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据
 aipd validate --manifest manifest.json --target C5    # 验证是否达到目标成熟度
 ```

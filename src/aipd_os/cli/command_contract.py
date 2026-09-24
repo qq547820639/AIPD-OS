@@ -142,6 +142,8 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                  description="仓库审计"),
     CommandEntry("release check", CommandStatus.PUBLIC, CommandCategory.AUDIT_RELEASE, "5.1",
                  description="发布检查"),
+    CommandEntry("release manifest", CommandStatus.PUBLIC, CommandCategory.AUDIT_RELEASE,
+                 "5.10", description="现取装配发布就绪证据文档（CTQ/图纸/BOM 对账）"),
     CommandEntry("test", CommandStatus.PUBLIC, CommandCategory.AUDIT_RELEASE, "5.1",
                  description="运行测试套件"),
     CommandEntry("eval", CommandStatus.PUBLIC, CommandCategory.AUDIT_RELEASE, "5.1",

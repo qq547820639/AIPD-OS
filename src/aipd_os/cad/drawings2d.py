@@ -505,7 +505,7 @@ def resolve_spec_tolerances(views: list[ViewGeometry],
 
     返回写进图纸证据的统计：贴了几处、声明了但图上没有的特征是哪些。
     """
-    declared: dict[str, dict[str, float]] = {}
+    declared: dict[str, dict[str, Any]] = {}
     order: list[str] = []
     for entry in (spec or {}).get("features") or []:
         if not isinstance(entry, dict) or not entry.get("feature"):
@@ -513,7 +513,10 @@ def resolve_spec_tolerances(views: list[ViewGeometry],
         name = str(entry["feature"])
         if name in declared:
             raise ValueError(f"spec 里特征 {name} 重复声明")
-        declared[name] = _declared_tolerance(entry.get("tolerance"), name)
+        # ``ctq_ref`` 是可选的**显式**溯源指针（指向 Product Truth 的 CTQ 记录 id）；
+        # 不猜、不按名字模糊匹配——没有它就是"这条公差暂无权威出处"。
+        declared[name] = {"tolerance": _declared_tolerance(entry.get("tolerance"), name),
+                          "ctq_ref": entry.get("ctq_ref")}
         order.append(name)
     glob_raw = (spec or {}).get("global_tolerance")
     glob = _declared_tolerance(glob_raw, "global_tolerance") if glob_raw else None
@@ -522,14 +525,18 @@ def resolve_spec_tolerances(views: list[ViewGeometry],
     applied = 0
     for view in views:
         for dim in view.dimensions:
-            tolerance = declared.get(str(dim["feature"]))
-            if tolerance is not None:
+            entry = declared.get(str(dim["feature"]))
+            if entry is not None:
                 matched.add(str(dim["feature"]))
-            elif glob is not None:
-                tolerance = glob
+                tolerance = entry["tolerance"]
+            else:
+                tolerance, entry = glob, None
             if tolerance is None:
                 continue
             dim["tolerance"] = {"upper": tolerance["upper"], "lower": tolerance["lower"]}
+            ref = (entry or {}).get("ctq_ref")
+            if ref:
+                dim["ctq_ref"] = str(ref)
             applied += 1
     return {
         "tolerance_applied": applied,

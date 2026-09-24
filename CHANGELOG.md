@@ -205,6 +205,25 @@
   Product Truth 打通，故 **C6 生产图纸包仍不成立**。证据见
   `docs/audit/CAD_DRAWING_CHAIN_TOLERANCE_F-DRAW-01_2026-09-24.md`；
 
+- **v5.10 修复 F-EVID-01：发布就绪门禁的 CTQ/GD&T 证据根本没有生产者**：
+  `production_release_gate.py:256-286` 的 `gdt_covers_ctq` / `ctq_has_inspection` 早写成
+  fail-closed，但实测全仓 `ctq`/`gdt` 两个数组**只出现在两处测试夹具里**（
+  `tests/test_production_release_gate.py:44`、`tests/test_cli.py:336`），`src/` 内零命中
+  ——C5/C6 的证据此前只能人手抄，抄什么过什么。现新增 `src/aipd_os/release_manifest.py` 与
+  `aipd release manifest`：BOM 行数/版本现取 `BomStore`、CTQ 现取 Product Truth
+  （`record_type="ctq"`）、图纸数与 sha256 现取 `.evidence.json`，版本三源独立
+  （BOM 头修订 / 图纸标题栏修订 / 模型内容哈希）**不代为对齐**。
+  防空真通过的关键：**`gdt` 只从图纸侧长出**——要求「真标了公差 + 显式 `ctq_ref` +
+  偏差数值与 CTQ 上下限一致」三条同时成立，所以「登记了 CTQ 但没画上」必然判未覆盖；
+  不做按名字模糊映射（F-REG-01 的装饰性接线），`approval_status` 缺省 `unapproved`（生产者不代批），
+  模型读不到就不写 `model_part_count`（不折算成 0）。真机端到端：未给 `--model` 时
+  `gdt_covers_ctq=True` 而 `drawing_cad_same_revision=False`（缺输入即判红）。
+  10 条新用例（两条门禁断言直接跑真门禁读 `evidence_checks`，不复刻判据），8 条变异全部打破；
+  `--model` 分支在首轮真机运行即判 `model_unreadable`——根因是
+  `importStep().val()` 返回 cadquery 的 `Solid` 包装而非 `TopoDS_Shape`，改用
+  `solids().size()` 并补「两个实体数出 2」的用例。证据见
+  `docs/audit/RELEASE_EVIDENCE_PRODUCER_F-EVID-01_2026-09-24.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

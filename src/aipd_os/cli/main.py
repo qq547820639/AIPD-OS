@@ -286,6 +286,23 @@ def build_parser() -> argparse.ArgumentParser:
                     choices=["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7"])
     rp.add_argument("--json", action="store_true")
     rp.set_defaults(func=COMMAND_FUNCS["release check"])
+    mp = release_sub.add_parser("manifest", help="现取装配发布就绪证据文档（CTQ/图纸/BOM 对账）。"
+                                               " Example: aipd release manifest --db state.db "
+                                               "--drawing out/bracket.dxf --out evidence.json")
+    mp.add_argument("--db", required=True, help="状态库路径（Product Truth 所在）")
+    mp.add_argument("--tenant", default="default")
+    mp.add_argument("--project", default="default")
+    mp.add_argument("--drawing", action="append",
+                    help="图纸 DXF 路径（可重复）；读其 .evidence.json 侧车")
+    mp.add_argument("--bom", default=None, help="BOM id（不传则不写 bom_version）")
+    mp.add_argument("--model", default=None, help="模型文件（.step）路径")
+    mp.add_argument("--units", default="mm")
+    mp.add_argument("--datum_scheme", default="unspecified")
+    mp.add_argument("--approval-status", dest="approval_status", default="unapproved",
+                    help="审批状态由属主填；缺省 unapproved，不代为置 approved")
+    mp.add_argument("--out", default=None, help="证据文档输出路径")
+    mp.add_argument("--json", action="store_true")
+    mp.set_defaults(func=COMMAND_FUNCS["release manifest"])
 
     p = sub.add_parser("test", help="运行完整测试套件（pytest）。"
                                     " Example: aipd test")

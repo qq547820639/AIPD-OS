@@ -2,6 +2,8 @@
 
 - ``aipd audit``：生成能力矩阵审计产物；
 - ``aipd release check``：版本真实性审计 + 生产发布门禁；
+- ``aipd release manifest``：从 BOM 库 / Product Truth / 图纸证据现取装配门禁可消费的
+  发布就绪证据文档（门禁的 ``gdt_covers_ctq`` 因此不再依赖手写 JSON）；
 - ``aipd test`` / ``aipd eval`` / ``aipd package``：测试 / 评估 / 构建发布包。
 """
 
@@ -58,6 +60,42 @@ def cmd_release_check(args):
               "gate_passed": gate.get("passed", rc == 0), "gate": gate}
     _emit(args, result, lambda: print(json.dumps(result, ensure_ascii=False, indent=2)))
     return 0
+
+
+# ---- release manifest：现取装配发布就绪证据文档（数字不手抄）----
+def cmd_release_manifest(args):
+    from aipd_os.release_manifest import build_release_manifest
+
+    db = Path(args.db)
+    if not db.is_file():
+        print(f"状态库不存在：{db}")
+        return 2
+    out = Path(args.out) if args.out else db.parent / "release-evidence.json"
+    doc = build_release_manifest(
+        db_path=db, tenant_id=args.tenant, project_id=args.project,
+        drawings=[Path(p) for p in (args.drawing or [])], bom_id=args.bom,
+        model=args.model, units=args.units, datum_scheme=args.datum_scheme,
+        approval_status=args.approval_status, out_path=out)
+
+    def prose():
+        print(f"发布就绪证据文档：{out}")
+        print(f"  runtime={doc['runtime']} ctq={len(doc['ctq'])} gdt={len(doc['gdt'])} "
+              f"图纸={doc['producer']['drawings_referenced']} 张")
+        for key in ("model_version", "bom_version", "drawings_version",
+                    "model_part_count", "bom_line_count", "drawing_count"):
+            if key in doc:
+                print(f"  {key} = {doc[key]}")
+            else:
+                print(f"  {key} = （未取到，不编造）")
+        for issue in doc["issues"]:
+            mark = "阻断" if issue["blocking"] else "提示"
+            print(f"  [{mark}] {issue['kind']}: {issue['detail']}")
+        if not doc["issues"]:
+            print("  无问题项")
+        print("  说明：gdt 只从「图纸上真标了公差 + 显式 ctq_ref + 数值与 CTQ 一致」"
+              "长出来；未对齐的版本字段留给门禁判红，不代为统一。")
+    _emit(args, doc, prose)
+    return 0 if doc["ok"] else 4
 
 
 # ---- test：运行测试套件（映射 run-tests）----
