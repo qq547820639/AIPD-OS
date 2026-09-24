@@ -15,9 +15,15 @@
 符号码位是本仓选定的表（ISO 1101 的符号在字形层面对应这些码位），
 不是「渲染已核实」的声明；不在表里的特征（如同轴度）一律判 ``characteristic_unsupported``
 而不猜一个近似符号。
+位置类特征还做**偏差核对**：声明带 ``basic: [x, y]``（理论精确位置，与挂点同一套视图坐标）时，
+拿投影实测圆心与之比较，直径带按 ``2×距离`` 判，超带判 ``position_deviation_exceeded``；
+没给 basic 就点名 ``position_basic_missing``，不拿实测当理论、也不拿 (0,0) 兜底。
+形状/方向类（平面度等）需要整面采样，本仓内核不做，一律标 ``verified="presence_only"``，
+不伪造 0 偏差。
 """
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from typing import Any
 
@@ -41,6 +47,7 @@ DIAMETER_SIGN = "⌀"          # U+2300，实测存盘读回原样（DXF TEXT �
 COMPARTMENT_HEIGHT = 5.0      # 图纸 mm（1:1 时），一格高
 CHAR_WIDTH = 2.4              # 每字符近似宽，够判定格宽与回读
 MIN_COMPARTMENT_WIDTH = 6.0
+POSITION_DEV_TOL = 1e-6      # 位置度偏差与公差带比较的数值容差（拟合/离散化噪声量级）
 
 
 def _fmt(value: float) -> str:
@@ -156,6 +163,20 @@ def build_gdt_frames(views: Sequence[Any], spec: dict[str, Any] | None
                 continue
 
             comps = _compartments(symbol, _zone_text(entry), datum_ids)
+            attach = _attach_point(view, dim)
+            ref = str(entry.get("ctq_ref") or decl.get("ctq_ref") or "")
+            basic, deviation, within, verified = _position_check(
+                characteristic, entry, attach, zone)
+            if verified == "missing_basic":
+                issues.append(_issue("position_basic_missing", feature=feature,
+                                     characteristic=characteristic, zone=zone,
+                                     measured=attach, ctq_ref=ref, blocking=True))
+                verified = "presence_only"
+            elif within is False:
+                issues.append(_issue("position_deviation_exceeded", feature=feature,
+                                     characteristic=characteristic, zone=zone,
+                                     deviation_mm=deviation, basic=basic,
+                                     measured=attach, ctq_ref=ref, blocking=True))
             frames.append({
                 "view": view_name,
                 "feature": feature,
@@ -165,16 +186,57 @@ def build_gdt_frames(views: Sequence[Any], spec: dict[str, Any] | None
                 "diametral": bool(entry.get("diametral")),
                 "datum_refs": datum_ids,
                 "datums": resolved,
-                "attach": _attach_point(view, dim),
+                "attach": attach,
+                "basic": basic,
+                "deviation_mm": deviation,
+                "within_zone": within,
+                "verified": verified,
                 "compartments": comps,
                 "text": "|".join(comps),
                 "height_mm": COMPARTMENT_HEIGHT,
                 "width_mm": sum(compartment_width(c) for c in comps),
                 # 这一格答的是哪条需求：优先取 gdt 条目自带的引用（由 CTQ 生产者写入），
                 # 手写声明没有就留空——空引用只是「不可溯源」，不等于无主，别硬凑一个。
-                "ctq_ref": str(entry.get("ctq_ref") or decl.get("ctq_ref") or ""),
+                "ctq_ref": ref,
             })
     return frames, issues, unmatched
+
+
+def _basic_point(entry: dict[str, Any]) -> list[float] | None:
+    """声明里的理论精确位置：必须是两个真数，否则按「没给」处理（不默认 0、不猜实测）。"""
+    raw = entry.get("basic")
+    if not isinstance(raw, (list, tuple)) or len(raw) != 2:
+        return None
+    out = []
+    for value in raw:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        out.append(float(value))
+    return out
+
+
+def _position_check(characteristic: str, entry: dict[str, Any],
+                    attach: list[float], zone: float):
+    """位置度偏差核对。返回 ``(basic, deviation_mm, within_zone, verified)``。
+
+    只有**位置**类特征有「理论精确位置」可核；形状/方向类需要整面采样，本仓内核不做，
+    所以对它们一律给 ``presence_only`` 而不是伪造一个 0 偏差。
+    """
+    if characteristic != "position":
+        return None, None, None, "presence_only"
+    basic = _basic_point(entry)
+    if basic is None:
+        return None, None, None, "missing_basic"
+    dx = attach[0] - basic[0]
+    dy = attach[1] - basic[1]
+    dist = math.hypot(dx, dy)
+    deviation = round(2.0 * dist, 9)
+    if entry.get("diametral"):
+        within = 2.0 * dist <= zone + POSITION_DEV_TOL
+    else:      # 非直径带按方形带处理：两个方向各自不越过半个带宽
+        within = (abs(dx) <= zone / 2.0 + POSITION_DEV_TOL
+                  and abs(dy) <= zone / 2.0 + POSITION_DEV_TOL)
+    return basic, deviation, bool(within), "deviation"
 
 
 def compartment_width(comp: Any) -> float:

@@ -151,9 +151,21 @@ def _collect_drawings(drawings: Sequence[Path | str], root: Path,
         # GD&T 框也算覆盖凭据：只声明形位、不声明尺寸公差的 CTQ，画上去的框就是它上图的证据。
         # 这一半只核「框真在图上 + 挂在实测特征上」，**不核形位偏差实测值**（本仓还不测形位偏差）。
         covered = {str(g["ctq_record_id"]) for g in gdt}
+        exceeded = {str(i.get("feature") or ""): i
+                    for i in (evidence.get("gdt_issues") or [])
+                    if i.get("kind") == "position_deviation_exceeded"}
         for frame in evidence.get("gdt_frames") or []:
             ref = str(frame.get("ctq_ref") or "")
             feature = str(frame.get("feature") or "")
+            if feature in exceeded:
+                # 偏差超带的框不是覆盖凭据：那等于拿一条没达成的要求给自己盖章放行。
+                one = exceeded[feature]
+                where = f"（CTQ {one.get('ctq_ref')}）" if one.get("ctq_ref") else ""
+                _issue(issues, "position_deviation_exceeded",
+                       f"{feature} 的位置度实测偏差 {one.get('deviation_mm')} "
+                       f"超出公差带 {one.get('zone')}{where}",
+                       blocking=True, feature=feature)
+                continue
             if not ref:
                 _issue(issues, "frame_unlinked",
                        f"{feature} 画了形位框但没有 ctq_ref，无法计入 gdt 覆盖",
@@ -170,6 +182,9 @@ def _collect_drawings(drawings: Sequence[Path | str], root: Path,
             covered.add(ref)
             gdt.append({"feature": ctq["feature"], "drawing_feature": feature,
                         "ctq_record_id": ref, "covered_by": "feature_control_frame",
+                        # verified 说明这一条覆盖到的是什么程度：deviation = 真核过偏差，
+                        # presence_only = 只证到「框画上去了且挂在实测特征上」。
+                        "verified": frame.get("verified"),
                         "frame": frame.get("text"), "drawing": rel,
                         "sha256": refs[-1]["sha256"]})
     if not drawings:

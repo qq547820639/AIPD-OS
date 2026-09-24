@@ -187,6 +187,9 @@ aipd drawing spec --db state.db --project P --out tolerances.json
 #     记录还可带 "gdt": [{"characteristic": "position", "zone": 0.05,
 #     "diametral": true, "datums": ["A"]}] 与 "datum_id": "A" ⇒ 形位框与基准
 #     方案同样从需求侧长出；同一特征上「一条尺寸 + 一条形位」合并声明，同类重复则两条都撤回。
+#     位置度类声明还可带 "basic": [x, y]（理论精确位置，与挂点同坐标同单位）⇒
+#     出图时拿投影实测圆心核偏差（直径带按 2×距离），超带判 position_deviation_exceeded
+#     并返回 4；没带 basic 则点名 position_basic_missing，不拿实测当理论位置。
 aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket --spec tolerances.json
 #   ↑ 尺寸链按实测孔心自动给出；公差只认 --spec 声明，格式
 #     {"features":[{"feature":"TOP.hole_2","tolerance":{"upper":0.05,"lower":-0.05}}],

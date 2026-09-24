@@ -210,14 +210,25 @@ def cmd_drawing(args):
         if evidence.get("stackup_inconsistent"):
             print("未收口：叠加判定的矛盾意味着这些公差无法同时达成，需改声明或改标注方案。")
         for frame in evidence.get("gdt_frames") or []:
+            verdict = ""
+            if frame.get("verified") == "deviation":
+                verdict = (f"，位置度实测偏差 {frame['deviation_mm']:g}"
+                           f" / 带 {frame['zone']:g}"
+                           f"{'（合格）' if frame.get('within_zone') else '（超带）'}")
+            elif frame.get("characteristic") == "position":
+                verdict = "，位置度无理论精确位置，未核偏差"
             print(f"  GD&T 框 {frame['view']}→{frame['feature']}："
-                  f"{frame['text']}（挂点 {frame['attach']}，来自实测）")
+                  f"{frame['text']}（挂点 {frame['attach']}，来自实测{verdict}）")
         for issue in gdt_issues:
             datum = issue.get("datum") or issue.get("datum_feature") or ""
-            print(f"  GD&T 未收口：{issue['kind']} {issue.get('feature')}"
+            numbers = ""
+            if issue.get("deviation_mm") is not None:
+                numbers = f" 偏差 {issue['deviation_mm']:g} > 带 {issue.get('zone'):g}"
+            print(f"  GD&T 形位未收口：{issue['kind']} {issue.get('feature')}"
                   f"{(' 基准 ' + datum) if datum else ''}"
                   f"{(' 特征 ' + issue['datum_feature']) if issue.get('datum_feature') else ''}"
-                  f"{(' 类型 ' + issue['characteristic']) if issue.get('characteristic') else ''}")
+                  f"{(' 类型 ' + issue['characteristic']) if issue.get('characteristic') else ''}"
+                  f"{numbers}")
         if gdt_unmatched:
             print(f"  GD&T 未收口：声明了框但图上没有这些特征：{gdt_unmatched}")
         for msg in section_issues:
