@@ -148,6 +148,29 @@ cd AIPD-OS
 # 见本文第三节；跑门禁须带 PATH="$PWD/.venv/bin:$PATH"
 ```
 
-## 八、收尾读数
+## 八、收尾读数（全部来自本轮实跑输出，非记忆）
 
-（全量与门禁跑完后按实际输出填写。）
+- 提交：实现 `9032280`（CAD: grow GD&T frames and the datum scheme from CTQ, credit frames
+  as coverage）、产物重锚 `2606191`（Release artifacts: re-anchor manifests after the
+  GD&T-from-truth slice），本节所在提交是本轮第三个；
+- `regenerate_release_manifest.py --version 5.6.0` → **586 个文件**（与上一轮持平：本片只改
+  已跟踪文件，没有新增被跟踪文件；新增的审计文档在 `docs/audit/` 下，两份清单整体排除该前缀）；
+- `release_evidence.py --bundle releases/aipd-os-5.6.0.zip --version 5.6.0
+  --test-report docs/audit/pytest-report-v5.6.0.json
+  --source-commit a66040520139405095648461f7144d4f00629924` → 重写
+  `SOURCE_MANIFEST / BUNDLE_MANIFEST / PROVENANCE`；bundle 未重建、未重签、tag 未动；
+- 重锚前全量：**1569 passed / 2 failed / 3 skipped**，两条失败只仍是
+  `tests/test_packaging.py::test_release_manifest_hashes_match_disk` 与
+  `::test_source_manifest_hashes_match_disk`（改了 `src/` 后的预期红，收尾时重算）；
+- 重锚后全量：**1571 passed / 0 failed / 3 skipped**（119.09s），报告落
+  `docs/audit/pytest-report.json`；
+- `production_release_gate --release-ready --tag v5.6.0`：**rc=0，release_ready true，
+  8/8 全绿**（`workspace_clean: clean`、`commit_matches_head`、两份清单 `zero diff`、
+  `test_numbers_from_report` 读数 `passed=1096 failed=0 total=1099 source_commit=a660405…`、
+  `Ed25519 signature verified`、无密钥、CVE 无未承认项）；
+- `skill_quality_audit`：**0 项警告 0 项失败**；`state_perf_gate`：**PASS**（空闲单跑）。
+- 本轮自伤一处并当场清掉：把门禁的 `--json-out` 写到了仓库根（`.gate6.json`），
+  会让下一条 `workspace_clean` 判红——读数取完立即 `rm` 并复核 `git status --short` 为空。
+  教训与既有偏好同源：**产物落点必须在仓库外**（`/tmp/...`），别让判据去收拾脚本的临时文件。
+- 未做且有意不做：不 `git push`、不动 tag、不重建 bundle、不重签、不放宽任何共享门禁；
+  `audit_repo --strict` 仍按设计判红（锚点在 tag 而非 HEAD），留给属主的真实发布闭合。
