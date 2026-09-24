@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-24T03:02:27+00:00",
+  "generated_at": "2026-09-24T03:21:39+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -967,8 +967,8 @@
     },
     {
       "path": "src/aipd_os/cad/drawings2d.py",
-      "size": 23691,
-      "sha256": "470f20d8b2aa1be7b2900528682879f7286ea4beb39556b68839158d1e1b62d9"
+      "size": 23729,
+      "sha256": "590f2688710c4627d8f12c9bf1fbd2f402a1f8bb89f4d73a731091723c2f6e3b"
     },
     {
       "path": "src/aipd_os/cad/evidence.py",
@@ -1017,8 +1017,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 3503,
-      "sha256": "8d8f9b122a3edeede5bfecff7e6e106b97b09e74ac5d39ad3766ef960b6214b0"
+      "size": 3384,
+      "sha256": "142424eedc584f20658e9b32bd76d88f9dba60310d2dae21a56243d7944fc26f"
     },
     {
       "path": "src/aipd_os/cli/commands_legacy.py",
@@ -2152,8 +2152,8 @@
     },
     {
       "path": "tests/test_cad_drawings2d.py",
-      "size": 12586,
-      "sha256": "162638535d39bf7ec42e6538587616dbc9ccbc1f9200f1a4de3e39eccde10416"
+      "size": 15450,
+      "sha256": "c09ec85f7104502174f750e02cfbcb8c456c1941c53cdc4ec68079dc33b67a57"
     },
     {
       "path": "tests/test_cad_golden_loop.py",
