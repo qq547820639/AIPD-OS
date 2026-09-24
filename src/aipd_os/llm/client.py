@@ -26,7 +26,7 @@ class LlmNotConfiguredError(RuntimeError):
 
 
 class LlmClient:
-    """OpenAI 兼容 ``/chat/completions`` 客户端（标准库 urllib 实现）。"""
+    """OpenAI 兼容 ``/chat/completions`` 客户端（出口在 ``aipd_os.net.http``）。"""
 
     def __init__(
         self,

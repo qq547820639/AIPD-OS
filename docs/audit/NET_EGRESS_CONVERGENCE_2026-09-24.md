@@ -14,7 +14,7 @@
 | 新增行为契约用例 | 15（`test_net_http.py`，真跑本地 HTTP 服务） | 上一提交 |
 | 新增收敛守卫用例 | 8（`test_net_egress_convergence.py`） | 本轮 |
 | eval 端点用例改写 | 3 改 + 1 新增（`test_completion_endpoint.py`） | 本轮 |
-| 全量回归 | 1383 passed / 3 skipped / 0 failed（另有 2 条 manifest 哈希项在重锚前判红，属预期） | `pytest -q` |
+| 全量回归 | **1385 passed / 0 failed / 3 skipped**（`pytest-report.json` 同源，exit 0） | `pytest -q --json-report` |
 
 ## 2. 缺陷本体
 
@@ -115,10 +115,11 @@ requests 的 adapter 机制，换成标准库反而做不到。
 - `tests/test_net_egress_convergence.py` 8 passed；`tests/test_net_http.py` 15 passed；
   `tests/test_completion_endpoint.py` 8 passed；`tests/test_adapters.py` +
   `tests/test_llm_providers.py` 31 passed。
-- 全量：`1383 passed / 3 skipped`，另有 2 条 `test_packaging.py` 的 manifest 哈希
-  项判红——它们钉的是「清单与磁盘一致」，本轮改了 src/ 就必然红，重锚方式见
-  §9 末尾（`SOURCE_MANIFEST` / `RELEASE_MANIFEST` 生成命令），**不是**回归。
-- 静态：`ruff check src tests state_service` 0；`mypy` 0 error（364 files）。
+- 全量：**1385 passed / 0 failed / 3 skipped**（exit 0，`docs/audit/pytest-report.json`
+  同源）。中途曾有 2 条 `test_packaging.py` 的 manifest 哈希项判红——它们钉的是
+  「清单与磁盘一致」，改了 src/ 就必然红，重锚方式见 §9 末尾
+  （`SOURCE_MANIFEST` / `RELEASE_MANIFEST` 生成命令），**不是**回归；重锚后复跑转绿。
+- 静态：`ruff check src tests state_service` 0；`mypy` 0 error（365 files）。
 - 本轮新增的 `eval` 端点用例在真服务上断言 429 命中次数 `== 1`，把「付费端点
   不自动重试」从意图变成机器读数。
 
