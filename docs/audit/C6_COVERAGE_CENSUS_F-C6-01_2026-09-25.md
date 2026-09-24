@@ -105,3 +105,16 @@
 3. **ICD**：需要接口清单这一事实来源（当前仓里没有接口实体），先问属主要不要建，
    不擅自造。`ECR/ECO` 同（涉及审批流程与「AI 不自批」边界）。
 4. `DFM/DFA` 从 `checker_only` 升 `producer` 需要一个真分析生产者，暂缓。
+
+## 十、收口读数（commit 后复算）
+
+- 代码+文档：`6cafe91`（9 files，+627/-82）；产物重锚：`f707f62`。
+  被哈希面 594 → **596** 个文件（新增的普查脚本与它的常驻用例）。
+- 全量常驻用例（带 `AIPD_SOURCE_COMMIT=a66040520139…`）：**1746 passed / 0 failed / 3 skipped**
+  （total 1749 = 上一轮 1739 + 本片 10 条）。
+- `production_release_gate --release-ready --tag v5.6.0`：**rc=0、8/8、`release_ready: true`**，
+  读数 `passed=1746 failed=0 total=1749 source_commit=a66040520139…`。
+- `skill_quality_audit` rc=0（0/0）；`state_perf_gate` **PASS**；
+  `audit_repo --strict` rc=1 且只剩「tag 未重打的 provenance 锚点」那一条已知 ✗。
+- 普查自身：`--self-test` **7/7 注入开火**；正式跑 **rc=0、15 项 = 10 / 2 / 3**；
+  `ruff check src tests` 全过、`mypy src tests` 397 files 无 issue。
