@@ -106,7 +106,18 @@ aipd release manifest --drawing assy.dxf --bom BOM-001      → issues 里没有
 README 场景 4 的命令行加 `--explode` 并写明拒画与告警；`scripts/c6_coverage.py` 映射升档，
 `tests/test_c6_coverage.py` 的棘轮与缺席清单同步（11/2/2，缺席只剩 ICD 与装配/维护）。
 
-## 九、收口读数（见文末追加）
+## 九、收口读数（commit 后复算）
+
+- 代码+文档：`e473b04`（16 files，+754/-53）；产物重锚：`09959f1`；
+  被哈希面 596 → **597** 个文件（新增的 explode 用例文件）。
+- 全量常驻用例（带 `AIPD_SOURCE_COMMIT=a66040520139…`）：**1772 passed / 0 failed / 3 skipped**
+  （total 1775 = 上一轮 1749 + explode 23 条 + 证据侧 3 条）。
+- `production_release_gate --release-ready --tag v5.6.0`：**rc=0、8/8、`release_ready: true`**，
+  读数 `passed=1772 failed=0 total=1775 source_commit=a66040520139…`。
+- `skill_quality_audit` rc=0（0/0）；`state_perf_gate` **PASS**；
+  `audit_repo --strict` rc=1，只剩「tag 未重打的 provenance 锚点」那一条已知 ✗。
+- 普查：`--self-test` **7/7**；档位 **15 项 = 11 / 2 / 2**（零实现只剩 ICD 与装配/维护）。
+- 变异电池 **13/13 killed**（§六）。
 
 ## 十、仍未做
 
