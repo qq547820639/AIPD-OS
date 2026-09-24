@@ -239,6 +239,25 @@ with A.transaction() as ca:
 | `changes_recent_100_ms` | 0.154 ms | v17 索引后亚毫秒 |
 | `outbox_claim_batch_ms` | 0.760 ms | 有序部分索引 |
 
+### 8.3 F-STATE-07：配了 `AIPD_ENCRYPTION_KEY` 也不加密（空串被当成显式指定）
+
+`build_runtime(..., encryption_key=...)` 用 `is not None` 判断「调用方是否指定」，
+而本仓各处（`Settings` 默认值、server 的 argparse 默认值）都以 **空串表示未设置**。
+CLI 的 idea.decompose 路径硬传了 `encryption_key=""` ⇒ 空串被当成显式指定，
+把配置里的密钥整个吞掉：敏感字段走 `_store_value` 的 fail-open 分支**明文落库**，
+而且不报错。实测（`tests/test_runtime.py::TestEncryptionKeyResolution`）：
+修复前 `rt.db._encryption_key == ""`，`facts.value_json` 里能直接读到
+`sk-live-secret-DO-NOT-LEAK`。
+
+改法：`build_runtime` 按真值判断（空串 = 未提供，回落到配置），CLI 调用点
+不再硬传该参数。**保留**的既有语义：什么都没配时本地模式仍明文 + 一次性 WARNING
+（server 模式另有 fail-closed 的长度/弱值校验，`MIN_STRONG_ENCRYPTION_KEY_LEN = 16`）——
+这条由 `test_unset_key_stays_plaintext_in_local_mode` 作为反向控制钉住，
+它同时证明前一条断言不是「永远红」。
+
+遗留（本条未覆盖）：`crypto._derive_key()` 仍是**无盐单轮 SHA-256**，
+16 字节的口令式密钥在拿到库文件后可被离线穷举；见 §8.4。
+
 ## 9. 复算入口
 
 ```bash

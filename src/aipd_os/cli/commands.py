@@ -157,8 +157,7 @@ def cmd_intake(args):
         # v5.8.2 Commit 3：共享 runtime 装配（providers/adapters/router 同源）。
         # 命令级动态适配器（idea.structure 依赖 decomposer 实例）经
         # runtime.with_adapters 叠加，不污染共享 registry。
-        runtime = build_runtime(encryption_key="",
-                                db_path=args.db,
+        runtime = build_runtime(db_path=args.db,
                                 tenant_id=DEFAULT_TENANT,
                                 project_id=project_id,
                                 make_default=True)

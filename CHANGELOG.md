@@ -61,6 +61,14 @@
   `tests/test_connection_reentrancy.py::TestOneRegistryAcrossEntries`
   （修复前 3 条全红）。同库嵌套边际成本 18.9µs（P2 记 36–52µs），
   `state_perf_gate` 与全量回归均 PASS；
+- **v5.10 修复 F-STATE-07：配了加密密钥仍然明文落库**：
+  `build_runtime()` 用 `encryption_key is not None` 判断「调用方是否指定」，
+  而本仓约定空串 = 未设置（`Settings` 与 server argparse 的默认值都是 `""`）；
+  CLI 的 idea.decompose 路径硬传 `""` ⇒ 配置里的 `AIPD_ENCRYPTION_KEY` 被整个吞掉，
+  敏感字段走 `_store_value` 的 fail-open 分支明文写入且不报错。
+  改为按真值判断、调用点不再硬传该参数；回归
+  `tests/test_runtime.py::TestEncryptionKeyResolution` 三条
+  （配了密钥必须密文、显式密钥优先、未配置仍明文——末条为反向控制）；
 - **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归

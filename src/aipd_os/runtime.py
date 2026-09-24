@@ -254,8 +254,10 @@ def build_runtime(settings: Settings | None = None,
     runtime；只有需要进程级默认语义的 transport 才 make_default。
     """
     settings = settings or get_settings()
-    key = encryption_key if encryption_key is not None \
-        else settings.data_encryption_key
+    # 本仓以空串表示「未提供」（server argparse 与 Settings 默认值都是 ""），
+    # 所以这里必须按真值判断：用 ``is not None`` 会让调用方传 "" 时
+    # 静默关掉加密，配了 AIPD_ENCRYPTION_KEY 也照样明文落库。
+    key = encryption_key if encryption_key else settings.data_encryption_key
     db = AIPDStateDB(str(_resolve_db_path(settings, db_path)),
                      encryption_key=key)
 

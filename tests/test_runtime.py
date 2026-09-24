@@ -167,3 +167,62 @@ def test_summary_shape(runtime):
     assert s["db"].endswith("state.db")
     assert "research" in s
     assert s["external_providers"] == ["researchstudio"]
+
+
+class TestEncryptionKeyResolution:
+    """配了 `AIPD_ENCRYPTION_KEY` 就必须真的加密——空串不等于「调用方指定了不加密」。
+
+    回归背景：CLI 的 idea.decompose 路径硬传 ``encryption_key=""``，而
+    ``build_runtime`` 用 ``is not None`` 判断「调用方是否指定」，于是空串被当成
+    显式指定、绕过了配置里的密钥 ⇒ 敏感字段明文落库（fail-open，且没有任何报错）。
+    本仓各处（server argparse 默认值、Settings 默认值）都以 ``""`` 表示「未设置」。
+    """
+
+    KEY = "unit-test-strong-encryption-key-0123456789abcdef"
+
+    def _runtime(self, tmp_path, monkeypatch, key: str | None, **kw):
+        from aipd_os.config import reload_settings
+        from aipd_os.runtime import build_runtime, reset_runtime
+
+        if key is None:
+            monkeypatch.delenv("AIPD_ENCRYPTION_KEY", raising=False)
+            monkeypatch.delenv("AIPD_DATA_ENCRYPTION_KEY", raising=False)
+        else:
+            monkeypatch.setenv("AIPD_ENCRYPTION_KEY", key)
+        reload_settings()
+        try:
+            return build_runtime(db_path=str(tmp_path / "state.db"),
+                                 tenant_id="default", project_id="p1", **kw)
+        finally:
+            reset_runtime()
+            reload_settings()
+
+    def _raw_fact_value(self, runtime) -> str:
+        with runtime.db.connect() as c:
+            row = c.execute("SELECT value_json FROM facts WHERE key='api_key'").fetchone()
+        assert row is not None, "敏感字段没写进去，本用例的前提不成立"
+        return row[0] if not isinstance(row[0], bytes) else row[0].decode()
+
+    def _write_secret(self, runtime) -> None:
+        runtime.db.add_fact("default", "p1", "api_key", "sk-live-secret-DO-NOT-LEAK", "V")
+
+    def test_empty_string_falls_back_to_configured_key(self, tmp_path, monkeypatch):
+        rt = self._runtime(tmp_path, monkeypatch, self.KEY, encryption_key="")
+        assert rt.db._encryption_key == self.KEY, (
+            "encryption_key='' 被当成显式指定，吞掉了配置里的密钥")
+        self._write_secret(rt)
+        raw = self._raw_fact_value(rt)
+        assert "__encrypted__" in raw, f"配了密钥仍然明文落库: {raw[:80]}"
+        assert "sk-live-secret" not in raw
+
+    def test_explicit_key_wins_over_configuration(self, tmp_path, monkeypatch):
+        rt = self._runtime(tmp_path, monkeypatch, self.KEY,
+                           encryption_key="caller-supplied-key-9876543210")
+        assert rt.db._encryption_key == "caller-supplied-key-9876543210"
+
+    def test_unset_key_stays_plaintext_in_local_mode(self, tmp_path, monkeypatch):
+        """反向控制：什么都没配时仍是明文 + 警告（本地/dev 的既有 fail-open 语义）。"""
+        rt = self._runtime(tmp_path, monkeypatch, None)
+        assert rt.db._encryption_key == ""
+        self._write_secret(rt)
+        assert "sk-live-secret" in self._raw_fact_value(rt)
