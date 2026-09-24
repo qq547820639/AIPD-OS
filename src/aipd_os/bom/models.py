@@ -56,6 +56,16 @@ class BomHeader:
         }
 
 
+def norm_item(value: Any) -> str:
+    """BOM 行 ``item`` 的**标识归一**：去首尾空格 + 转小写后的全等。
+
+    这不是模糊匹配：``BRACKET`` 归一后仍不等于 ``BRACKET-01``，包含关系不算命中
+    （``supply_chain/impact`` 从一开始就是这条规矩，这里只是把它收成一处定义，
+    免得图纸侧与影响传播侧各写一份然后各自漂）。
+    """
+    return str(value if value is not None else "").strip().lower()
+
+
 @dataclass
 class BomLine:
     line_id: str

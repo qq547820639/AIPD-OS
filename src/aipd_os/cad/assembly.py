@@ -31,6 +31,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -99,8 +100,22 @@ def parse_assembly_manifest(path: str | Path) -> list[dict[str, Any]]:
         except (TypeError, ValueError) as exc:
             raise ValueError(f"零件 {name} 的 offset 都得是数：{offset!r}") from exc
         out.append({"name": name, "step": str(step), "balloon": int(number),
-                    "offset": vec})
+                    "offset": vec, "bom_item": _bom_item(raw, name)})
     return out
+
+
+def _bom_item(raw: dict[str, Any], name: str) -> str | None:
+    """作者声明的 BOM 行标识；没写就是 ``None``，**不会**拿零件名去找行。
+
+    manifest 里的 ``quantity`` 一类字段一律不解析：数量的权威在 BOM 行上。
+    """
+    if "bom_item" not in raw:
+        return None
+    value = raw["bom_item"]
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"零件 {name} 的 bom_item 必须是非空字符串（要绑哪一行由你说），"
+                         f"实得 {value!r}")
+    return value.strip()
 
 
 def _translate(shape: Any, offset: list[float]) -> Any:
@@ -264,8 +279,63 @@ def build_assembly_view(parts: list[dict[str, Any]], view_name: str,
     return view
 
 
+def bind_bom(parts: list[dict[str, Any]],
+             lines: Sequence[Any]) -> tuple[list[dict[str, Any]], list[str]]:
+    """按作者声明的 ``bom_item`` 把球标绑到 BOM 行上；数量与单位一律**取自 BOM**。
+
+    对应关系是声明出来的，不是匹配出来的：没写 ``bom_item`` 的零件不会因为名字恰好
+    等于某个 item 就算对上（与 ``drawing spec`` 不按名字自动映射同一条纪律——名字相似
+    不等于同一个东西）。标识归一用 ``bom.models.norm_item``（strip+lower 全等），
+    与 ``supply_chain/impact`` 同一处定义，两边不会各自漂。
+
+    两头都要闭合：球标有号而 BOM 找不到 ⇒ 未收口；BOM 有行而图上没号 ⇒ 也是未收口。
+    绑不上就留空（``None``），**不折算成 0**——图纸上 0 与「没核到」差一个量级。
+    """
+    from aipd_os.bom.models import norm_item
+
+    by_item: dict[str, list[Any]] = {}
+    for line in lines:
+        by_item.setdefault(norm_item(line.item), []).append(line)
+
+    rows: list[dict[str, Any]] = []
+    issues: list[str] = []
+    used: set[str] = set()
+    for part in sorted(parts, key=lambda p: p["balloon"]):
+        declared = part.get("bom_item")
+        row: dict[str, Any] = {"item": int(part["balloon"]), "part": str(part["name"]),
+                               "bom_item": declared, "bom_line_id": None,
+                               "qty": None, "unit": None}
+        if declared is None:
+            issues.append(f"零件 {part['name']}（球标 {row['item']}）未声明 bom_item："
+                          "明细表这一行不印数量，也不拿零件名字去 BOM 里猜一行")
+        else:
+            matches = by_item.get(norm_item(declared), [])
+            if not matches:
+                issues.append(f"球标 {row['item']}（{part['name']}）声明的 BOM 行 "
+                              f"{declared!r} 在 BOM 里找不到：数量留空，"
+                              "不拿 0 或别的行冒充")
+            elif len(matches) > 1:
+                ids = ", ".join(sorted(str(m.line_id) for m in matches))
+                issues.append(f"球标 {row['item']} 声明的 {declared!r} 在 BOM 里有 "
+                              f"{len(matches)} 行（{ids}）：歧义，随便取一行就是猜数量")
+            else:
+                line = matches[0]
+                row.update({"bom_line_id": line.line_id,
+                            "qty": float(line.quantity), "unit": line.unit})
+                used.add(line.line_id)
+        rows.append(row)
+
+    for group in by_item.values():
+        for line in group:
+            if line.line_id not in used:
+                issues.append(f"BOM 行 {line.item!r}（{line.line_id}，数量 "
+                              f"{line.quantity:g} {line.unit}）在图上没有球标指它："
+                              "这张装配图漏了零件")
+    return rows, issues
+
+
 def parts_list_rows(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """明细表行：**只印 manifest 声明的东西**。数量/材料由 BOM 提供，本轮不猜。"""
+    """明细表行：**只印 manifest 声明的东西**。数量/材料由 BOM 提供，未绑定就不印。"""
     return [{"item": int(p["balloon"]), "part": str(p["name"])}
             for p in sorted(parts, key=lambda q: q["balloon"])]
 
@@ -303,13 +373,19 @@ def draw_parts_list(msp: Any, rows: list[dict[str, Any]], sheet_wh: tuple[float,
     from aipd_os.cad.drawings2d import MARGIN
 
     columns = ["ITEM", "PART"]
+    if any("qty" in row for row in rows):
+        columns += ["QTY", "UNIT"]
     painter = TablePainter((0.0, 0.0), nrows=len(rows) + 1, ncols=len(columns),
                            cell_width=TABLE_CELL_W, cell_height=TABLE_CELL_H)
-    painter.text_cell(0, 0, columns[0])
-    painter.text_cell(0, 1, columns[1])
+    for col, title in enumerate(columns):
+        painter.text_cell(0, col, title)
     for i, row in enumerate(rows, start=1):
         painter.text_cell(i, 0, str(row["item"]))
         painter.text_cell(i, 1, str(row["part"]))
+        if "qty" in row:
+            # 绑不上就留空：图纸上「没核到」与「数量为 0」差一个量级，不能都写成 0
+            painter.text_cell(i, 2, "" if row["qty"] is None else f"{row['qty']:g}")
+            painter.text_cell(i, 3, row.get("unit") or "")
     width, height = painter.table_width, painter.table_height
     insert = (MARGIN + 10.0, MARGIN + 10.0 + height)
     painter.render(msp, insert)
@@ -357,13 +433,16 @@ def generate_assembly_drawing(out_path: Path | str, *, manifest: str, part_name:
                               scale: float = 1.0, material: str = "-",
                               sheet: str = "A3",
                               provenance: dict[str, Any] | None = None,
-                              bom: dict[str, Any] | None = None) -> dict[str, Any]:
+                              bom_lines: Sequence[Any] | None = None) -> dict[str, Any]:
     """端到端出装配图：清单 -> 逐件投影 -> DXF -> 证据字典。
 
     放在装配这一侧、由它 import 图纸模块，而不是在 ``generate_drawing`` 里加分支：
     反向依赖会被无环门判红（``tests/test_import_cycles.py``）。
     派生视图（剖视、局部放大）在这里**明确拒绝**，而不是默默产出错的图——
     装配视图的折线按零件归属，裁剪/切割会把归属打散，球标就成了指错零件的假标注。
+
+    ``bom_lines`` 给就交叉核对并给明细表加 QTY/UNIT 两列；不给就维持第 12 片的形状
+    （只有 ITEM/PART，一个数量都不印）。
     """
     from aipd_os.cad.drawings2d import STANDARD_VIEWS, _finish_evidence, write_dxf
 
@@ -373,12 +452,18 @@ def generate_assembly_drawing(out_path: Path | str, *, manifest: str, part_name:
     path = Path(out_path)
     parts = load_assembly_parts(parse_assembly_manifest(manifest))
 
-    def layout(msp: Any, sheet_wh: tuple[float, float]) -> dict[str, Any]:
-        """图纸侧的唯一装配入口：画明细表，并把装配证据交回去。
+    rows = parts_list_rows(parts)
+    binding_issues: list[str] = []
+    bom_evidence: dict[str, Any] | None = None
+    if bom_lines is not None:
+        rows, binding_issues = bind_bom(parts, list(bom_lines))
+        bom_ids = sorted({str(line.bom_id) for line in bom_lines})
+        bom_evidence = {"bom_id": bom_ids[0] if len(bom_ids) == 1 else None,
+                        "bom_ids": bom_ids, "lines": len(bom_lines)}
 
-        ``bom`` 传进来只为在证据里如实记 ``bom_bound``，**不参与**任何一格的取值。
-        """
-        return {"parts_list": draw_parts_list(msp, parts_list_rows(parts), sheet_wh, bom)}
+    def layout(msp: Any, sheet_wh: tuple[float, float]) -> dict[str, Any]:
+        """图纸侧的唯一装配入口：画明细表，并把装配证据交回去。"""
+        return {"parts_list": draw_parts_list(msp, rows, sheet_wh, bom_evidence)}
 
     built = [build_assembly_view(parts, f"ASSY_{name}", *STANDARD_VIEWS[name],
                                  with_balloons=(idx == 0))
@@ -386,8 +471,12 @@ def generate_assembly_drawing(out_path: Path | str, *, manifest: str, part_name:
     evidence = write_dxf(built, path, part_name=part_name, revision=revision,
                          scale=scale, material=material, sheet=sheet,
                          provenance=provenance, layout_hook=layout,
-                         extra_evidence={
-                             "assembly": {"parts": [{k: v for k, v in p.items()
-                                                     if k != "shape"} for p in parts]},
-                             "bom": bom})
+                         extra_evidence={"assembly": {
+                             "parts": [{k: v for k, v in p.items() if k != "shape"}
+                                       for p in parts]},
+                             "bom": bom_evidence})
+    # 绑定问题与投影问题记在同一个笼子里：都是「这张图还不能交」，
+    # 但来源不同，所以文案各自点名（找不到行 / 歧义 / 没声明 / 图上漏了零件）
+    evidence["assembly_issues"] = sorted(set(evidence["assembly_issues"])
+                                         | set(binding_issues))
     return _finish_evidence(path, evidence, part_name, revision, provenance)

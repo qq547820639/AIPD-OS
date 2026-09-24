@@ -26,6 +26,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..bom.models import norm_item
 from ..bom.store import BomStore
 
 IMPACT_FACT_PREFIX = "impact"
@@ -34,8 +35,7 @@ PROTECTED_DELIVERABLE_STATUSES = frozenset({"released", "archived"})
 STALE_STATUS = "stale"
 
 
-def _norm(value: Any) -> str:
-    return str(value if value is not None else "").strip().lower()
+_norm = norm_item   # 标识归一只留一处定义（bom.models）；图纸侧的球标↔BOM 也用它
 
 
 @dataclass

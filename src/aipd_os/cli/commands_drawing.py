@@ -292,6 +292,33 @@ def cmd_drawing_assembly(args):
     from aipd_os.cad.assembly import generate_assembly_drawing
     from aipd_os.cad.backends import CadQueryBackend
 
+    db_arg = getattr(args, "db", None)
+    bom_arg = getattr(args, "bom", None)
+    if bool(db_arg) != bool(bom_arg):
+        print("--db 与 --bom 要一起给：只给一个就是半条接线，"
+              "要么两边都核、要么明说不核，不能画一张声称完整的图")
+        return 2
+    bom_lines = None
+    if db_arg:
+        db = Path(db_arg)
+        if not db.is_file():
+            print(f"状态库不存在：{db}（读不到 BOM 权威表不等于「没有 BOM」）")
+            return 2
+        try:
+            from aipd_os.bom.store import BomStore
+
+            store = BomStore(db)
+            # 先确认那张表真在：读不到表就当空 BOM，会把「编号写错了」报成
+            # 「每一行都对不上」——两句话的处置完全不同
+            if store.get_bom(args.tenant, args.project, bom_arg) is None:
+                print(f"BOM {bom_arg} 在 {args.tenant}/{args.project} 下不存在："
+                      "先把 BOM 建出来或核对编号，不拿空表当「已核对」")
+                return 2
+            bom_lines = store.list_lines(args.tenant, args.project, bom_arg)
+        except Exception as exc:          # 权威表读不动就不是「绑定了空 BOM」
+            print(f"BOM 读取失败：{type(exc).__name__}: {exc}")
+            return 2
+
     provenance = {"tool": f"cadquery {CadQueryBackend().tool_version()}",
                   "model_source": str(manifest), "command": "drawing assembly",
                   "ok": True, "status": "DONE"}
@@ -300,7 +327,7 @@ def cmd_drawing_assembly(args):
             out, manifest=str(manifest), part_name=args.part, revision=args.revision,
             views=tuple(v.strip() for v in args.views.split(",") if v.strip()),
             scale=args.scale, material=args.material, sheet=args.sheet,
-            provenance=provenance)
+            provenance=provenance, bom_lines=bom_lines)
     except ValueError as exc:
         print(f"装配声明不合法：{exc}")
         return 2
@@ -329,14 +356,21 @@ def cmd_drawing_assembly(args):
             else:
                 print("      本视图不标球标（装配图只在一个视图上编号）")
         listed = evidence.get("parts_list") or {}
+        bound = evidence.get("bom")
         print(f"明细表：{len(listed.get('rows') or [])} 行，列 {listed.get('columns')}，"
               f"绘制方式 {listed.get('rendered_by')}")
+        if bound:
+            print(f"  数量与单位来自 BOM {bound['bom_id'] or bound['bom_ids']}"
+                  f"（{bound['lines']} 行）；对应关系靠 manifest 的 bom_item 声明，"
+                  f"不按零件名字猜")
+        else:
+            print("  未接 BOM：明细表不含数量列，一个猜测值都不印。")
         for msg in issues:
             print(f"  装配未收口：{msg}")
         for msg in warnings:
             print(f"  装配告警：{msg}")
         print("  没有做的事：干涉检查（只报包络投影重叠，不做实体求交）、"
-              "爆炸图/装配约束、明细表数量与材料列（数量权威在 BOM，尚未接线）。")
+              "爆炸图/装配约束、明细表材料列（材料在 BOM 行上，尚未取用）。")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
     _emit(args, evidence, prose)
     return 4 if issues else 0
