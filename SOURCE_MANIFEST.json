@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-24T13:30:32+00:00",
+  "generated_at": "2026-09-24T13:52:38+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 44438,
-      "sha256": "60d015c4d2632751382dbc01a3d636510fef97fca58548b6d5c94afff2b939a2"
+      "size": 46035,
+      "sha256": "ce0604a43961873f0a0c8c38009652da6548b936f21ca1ee5a820c9ce1fd3b3f"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 15354,
-      "sha256": "ae90367a73459f150f059099292743c569767c7780c1e0d078685fb832b4cbbb"
+      "size": 15709,
+      "sha256": "7b4720fda8ffbadc9677258c24db987324b8011c497d61f64476a2dda4b26d99"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -967,13 +967,18 @@
     },
     {
       "path": "src/aipd_os/cad/drawings2d.py",
-      "size": 33996,
-      "sha256": "b53b485a3c502551c2ddb5aa32ec4d65b77e285bb7f2350aa23e4c6debcdb285"
+      "size": 35109,
+      "sha256": "a66b34ac122bbf362f2baaf861f631ec0473d16a6b1a2efdb3780ef7493bb477"
     },
     {
       "path": "src/aipd_os/cad/evidence.py",
       "size": 2617,
       "sha256": "3c98734de5248bfe0bcc5f15dbc1bf460e74e3b361766b75e84c51f7438e15ad"
+    },
+    {
+      "path": "src/aipd_os/cad/gdt.py",
+      "size": 8916,
+      "sha256": "d54d6eb28d16c58fdb78d047ea961ad641f2f233eeae527a24bef1f45b65c64b"
     },
     {
       "path": "src/aipd_os/cad/maturity.py",
@@ -1022,8 +1027,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 6183,
-      "sha256": "0b1301c7f0431ab23dc2d8db641d203d5ce0326621eea28f798f25c730d9f2ba"
+      "size": 7161,
+      "sha256": "67776c70f9b07df650b6f2771e790be7b482954efc3c7cdc307f984a2a9b82cf"
     },
     {
       "path": "src/aipd_os/cli/commands_legacy.py",
@@ -1542,8 +1547,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 53496,
-      "sha256": "7d95a0ee8a0204aa8c3e9576d4d9cee150699de2014fef6c8e5313f330f93361"
+      "size": 53863,
+      "sha256": "ca892e571d48ededd9edbcdf469c9a39b701df5e42bae9b9e46871ef49143e9b"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2204,6 +2209,11 @@
       "path": "tests/test_cad_drawings_chain_tolerance.py",
       "size": 17857,
       "sha256": "15c69bbb989026760dc54c70a3e8df19fa31693252fad605288d29a6636d580a"
+    },
+    {
+      "path": "tests/test_cad_gdt_frames.py",
+      "size": 8423,
+      "sha256": "c9162425a7788bf639850f9348e36b585862f7c0c93bdd5ce4e20623efc7f20b"
     },
     {
       "path": "tests/test_cad_golden_loop.py",
