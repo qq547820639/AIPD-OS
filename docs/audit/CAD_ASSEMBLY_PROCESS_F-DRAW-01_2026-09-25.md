@@ -134,7 +134,24 @@ aipd release manifest --db state.db --drawing assy.dxf --bom BOM-001    → rc=4
 ——第 2 行的工艺格为空（没有 `-`、没有 `None`），材料两行都有值，全图无供应商串。
 （`no_ctq` 是因为这条 e2e 没种 CTQ，与本片无关；`version_split` 非阻断。）
 
-## 九、收口读数（见文末追加）
+## 九、收口读数（commit 后复算，不是计划值）
+
+- 代码+文档：`1fd00ca`（17 files，+817/-146）；产物重锚：`bbeebbb`
+  （SOURCE_MANIFEST / RELEASE_MANIFEST / PROVENANCE / pytest 报告四个一起走）。
+- 全量常驻用例（带 `AIPD_SOURCE_COMMIT=a66040520139…`）：**1736 passed / 0 failed / 3 skipped**
+  （total 1739，与 `--collect-only` 的 1739 一致；上一轮为 1715/0/3，本片净 +21）。
+- `production_release_gate --release-ready --tag v5.6.0`：**rc=0、8/8、`release_ready: true`**，
+  `test_numbers_from_report` 读数 `passed=1736 failed=0 total=1739
+  source_commit=a66040520139405095648461f7144d4f00629924`（判定读 JSON，不读管道退出码）。
+- `skill_quality_audit.py`：rc=0，**0 警告 0 失败**；`state_perf_gate.py`：**PASS**。
+- `audit_repo.py --strict`：**rc=1，只有那一条已知的 ✗**
+  `Provenance source commit mismatch: manifest=a66040520139… vs HEAD=bbeebbb6a0c8…`
+  ——tag 未重打的应有状态，不为过门禁把 SOURCE_MANIFEST 改指 HEAD。
+- 能力表：`scripts/capability_matrix.py` 重跑后 `total_capabilities=81`
+  （`docs/audit/capability_matrix.{json,md}`、`repository_snapshot.json` 已随本片入库），
+  `tests/test_capability_matrix.py` 5 条全过（其中一条正是拿"表里的总数 == 磁盘上算出来的总数"
+  把这笔补账钉住的）。
+- 变异电池：**13/13 killed**（关掉 `-x` 复跑，红在哪几条记在 §六）。
 
 ## 十、仍未做（别当已具备）
 
