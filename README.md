@@ -260,6 +260,20 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     有一个零件没声明就直接 rc=2——摆开一半的爆炸图会让读者把「没动」当成「就该在那儿」。
 #     不自动求拆卸方向：文献那套（离散球面搜索 + 无碰撞路径校验）要装配约束与实体求交两样
 #     本仓没有的前提，硬算就是画一张没证过的装配顺序。位移与视线平行时告警「看不出分离」。
+aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part ASSY-1 \
+  --db state.db --bom BOM-1
+#   ↑ 装配步骤文档（C6「装配/维护」里**装配**那一半）：同一份清单多一段 "assembly_steps"：
+#     [{"no":1,"action":"支架贴基面，两颗 M5 先不拧紧","balloons":[1]}]——
+#     序号、动作原文、这一步动哪些球标都由你写。四件事它不做：不补号（没写 no / 重号 /
+#     断档 1·2·4 一律 rc=2 并点名缺哪个号）、不按遍历顺序发号、不引用清单里没有的号
+#     （balloons 写 7 而图纸没这个号 ⇒ rc=2，文档不能指着不存在的零件）、
+#     不接你写的别的字段（"torque": "12 N·m" 是 rc=2 **拒绝**而不是静默丢——丢掉就得到
+#     一份少了一格还自称完整的文档；要表达请先写进 action 原文）。
+#     反过来，「球标有号而没有任何步骤装配它」不拒：文档照出，但写进未收口、CLI 退 4——
+#     图纸编了号、说明书里没人装这一件，是缺陷不是崩。
+#     数量/单位/材料/工艺仍只来自绑上的 BOM 行（与装配图同一个 bind_bom、同一条「两格不许互相顶」）；
+#     没接 --db/--bom 时零件清单只有 ITEM/PART 两列，一个猜测值都不印。
+#     证据侧车 not_covered 逐条写明不含维护指引/工时/扭矩/PDF 版式，读者不会把骨架当全文。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。
@@ -274,10 +288,16 @@ aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom 
 #     bom_line_coverage 只聚合数得清的那几项——多张装配图的球标都从 1 开始编号，
 #     「哪几行缺」一律逐图读、不拍平；没绑上的行不重复算成缺材料/缺工艺，
 #     没接 BOM 的图写成盲区而不是 0。
+#     --steps-doc assembly.md 才写 C6 的 assembly_instructions 那一格（{path, sha256}）：
+#     没交文档就**不写这一格**（而不是写一个空的），侧车不在 ⇒ steps_evidence_missing，
+#     球标没人装 ⇒ steps_balloons_uncovered，都阻断；同时带 assembly_steps 汇总
+#     （step_count / declared_balloons / unreferenced / not_covered / 侧车哈希）。
 python scripts/c6_coverage.py          # C6 那 15 项交付物各自做到哪一步了（诊断档）
 #   ↑ 分母逐字取自 references/production-cad-deliverables.md 那一行：改契约不改映射会当场红。
 #     三档读数：有生产者且有常驻用例 / 只有校验方（门会判声明，但产品侧没有落点）/ 零实现。
-#     今天的实测 10 / 2 / 3，零实现那三项是爆炸图、ICD、装配与维护说明——
+#     2026-09-25 第 18 片后实测 12 / 2 / 1：零实现只剩 ICD 一项。「装配/维护」升
+#     producer 指的是**装配那一半**（维护指引仍无生产者，这句话写在映射的 note 里、
+#     不在档位里）；爆炸图是第 17 片升的。
 #     这张表的作用就是决定下一片做什么，而不是继续在已交付的项上精雕。
 #     它刻意**没接进** `production_release_gate`：普查里今天就有零实现项，挂成阻断等于没人看。
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"

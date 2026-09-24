@@ -108,6 +108,10 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
     CommandEntry("drawing assembly", CommandStatus.PUBLIC, CommandCategory.CAD, "5.10",
                  requires_args=frozenset({"--manifest", "--part"}),
                  description="多零件装配图：逐件投影 + 序号球标 + 明细表（编号只认 manifest）"),
+    CommandEntry("drawing assembly-steps", CommandStatus.PUBLIC, CommandCategory.CAD, "5.11",
+                 requires_args=frozenset({"--manifest", "--out", "--part"}),
+                 description="装配步骤文档：步骤号与引用球标都由 manifest 声明，"
+                             "断档/引用未声明的号/写了不承载的字段一律拒绝（C6 装配那一半）"),
 
     # ---- 结构化事实的失效传播（F-TRUTH-PROP-01）----
     CommandEntry("truth propagate", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",

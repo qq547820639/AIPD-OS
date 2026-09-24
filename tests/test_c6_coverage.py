@@ -51,20 +51,21 @@ def test_census_is_self_consistent_today():
 def test_verdict_rack_is_pinned_so_moves_are_deliberate():
     """档位数字是**棘轮**：想改动必须先说清哪一项进了哪一档（或退出）。
 
-    今天的实测：15 项 = 有生产者 11 / 只有校验方 2（DFM-DFA、版本与ECR-ECO）/
-    2026-09-25 第 17 片后：有生产者 11 / 只有校验方 2 / 零实现 2（ICD、装配/维护），
-    爆炸图由「爆炸视图」那一片升档。
+    2026-09-25 第 18 片后实测（由 `cov.audit` 现算，不是手抄）：15 项 =
+    有生产者 12 / 只有校验方 2（DFM-DFA、版本与ECR-ECO）/ 零实现 1（ICD）。
+    「装配/维护」由 absent 升 producer —— 只升装配那一半，维护指引仍无生产者，
+    这句话写在映射的 note 里而不是靠档位表达，所以档位动之前先读 note。
     """
     report = cov.audit(ROOT)
     assert report["item_count"] == 15, report["item_count"]
-    assert report["verdict_counts"] == {"producer": 11, "checker_only": 2,
-                                        "absent": 2}, report["verdict_counts"]
+    assert report["verdict_counts"] == {"producer": 12, "checker_only": 2,
+                                        "absent": 1}, report["verdict_counts"]
 
 
 def test_the_absent_items_are_the_ones_we_say_they_are():
     report = cov.audit(ROOT)
     absent = {r["item"] for r in report["rows"] if r["verdict"] == "absent"}
-    assert absent == {"ICD", "装配/维护"}, absent
+    assert absent == {"ICD"}, absent
 
 
 def test_checker_only_items_have_no_src_producer():

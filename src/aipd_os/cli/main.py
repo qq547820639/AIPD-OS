@@ -280,6 +280,26 @@ def build_parser() -> argparse.ArgumentParser:
     da.add_argument("--json", action="store_true")
     da.set_defaults(func=COMMAND_FUNCS["drawing assembly"])
 
+    das = drawing_sub.add_parser(
+        "assembly-steps", help="装配步骤文档：步骤序列由清单声明，每步引用已声明的球标。"
+                               " Example: aipd drawing assembly-steps "
+                               "--manifest assembly.json --out assembly.md --part ASSY-1")
+    das.add_argument("--manifest", required=True,
+                     help='同一份装配清单 JSON，多一段 assembly_steps：'
+                          '{"parts":[...],"assembly_steps":[{"no":1,'
+                          '"action":"支架贴合基面","balloons":[1]}]}。'
+                          "步骤号/引用球标都必须是作者声明的；缺号、重号、断档、"
+                          "引用没声明的号、写了不承载的字段（如 torque）一律 rc=2")
+    das.add_argument("--out", required=True, help="Markdown 输出路径（同时写 .evidence.json）")
+    das.add_argument("--part", required=True, help="装配体代号（文档标题）")
+    das.add_argument("--revision", default="A", help="文档版本号")
+    das.add_argument("--db", help="状态库路径（与 --bom 一起给）：给了零件清单才长数量/材料列")
+    das.add_argument("--bom", help="BOM 编号：数量、单位、材料与工艺取自这张 BOM 的行")
+    das.add_argument("--tenant", default="default", help="BOM 所属租户")
+    das.add_argument("--project", default="default", help="BOM 所属项目")
+    das.add_argument("--json", action="store_true")
+    das.set_defaults(func=COMMAND_FUNCS["drawing assembly-steps"])
+
     p_outbox = sub.add_parser("outbox", help="消费对外副作用事件（RFQ 邮件等）。"
                                             " Example: aipd outbox drain --db state.db")
     outbox_sub = p_outbox.add_subparsers(dest="outbox_cmd", required=True)
@@ -345,6 +365,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="图纸 DXF 路径（可重复）；读其 .evidence.json 侧车")
     mp.add_argument("--bom", default=None, help="BOM id（不传则不写 bom_version）")
     mp.add_argument("--model", default=None, help="模型文件（.step）路径")
+    mp.add_argument("--steps-doc", dest="steps_doc", default=None,
+                    help="装配步骤文档（.md）路径：给了才写 C6 的 assembly_instructions 那一格"
+                         "（读其 .evidence.json 侧车，没交就不编这一格）")
     mp.add_argument("--units", default="mm")
     mp.add_argument("--datum_scheme", default="unspecified")
     mp.add_argument("--approval-status", dest="approval_status", default="unapproved",

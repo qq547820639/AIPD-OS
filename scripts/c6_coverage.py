@@ -106,10 +106,15 @@ MAPPING: dict[str, dict[str, Any]] = {
         "note": "该行 implementation_file 只有模板 + 门禁脚本：门会判「声明了什么」，"
                 "但产品侧没有 DFM/DFA 分析的生产者。"},
     "装配/维护": {
-        "verdict": "absent", "capabilities": ["cad.assembly_constraints"],
-        "producers": [], "tests": [],
-        "note": "装配说明与维护指引都没有落点。顺带暴露：`cad.assembly_constraints` 这一行"
-                "implementation_file 与 unit_test **两栏皆空**——一行不可核验的声明。"},
+        "verdict": "producer", "capabilities": ["cad.assembly_instructions"],
+        "producers": ["src/aipd_os/cad/assembly_steps.py",
+                      "src/aipd_os/release_manifest.py"],
+        "tests": ["tests/test_cad_assembly_steps.py"],
+        "note": "**只装配那一半**：步骤序列、各步引用的球标都由 manifest 声明，"
+                "断档/引用未声明的号/写了不承载的字段一律拒（rc=2），文档与侧车进 "
+                "release manifest 的 assembly_instructions。维护指引仍无生产者（要属主给内容），"
+                "文档自己的 not_covered 里逐条写明不含什么。"
+                "能力行 cad.assembly_constraints（装配约束求解）是另一件事，仍不可核验。"},
     "CTQ与检验": {
         "verdict": "producer", "capabilities": ["cad.inspection_plan",
                                                 "industrialize.release_evidence"],

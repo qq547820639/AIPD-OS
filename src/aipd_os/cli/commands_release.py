@@ -74,8 +74,9 @@ def cmd_release_manifest(args):
     doc = build_release_manifest(
         db_path=db, tenant_id=args.tenant, project_id=args.project,
         drawings=[Path(p) for p in (args.drawing or [])], bom_id=args.bom,
-        model=args.model, units=args.units, datum_scheme=args.datum_scheme,
-        approval_status=args.approval_status, out_path=out)
+        model=args.model, steps_doc=args.steps_doc, units=args.units,
+        datum_scheme=args.datum_scheme, approval_status=args.approval_status,
+        out_path=out)
 
     def prose():
         print(f"发布就绪证据文档：{out}")
@@ -83,7 +84,8 @@ def cmd_release_manifest(args):
               f"图纸={doc['producer']['drawings_referenced']} 张")
         for key in ("model_version", "bom_version", "drawings_version",
                     "model_part_count", "bom_line_count", "drawing_count",
-                    "assembly_drawing_count", "part_drawing_count"):
+                    "assembly_drawing_count", "part_drawing_count",
+                    "assembly_instructions", "assembly_steps"):
             if key in doc:
                 print(f"  {key} = {doc[key]}")
             else:

@@ -264,6 +264,47 @@ def cmd_drawing(args):
     return 4 if held else 0
 
 
+def _bom_lines_or_none(args):
+    """``--db`` + ``--bom`` 那一接线：返回 ``(bom_lines, rc)``，rc 非 None 就直接返回。
+
+    装配图与装配步骤文档共用同一条读法（同一权威、同一失败文案），否则两条命令
+    对「只给了一半参数」「库不存在」「BOM 编号写错」会给出不一致的处置。
+    """
+    db_arg = getattr(args, "db", None)
+    bom_arg = getattr(args, "bom", None)
+    if bool(db_arg) != bool(bom_arg):
+        print("--db 与 --bom 要一起给：只给一个就是半条接线，"
+              "要么两边都核、要么明说不核，不能画一张声称完整的图")
+        return None, 2
+    if not db_arg:
+        return None, None
+    from aipd_os.bom.store import BomStore, bom_store_path
+
+    db = Path(db_arg)
+    if not db.is_file():
+        print(f"状态库不存在：{db}（读不到 BOM 权威表不等于「没有 BOM」）")
+        return None, 2
+    # --db 指的是**状态库**；BOM 按产品口径在同目录的 bom.db 里。直接
+    # BomStore(db) 会给权威状态库加 BOM 表——状态库迁移已冻结，正是要防这个
+    bom_db = bom_store_path(db)
+    if not bom_db.is_file():
+        print(f"BOM 库不存在：{bom_db}（--db 是状态库，BOM 取同目录的 bom.db；"
+              "先用 aipd bom 建出来，不拿新建的空库当「已核对」）")
+        return None, 2
+    try:
+        store = BomStore(bom_db)
+        # 先确认那张表真在：读不到表就当空 BOM，会把「编号写错了」报成
+        # 「每一行都对不上」——两句话的处置完全不同
+        if store.get_bom(args.tenant, args.project, bom_arg) is None:
+            print(f"BOM {bom_arg} 在 {args.tenant}/{args.project} 下不存在："
+                  "先把 BOM 建出来或核对编号，不拿空表当「已核对」")
+            return None, 2
+        return store.list_lines(args.tenant, args.project, bom_arg), None
+    except Exception as exc:          # 权威表读不动就不是「绑定了空 BOM」
+        print(f"BOM 读取失败：{type(exc).__name__}: {exc}")
+        return None, 2
+
+
 def cmd_drawing_assembly(args):
     """``aipd drawing assembly`` —— 多零件装配图：逐件投影 + 序号球标 + 明细表。
 
@@ -292,41 +333,9 @@ def cmd_drawing_assembly(args):
     from aipd_os.cad.assembly import generate_assembly_drawing
     from aipd_os.cad.backends import CadQueryBackend
 
-    db_arg = getattr(args, "db", None)
-    bom_arg = getattr(args, "bom", None)
-    if bool(db_arg) != bool(bom_arg):
-        print("--db 与 --bom 要一起给：只给一个就是半条接线，"
-              "要么两边都核、要么明说不核，不能画一张声称完整的图")
-        return 2
-    bom_lines = None
-    if db_arg:
-        from aipd_os.bom.store import bom_store_path
-
-        db = Path(db_arg)
-        if not db.is_file():
-            print(f"状态库不存在：{db}（读不到 BOM 权威表不等于「没有 BOM」）")
-            return 2
-        # --db 指的是**状态库**；BOM 按产品口径在同目录的 bom.db 里。直接
-        # BomStore(db) 会给权威状态库加 BOM 表——状态库迁移已冻结，正是要防这个
-        bom_db = bom_store_path(db)
-        if not bom_db.is_file():
-            print(f"BOM 库不存在：{bom_db}（--db 是状态库，BOM 取同目录的 bom.db；"
-                  "先用 aipd bom 建出来，不拿新建的空库当「已核对」）")
-            return 2
-        try:
-            from aipd_os.bom.store import BomStore
-
-            store = BomStore(bom_db)
-            # 先确认那张表真在：读不到表就当空 BOM，会把「编号写错了」报成
-            # 「每一行都对不上」——两句话的处置完全不同
-            if store.get_bom(args.tenant, args.project, bom_arg) is None:
-                print(f"BOM {bom_arg} 在 {args.tenant}/{args.project} 下不存在："
-                      "先把 BOM 建出来或核对编号，不拿空表当「已核对」")
-                return 2
-            bom_lines = store.list_lines(args.tenant, args.project, bom_arg)
-        except Exception as exc:          # 权威表读不动就不是「绑定了空 BOM」
-            print(f"BOM 读取失败：{type(exc).__name__}: {exc}")
-            return 2
+    bom_lines, bom_rc = _bom_lines_or_none(args)
+    if bom_rc is not None:
+        return bom_rc
 
     provenance = {"tool": f"cadquery {CadQueryBackend().tool_version()}",
                   "model_source": str(manifest), "command": "drawing assembly",
@@ -396,5 +405,67 @@ def cmd_drawing_assembly(args):
               "装配约束/配合、爆炸位移的自动求解（要装配约束与无碰撞路径两样前提，本仓都没有）、"
               "多工序工艺路线（工艺只有那一格，工序顺序/工时/工序成本不建模）。")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
+    _emit(args, evidence, prose)
+    return 4 if issues else 0
+
+
+def cmd_drawing_assembly_steps(args):
+    """``aipd drawing assembly-steps`` —— 装配步骤文档（Markdown + 证据 sidecar）。
+
+    这一步**不投影几何**（文档不需要视图），所以不检查 CadQuery/ezdxf 在不在；
+    但零件的 STEP 文件存在性照样要过 —— 连模型都不存在的零件，步骤里引用它就是空话。
+    顺序、各步引用哪些球标、动作原文都来自 manifest；本命令不补号也不代拟。
+    """
+    from aipd_os.cad.assembly_steps import generate_assembly_steps
+
+    out = Path(args.out)
+    if not args.part:
+        print("--part 必填（文档标题里的装配体代号）")
+        return 2
+    if not args.manifest:
+        print('--manifest 必填（装配清单 JSON：{"parts":[...],"assembly_steps":'
+              '[{"no":1,"action":"…","balloons":[1]}]}）')
+        return 2
+    manifest = Path(args.manifest)
+    if not manifest.is_file():
+        print(f"--manifest 指向的文件不存在：{manifest}")
+        return 2
+    bom_lines, bom_rc = _bom_lines_or_none(args)
+    if bom_rc is not None:
+        return bom_rc
+
+    provenance = {"tool": "aipd_os.cad.assembly_steps（声明渲染，无几何投影）",
+                  "model_source": str(manifest), "command": "drawing assembly-steps",
+                  "ok": True, "status": "DONE"}
+    try:
+        evidence = generate_assembly_steps(
+            out, manifest=str(manifest), part_name=args.part, revision=args.revision,
+            bom_lines=bom_lines, provenance=provenance)
+    except ValueError as exc:
+        print(f"装配步骤声明不合法：{exc}")
+        return 2
+
+    issues = list(evidence.get("assembly_step_issues") or [])
+    coverage = evidence["assembly_steps"]["balloon_coverage"]
+
+    def prose():
+        print(f"已出装配步骤文档：{out}（{evidence['assembly_steps']['step_count']} 步，"
+              f"球标覆盖 {len(coverage['referenced'])}/{len(coverage['declared'])}，"
+              f"清单 {manifest.name}）")
+        for step in evidence["steps"]:
+            cited = "、".join(f"{c['balloon']}（{c['part']}）" for c in step["cited"])
+            print(f"  步骤 {step['no']:>2d}  引用球标 {cited}：{step['action']}")
+        if evidence.get("bom"):
+            print(f"  数量/单位/材料/工艺取自 BOM "
+                  f"{evidence['bom']['bom_id'] or evidence['bom']['bom_ids']}"
+                  f"（{evidence['bom']['lines']} 行）；对应关系靠 manifest 的 bom_item 声明")
+        else:
+            print("  未接 BOM：零件清单只有 ITEM/PART 两列，一个猜测值都不印。")
+        for msg in issues:
+            print(f"  装配步骤未收口：{msg}")
+        print("  本文档不承载：" + "、".join(evidence["not_covered"])
+              + "（维护那一半要属主给内容，见 capability cad.assembly_instructions）")
+        print(f"证据文件：{evidence['evidence_file']}  "
+              f"sha256={evidence['document_sha256'][:16]}…")
     _emit(args, evidence, prose)
     return 4 if issues else 0

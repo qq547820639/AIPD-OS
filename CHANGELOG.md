@@ -723,6 +723,52 @@
   （装配视图上仍拒绝，折线按零件归属，裁剪会打散）。证据见
   `docs/audit/CAD_ASSEMBLY_EXPLODE_F-DRAW-01_2026-09-25.md`；
 
+- **v5.10 F-DRAW-01 第 18 片：装配步骤文档的生产者，把 C6「装配/维护」的装配那一半落到地上**：
+  `assembly_instructions` 这个键此前在 `cad/maturity.py:29`、`production_release_gate.py:39,53`
+  （`FILE_KEYS`：值必须是真存在且哈希对得上的文件）、`cad_maturity_gate.py`、`selftest_v3.py`
+  四处**被声明却没人生产**。新增 `src/aipd_os/cad/assembly_steps.py`：步骤序列走同一份装配清单
+  多出来的 `"assembly_steps"` 段（`{"no":1,"action":"…","balloons":[1]}`），序号、动作原文、
+  每步引用哪些球标都由作者声明；`aipd drawing assembly-steps` 出 Markdown + `.evidence.json`
+  侧车，`aipd release manifest --steps-doc` 才写 `assembly_instructions = {path, sha256}`
+  （**没交文档就不写这一格**，而不是写个空的）。五道拒绝都 rc=2：没写 `no`（不按遍历顺序代发）、
+  重号、断档（1·2·4 ⇒ 点名缺 3）、引用清单里没声明的球标、写了不承载的字段
+  （`torque` 是**拒**不是静默丢——丢掉就得到一份少了一格还自称完整的文档）。
+  反向闭合不拒而是记未收口 + CLI 退 4 + manifest 阻断（`steps_balloons_uncovered`）：
+  图纸编了号、说明书里没人装这一件，是缺陷不是崩。
+  **为什么序号要求连续而 Odoo 不要求**：本机按 commit f254c797 取到
+  `addons/mrp/models/mrp_routing.py` 全文读过——它的 `sequence`（默认 100）是**内部排序键**，
+  故意留空档好插队，且工序是带 `workcenter_id`/工时算式/成本/依赖图 + 环检测的独立记录；
+  本片不做那个对象（与第 16 片「不建 operations 表」同一裁决），印在受控文件里的
+  「步骤 N」是正文本身，断档等于当着一线操作者的面少一页。
+  **生成式方案检索后不用**：`Ayaan577/Assembly_Instruction_Generation-IITK`（T5 seq2seq，
+  BoM→自然语言步骤）GitHub API 列出的根目录 7 项里**没有 LICENSE**、权重是一个 83 字节
+  的 Google Drive 链接文件、只有硬编码路径的 notebook——不可复现的输出进不了发布证据链，
+  无授权也不能复用；InvenTree 侧检到 6 个 0-star 微插件、其核心文档 URL 本次 404（**没读到就不引用**）；
+  S1000D 只拿到一份中文导读（不含 FWA/CTA 细节），导读称「标准可在 s1000d.org 免费下载」
+  而我抓该站失败，**这句未验证**，故只借「编号步骤 + 每步显式列件号」的结构、不声称按其实现。
+  介质选 Markdown：PDF 不是不能做——本机实测 reportlab 5.0.0 + `UnicodeCIDFont("STSong-Light")`
+  出中文成功（2374 字节 PDF），本轮不做的是排版与分页判据；`python-docx` 未装且本仓把 .docx
+  当外部输入拒绝（`supply_chain/lab.py:26,113`）。侧车刻意**不复用** `drawings2d._finish_evidence`
+  （它会盖 `hidden_line_method`，那是图纸的事实，写进步骤文档就是给读者一个不相干字段）。
+  数量/单位/材料/工艺仍只来自绑上的 BOM 行（同一个 `bind_bom`、同一条「两格不许互相顶」）；
+  顺带把装配图与步骤文档共用的 `--db/--bom` 读法抽成 `_bom_lines_or_none`（文案逐字保留），
+  否则两条命令对「只给一半参数」「库不存在」「编号写错」会各自漂。
+  守卫：`tests/test_cad_assembly_steps.py` 29 条（六组）+ 变异电池 **14/14 killed**。
+  **M8 首轮存活值得记**：判据「材料缺了不许拿工艺顶」写在实现里，但样本库里两格要么都有
+  要么都没有，注入成 `material or process` 后测试全绿——**判据存在不等于判据被验过**，
+  缺的是那个「只缺一格」的样本；补 `test_material_and_process_never_cover_for_each_other` 后才开火。
+  能力表新增 `cad.assembly_instructions`（81→82），普查 `装配/维护` 由 absent 升 producer
+  （档位 **11/2/2 → 12/2/1**，零实现只剩 ICD；README 那行停在 10/2/3 的陈读数一并改），
+  档位升的是**一半**这句话写在映射 note 与文档 `not_covered` 里，不靠档位表达。
+  端到端（真 CadQuery 模型两件 + 真 bom.db + 真状态库一条 CTQ，全走 `aipd`、全在临时目录）：
+  步骤文档 2 步、球标覆盖 2/2、压板那行 PROCESS 格留空；`assembly_instructions.sha256`
+  与文档实测哈希逐位相同；删掉第 2 步 ⇒ CLI rc=4 且 manifest 报 `steps_balloons_uncovered`
+  blocking、`ok=False`、`unreferenced:[2]`；五种坏声明各自文案不同（不存在号 / torque / 断档 /
+  重号 / 整段没写）。仍未做：维护指引（要属主给）、工时与工序成本、扭矩值、逐步骤点检项、
+  PDF/图框版式、顺序的自动求解。证据见
+  `docs/audit/CAD_ASSEMBLY_STEPS_F-DRAW-01_2026-09-25.md`；
+  该文档 §二 有六维对比表、§五 有变异表、§六 有端到端读数。
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

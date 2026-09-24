@@ -333,10 +333,61 @@ def _model_fields(model: Path | str | None, issues: list[dict[str, Any]]) -> dic
     return out
 
 
+def _collect_steps(steps_doc: Path | str | None, root: Path,
+                   issues: list[dict[str, Any]]) -> dict[str, Any]:
+    """读装配步骤文档的 sidecar，产出 C6 的 ``assembly_instructions`` 那一格。
+
+    这一格在门里是 ``FILE_KEYS``（脚本 ``production_release_gate.py``）：值必须是一个
+    真存在、哈希对得上的文件。所以**没交文档就不写这一格**——写一个空对象或
+    ``step_count: 0`` 会让门把「没做」读成「做了但没内容」。
+    """
+    if steps_doc is None:
+        return {}
+    path = Path(steps_doc)
+    if not path.is_file():
+        _issue(issues, "steps_missing", f"装配步骤文档不存在：{path}", blocking=True)
+        return {}
+    rel = path.relative_to(root).as_posix() if path.parent == root else str(path)
+    ref = {"path": rel, "sha256": _sha256(path)}
+    sidecar = path.with_suffix(".evidence.json")
+    if not sidecar.is_file():
+        _issue(issues, "steps_evidence_missing",
+               f"{path.name} 没有 {sidecar.name}，装配步骤内容无法核验", blocking=True)
+        return {"assembly_instructions": ref}
+    evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+    body = evidence.get("assembly_steps") or {}
+    if "step_count" not in body:
+        _issue(issues, "steps_evidence_incomplete",
+               f"{sidecar.name} 里没有 assembly_steps.step_count：这一格读不出内容，"
+               "不折成 0 步的文档", blocking=True)
+        return {"assembly_instructions": ref}
+    coverage = body.get("balloon_coverage") or {}
+    unreferenced = sorted(int(b) for b in coverage.get("unreferenced") or [])
+    doc_issues = list(evidence.get("assembly_step_issues") or [])
+    if unreferenced:
+        _issue(issues, "steps_balloons_uncovered",
+               f"{rel}：球标 {unreferenced} 没有任何装配步骤引用——装配图编了号、"
+               "说明书里没人装这一件", blocking=True)
+    elif doc_issues:
+        _issue(issues, "steps_not_closed",
+               f"{rel}：装配步骤文档带着 {len(doc_issues)} 条未收口"
+               "（BOM 绑定或步骤闭合），就绪判定不替它盖住", blocking=True)
+    return {"assembly_instructions": ref,
+            "assembly_steps": {
+                "step_count": int(body["step_count"]),
+                "declared_balloons": len(coverage.get("declared") or []),
+                "unreferenced": unreferenced,
+                "not_covered": list(evidence.get("not_covered") or []),
+                "evidence": {"path": (sidecar.relative_to(root).as_posix()
+                                      if sidecar.parent == root else str(sidecar)),
+                             "sha256": _sha256(sidecar)}}}
+
+
 def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENANT,
                            project_id: str = DEFAULT_TENANT,
                            drawings: Sequence[Path | str] = (),
                            bom_id: str | None = None, model: Path | str | None = None,
+                           steps_doc: Path | str | None = None,
                            units: str = "mm", datum_scheme: str = "unspecified",
                            approval_status: str = "unapproved",
                            out_path: Path | str | None = None,
@@ -385,6 +436,7 @@ def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENA
             "missing_detail": "evidence.drawings[].bom_line_coverage"
                               ".missing_material / .missing_process",
         }
+    doc.update(_collect_steps(steps_doc, root, issues))
     model_fields = _model_fields(model, issues)
     if "model_part_count" in model_fields:
         doc["model_part_count"] = model_fields["model_part_count"]
