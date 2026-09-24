@@ -207,3 +207,21 @@ capability registry will be empty`），最后由 3 条用例（`total_capabilit
 - 单件图的明细表不适用（材料在标题栏 MATL 上，那是作者声明的一格，本片未动其默认 `-`，
   也未把行级材料与标题栏材料做一致性判定——两者含义不同，做判定要先说清谁权威）。
 - 材料「对不对」不判：本仓不验材料牌号与零件是否匹配，只管有没有落到图上。
+
+## 十、收口读数（commit 后复算，不是计划值）
+
+- 代码+文档：`f25b1be`（10 files，+658/-41）；产物重锚：`7ebc0cf`
+  （SOURCE_MANIFEST / RELEASE_MANIFEST / PROVENANCE / pytest 报告四个一起走）。
+- 全量常驻用例（带 `AIPD_SOURCE_COMMIT=a66040520139…`）：**1715 passed / 0 failed / 3 skipped**
+  （total 1718；上一轮为 1698/0/3，本片 +17 条）。
+- `production_release_gate --release-ready --tag v5.6.0`：**rc=0、8/8、`release_ready: true`**，
+  `test_numbers_from_report` 读数 `passed=1715 failed=0 total=1718
+  source_commit=a66040520139405095648461f7144d4f00629924`。
+  中途一次 rc=2 只红在 `workspace_clean`——那是本片自己的 `tmp/` 草稿未清，
+  与判据无关；清掉后即 8/8。**gate 的判定要读 JSON，不看管道退出码。**
+- `skill_quality_audit.py`：rc=0，**0 警告 0 失败**；`state_perf_gate.py`：**PASS**
+  （`batch_over_autocommit_ratio` median 0.0455）。
+- `audit_repo.py --strict`：**rc=1，且只有那一条已知的 ✗**
+  `Provenance source commit mismatch: manifest=a66040520139… vs HEAD=7ebc0cf5c733…`
+  ——按口径这是「tag 还没重打」的应有状态，不为过门禁把 SOURCE_MANIFEST 改指 HEAD。
+- 变异电池：`12/12 killed`（关掉 `-x` 复跑记录红在哪几条，见 §六）。
