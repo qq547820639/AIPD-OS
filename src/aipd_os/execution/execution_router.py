@@ -23,6 +23,20 @@ from aipd_os.execution.registry import AdapterRegistry
 from aipd_os.execution.runs import RunStore, canonical_hash
 
 DEFAULT_MAX_RETRIES = 3
+
+# 自动幂等键派生时要剔除的**易变**输入字段：它们每次调用都可能不同，
+# 留着会让「同一封 RFQ」被判成两次不同的发送。
+VOLATILE_INPUT_KEYS = frozenset({
+    "work_id", "run_id", "attempt", "timestamp", "now", "requested_at",
+})
+
+
+def auto_external_idempotency_key(capability_id: str,
+                                  input_data: dict[str, Any]) -> str:
+    """为外部副作用能力派生内容幂等键（同内容 + 同作用域 ⇒ 同一个键）。"""
+    core = {k: v for k, v in (input_data or {}).items()
+            if k not in VOLATILE_INPUT_KEYS}
+    return "auto:" + canonical_hash([capability_id, core])
 BACKOFF_BASE_S = 0.05
 
 
@@ -89,6 +103,11 @@ class ExecutionRouter:
         tenant_id = context.get("tenant_id") or "default"
         context["tenant_id"] = tenant_id
         idempotency_key = idempotency_key or context.get("idempotency_key", "")
+        side_effect_mode = adapter.side_effect_mode()
+        # 外部副作用（发邮件/登记外部报价…）此前只在调用方显式给 key 时才去重，
+        # 而产品侧从没给过 ⇒ 同一封 RFQ 被重驱动就会再发一次。这里按内容自动派生。
+        if not idempotency_key and side_effect_mode == "EXTERNAL_SIDE_EFFECT":
+            idempotency_key = auto_external_idempotency_key(capability_id, input)
 
         # 1) 能力可用性
         meta = adapter.discover()
@@ -118,6 +137,15 @@ class ExecutionRouter:
                 if existing.status in ("running", "retried"):
                     return {"record": existing, "result": None,
                             "deduped": True, "in_progress": True}
+                # 外部副作用且上次是「可能已经发出去了」的失败（transient /
+                # tool_error）⇒ 结果未知，重驱动不得再发一次；本仓 doctrine：
+                # UNKNOWN ≠ FAILED。external_blocked 表示根本没对外调用过，
+                # 不在此列（落在 blocked_external 状态，由下面的等号排除）。
+                if (side_effect_mode == "EXTERNAL_SIDE_EFFECT"
+                        and existing.status == "failed"
+                        and existing.error_classification != "external_blocked"):
+                    return {"record": existing, "result": None,
+                            "deduped": True, "unknown_outcome": True}
 
         input_hash = self._hash(input)
         run_id = self.store.create_run(
@@ -132,7 +160,6 @@ class ExecutionRouter:
         )
         lineage: list[str] = []
 
-        side_effect_mode = adapter.side_effect_mode()
         retry_allowed = side_effect_mode in ("PURE", "IDEMPOTENT")
 
         max_attempts = max(1, min(adapter.retry_limits(), self.max_retries))

@@ -81,6 +81,17 @@
   `cryptography` 的 scrypt 挂在可选依赖上、Argon2 需新增 C 扩展；
   回归 `tests/test_crypto.py`（7 新）、`TestStateFieldEncryption`（e2e 盐稳定性）、
   `tests/test_migration.py::test_v18_db_meta_up_and_down`；
+- **v5.10 修复 F-EXEC-01：外部副作用没有幂等键，重驱动会重复对外发送**：
+  执行路由的去重只在调用方显式传 `idempotency_key` 时生效，而全仓唯一传 key 的是
+  实验室数据入库；`side_effect_mode() == "EXTERNAL_SIDE_EFFECT"` 的 RFQ 邮件等
+  从没给过 key ⇒ supervisor 重跑或用户再点一次就会再发一封（路由的 docstring
+  本身声明要避免的正是这个）。现按内容自动派生键
+  （`auto:` + `canonical_hash([capability, input − 易变字段])`，
+  换供应商/换零件仍算新的一次发送），并把上一次"结果未知"的失败
+  （`failed` 且分类不是 `external_blocked`）的重驱动挂起为 `unknown_outcome`
+  等人工核对，与「UNKNOWN ≠ FAILED」的既有 doctrine 一致；
+  用例 `tests/test_execution_idempotency.py` 第 7 组 5 条（实现前 2 红 3 绿）。
+  未做：`OutboxDispatcher` 仍无产品调用点（机制齐备但未接线，属遗留清单）；
 - **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归

@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-24T10:57:30",
+  "generated_at": "2026-09-24T14:15:59",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385",
-  "source_commit": "5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385",
+  "latest_commit_sha": "f8e614864bd56d1d2e9c2a6a1d89b4f18023feb3",
+  "source_commit": "f8e614864bd56d1d2e9c2a6a1d89b4f18023feb3",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
@@ -1147,7 +1147,7 @@
           "unit_test": null,
           "integration_test": null,
           "e2e_evidence": null,
-          "current_limitation": "依赖外部 Gmail/邮件通道，未接入时诚实等待",
+          "current_limitation": "依赖外部 Gmail/邮件通道，未接入时诚实等待；同一内容的重驱动按内容幂等拦截，结果未知（transient/tool_error）的失败挂起等人工核对，不自动重发",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": false,

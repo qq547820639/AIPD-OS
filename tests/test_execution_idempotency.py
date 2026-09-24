@@ -271,3 +271,80 @@ def test_cad_placeholder_blocked_via_router(tmp_path, monkeypatch):
     assert out["record"].status == "blocked_external"
     assert out["record"].error_classification == "external_blocked"
     assert out["result"] is None
+
+
+# ---------------------------------------------------------------------------
+# 7) 外部副作用没有显式 key 时的重驱动保护（F-EXEC-01）
+# ---------------------------------------------------------------------------
+
+def _external_router(tmp_path, adapter):
+    reg = AdapterRegistry()
+    reg.register(adapter)
+    return _router(tmp_path, reg)
+
+
+def test_external_side_effect_repeat_send_is_deduped(tmp_path):
+    """同一封 RFQ 被重驱动时只对外发一次。
+
+    回归背景：幂等去重只在调用方显式给 ``idempotency_key`` 时生效，
+    而产品侧唯一给 key 的是实验室数据入库；RFQ/报价登记这类
+    ``EXTERNAL_SIDE_EFFECT`` 从没给过 ⇒ supervisor 重跑/用户再点一次就再发一封。
+    """
+    a = CountingAdapter(side_effect_mode="EXTERNAL_SIDE_EFFECT",
+                        result={"sent": True, "to": "acme"})
+    store, router = _external_router(tmp_path, a)
+    out1 = router.run("W1", "test.count", {"supplier": "acme", "part": "壳"},
+                      project_id="p1", context={"tenant_id": "t1"})
+    out2 = router.run("W2", "test.count", {"supplier": "acme", "part": "壳"},
+                      project_id="p1", context={"tenant_id": "t1"})
+    assert out1["record"].status == "succeeded"
+    assert out2.get("deduped") is True, "重复的对外发送没被拦住"
+    assert out2["record"].run_id == out1["record"].run_id
+    assert a.execute_count == 1
+
+
+def test_external_side_effect_different_content_still_sends(tmp_path):
+    """键是内容派生的：换供应商/换零件必须是新的一次发送（不许一刀切拦死）。"""
+    a = CountingAdapter(side_effect_mode="EXTERNAL_SIDE_EFFECT")
+    store, router = _external_router(tmp_path, a)
+    router.run("W1", "test.count", {"supplier": "acme"}, project_id="p1")
+    out2 = router.run("W2", "test.count", {"supplier": "other"}, project_id="p1")
+    assert out2.get("deduped") is None or out2.get("deduped") is not True
+    assert a.execute_count == 2
+
+
+def test_external_unknown_outcome_holds_redrive(tmp_path):
+    """结果未知（发送中途 transient 失败）⇒ 重驱动要挂起等人工核对，不得再发。"""
+    a = CountingAdapter(side_effect_mode="EXTERNAL_SIDE_EFFECT",
+                        fail_attempts=1, classification="transient")
+    store, router = _external_router(tmp_path, a)
+    out1 = router.run("W1", "test.count", {"supplier": "acme"}, project_id="p1")
+    assert out1["record"].status == "failed"
+    out2 = router.run("W2", "test.count", {"supplier": "acme"}, project_id="p1")
+    assert out2.get("unknown_outcome") is True, (
+        "邮件可能已经出去了却没记上——重驱动必须停在核对，而不是再发一封")
+    assert a.execute_count == 1
+
+
+def test_external_blocked_redrive_is_allowed(tmp_path):
+    """反向控制：``external_blocked`` 表示根本没对外发过 ⇒ 重驱动应当再试一次。
+
+    没有这条，上一条断言可能只是因为"外部副作用一律拦死"而成立。
+    """
+    a = CountingAdapter(side_effect_mode="EXTERNAL_SIDE_EFFECT",
+                        fail_attempts=1, classification="external_blocked")
+    store, router = _external_router(tmp_path, a)
+    out1 = router.run("W1", "test.count", {"supplier": "acme"}, project_id="p1")
+    assert out1["record"].status == "blocked_external"
+    out2 = router.run("W2", "test.count", {"supplier": "acme"}, project_id="p1")
+    assert out2.get("unknown_outcome") is not True
+    assert a.execute_count == 2
+
+
+def test_pure_capability_still_needs_explicit_key(tmp_path):
+    """范围控制：无副作用能力不自动上键（自动去重会吞掉合法的重复执行）。"""
+    a = CountingAdapter(side_effect_mode="PURE")
+    store, router = _external_router(tmp_path, a)
+    router.run("W1", "test.count", {"x": 1}, project_id="p1")
+    router.run("W2", "test.count", {"x": 1}, project_id="p1")
+    assert a.execute_count == 2

@@ -316,6 +316,10 @@ PASS no_unacknowledged_cve      pip-audit: no unacknowledged CVE
   而不是用「当前调用图里没看到」来判**——后者是 grep 面积，不是证据。
 - `OutboxDispatcher` 在 `src/`、`scripts/` 内**无任何产品调用点**（实测 grep），
   目前只有测试与量具消费它。M5 交付的是机制，接线尚未发生。
+  > 2026-09-24 复核：这条仍然成立（dispatcher 依旧无人调用，本轮**没有**把它接上）。
+  > 但顺着它量到一个更要紧的相邻缺口并已修复：外部副作用（RFQ 邮件等）在
+  > `execution_router` 里从来没有幂等键，重驱动会重复对外发送 —— 见
+  > `CAD_2D_DRAWINGS_HOLE_PATTERN_2026-09-24.md` §8.5（F-EXEC-01）。
 - ~~两套事务登记表（`AIPDStateDB` 与 `ConnectionFactory`）未统一~~ **已统一**
   （2026-09-24 F-STATE-06，见 §2 更新块）。
 - WAL 仍未全局开启（量具可复测，属于需要跨平台验证的独立决策）。

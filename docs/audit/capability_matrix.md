@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-24T10:57:30`
+- 生成时间：`2026-09-24T14:15:59`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385`
+- 默认分支：`main`；HEAD：`f8e614864bd56d1d2e9c2a6a1d89b4f18023feb3`
 - 版本：`5.6.0`
 - 能力总数：`77`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -94,7 +94,7 @@
 | 能力 | 分类 | 声明文件 | 实现文件 | 入口 | 运行命令 | 单元测试 | 当前限制 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | RFQ | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/tool_adapters/mail_rfq_adapter.py | aipd_os.tool_adapters.mail_rfq_adapter.MailRfqAdapter | `aipd industrialize` | tests/test_supply_chain.py | 真实邮件发送依赖外部邮件通道 |
-| 邮件执行 | `external_dependency` | references/tool-and-physical-boundaries.md | src/aipd_os/tool_adapters/mail_rfq_adapter.py | mail_rfq_adapter.send | `aipd industrialize` |  | 依赖外部 Gmail/邮件通道，未接入时诚实等待 |
+| 邮件执行 | `external_dependency` | references/tool-and-physical-boundaries.md | src/aipd_os/tool_adapters/mail_rfq_adapter.py | mail_rfq_adapter.send | `aipd industrialize` |  | 依赖外部 Gmail/邮件通道，未接入时诚实等待；同一内容的重驱动按内容幂等拦截，结果未知（transient/tool_error）的失败挂起等人工核对，不自动重发 |
 | 报价解析 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/quotes.py | aipd_os.supply_chain.quotes.normalize_quote | `aipd industrialize --quote <file>` | tests/test_supply_chain.py | 附件格式解析范围有限 |
 | 供应商资质 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/suppliers.py | aipd_os.supply_chain.suppliers.SupplierRegistry | `aipd industrialize` | tests/test_supply_chain.py | 证书真实性需人工/外部核验 |
 | EVT/DVT/PVT数据导入 | `partially_implemented` | references/tool-and-physical-boundaries.md | src/aipd_os/supply_chain/lab.py; tool_adapters/evt_dvt_pvt_adapter.py | aipd_os.supply_chain.lab.import_lab_csv | `aipd industrialize --lab-data <csv>` | tests/test_supply_chain.py | 导入格式范围有限 |

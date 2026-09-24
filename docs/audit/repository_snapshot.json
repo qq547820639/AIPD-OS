@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-24T10:57:28",
-  "source_commit": "5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385",
+  "generated_at": "2026-09-24T14:15:57",
+  "source_commit": "f8e614864bd56d1d2e9c2a6a1d89b4f18023feb3",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "5f6d4dd6d9d9c550ddb3f5a4dfc7ded341944385",
-  "latest_commit_time": "2026-09-24 01:19:18 +0800",
+  "latest_commit_sha": "f8e614864bd56d1d2e9c2a6a1d89b4f18023feb3",
+  "latest_commit_time": "2026-09-24 13:59:55 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 141
+      "tests": 142
     }
   },
   "tags": [
@@ -116,68 +116,43 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 554,
-    "hash_matches": 547,
-    "hash_mismatch_count": 7,
+    "total_files": 558,
+    "hash_matches": 554,
+    "hash_mismatch_count": 4,
     "mismatches": [
       {
-        "path": "SKILL.md",
+        "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "f651087daaf7e5b78691261157314cd11b8427e778881a20c436abd1216bbda1",
-        "actual": "ea9254c14b622379fe64e28f2da01e3dba47b7145a417a6f2bff0ed533c2d0dd"
+        "expected": "de59d5f0290ff82f0f974f5b30e1622f5abad5920097110069ba8319a4ac7d0e",
+        "actual": "43cbe70fa6f40a4f885ea5e38b56f0998aed7721b851b26622d0ec6b5f2390d9"
       },
       {
-        "path": "src/aipd_os/cad/backends.py",
+        "path": "src/aipd_os/execution/execution_router.py",
         "reason": "hash_mismatch",
-        "expected": "b1c9561f3dcc99aa3868f16f3b7f1f294a6a5116cd653e476ac472c246cce4b6",
-        "actual": "9b00bf02feed70dccb299e4fc6b9f90c404e86135d5511b5dc62ce79ecc40ea6"
-      },
-      {
-        "path": "src/aipd_os/cli/command_contract.py",
-        "reason": "hash_mismatch",
-        "expected": "bf84955fa4fa0f96245dd4e46e99002d9bb5a10ed2c31890552a1d06822093d2",
-        "actual": "1bb4f328de5d74a2de32dafd9b2ae2f51bc11dab8d32b364e267d2ebc70bfe40"
-      },
-      {
-        "path": "src/aipd_os/cli/commands.py",
-        "reason": "hash_mismatch",
-        "expected": "57780c17d0a747c9beafd87d72c0f80e61ce3f759808e40a16767494787fe00b",
-        "actual": "6d91121b03f3bc00e6c4ee73afbbbd0f7a2f668becf13da3fa9a8ba4efe15369"
-      },
-      {
-        "path": "src/aipd_os/cli/main.py",
-        "reason": "hash_mismatch",
-        "expected": "04aa4dd2dd26ebd0f56d5e3123ccbf936f8a478067ab308eaab20996218bf2cb",
-        "actual": "f5053df9ad7f20503b0448ebf04e669e1e74ff41bdd5fa920cf59667cdcc35c0"
+        "expected": "7a215a421d79e67dedd045f2dd79e89c712d21493ef86f62c2a9153a9e4d5d53",
+        "actual": "f62bb75eecb63030610f8ada1ab74ff609b797023f3200eb91e77e982371ab08"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "ed112d93f650de4085880106156c212cd83af54f59928a591fe20d405f770f38",
-        "actual": "bd90927292211341a8dd659f221d396d2094924fbfeb91efd0206970e6215a23"
+        "expected": "bd90927292211341a8dd659f221d396d2094924fbfeb91efd0206970e6215a23",
+        "actual": "3f666e5f59356ab7729d6baf58d0750e5084c845ed7147dee1c639cdce18a7ce"
       },
       {
-        "path": "tests/test_cad_golden_loop.py",
+        "path": "tests/test_execution_idempotency.py",
         "reason": "hash_mismatch",
-        "expected": "bbdece914d42a8c8351ea70b305c34bc4d60f1aaae50fdb8f1cfa7836c3d9acb",
-        "actual": "c238668cb97c8152f9f290f78d2de1c02f5cc77666a103edd12fc60f1e91fb70"
+        "expected": "1bb729a651ad0cd069ed47f3912c63fdc52553cc239c8a13c63a009b1aa0263c",
+        "actual": "7d7a91b6ec6927059481c93c2a3e09627c1ea44bad7a5ef60937d8cc6ac9615f"
       }
     ]
   },
   "untracked_or_generated": [
-    " M SKILL.md",
-    " M docs/audit/capability_matrix.json",
-    " M docs/audit/capability_matrix.md",
-    " M docs/audit/repository_snapshot.json",
-    " M src/aipd_os/cad/backends.py",
-    " M src/aipd_os/cli/command_contract.py",
-    " M src/aipd_os/cli/commands.py",
-    " M src/aipd_os/cli/main.py",
+    " M CHANGELOG.md",
+    " M docs/audit/CAD_2D_DRAWINGS_HOLE_PATTERN_2026-09-24.md",
+    " M docs/audit/P2_M10_STATE_PERF_CLOSURE_2026-09-24.md",
+    " M src/aipd_os/execution/execution_router.py",
     " M src/aipd_os/registry_data.py",
-    " M tests/test_cad_golden_loop.py",
-    "?? src/aipd_os/cad/drawings2d.py",
-    "?? src/aipd_os/cli/commands_drawing.py",
-    "?? tests/test_cad_drawings2d.py",
+    " M tests/test_execution_idempotency.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

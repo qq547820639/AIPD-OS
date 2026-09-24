@@ -16,12 +16,13 @@
 | 全能力分布 | fully 36 / partially 28 / external 13 / 其余 0（共 77） | `docs/audit/capability_matrix.json` |
 | 图纸用例 | 27 passed | `tests/test_cad_drawings2d.py` |
 | CAD 黄金闭环用例 | 18 passed（新增 6 条） | `tests/test_cad_golden_loop.py` |
-| 全量回归 | **1349 passed / 0 functional failed / 3 skipped**（另 2 条为清单哈希，重算后转绿） | 收尾复跑 |
+| 全量回归 | **1354 passed / 0 functional failed / 3 skipped**（另 2 条为清单哈希，重算后转绿） | 收尾复跑 |
 | F-CAD-01 | 已修 + 已入门禁 + 已配反证 | §5 |
 | F-STATE-05 | 已复现（5 处）+ 已修 + 配对对照（11 passed） | §8.1 |
 | F-STATE-06 | 跨库串连接已复现 + 登记表收敛为一（3 条回归） | §8.2 |
 | F-STATE-07 | 空串吞掉已配置密钥，已修 + 3 条解析回归 | §8.3 |
 | F-STATE-08 | 无盐单轮 KDF → 带盐 PBKDF2（`f2:`，migration v18） | §8.4 |
+| F-EXEC-01 | 外部副作用补内容幂等键 + 未知结果挂起（5 条用例） | §8.5 |
 | ruff（`src tests state_service`）/ mypy（360 文件） | 0 项 | CI 作用域 |
 | 发布门 / 性能门 / skill 自审 | 8/8 绿 · PASS（比值 0.0161） · 0 警告 0 失败 | §6、§9 命令 |
 
@@ -288,6 +289,36 @@ CLI 的 idea.decompose 路径硬传了 `encryption_key=""` ⇒ 空串被当成�
 回归：`tests/test_crypto.py`（7 新）+ `TestStateFieldEncryption`（e2e：写进去是
 `f2:`、库里读不到明文、重开库盐不变、两库盐不同）+
 `tests/test_migration.py::test_v18_db_meta_up_and_down`（up/down 双向）。
+
+### 8.5 F-EXEC-01：外部副作用没有幂等键 ⇒ 同一封 RFQ 会被重驱动发第二次
+
+追 P2 遗留「`OutboxDispatcher` 无产品调用点」时先量清了事实：
+- `OutboxRepository` / `ExternalOperationRepository` 与 dispatcher 机制齐备
+  （claim+lease、completed/retry/terminal、`find_by_idempotency_key`、
+  UNIQUE partial index），产品侧**确实零调用**；
+- 但真正会对外造成后果的缺口不在这，而在 `execution_router`：
+  幂等去重只在调用方显式传 `idempotency_key` 时生效，
+  而全仓唯一传 key 的是实验室数据入库（`validation/ingestion.py`）。
+  RFQ 邮件这类 `side_effect_mode() == "EXTERNAL_SIDE_EFFECT"` 的适配器
+  从没给过 key ⇒ supervisor 重跑、或用户再点一次，就会**再发一封**，
+  而 router 的 docstring 本来就写着"外部副作用重试可能重复对外发送"。
+
+改法（不引入 daemon，也不改状态词表）：
+1. 外部副作用能力在调用方没给 key 时**按内容自动派生**
+   （`auto:` + `canonical_hash([capability, input − 易变字段])`），
+   于是"同内容 + 同租户 + 同项目 + 同能力"的重驱动命中既有去重；
+   换供应商/换零件是不同内容 ⇒ 照发（防止一刀切拦死）。
+2. 上一次是**结果未知**的失败（`failed` 且分类不是 `external_blocked`）
+   ⇒ 重驱动返回 `unknown_outcome`，挂起等人工核对而不是再发；
+   `external_blocked` 表示根本没对外调用过 ⇒ 允许再试。
+   这与本仓 doctrine 一致：UNKNOWN ≠ FAILED。
+
+用例（`tests/test_execution_idempotency.py` 第 7 组，5 条，实现前 2 红 3 绿）：
+重复发送被拦、换内容仍发、未知结果挂起、`external_blocked` 允许重驱、
+`PURE` 能力不自动上键（范围控制）。选型说明：dispatcher 的后台/CDC 方案
+（Debian daemon、Debezium 类）与本机 SQLite + 短进程形态不匹配，
+本轮不做——`OutboxDispatcher` 仍无产品调用点，这条遗留保持原状并已核实在
+§7 记录，不在这里假装已接。
 
 ## 9. 复算入口
 
