@@ -80,7 +80,7 @@ AIPD 最有价值的能力之一，是「证据 → 产品定义」的完整转�
 | 产品手册 | 自动规划并生成图文手册，配视觉质量检查 |
 | 工程与图纸 | 从设计意图到生产放行的成熟度推进（C0→C7），带几何校验 |
 | 供应链 / 工业化 | 报价、供应商、实验数据登记，试产三阶段（EVT/DVT/PVT）跟踪 |
-| 物料清单与成本 | 结构化 BOM（零件、数量、材料、供应商、单价）+ 一键成本核算（材料 + 模具摊销 + 一次性投入 + 毛利），发布前检查「是否达到开模可用」 |
+| 物料清单与成本 | 结构化 BOM（零件、数量、材料、工艺、供应商、单价）+ 一键成本核算（材料 + 模具摊销 + 一次性投入 + 毛利），发布前检查「是否达到开模可用」 |
 | 验证与质量 | 验证计划/测试/执行/结果全链路管理，自动标记过时结果，失败自动创建 Issue |
 | Issue 与纠正措施 | 问题跟踪、根因分析、纠正措施、重新验证闭环，不能通过简单改状态绕过验证 |
 | 制造就绪度 | 确定性计算 8 个维度（产品定义/CAD/BOM/成本/验证/问题/供应链/谱系），缺数据默认「待验证」而非「通过」 |
@@ -233,19 +233,24 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     装配视图上 `--section/--detail` 直接拒绝（2），爆炸图与装配约束仍未做。
 aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 \
                       --db state.db --bom BOM-001 --project P       # 接上 BOM 的数量
-#   ↑ 给 --db/--bom 就交叉核对球标↔BOM 行，明细表长出 QTY/UNIT/MATERIAL 三列；不给就维持
+#   ↑ 给 --db/--bom 就交叉核对球标↔BOM 行，明细表长出 QTY/UNIT/MATERIAL/PROCESS 四列；不给就维持
 #     ITEM/PART 两列、一个猜测值都不印。对应关系**只认 manifest 里声明的 bom_item**：
 #     {"parts":[{"name":"支架","step":"a.step","balloon":1,"bom_item":"BRACKET-01"}]}。
 #     不按零件名字自动映射（名字相似不等于同一个东西）；没声明 bom_item 的零件即使
-#     与某行同名也不对上。数量、单位与材料一律取自 BOM 行，材料走**同一个**绑定结果
-#     （没绑上/歧义/那行本身没填都留空，不写 "-" 这类占位符——占位符会被读成图上有这么个材料）；
-#     manifest 写 quantity 或 material 都不读（解析器两个都不认），明细表只有一个材料来源。
+#     与某行同名也不对上。数量、单位、材料与工艺一律取自 BOM 行，材料/工艺走**同一条**绑定结果
+#     （没绑上/歧义/那行本身没填都留空，不写 "-" 这类占位符——占位符会被读成图上有这么个值）；
+#     两格各填各的，**不许互相顶**（拿工艺顶材料会把真正缺的那一半盖住）；
+#     manifest 写 quantity / material / process 都不读（解析器三个都不认），明细表每格只有一个来源。
+#     工艺那一格只装**一道主工艺**：多工序路线（工序顺序/工时/工序成本）本仓不建模——
+#     成熟实现把它建成独立对象（Dynamics 365 BC 的 Routing + 行上 Routing Link Code、
+#     ERPNext v15 的 BOM Operation 子表），要做就先建 operations 表。
 #     供应商**刻意不上图**（裁决，不是漏做）：明细表随图纸版本冻结，供应商是商务事实，
 #     本仓契约里它只叫「候选供应商」且归在供应链开发清单。
 #     四种情形判未收口（退出码 4）：声明的行找不到 / 同一 item 在 BOM 里有多行（歧义）/
 #     零件没声明 bom_item / BOM 有行而图上没有球标指它（这张图漏了零件）。
-#     绑不上的数量与材料都留空，不折算成 0。三列在不在只看 BOM 接没接上，不看有没有值
+#     绑不上的数量/材料/工艺都留空，不折算成 0。那四列在不在只看 BOM 接没接上，不看有没有值
 #     （「全部行都没材料」恰恰最需要看得见，用「有值才长列」的写法它会整列消失）。
+#     出图时命令行直接报哪一半还缺：材料已填 2/2 行、工艺已填 1/2 行，缺的点名到球标。
 #     --db 与 --bom 必须一起给，且那张 BOM 得真在：
 #     编号写错会当场 rc=2，而不是被当成空 BOM 报成一堆「每行都找不到」。
 #     注意 --db 指的是**状态库**：BOM 按产品口径取同目录的 bom.db（不给权威状态库加表，
@@ -253,15 +258,17 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。
-#     装配图特有的四条判定：球标↔BOM 未闭合 ⇒ assembly_unresolved（阻断）；
-#     已绑上但那一行没填材料 ⇒ material_missing（阻断，逐图点名到球标）；
+#     装配图特有的五条判定：球标↔BOM 未闭合 ⇒ assembly_unresolved（阻断）；
+#     已绑上但那一行没填材料 ⇒ material_missing、没填工艺 ⇒ process_missing（各一条、都阻断、
+#     逐图点名到球标——C6 要的是「材料与工艺」，合成一条就看不出还差哪一半）；
 #     图上数量所属 BOM 与本份证据所核 BOM 不一致 ⇒ assembly_bom_mismatch（阻断）；
 #     出图时没接 BOM ⇒ assembly_bom_unverified（提示，不阻断：图仍成立，只是数量没核）。
 #     一张漏了零件的装配图不能再读成 ok=true。
-#     材料覆盖读数随各张图的引用带（bound_rows / with_material / unbound_rows /
-#     missing_balloons / drawings_without_bom），文档级 material_coverage 只聚合数得清的四项——
-#     多张装配图的球标都从 1 开始编号，「哪几行缺」一律逐图读、不拍平；
-#     没绑上的行不重复算成缺材料，没接 BOM 的图写成盲区而不是 0。
+#     行级事实覆盖读数随各张图的引用带（bound_rows / with_material / with_process /
+#     unbound_rows / missing_material / missing_process / drawings_without_bom），文档级
+#     bom_line_coverage 只聚合数得清的那几项——多张装配图的球标都从 1 开始编号，
+#     「哪几行缺」一律逐图读、不拍平；没绑上的行不重复算成缺材料/缺工艺，
+#     没接 BOM 的图写成盲区而不是 0。
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"
 #   ↑ 失效传播：沿血缘把下游 truth 标 stale、生成有界返工任务（rework_tasks，默认上限 3 次），
 #     并给出 owner 可读的四段变更说明（改了什么/为何影响/修复计划/需要批准什么）。
@@ -275,7 +282,7 @@ aipd validate --manifest manifest.json --target C5    # 验证是否达到目标
 
 ### 场景 5：准备开模物料清单与成本
 ```bash
-aipd bom add --db state.db --part 外壳 --material ABS --quantity 1
+aipd bom add --db state.db --part 外壳 --material ABS --process "注塑" --quantity 1
 aipd quote apply --db state.db --file quotes.csv      # 报价 → quote.* 事实 → 该行单价
 aipd bom show --db state.db --tooling 50000 --quantity 1000 --margin 20   # 汇总 + 发布检查
 aipd cost calc --db state.db --tooling 50000 --quantity 1000 --margin 20   # 成本核算

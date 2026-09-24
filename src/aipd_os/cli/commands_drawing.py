@@ -369,17 +369,26 @@ def cmd_drawing_assembly(args):
         print(f"明细表：{len(listed.get('rows') or [])} 行，列 {listed.get('columns')}，"
               f"绘制方式 {listed.get('rendered_by')}")
         if bound:
-            print(f"  数量、单位与材料都来自 BOM {bound['bom_id'] or bound['bom_ids']}"
+            print(f"  数量、单位、材料与工艺都来自 BOM "
+                  f"{bound['bom_id'] or bound['bom_ids']}"
                   f"（{bound['lines']} 行）；对应关系靠 manifest 的 bom_item 声明，"
                   f"不按零件名字猜")
+            bound_rows = [r for r in (listed.get("rows") or [])
+                          if r.get("bom_line_id") is not None]
+            # 只数**绑上的**行：没绑上的已经被「装配未收口」点名，这里再报一遍就分不出缺的是哪一半
+            for cell, label in (("material", "材料"), ("process", "工艺")):
+                missing = sorted(int(r["item"]) for r in bound_rows if not r.get(cell))
+                print(f"    {label}已填 {len(bound_rows) - len(missing)}/"
+                      f"{len(bound_rows)} 行"
+                      + (f"，缺的球标 {missing}" if missing else "，没有缺行"))
         else:
-            print("  未接 BOM：明细表不含数量与材料列，一个猜测值都不印。")
+            print("  未接 BOM：明细表不含数量/材料/工艺列，一个猜测值都不印。")
         for msg in issues:
             print(f"  装配未收口：{msg}")
         for msg in warnings:
             print(f"  装配告警：{msg}")
         print("  没有做的事：干涉检查（只报包络投影重叠，不做实体求交）、"
-              "爆炸图/装配约束、工艺与表面处理列（C6 的「材料与工艺」只落了材料一半）。")
+              "爆炸图/装配约束、多工序工艺路线（工艺只有那一格，工序顺序/工时/工序成本不建模）。")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
     _emit(args, evidence, prose)
     return 4 if issues else 0

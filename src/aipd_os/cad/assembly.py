@@ -23,15 +23,18 @@
 （``Modelspace.add_table`` 不存在，``ezdxf.entities`` 里没有 ``Table`` 类）。
 
 球标↔BOM **已经**交叉核对（``bind_bom``）：对应关系只认 manifest 里作者声明的
-``bom_item``，**不按零件名字自动映射**；数量、单位与材料一律取自 BOM 行（解析器不读
-manifest 的 ``quantity``，也不读它的 ``material``），绑不上/歧义/没声明/BOM 多出行都判
-未收口，绑不上留空不折算成 0、材料留空不写占位符。
+``bom_item``，**不按零件名字自动映射**；数量、单位、材料与工艺一律取自 BOM 行（解析器不读
+manifest 的 ``quantity``/``material``/``process``），绑不上/歧义/没声明/BOM 多出行都判未收口，
+绑不上留空不折算成 0、材料与工艺留空不写占位符，两格各自独立不许互相顶。
+``BomLine.process`` 是**明细表那一格要的那道主工艺**，不是工序路线：本仓不建 operations
+表（成熟实现把多工序建成独立对象——Dynamics 365 BC 的 BOM 行只带 Routing Link Code、
+ERPNext v15 用子表 BOM Operation），所以这里不承载顺序、工时与工序成本。
 **供应商（``BomLine.supplier``）刻意不进明细表**——这是裁决不是漏做：明细表随图纸版本
 冻结，而供应商是商务事实（本仓契约把它归在「供应链开发清单」，BOM 侧也只叫「候选供应商」，
 见 ``references/deliverable-contracts.md``），把供应商印到受控技术文件上等于让图纸携带
 一个未取证就绪的采购承诺。要改这条需要先给理由，别当默认值。
 明确**未实现**（不要当成已具备）：干涉/碰撞检查（只报**包络投影重叠**面积，不是实体求交）；
-爆炸图、装配约束/配合；工艺/表面处理列（C6 的「材料与工艺」只落了材料一半）；
+爆炸图、装配约束/配合；多工序工艺路线（一格一个字符串，工序成本/工时无处安放）；
 同一 item 在 BOM 里出现多行时判歧义而不是合并（本仓还没有合并口径，就不猜）。
 """
 from __future__ import annotations
@@ -287,15 +290,16 @@ def build_assembly_view(parts: list[dict[str, Any]], view_name: str,
     return view
 
 
-def _material_of(line: Any) -> str | None:
-    """BOM 行上的材料：空白串按「没填」处理，不原样搬进表格。
+def _bom_text(line: Any, name: str) -> str | None:
+    """取 BOM 行上的一个自由文本事实（材料 / 工艺）：空白串按「没填」处理。
 
-    材料与数量**同一个权威、同一个绑定结果**——``bom_item`` 没声明、找不到、或有歧义，
+    两个字段与数量**同一个权威、同一个绑定结果**——``bom_item`` 没声明、找不到、或有歧义，
     这里就是 ``None``，明细表那一格留空。不写 ``"-"`` 也不写「未指定」：占位符会被读成
-    「图上确实有这么一个材料」，而 C6（``references/production-cad-deliverables.md``）
-    要的是能落到每一行的材料事实。
+    「图上确实有这么一个值」，而 C6（``references/production-cad-deliverables.md``）要的是
+    能落到每一行的材料**与工艺**事实。两条各填各的格子，**不许互相顶**：
+    拿工艺凑材料（或反过来）会把真正缺的那一半盖住。
     """
-    value = line.material or ""
+    value = getattr(line, name) or ""
     return value.strip() or None
 
 
@@ -310,9 +314,9 @@ def bind_bom(parts: list[dict[str, Any]],
 
     两头都要闭合：球标有号而 BOM 找不到 ⇒ 未收口；BOM 有行而图上没号 ⇒ 也是未收口。
     绑不上就留空（``None``），**不折算成 0**——图纸上 0 与「没核到」差一个量级。
-    第 15 片起 ``material`` 走同一条绑定：值只来自绑上的那一行 ``BomLine.material``，
-    绑不上或那行没填都是 ``None``。``supplier`` 一律不取（明细表与采购清单的边界，
-    理由写在模块 docstring）。
+    第 15 片起 ``material``、第 16 片起 ``process`` 走同一条绑定：值只来自绑上的那一行
+    ``BomLine.material`` / ``BomLine.process``，绑不上或那行没填都是 ``None``，两格各自独立
+    不互相顶。``supplier`` 一律不取（明细表与采购清单的边界，理由写在模块 docstring）。
     """
     from aipd_os.bom.models import norm_item
 
@@ -327,7 +331,8 @@ def bind_bom(parts: list[dict[str, Any]],
         declared = part.get("bom_item")
         row: dict[str, Any] = {"item": int(part["balloon"]), "part": str(part["name"]),
                                "bom_item": declared, "bom_line_id": None,
-                               "qty": None, "unit": None, "material": None}
+                               "qty": None, "unit": None, "material": None,
+                               "process": None}
         if declared is None:
             issues.append(f"零件 {part['name']}（球标 {row['item']}）未声明 bom_item："
                           "明细表这一行不印数量，也不拿零件名字去 BOM 里猜一行")
@@ -345,7 +350,8 @@ def bind_bom(parts: list[dict[str, Any]],
                 line = matches[0]
                 row.update({"bom_line_id": line.line_id,
                             "qty": float(line.quantity), "unit": line.unit,
-                            "material": _material_of(line)})
+                            "material": _bom_text(line, "material"),
+                            "process": _bom_text(line, "process")})
                 used.add(line.line_id)
         rows.append(row)
 
@@ -389,9 +395,9 @@ def draw_parts_list(msp: Any, rows: list[dict[str, Any]], sheet_wh: tuple[float,
 
     位置固定在**图框内左下角**（离框 ``MARGIN + 10``），因为标题栏占右下角、视图行
     从上往下排；表体向下长的方向是实测出来的（见下）。
-    ``bom`` 是「这张表的权威接到哪张 BOM」的声明：给了就多印 QTY/UNIT/MATERIAL 三列，
-    不给就维持 ITEM/PART 两列。三列**在不在**只看权威接没接上，不看那一格有没有值——
-    「全部行都没材料」恰恰是最需要看得见的一格，用「有值才长列」的写法它会整列消失。
+    ``bom`` 是「这张表的权威接到哪张 BOM」的声明：给了就多印 QTY/UNIT/MATERIAL/PROCESS
+    四列，不给就维持 ITEM/PART 两列。这四列**在不在**只看权威接没接上，不看那一格有没有
+    值——「全部行都没材料」恰恰是最需要看得见的一格，用「有值才长列」的写法它会整列消失。
     """
     from ezdxf.addons.tablepainter import TablePainter
 
@@ -399,7 +405,7 @@ def draw_parts_list(msp: Any, rows: list[dict[str, Any]], sheet_wh: tuple[float,
 
     columns = ["ITEM", "PART"]
     if bom is not None:
-        columns += ["QTY", "UNIT", "MATERIAL"]
+        columns += ["QTY", "UNIT", "MATERIAL", "PROCESS"]
     painter = TablePainter((0.0, 0.0), nrows=len(rows) + 1, ncols=len(columns),
                            cell_width=TABLE_CELL_W, cell_height=TABLE_CELL_H)
     for col, title in enumerate(columns):
@@ -412,8 +418,9 @@ def draw_parts_list(msp: Any, rows: list[dict[str, Any]], sheet_wh: tuple[float,
             painter.text_cell(i, 2, "" if row.get("qty") is None
                               else f"{row['qty']:g}")
             painter.text_cell(i, 3, row.get("unit") or "")
-            # 材料与数量同一留空规矩：没有就空着，不写 "-"（占位符会被读成一个材料）
+            # 材料与工艺同一留空规矩：没有就空着，不写 "-"（占位符会被读成一个值）
             painter.text_cell(i, 4, row.get("material") or "")
+            painter.text_cell(i, 5, row.get("process") or "")
     width, height = painter.table_width, painter.table_height
     insert = (MARGIN + 10.0, MARGIN + 10.0 + height)
     painter.render(msp, insert)

@@ -605,6 +605,48 @@
   一致性（做判定得先说清谁权威）、爆炸图与装配约束。证据见
   `docs/audit/CAD_ASSEMBLY_MATERIAL_F-DRAW-01_2026-09-25.md`；
 
+- **v5.10 F-DRAW-01 第 16 片：明细表的工艺列，覆盖判据分成「材料 / 工艺」两半**：
+  第 15 片把材料落到图纸那一格时，行内自己写着「C6 的材料与工艺只落了材料一半」。
+  本片收另一半，并且先把形状问清楚：**工艺该是 BOM 行上的一列，还是独立的工序对象？**
+  真读到的两家成熟实现口径一致——Dynamics 365 Business Central 的生产 BOM 行只有
+  Type / No. / Quantity per / Scrap % / **Routing Link Code**，工序在另一张 Routing 里；
+  ERPNext v15 用 BOM 的子表 **BOM Operation** 存工位/工时/成本（靠 “With Operations” 开启）。
+  于是本片选「行上一列」但**改掉了它的定义**：`BomLine.process` 只表示
+  「明细表那一格要的那道主工艺」，**不是工序路线**——工序顺序/工时/工序成本不建模，
+  这句话同时写进 `bom/models.py` 类 docstring、`cad/assembly.py` 模块 docstring 与能力表行内
+  （多工序塞进一个字符串会被明细表读成一个工序）。上游 FreeCAD TechDraw 的 BOM 列定义
+  依旧**没读到**（GitHub 代码检索三种查询式 0 命中、猜的文件路径不存在），不引用。
+  实现：`bom_lines` 加 `process TEXT`；旧库靠 `BomStore._ensure_columns` 就地补列
+  （仿 `ProductTruthStore` 先例；`tests/test_migration_freeze.py` 冻结的是状态库，
+  bom.db 归本 store 自有），补出来的列**可空**、旧行读成 `None` 不给非空默认值；
+  `aipd bom add --process` 真能填；`_material_of` 收成 `_bom_text(line, name)`
+  让材料与工艺共用一处取值规矩；明细表列集合 `QTY/UNIT/MATERIAL/PROCESS`，
+  绑不上的数量/材料/工艺一律留空（不写 `-`、不写 `str(None)`）。
+  证据侧：`_check_assembly` 逐行读两格，**两半各一条**阻断判定
+  （`material_missing` / `process_missing`）——合成一条「信息不全」就看不出还差哪一半；
+  每图引用里的块与文档级字段从 `material` / `material_coverage` 改名为
+  `bom_line_coverage`（一个装两半的容器不该叫材料），新增 `with_process`、
+  `missing_process`、`missing_process_drawings`；没绑上的行不重复计入，没接 BOM 仍是盲区。
+  命令行出图直接报「材料已填 2/2 行、工艺已填 1/2 行，缺的球标 [2]」。
+  守卫：三个文件各 +7 条（净 +21，其中 1 条是第 15 片「满覆盖⇒无问题」在新世界不成立而改名改判）；
+  两条通用不变量是新加的——**逐字段全量 round-trip**（漏在 INSERT 列表里的字段只有它抓得住）
+  与**模型字段集合 == 表列集合**；变异电池 **13/13 killed**，其中上一轮同类幸存的
+  「`with_* = bound_rows` 拿位置当计数」（P13）这次因为一开始就配了
+  「缺的那行在前、有的那行在后」的排列，首轮即被杀掉。
+  **补一处更大的账**：动手前查到 `tests/test_bom.py` 在能力表里出现 **0 次**，而且
+  **没有任何一行的 `implementation_file` 指向 `src/aipd_os/bom/*`**——`aipd bom add/show/
+  release/cost calc`（三条 5.10 PUBLIC 命令）在能力表里整域不可见。新增
+  `industrialize.bom_model_cost` 行（能力总数 80→81，`capability_matrix.{json,md}` 与
+  `repository_snapshot.json` 重新生成），并写明「成本齐备 ≠ 材料/工艺齐备」是刻意的分家：
+  `release_checklist` 只判成本，材料/工艺是否落到图纸由 `release manifest` 逐图点名。
+  端到端全走 `aipd` 可执行文件：`bom add`（一行有工艺一行没有）→ `drawing assembly` rc=0
+  且六列齐、缺格为空 → `release manifest` rc=4、`process_missing` 点名球标 [2]、
+  每图读数 `{bound_rows:2, with_material:2, with_process:1, missing_process:[2]}`；
+  读回 DXF 的 `TABLECONTENT` 确认工艺值真在图上、没有 `-`/`None` 占位。
+  仍未做：多工序路线、材料与工艺的**对不对**（只管有没有上图）、标题栏 MATL 与行级材料的一致性、
+  `release_checklist` 与材料/工艺齐备的合并（要业务口径）。证据见
+  `docs/audit/CAD_ASSEMBLY_PROCESS_F-DRAW-01_2026-09-25.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

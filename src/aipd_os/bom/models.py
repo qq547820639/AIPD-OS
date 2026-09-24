@@ -1,15 +1,17 @@
 """BOM 域数据模型（v5.10 NPI：物料清单）。
 
 - :class:`BomHeader`：BOM 头（名称/修订/状态，tenant+project 作用域）；
-- :class:`BomLine`：BOM 行（层级 parent_item、数量/单位、材料、供应商、
+- :class:`BomLine`：BOM 行（层级 parent_item、数量/单位、材料、工艺、供应商、
   单位成本、关联图纸与报价引用；乐观锁 version_no）。
 
 正式状态语义：
 - BOM 状态：draft → released → superseded / archived；
 - 行状态：planned → quoted → released → obsolete。
 
-诚实原则：unit_cost/supplier 缺省 None（不伪造）；成本完整性由
+诚实原则：unit_cost/supplier/material/process 缺省 None（不伪造）；成本完整性由
 ``bom.projection.release_checklist`` 显式判定，绝不把缺数据算成 0 元。
+材料与工艺**是否落到图纸**不在这里判，由 ``release manifest`` 逐图点名（见
+``cad/assembly.bind_bom``）。
 """
 from __future__ import annotations
 
@@ -68,6 +70,14 @@ def norm_item(value: Any) -> str:
 
 @dataclass
 class BomLine:
+    """一行 BOM。``process`` 是**图纸明细表那一格要的那道主工艺/表面工艺**，不是工序路线：
+
+    成熟实现把多工序建成独立对象（Dynamics 365 Business Central 的 BOM 行只带
+    Routing Link Code、工序在 Routing 里；ERPNext v15 用 BOM 的子表 BOM Operation 存
+    工位/工时/成本）。本仓不建那个对象，所以这里不承载顺序、工时或工序成本——
+    要那些请先建路线表，别把多步塞进这一个字符串。
+    """
+
     line_id: str
     bom_id: str
     tenant_id: str = "default"
@@ -78,6 +88,7 @@ class BomLine:
     quantity: float = 1.0
     unit: str = "pcs"
     material: str | None = None
+    process: str | None = None
     supplier: str | None = None
     unit_cost: float | None = None
     currency: str = "CNY"
@@ -108,6 +119,7 @@ class BomLine:
             "item": self.item, "parent_item": self.parent_item,
             "description": self.description, "quantity": self.quantity,
             "unit": self.unit, "material": self.material,
+            "process": self.process,
             "supplier": self.supplier, "unit_cost": self.unit_cost,
             "currency": self.currency,
             "source_deliverable": self.source_deliverable,

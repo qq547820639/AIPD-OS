@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS bom_lines(
   quantity REAL NOT NULL DEFAULT 1.0,
   unit TEXT NOT NULL DEFAULT 'pcs',
   material TEXT,
+  process TEXT,
   supplier TEXT,
   unit_cost REAL,
   currency TEXT NOT NULL DEFAULT 'CNY',
@@ -102,6 +103,20 @@ class BomStore:
 
         with self.connect() as c:
             exec_script(c, SCHEMA)
+            self._ensure_columns(c)
+
+    @staticmethod
+    def _ensure_columns(c: sqlite3.Connection) -> None:
+        """就地给旧 bom.db 补齐后加的列（仿 ``ProductTruthStore._ensure_columns``）。
+
+        ``CREATE TABLE IF NOT EXISTS`` 不会给已存在的表加列，所以只改 SCHEMA 会让
+        老库在 ``row["process"]`` 上直接 IndexError。bom.db 归本 store 自有，
+        与迁移冻结的状态库无关；新列一律可空（旧行读出 None=没填，不折成空串）。
+        """
+        cols = {r[1] for r in c.execute("PRAGMA table_info(bom_lines)").fetchall()}
+        for name in ("process",):
+            if name not in cols:
+                c.execute(f"ALTER TABLE bom_lines ADD COLUMN {name} TEXT")
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
@@ -213,12 +228,14 @@ class BomStore:
             line.line_id = line_id
             c.execute(
                 "INSERT INTO bom_lines(line_id,bom_id,tenant_id,project_id,item,"
-                "parent_item,description,quantity,unit,material,supplier,unit_cost,"
+                "parent_item,description,quantity,unit,material,process,supplier,"
+                "unit_cost,"
                 "currency,source_deliverable,quote_ref,status,version_no,"
-                "created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (line_id, line.bom_id, line.tenant_id, line.project_id, line.item,
                  line.parent_item, line.description, line.quantity, line.unit,
-                 line.material, line.supplier, line.unit_cost, line.currency,
+                 line.material, line.process,
+                 line.supplier, line.unit_cost, line.currency,
                  line.source_deliverable, line.quote_ref, line.status,
                  line.version_no, line.created_at, line.updated_at))
             self._change(c, line.tenant_id, line.project_id, "bom_line", line_id,
@@ -251,7 +268,8 @@ class BomStore:
             tenant_id=row["tenant_id"], project_id=row["project_id"],
             item=row["item"], parent_item=row["parent_item"],
             description=row["description"], quantity=row["quantity"],
-            unit=row["unit"], material=row["material"], supplier=row["supplier"],
+            unit=row["unit"], material=row["material"],
+            process=row["process"], supplier=row["supplier"],
             unit_cost=row["unit_cost"], currency=row["currency"],
             source_deliverable=row["source_deliverable"],
             quote_ref=row["quote_ref"], status=row["status"],
@@ -285,7 +303,7 @@ class BomStore:
                     expected_version: int, reason: str = "update line",
                     **fields: Any) -> BomLine:
         allow = {"item", "parent_item", "description", "quantity", "unit",
-                 "material", "supplier", "unit_cost", "currency",
+                 "material", "process", "supplier", "unit_cost", "currency",
                  "source_deliverable", "quote_ref", "status"}
         set_cols = [k for k in fields if k in allow]
         if not set_cols:

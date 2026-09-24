@@ -12,9 +12,10 @@
 两头都要闭合：图纸上有号但 BOM 找不到 ⇒ 未收口；BOM 有行但图上没号 ⇒ 也是未收口
 （一张漏了零件的装配图比一张丑的装配图危险得多）。
 
-第 15 片把**材料**接到同一条绑定上：材料与数量同一权威（BOM 行）、同一个 `bom_item`
-声明、同一处留空规矩，所以它复用这里的夹具而不是另起一套对应关系。供应商**不在**
-明细表里（判据与理由见 `TestSupplierIsNotOnTheDrawing`）。
+第 15 片把**材料**、第 16 片把**工艺**接到同一条绑定上：它们与数量同一权威（BOM 行）、
+同一个 `bom_item` 声明、同一处留空规矩，所以复用这里的夹具而不是另起一套对应关系。
+两半各自独立判、各自点名（`TestProcessColumnComesFromTheBom` 里有一条专门钉「不许拿
+工艺凑材料」）。供应商**不在**明细表里（判据与理由见 `TestSupplierIsNotOnTheDrawing`）。
 """
 from __future__ import annotations
 
@@ -76,8 +77,10 @@ def _bom(tmp_path, items):
     夹具故意走和命令行同一个换算（``bom_store_path``）：「BOM 放哪个文件」这条规矩
     一旦被改动，这里就跟着红——不会像上一片那样测试与命令行各认一个路径。
 
-    每一项 ``(item, qty, unit[, material[, supplier]])``：材料/供应商留成可选，
-    是为了让「BOM 行没填材料」这种真实数据形状能被画出来，而不是只有满数据的用例。
+    每一项 ``(item, qty, unit[, material[, supplier]])``，或直接给一个 dict
+    （``{"item":…, "quantity":…, "unit":…, "process":…}``）：第 16 片起字段多于三个，
+    位置参数会读成 ``("BRACKET-01", 4.0, "pcs", None, None, "CNC")`` 那种没人能核的东西。
+    材料/工艺留成可缺省，是为了让「BOM 行没填」这种真实数据形状能被画出来。
     """
     from aipd_os.bom.store import bom_store_path
     from aipd_os.state.db import AIPDStateDB
@@ -87,14 +90,12 @@ def _bom(tmp_path, items):
     store = BomStore(bom_store_path(state))
     header = store.create_bom(TENANT, PROJECT, "装配 BOM")
     for i, spec in enumerate(items, start=1):
-        extra: dict = {}
-        if len(spec) > 3:
-            extra["material"] = spec[3]
-        if len(spec) > 4:
-            extra["supplier"] = spec[4]
+        extra = dict(spec) if isinstance(spec, dict) else {
+            "item": spec[0], "quantity": spec[1], "unit": spec[2],
+            **({"material": spec[3]} if len(spec) > 3 else {}),
+            **({"supplier": spec[4]} if len(spec) > 4 else {})}
         store.add_line(BomLine(line_id=f"L-{i}", bom_id=header.bom_id,
-                               tenant_id=TENANT, project_id=PROJECT,
-                               item=spec[0], quantity=spec[1], unit=spec[2], **extra))
+                               tenant_id=TENANT, project_id=PROJECT, **extra))
     return state, header.bom_id
 
 def _lines(db, bom_id):
@@ -198,7 +199,7 @@ class TestDrawingCarriesTheBoundQuantities:
         db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs"),
                                      ("PLATE-02", 2.0, "pcs")])
         ev, _ = self._gen(tmp_path, manifest, db, bom_id)
-        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT", "MATERIAL"]
+        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT", "MATERIAL", "PROCESS"]
         assert [r["qty"] for r in ev["parts_list"]["rows"]] == [4.0, 2.0]
         assert ev["bom"]["bom_id"] == bom_id
         assert ev["assembly_issues"] == []
@@ -264,7 +265,7 @@ class TestMaterialColumnComesFromTheBom:
         db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs", "6061-T6"),
                                      ("PLATE-02", 2.0, "pcs", "SUS304")])
         ev = self._gen(tmp_path, manifest, db, bom_id)
-        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT", "MATERIAL"]
+        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT", "MATERIAL", "PROCESS"]
         texts = self._texts(tmp_path / "mat.dxf")
         assert {"MATERIAL", "6061-T6", "SUS304"} <= texts, texts
 
@@ -372,6 +373,122 @@ class TestSupplierIsNotOnTheDrawing:
             "模块 docstring 要写明供应商被排除及其理由"
 
 
+
+class TestProcessColumnComesFromTheBom:
+    """第 16 片：把 C6「材料与工艺」的另一半接上——工艺同样**只认 BOM 行**。
+
+    `BomLine.process` 的语义边界写在 `bom/models.py`：它是「明细表那一格要的那道主工艺」，
+    **不是工序路线**（成熟实现把多工序建成独立对象：Dynamics 365 BC 的 BOM 行只带
+    Routing Link Code，ERPNext v15 用子表 BOM Operation）。所以这里一格一个字符串，
+    不解析顺序、不估工时。
+    """
+
+    def _gen(self, tmp_path, manifest, db, bom_id, **kw):
+        out = tmp_path / "proc.dxf"
+        return generate_assembly_drawing(out, manifest=str(manifest), part_name="ASSY-1",
+                                         views=("TOP",), bom_lines=_lines(db, bom_id), **kw)
+
+    def _texts(self, path):
+        import ezdxf
+
+        doc = ezdxf.readfile(str(path))
+        return {e.dxf.text for e in doc.modelspace().query('TEXT[layer=="TABLECONTENT"]')}
+
+    def test_bound_row_carries_the_process_from_the_bom_line(self, tmp_path):
+        manifest, _ = _manifest(tmp_path, [
+            {"name": "支架", "balloon": 1, "bom_item": "BRACKET-01"},
+            {"name": "压板", "balloon": 2, "step": "b", "bom_item": "PLATE-02"}])
+        db, bom_id = _bom(tmp_path, [
+            {"item": "BRACKET-01", "quantity": 4.0, "unit": "pcs", "process": "CNC 铣削"},
+            {"item": "PLATE-02", "quantity": 2.0, "unit": "set", "process": "激光切割"}])
+        rows, issues = bind_bom(_load(tmp_path, manifest), _lines(db, bom_id))
+        assert issues == [], issues
+        assert [(r["item"], r["process"]) for r in rows] == \
+            [(1, "CNC 铣削"), (2, "激光切割")]
+
+    def test_process_is_drawn_and_completes_the_bom_column_set(self, tmp_path):
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                            "bom_item": "BRACKET-01"}])
+        db, bom_id = _bom(tmp_path, [{"item": "BRACKET-01", "quantity": 4.0,
+                                      "unit": "pcs", "process": "CNC 铣削"}])
+        ev = self._gen(tmp_path, manifest, db, bom_id)
+        assert ev["parts_list"]["columns"] == \
+            ["ITEM", "PART", "QTY", "UNIT", "MATERIAL", "PROCESS"]
+        assert "CNC 铣削" in self._texts(tmp_path / "proc.dxf")
+
+    def test_a_row_without_process_is_blank_and_the_column_still_exists(self, tmp_path):
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                            "bom_item": "BRACKET-01"}])
+        db, bom_id = _bom(tmp_path, [{"item": "BRACKET-01", "quantity": 4.0,
+                                      "unit": "pcs", "process": None}])
+        ev = self._gen(tmp_path, manifest, db, bom_id)
+        assert ev["parts_list"]["rows"][0]["process"] is None
+        texts = self._texts(tmp_path / "proc.dxf")
+        assert "PROCESS" in texts
+        assert not {"-", "None", "未指定"} & texts, texts
+
+    def test_whitespace_process_counts_as_missing(self, tmp_path):
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                            "bom_item": "BRACKET-01"}])
+        db, bom_id = _bom(tmp_path, [{"item": "BRACKET-01", "quantity": 4.0,
+                                      "unit": "pcs", "process": "  \t "}])
+        rows, _ = bind_bom(_load(tmp_path, manifest), _lines(db, bom_id))
+        assert rows[0]["process"] is None
+
+    def test_process_never_borrows_the_material_cell_and_the_other_way_round(self, tmp_path):
+        """两个来源各填一半时**不许互相顶格子**：C6 那句「材料与工艺」是两件事。
+
+        这一条盯的是最省事的错写法——「材料没填就拿工艺凑」（或反过来），
+        那会让图纸上那一格看起来有值，而真正缺的事实被盖住。
+        """
+        manifest, _ = _manifest(tmp_path, [
+            {"name": "支架", "balloon": 1, "bom_item": "BRACKET-01"},
+            {"name": "压板", "balloon": 2, "step": "b", "bom_item": "PLATE-02"}])
+        db, bom_id = _bom(tmp_path, [
+            {"item": "BRACKET-01", "quantity": 4.0, "unit": "pcs",
+             "material": None, "process": "CNC 铣削"},
+            {"item": "PLATE-02", "quantity": 2.0, "unit": "set",
+             "material": "SUS304", "process": None}])
+        rows, _ = bind_bom(_load(tmp_path, manifest), _lines(db, bom_id))
+        by_item = {r["item"]: r for r in rows}
+        assert (by_item[1]["material"], by_item[1]["process"]) == (None, "CNC 铣削")
+        assert (by_item[2]["material"], by_item[2]["process"]) == ("SUS304", None)
+
+    def test_manifest_process_is_not_read_either(self, tmp_path):
+        """与 quantity/material 同一条边界：清单里写工艺也不许进到零件数据。"""
+        a, _ = _parts(tmp_path)
+        path = tmp_path / "pm.json"
+        path.write_text(json.dumps({"parts": [{"name": "支架", "step": str(a),
+                                               "balloon": 1, "bom_item": "BRACKET-01",
+                                               "process": "清单自己说的工艺"}]},
+                                   ensure_ascii=False), encoding="utf-8")
+        parts = _load(tmp_path, path)
+        assert "process" not in parts[0]
+
+    def test_the_cli_reports_which_half_is_still_missing(self, tmp_path, capsys):
+        """命令行要说得出「材料齐了、工艺还差哪一行」——否则拍完材料就没人知道工艺是空的。"""
+        from aipd_os.cli.main import main
+
+        manifest, _ = _manifest(tmp_path, [
+            {"name": "支架", "balloon": 1, "bom_item": "BRACKET-01"},
+            {"name": "压板", "balloon": 2, "step": "b", "bom_item": "PLATE-02"}])
+        db, bom_id = _bom(tmp_path, [
+            {"item": "BRACKET-01", "quantity": 4.0, "unit": "pcs",
+             "material": "6061-T6", "process": "CNC 铣削"},
+            {"item": "PLATE-02", "quantity": 2.0, "unit": "set", "material": "SUS304"}])
+        out = tmp_path / "cli-proc.dxf"
+        rc = main(["drawing", "assembly", "--manifest", str(manifest), "--out", str(out),
+                   "--part", "ASSY-1", "--views", "TOP", "--db", str(db),
+                   "--bom", bom_id, "--tenant", TENANT, "--project", PROJECT])
+        text = capsys.readouterr().out
+        assert rc == 0, text
+        assert "材料已填 2/2 行，没有缺行" in text, text
+        assert "工艺已填 1/2 行，缺的球标 [2]" in text, text
+        # 没做的事里不能再出现「工艺列还没做」——它已经做了，缺的是多工序路线
+        assert "多工序工艺路线" in text and "工艺与表面处理列" not in text, text
+
+
+
 class TestCliSurface:
     def _run(self, tmp_path, manifest, extra, name="cli"):
         from aipd_os.cli.main import main
@@ -405,8 +522,8 @@ class TestCliSurface:
                                "--tenant", TENANT, "--project", PROJECT])
         text = capsys.readouterr().out
         assert rc == 0, text
-        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT", "MATERIAL"]
-        assert "数量、单位与材料都来自 BOM" in text
+        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT", "MATERIAL", "PROCESS"]
+        assert "数量、单位、材料与工艺都来自 BOM" in text
         assert "不按零件名字猜" in text
         # 行内说的话要和真画出来的列一致，也不能再欠一句「材料还没取用」
         assert "MATERIAL" in text

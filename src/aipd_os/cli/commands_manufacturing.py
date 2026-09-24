@@ -166,7 +166,8 @@ def _bom_add(args: Any) -> int:
         line_id="", bom_id=header.bom_id, tenant_id=DEFAULT_TENANT,
         project_id=pid, item=args.part, parent_item=args.parent,
         description=args.description or "", quantity=float(args.quantity),
-        unit=args.unit, material=args.material, supplier=args.supplier,
+        unit=args.unit, material=args.material,
+        process=getattr(args, "process", None), supplier=args.supplier,
         unit_cost=float(args.unit_cost) if args.unit_cost is not None else None,
         currency=args.currency, source_deliverable=args.deliverable,
         quote_ref=args.quote_ref, status=args.status)
@@ -175,7 +176,9 @@ def _bom_add(args: Any) -> int:
 
     def prose():
         print(f"已添加 BOM 行：{line.item}（{line.line_id}，数量 {line.quantity}"
-              f"{line.unit}，供应商 {line.supplier or '未填'}，"
+              f"{line.unit}，材料 {line.material or '未填'}，"
+              f"工艺 {line.process or '未填'}，"
+              f"供应商 {line.supplier or '未填'}，"
               f"单位成本 {line.unit_cost if line.unit_cost is not None else '未填'}）")
     _emit(args, result, prose)
     return 0

@@ -528,6 +528,7 @@ def build_parser() -> argparse.ArgumentParser:
     bp.add_argument("--quantity", type=float, default=1.0)
     bp.add_argument("--unit", default="pcs")
     bp.add_argument("--material")
+    bp.add_argument("--process", help="该行的主工艺/表面工艺（明细表那一格）")
     bp.add_argument("--supplier")
     bp.add_argument("--unit-cost", type=float, help="单位成本（缺省不填=未报价）")
     bp.add_argument("--currency", default="CNY")

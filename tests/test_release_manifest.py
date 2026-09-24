@@ -95,11 +95,11 @@ def _manifest(tmp_path, db_path, drawings, **kw):
 
 
 def _coverage(doc, idx):
-    """取第 ``idx`` 张**图**自己的材料覆盖读数。
+    """取第 ``idx`` 张**图**自己的 BOM 行事实覆盖读数（材料 + 工艺）。
 
     缺哪几个球标一律逐图读：多张装配图的球标都从 1 开始，聚合清单会分不清是谁家的 1 号。
     """
-    return doc["evidence"]["drawings"][idx]["material"]
+    return doc["evidence"]["drawings"][idx]["bom_line_coverage"]
 
 
 def _gate_verdict(manifest_path, check, target="C5"):
@@ -300,7 +300,8 @@ def _assy_drawing(tmp_path, bom_items=(("BRACKET-01", 4.0), ("PLATE-02", 2.0)),
     """造一张**绑过 BOM** 的装配图（走真实入口，不手搓证据）。
 
     返回 (dxf 路径, 这张图绑的 bom_id)。bom_items 比 parts 多就是「BOM 有行图上没号」；
-    每一项可写第三格 ``(item, qty, material)``——`bind=False` 则出图时不接 BOM。
+    每一项可写 ``(item, qty[, material[, process]])`` 或直接给 dict——`bind=False`
+    则出图时不接 BOM。
     """
     import cadquery as cq
 
@@ -309,9 +310,13 @@ def _assy_drawing(tmp_path, bom_items=(("BRACKET-01", 4.0), ("PLATE-02", 2.0)),
     store = BomStore(str(Path(tmp_path) / "bom.db"))
     header = store.create_bom(T, P, "装配 BOM", revision=revision)
     for spec in bom_items:
-        store.add_line(BomLine(line_id="", bom_id=header.bom_id, tenant_id=T, project_id=P,
-                               item=spec[0], quantity=spec[1], unit="pcs",
-                               material=spec[2] if len(spec) > 2 else None))
+        fields = ({"item": spec[0], "quantity": spec[1], "unit": "pcs",
+                   **({"material": spec[2]} if len(spec) > 2 else {}),
+                   **({"process": spec[3]} if len(spec) > 3 else {})}
+                  if not isinstance(spec, dict) else dict(spec))
+        fields.setdefault("unit", "pcs")
+        store.add_line(BomLine(line_id="", bom_id=header.bom_id, tenant_id=T,
+                               project_id=P, **fields))
     steps = {}
     for i, letter in enumerate("ab"):
         box = cq.Workplane("XY").box(40.0, 20.0, 10.0 + i * 2).solids().vals()[0]
@@ -445,21 +450,23 @@ class TestMaterialIsCoveredByTheEvidence:
         assert doc["ok"] is False, "图纸一行的材料都说不出来，C6 不算交齐"
         cov = _coverage(doc, 0)
         assert (cov["bound_rows"], cov["with_material"]) == (2, 0), cov
-        assert cov["missing_balloons"] == [1, 2], cov
-        assert doc["material_coverage"]["drawings_missing_material"] == 1
+        assert cov["missing_material"] == [1, 2], cov
+        assert doc["bom_line_coverage"]["missing_material_drawings"] == 1
 
-    def test_full_material_coverage_leaves_no_blocking_issue(self, tmp_path, db):
+    def test_full_material_coverage_raises_no_material_issue(self, tmp_path, db):
+        """第 15 片这条原本断「无任何问题、ok=true」；第 16 片起工艺那半也要求齐，
+        所以这里改判成**两半分开**：材料齐就不许再报材料，缺的工艺单独点名。"""
         _seed_ctq(db)
         dxf, bom_id = _assy_drawing(
             tmp_path, bom_items=(("BRACKET-01", 4.0, "6061-T6"),
                                  ("PLATE-02", 2.0, "SUS304")))
         path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
         doc = json.loads(path.read_text("utf-8"))
-        assert [i["kind"] for i in doc["issues"]] == [], doc["issues"]
+        assert [i["kind"] for i in doc["issues"]] == ["process_missing"], doc["issues"]
         cov = _coverage(doc, 0)
         assert (cov["bound_rows"], cov["with_material"]) == (2, 2), cov
-        assert cov["missing_balloons"] == []
-        assert doc["ok"] is True
+        assert cov["missing_material"] == [] and cov["missing_process"] == [1, 2], cov
+        assert doc["bom_line_coverage"]["missing_material_drawings"] == 0
 
     def test_the_counted_rows_are_the_ones_the_drawing_did_draw(self, tmp_path, db):
         """只有一行没材料时，球标号必须逐个点名——「有 1 行缺」这种话没法返工。
@@ -475,7 +482,7 @@ class TestMaterialIsCoveredByTheEvidence:
         hits = [i for i in doc["issues"] if i["kind"] == "material_missing"]
         assert hits and "球标 [1]" in hits[0]["detail"], hits
         cov = _coverage(doc, 0)
-        assert cov["missing_balloons"] == [1], cov
+        assert cov["missing_material"] == [1], cov
         assert (cov["bound_rows"], cov["with_material"]) == (2, 1), cov
 
     def test_a_row_that_never_bound_is_not_double_counted_as_missing_material(
@@ -506,8 +513,8 @@ class TestMaterialIsCoveredByTheEvidence:
         doc = json.loads(path.read_text("utf-8"))
         cov = _coverage(doc, 0)
         assert cov["drawings_without_bom"] == 1, cov
-        assert cov["bound_rows"] == 0 and cov["missing_balloons"] == [], cov
-        assert doc["material_coverage"]["bound_rows"] == 0
+        assert cov["bound_rows"] == 0 and cov["missing_material"] == [], cov
+        assert doc["bom_line_coverage"]["bound_rows"] == 0
         assert "material_missing" not in [i["kind"] for i in doc["issues"]]
 
     def test_two_assembly_drawings_keep_their_own_row_numbers(self, tmp_path, db):
@@ -519,10 +526,10 @@ class TestMaterialIsCoveredByTheEvidence:
                                   parts=(("压板", "PLATE-02"),), name="two")
         path, _ = _manifest(tmp_path, db, [first, second], bom_id=bom_id)
         doc = json.loads(path.read_text("utf-8"))
-        assert [_coverage(doc, i)["missing_balloons"] for i in (0, 1)] == [[1], []]
-        agg = doc["material_coverage"]
+        assert [_coverage(doc, i)["missing_material"] for i in (0, 1)] == [[1], []]
+        agg = doc["bom_line_coverage"]
         assert (agg["bound_rows"], agg["with_material"]) == (2, 1), agg
-        assert agg["drawings_missing_material"] == 1
+        assert agg["missing_material_drawings"] == 1
 
     def test_a_package_without_assembly_drawings_says_nothing_about_material(
             self, tmp_path, db):
@@ -532,5 +539,115 @@ class TestMaterialIsCoveredByTheEvidence:
         dxf = _drawing(tmp_path)
         path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom.bom_id)
         doc = json.loads(path.read_text("utf-8"))
-        assert "material_coverage" not in doc, doc.get("material_coverage")
-        assert "material" not in doc["evidence"]["drawings"][0]
+        assert "bom_line_coverage" not in doc, doc.get("bom_line_coverage")
+        assert "bom_line_coverage" not in doc["evidence"]["drawings"][0]
+
+
+class TestProcessIsReportedApartFromMaterial:
+    """C6 那句是「材料与工艺」，所以覆盖也得分两半报——合在一起就看不出还差哪一半。
+
+    工艺值同样只来自绑上的那一行 ``BomLine.process``；两半各自独立判、各自点名，
+    **不许互相顶**（材料空着却拿工艺填上，图纸那一格看起来有值而真正缺的事实被盖住）。
+    """
+
+    def test_a_bound_row_without_process_holds_the_release(self, tmp_path, db):
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(
+            tmp_path, bom_items=(("BRACKET-01", 4.0, "6061-T6", "CNC 铣削"),
+                                 ("PLATE-02", 2.0, "SUS304")))
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        kinds = [i["kind"] for i in doc["issues"]]
+        assert "process_missing" in kinds, kinds
+        assert "material_missing" not in kinds, kinds
+        hits = [i for i in doc["issues"] if i["kind"] == "process_missing"]
+        assert hits[0]["blocking"] is True and "球标 [2]" in hits[0]["detail"], hits
+        cov = _coverage(doc, 0)
+        assert (cov["bound_rows"], cov["with_material"], cov["with_process"]) == \
+            (2, 2, 1), cov
+        assert cov["missing_process"] == [2] and cov["missing_material"] == [], cov
+        assert doc["ok"] is False
+
+    def test_the_two_halves_are_named_separately(self, tmp_path, db):
+        """一行缺材料、另一行缺工艺 ⇒ 两条问题各点各的球标，不合成一条「信息不全」。"""
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(
+            tmp_path, bom_items=(("BRACKET-01", 4.0, None, "CNC 铣削"),
+                                 ("PLATE-02", 2.0, "SUS304")))
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        by_kind = {i["kind"]: i["detail"] for i in doc["issues"]}
+        assert set(by_kind) == {"material_missing", "process_missing"}, by_kind
+        assert "球标 [1]" in by_kind["material_missing"]
+        assert "球标 [2]" in by_kind["process_missing"]
+        cov = _coverage(doc, 0)
+        assert (cov["missing_material"], cov["missing_process"]) == ([1], [2]), cov
+
+    def test_full_coverage_of_both_halves_leaves_no_issue(self, tmp_path, db):
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(
+            tmp_path, bom_items=(("BRACKET-01", 4.0, "6061-T6", "CNC 铣削"),
+                                 ("PLATE-02", 2.0, "SUS304", "激光切割")))
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        assert [i["kind"] for i in doc["issues"]] == []
+        agg = doc["bom_line_coverage"]
+        assert (agg["bound_rows"], agg["with_material"], agg["with_process"]) == \
+            (2, 2, 2), agg
+        assert doc["ok"] is True
+
+    def test_a_row_that_never_bound_is_not_counted_against_process(self, tmp_path, db):
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(
+            tmp_path, bom_items=(("BRACKET-01", 4.0, "6061-T6", "CNC 铣削"),
+                                 ("OTHER", 1.0)),
+            parts=(("支架", "BRACKET-01"), ("压板", "GHOST")))
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        kinds = [i["kind"] for i in doc["issues"]]
+        assert "assembly_unresolved" in kinds and "process_missing" not in kinds, kinds
+        cov = _coverage(doc, 0)
+        assert (cov["bound_rows"], cov["with_process"], cov["unbound_rows"]) == \
+            (1, 1, 1), cov
+
+    def test_the_blind_spot_covers_both_halves(self, tmp_path, db):
+        """没接 BOM 的图：材料与工艺**都无法判**，同一格盲区说一次，不折成两个 0。"""
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(tmp_path, bind=False)
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        cov = _coverage(doc, 0)
+        assert cov["drawings_without_bom"] == 1
+        assert (cov["missing_material"], cov["missing_process"]) == ([], []), cov
+        assert "process_missing" not in [i["kind"] for i in doc["issues"]]
+
+
+    def test_the_process_count_is_per_row_not_positional(self, tmp_path, db):
+        """混合样本故意「缺的那行在前、有的那行在后」：拿位置当计数的写法在这里算错。
+
+        上一轮 M10 就是这么幸存的（见 CAD_ASSEMBLY_MATERIAL 审计 §六），所以这一片
+        材料与工艺各配一条这种排列的用例。
+        """
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(
+            tmp_path, bom_items=(("BRACKET-01", 4.0, "6061-T6"),
+                                 ("PLATE-02", 2.0, "SUS304", "激光切割")))
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        cov = _coverage(doc, 0)
+        assert (cov["bound_rows"], cov["with_material"], cov["with_process"]) == \
+            (2, 2, 1), cov
+        assert cov["missing_process"] == [1] and cov["missing_material"] == [], cov
+
+    def test_a_process_value_never_lands_in_the_material_cell(self, tmp_path, db):
+        """取值不互顶：整张图只有工艺时，材料那一半照样得判缺。"""
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(
+            tmp_path, bom_items=(("BRACKET-01", 4.0, None, "CNC 铣削"),
+                                 ("PLATE-02", 2.0, None, "激光切割")))
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        kinds = [i["kind"] for i in doc["issues"]]
+        assert kinds == ["material_missing"], kinds
+        cov = _coverage(doc, 0)
+        assert (cov["with_material"], cov["with_process"]) == (0, 2), cov

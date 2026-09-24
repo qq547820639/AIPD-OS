@@ -97,13 +97,14 @@ def _check_assembly(rel: str, evidence: dict[str, Any], bom_id: str | None,
 
     「图上没号」与「数量来自另一张表」都会让这张图看起来完整而实际不完整，
     所以都是阻断项；没绑过 BOM 只是「数量没核」，装配图本身仍然成立 ⇒ 非阻断。
-    第三条是第 15 片加的材料覆盖：C6（``references/production-cad-deliverables.md``）
-    要「材料与工艺」，所以**绑上了却填不出材料**的那些行必须点名到球标——
-    「有 N 行缺」这种话没法返工。压根没绑上的行**不重复计入**缺材料：
+    第三条是覆盖判据：C6（``references/production-cad-deliverables.md``）要的是
+    「材料**与**工艺」，所以两半各自点名到球标、各自一条问题——合成一条「信息不全」
+    就看不出还差哪一半，也就没人知道该去补什么。压根没绑上的行**不重复计入**缺材料/缺工艺：
     那是 ``assembly_unresolved`` 已经判住的事，报两遍会淹掉真信号。
     """
-    coverage: dict[str, Any] = {"bound_rows": 0, "with_material": 0, "unbound_rows": 0,
-                                "missing_balloons": [], "drawings_without_bom": 0}
+    coverage: dict[str, Any] = {"bound_rows": 0, "with_material": 0, "with_process": 0,
+                                "unbound_rows": 0, "missing_material": [],
+                                "missing_process": [], "drawings_without_bom": 0}
     unresolved = list(evidence.get("assembly_issues") or [])
     if unresolved:
         first = str(unresolved[0])
@@ -127,15 +128,19 @@ def _check_assembly(rel: str, evidence: dict[str, Any], bom_id: str | None,
             coverage["unbound_rows"] += 1
             continue
         coverage["bound_rows"] += 1
-        if row.get("material"):
-            coverage["with_material"] += 1
-        else:
-            coverage["missing_balloons"].append(row.get("item"))
-    if coverage["missing_balloons"]:
-        _issue(issues, "material_missing",
-               f"{rel}：{len(coverage['missing_balloons'])} 行已绑到 BOM 行但那一行没填材料"
-               f"（球标 {sorted(coverage['missing_balloons'])}）：C6 要材料与工艺，"
-               "材料没落到图上就不算交齐", blocking=True)
+        # 两格各读各的：拿工艺顶材料（或反过来）会把真正缺的那一半盖住
+        for cell in ("material", "process"):
+            if row.get(cell):
+                coverage["with_" + cell] += 1
+            else:
+                coverage["missing_" + cell].append(row.get("item"))
+    for cell, label in (("material", "材料"), ("process", "工艺")):
+        missing = coverage["missing_" + cell]
+        if missing:
+            _issue(issues, f"{cell}_missing",
+                   f"{rel}：{len(missing)} 行已绑到 BOM 行但那一行没填{label}"
+                   f"（球标 {sorted(missing)}）：C6 要材料与工艺，"
+                   f"{label}没落到图上就不算交齐", blocking=True)
     return coverage
 
 
@@ -149,8 +154,8 @@ def _collect_drawings(drawings: Sequence[Path | str], root: Path,
 
     装配图单独判：C6 要的是「总装图 + 零件图」都在，而装配图特有的
     ``assembly_issues``（球标↔BOM 没闭合）必须影响就绪结论——一张漏了零件的
-    装配图不能读成 ``ok: true``。材料覆盖随各自的引用带着（哪张图缺哪几行，
-    逐图可查），总数由调用方现算，不在这里预聚合。
+    装配图不能读成 ``ok: true``。行级事实覆盖（材料/工艺）随各自的引用带着
+    （哪张图缺哪几行，逐图可查），总数由调用方现算，不在这里预聚合。
     """
     refs: list[dict[str, Any]] = []
     gdt: list[dict[str, Any]] = []
@@ -170,7 +175,8 @@ def _collect_drawings(drawings: Sequence[Path | str], root: Path,
         kind = "assembly" if evidence.get("assembly") else "part"
         file_ref: dict[str, Any] = {"path": rel, "sha256": _sha256(path), "kind": kind}
         if kind == "assembly":
-            file_ref["material"] = _check_assembly(rel, evidence, bom_id, issues)
+            file_ref["bom_line_coverage"] = _check_assembly(
+                rel, evidence, bom_id, issues)
         refs.append(file_ref)
         revisions.append(str(evidence.get("revision", "")))
         for view in evidence.get("views", []):
@@ -351,17 +357,20 @@ def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENA
         "part_drawing_count": sum(1 for r in refs if r["kind"] == "part"),
     }
     doc.update(_collect_bom(db, tenant_id, project_id, bom_id, issues))
-    # 材料覆盖：只聚合**数得清**的四项。哪几个球标缺材料留在各自图纸的引用里——
-    # 多张装配图的球标都从 1 开始编号，拍平成一份清单就分不清 2 号是谁家的 2 号。
-    coverages = [r["material"] for r in refs if "material" in r]
+    # 行级事实覆盖（材料 + 工艺）：只聚合**数得清**的几项。哪几个球标缺什么留在各自图纸的
+    # 引用里——多张装配图的球标都从 1 开始编号，拍平成一份清单就分不清 2 号是谁家的 2 号。
+    coverages = [r["bom_line_coverage"] for r in refs if "bom_line_coverage" in r]
     if coverages:
-        doc["material_coverage"] = {
+        doc["bom_line_coverage"] = {
             "bound_rows": sum(int(c["bound_rows"]) for c in coverages),
             "with_material": sum(int(c["with_material"]) for c in coverages),
+            "with_process": sum(int(c["with_process"]) for c in coverages),
             "unbound_rows": sum(int(c["unbound_rows"]) for c in coverages),
             "drawings_without_bom": sum(int(c["drawings_without_bom"]) for c in coverages),
-            "drawings_missing_material": sum(1 for c in coverages if c["missing_balloons"]),
-            "missing_detail": "evidence.drawings[].material.missing_balloons",
+            "missing_material_drawings": sum(1 for c in coverages if c["missing_material"]),
+            "missing_process_drawings": sum(1 for c in coverages if c["missing_process"]),
+            "missing_detail": "evidence.drawings[].bom_line_coverage"
+                              ".missing_material / .missing_process",
         }
     model_fields = _model_fields(model, issues)
     if "model_part_count" in model_fields:
