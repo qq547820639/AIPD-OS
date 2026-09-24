@@ -217,6 +217,19 @@ aipd drawing generate --out out/bracket.dxf --part bracket --views TOP --detail 
 #     的那些且保留原名（`inherited_from`），所以声明好的公差与 ctq_ref 一起带到放大图上，
 #     而总尺寸/以零件边缘为锚的链段一律不带（裁剪窗的大小不是零件尺寸）。
 #     圆内没有图线 ⇒ 不编号、不画圈，判「放大未收口」并返回 4；母视图名写错直接报错（2）。
+aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 --views TOP,FRONT
+#   ↑ 装配图：manifest 形如 {"parts":[{"name":"支架","step":"a.step","balloon":1,
+#     "offset":[0,0,0]}]}。**每个零件单独投影再叠加**，所以每条图线天然知道自己属于谁
+#     （合并成一次投影会把孔全局重编号、包络并成一个、被压住的边判成不存在）。
+#     球标编号**只认你写的 `balloon`**：缺号/重号/写 0/零件重名/STEP 读不到一律返回 2，
+#     且不落半成品图纸——按遍历顺序发号等于图纸在声称一个作者从没说过的编号。
+#     引线挂在**实测**投影质心上；球标只标在 `--views` 的第一个视图上，证据用 `balloon_view`
+#     明写这一点（否则「这里故意不编号」与「发号失败」在证据里同形）。
+#     零件沿投影方向叠着 ⇒ 两个球标会指向同一个位置，图能交付但读图分不出归属，
+#     这种情况点名告警并建议换一个能分开零件的视图当球标视图。
+#     明细表只有 ITEM/PART 两列：数量与材料的权威在 BOM，尚未接线，所以一个猜测值都不印。
+#     只报「包络投影重叠面积」，**不是干涉判定**（本轮不做实体求交）；
+#     装配视图上 `--section/--detail` 直接拒绝（2），爆炸图与装配约束仍未做。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"
@@ -302,7 +315,7 @@ AIPD 的**一键命令**（`aipd <cmd>`；权威清单是 `src/aipd_os/cli/comma
 - 核心流程：`init` / `intake` / `resume` / `status` / `run` / `decide`
 - 所有者体验：`onboard` / `dashboard` / `operate` / `ui` / `reset` / `recover`
 - 手册链：`manual plan` / `manual generate`
-- 图纸：`cad preflight` / `cad build` / `drawing generate`
+- 图纸：`cad preflight` / `cad build` / `drawing generate` / `drawing spec` / `drawing assembly`
 - 产品定义：`product show` / `product gate`
 - 工业化：`industrialize` / `validate`
 - 制造就绪：`bom show` / `bom add` / `bom release` / `quote apply` / `cost calc`

@@ -2,11 +2,11 @@
 
 三条不可让的规矩，都能机器核：
 
-1. **逐个投影再叠加，不合成一次投影。** 本机实测：``drawings2d.classify_view`` 走
-   ``TopExp_Explorer(EDGE)``，两个盒子合成的 compound 投出 48 条边（单盒 24）——
-   几何上一次投得完，但 ``detect_circles`` 会把两件的孔全局混编号、``_bbox`` 变成
-   合并包络、``_coincident`` 会把「A 的轮廓压住 B 的那条边」判成不存在。逐件投影让
-   每条线**天然知道自己属于谁**，不需要事后聚类猜。
+1. **逐个投影再叠加，不合成一次投影。** 本机实测：两个 20×20×8 盒子，单盒 24 条
+   raw edge、合成 compound 48 条（``TopExp_Explorer(EDGE)``），``classify_view`` 投出
+   8 条 vs 16 条折线——几何上一次投得完、条数也正好翻倍，但 ``detect_circles`` 会把两件的
+   孔全局混编号、``_bbox`` 变成合并包络、``_coincident`` 会把「A 的轮廓压住 B 的那条边」
+   判成不存在。逐件投影让每条线**天然知道自己属于谁**，不需要事后聚类猜。
 2. **球标编号只来自 manifest 的 ``balloon``。** 与 FreeCAD TechDraw 的
    ``DrawViewBalloon`` 同一语义——气泡内容是作者设的 ``Text`` 属性
    （``src/Mod/TechDraw/App/DrawViewBalloon.cpp:67`` "The text to be displayed"），

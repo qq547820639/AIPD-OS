@@ -456,6 +456,41 @@
   依然 0 产品调用点（唯一使用者是 `scripts/state_perf_gate.py:237`）。
   证据见 `docs/audit/TRUTH_PROPAGATION_WIRED_F-TRUTH-PROP-01_2026-09-25.md`；
 
+- **v5.10 F-DRAW-01 第 12 片：装配图（逐件投影 + 序号球标 + 明细表），图纸第一次能指认多个零件**：
+  改前图纸侧只有单件图，`cad.2d_drawings` 的 limitation 明写「爆炸图、多零件装配图未做」。
+  新增 `aipd drawing assembly --manifest assembly.json`：每零件一个 STEP + 作者声明的件号 +
+  平移偏移，出一张带球标与明细表的 DXF 装配图并落证据 sidecar。三条判据决定画法与形状：
+  ①**逐件投影**——本机实测两个 20×20×8 盒子，单盒 24 条 raw edge / 合并 compound 48 条，
+  `classify_view` 投出 8 条 vs 16 条折线：一次投得完但孔会被全局重编号、包络被并成一个、
+  重叠边被判不存在，归属只能靠事后聚类猜；②**编号只认作者声明**——缺号/重号/写 0/零件重名/
+  STEP 读不到一律 rc=2 且不落半成品，与 FreeCAD TechDraw `DrawViewBalloon` 的语义一致
+  （本轮真读上游 `src/Mod/TechDraw/App/DrawViewBalloon.h` 与 `.cpp:51-54,67`：气泡内容是可写的
+  `Text` 属性、箭头落点是作者指的 `OriginX/OriginY`，**没有**按遍历顺序发号的机制；
+  顺带纠正本轮初稿自己写错的「`DrawViewBalloon.ModelIndex`」引用——该属性经全仓检索并不存在）；
+  ③**挂点是量出来的**——引线终点取该零件已投影折线的长度加权质心，断言落在自己包络内且不在
+  别人的包络内。真跑命令行又抓到一个 19 条全绿用例看不见的缺陷：零件沿投影方向叠着时
+  两个球标挂在同一个 `(0,0)`，几何没错但读图分不出归属 ⇒ 先写会红的用例，再让它**只作告警**
+  （不改作者点的视图顺序），并给证据补 `balloon_view` 真值字段——否则「本视图故意不编号」与
+  「发号那步坏了」在证据里同形（这条是新用例先失败逼出来的：原断言 `is None`，实读 `[]`）。
+  明细表用 `ezdxf.addons.tablepainter.TablePainter`（MIT；本机实测 `text_cell`+`render` 产 TEXT+LINE，
+  层 `TABLECONTENT`/`TABLEGRID`，`insert` 是左上角、表体向下长），**不用** DXF 原生 TABLE 实体
+  （ezdxf 1.4.2 没有表实体写作 API：`Modelspace.add_table` 不存在、`ezdxf.entities` 无 `Table` 类）。
+  候选 `cadquery.Assembly` 记为后续入口：本轮实测否掉了自己原先的理由（以为 `locate()` 会覆盖
+  STEP 子实体自带 location，实测与 `BRepBuilderAPI_Transform` 都得 `[45,65]` ⇒ 两条路都正确叠加），
+  真实差别是它的价值在约束求解而本轮不做约束，且迭代交回的 shape 不带摆放（PART_B 仍 `[-10,10]`），
+  换成它要改既有投影入口的入参形状而收益为零。**未做且已在行内写明**：干涉检查（只报包络投影
+  重叠面积）、球标↔BOM 行交叉核对与数量/材料列（`BomLine` 无件号字段，数量权威在 BOM，
+  一个猜测值都不印）、爆炸图与装配约束、装配视图上的剖视/局部放大（rc=2 拒绝，裁剪会打散归属）。
+  同一趟改完所有描述这件事的散文：`cad.2d_drawings` 行的实现文件/input_output/unit_test/
+  e2e_evidence/current_limitation 五处、两行 B-Rep 能力里「装配…仍依赖外部工具」的歧义措辞、
+  `drawings2d.py` 模块 docstring 的未实现清单、`drawing generate` 页脚、契约新增 1 条 PUBLIC
+  （48 条）与 SKILL.md 47→48。守卫 `tests/test_cad_assembly_balloons.py`（27 条）+
+  `tests/test_cad_drawings2d.py` 声明看守收紧（`implementation_file` 由「单个路径存在」改为
+  「`;` 拆开逐个存在」，与本文件 `unit_test` 的写法及 `registry.probe_file_has_impl` 的形状对齐；
+  未动那条公共 `any` 判据）。9 条变异全部被杀；变异器自身补了 baseline 前提，避免 node id 写错时
+  「no tests ran」被误记成杀掉变异。证据见
+  `docs/audit/CAD_ASSEMBLY_BALLOONS_F-DRAW-01_2026-09-25.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与
