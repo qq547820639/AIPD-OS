@@ -223,6 +223,11 @@ def build_parser() -> argparse.ArgumentParser:
     dp.add_argument("--scale", type=float, default=1.0, help="比例（1 表示 1:1）")
     dp.add_argument("--material", default="-", help="标题栏材料")
     dp.add_argument("--sheet", default="A3", choices=["A3", "A4"], help="图纸幅面")
+    dp.add_argument("--spec", help="公差声明 JSON 路径："
+                                   '{"features":[{"feature":"TOP.hole_2",'
+                                   '"tolerance":{"upper":0.05,"lower":-0.05}}],'
+                                   '"global_tolerance":{"upper":0.2,"lower":-0.2}}'
+                                   "；不传则整张图不含公差")
     dp.add_argument("--json", action="store_true")
     dp.set_defaults(func=COMMAND_FUNCS["drawing generate"])
 

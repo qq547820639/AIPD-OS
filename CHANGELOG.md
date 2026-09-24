@@ -186,6 +186,25 @@
   变异对照：探针退回旧 path 列表 ⇒ 4 红；把一条入口改回路径形态 ⇒ 1 红。
   证据见 `docs/audit/CAPABILITY_ENTRY_SURFACE_F-REG-01_2026-09-24.md`；
 
+- **v5.10 推进 F-DRAW-01 第 1 片：二维图纸补尺寸链，公差只允许来自声明**：改前图纸只有
+  总体宽/高 + 孔径、**零公差**（registry 行内自陈「未实现尺寸链/公差叠加」）。现
+  ① 链由实测孔心排出「左沿→孔心…→右沿」并核对**图上印出来的**各段之和 == 总体宽
+  （闭合差进 `dimension_chain_check`，同 x 不去重就会画出零长段 ⇒ 少于两站宁可不给链）；
+  ② 公差只从 `--spec` JSON 取（`features[].tolerance` / `global_tolerance`），无声明即
+  整张图零公差，声明在图上找不到 ⇒ 点名 `spec_unmatched_features` 且命令判**未收口（退出码 4）**；
+  ③ 特征名带视图前缀（`TOP.overall_width`）——同一零件 FRONT 的总宽是 100、RIGHT 是 10，
+  不带前缀会把公差贴错尺寸。
+  实测口径（ezdxf 1.4.2 源码 + 存盘读回）：`dimtm` 存的是**下偏差的相反数**，原样传 -0.05
+  会打成 `+0.05` 的假公差；`dimtdec` 默认 2 位会把 0.005 截成 0.01；override 只有 `render()`
+  时才落到实体（据此删掉了本轮一度加的冗余 `commit()`——变异台证明「必须 commit」是错的）。
+  真实黄金件端到端：15 处尺寸 = 15 个 `DIMENSION` 实体、15 处带公差、TOP 链 5 段闭合差 0.0。
+  新增 `tests/test_cad_drawings_chain_tolerance.py` 23 条（读数一律重新读回文件，渲染文字读块内
+  MTEXT）；变异对照 7 条全部打破（含符号、去重、显示位数、命名顺序、CLI 判据），
+  1 条幸存并反过来更正了本轮自己的说法。未做：公差叠加分析、GD&T 形位框（入口已验：
+  ezdxf 有 `TOLERANCE` 实体但无 `add_tolerance` 工厂）、剖视/局部放大、`--spec` 与
+  Product Truth 打通，故 **C6 生产图纸包仍不成立**。证据见
+  `docs/audit/CAD_DRAWING_CHAIN_TOLERANCE_F-DRAW-01_2026-09-24.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

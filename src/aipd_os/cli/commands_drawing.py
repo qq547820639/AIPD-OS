@@ -2,12 +2,31 @@
 
 诚实前提：出图需要真实 CAD 内核（cadquery/OCP）。内核缺失时**不外推**、
 不产出占位文件，而是像其它外部能力一样给 HOLD + 外部任务包。
+
+公差只认 ``--spec`` 声明的 JSON，尺寸值一律由投影几何量出：spec 不参与测量。
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from aipd_os.cli._helpers import _emit
+
+
+def _load_spec(path: str | None):
+    """读公差声明文件。返回 (spec, 错误信息)；不传 spec 就是「无公差」。"""
+    if not path:
+        return None, None
+    file = Path(path)
+    if not file.is_file():
+        return None, f"--spec 指向的文件不存在：{file}"
+    try:
+        data = json.loads(file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return None, f"--spec 不是合法 JSON：{exc}"
+    if not isinstance(data, dict):
+        return None, "--spec 顶层必须是对象（features / global_tolerance）"
+    return data, None
 
 
 def _load_model(step: str | None, native: str | None):
@@ -60,6 +79,11 @@ def cmd_drawing(args):
     from aipd_os.cad.backends import CadQueryBackend
     from aipd_os.cad.drawings2d import generate_drawing
 
+    spec, spec_error = _load_spec(getattr(args, "spec", None))
+    if spec_error:
+        print(spec_error)
+        return 2
+
     try:
         model = _load_model(args.step, args.native)
     except Exception as exc:  # 读不到的模型不是「出图成功」
@@ -74,10 +98,12 @@ def cmd_drawing(args):
             model, out, part_name=args.part, revision=args.revision,
             views=tuple(v.strip() for v in args.views.split(",") if v.strip()),
             scale=args.scale, material=args.material, sheet=args.sheet,
-            provenance=provenance)
+            provenance=provenance, spec=spec)
     except ValueError as exc:
         print(f"出图参数不合法：{exc}")
         return 2
+
+    unmatched = list(evidence.get("spec_unmatched_features") or [])
 
     def prose():
         print(f"已出图：{out}（{evidence['sheet']} 1:{evidence['scale']}，"
@@ -85,7 +111,17 @@ def cmd_drawing(args):
         for view in evidence["views"]:
             print(f"  {view['view']:6s} {view['size_mm'][0]}x{view['size_mm'][1]}mm "
                   f"实线 {view['visible_polylines']} 条 / 虚线 {view['hidden_polylines']} 条")
+            check = view.get("chain_check") or {}
+            if check.get("segments"):
+                print(f"         尺寸链 {check['segments']} 段，"
+                      f"各段之和 {check['sum']} vs 总体宽 {check['overall_width']}，"
+                      f"闭合差 {check['delta']}")
+        print(f"公差：声明 {len(evidence.get('spec_declared_features') or [])} 项、"
+              f"落到图上 {evidence.get('tolerance_applied', 0)} 处"
+              f"（无声明则不写任何公差）")
+        if unmatched:
+            print(f"未收口：spec 声明的这些特征在图上找不到 ⇒ 少标了公差：{unmatched}")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
-        print("未含 GD&T/尺寸链/剖视，见 capability cad.2d_drawings 的 limitation。")
+        print("未含 GD&T 形位公差框/剖视/局部放大，见 capability cad.2d_drawings 的 limitation。")
     _emit(args, evidence, prose)
-    return 0
+    return 4 if unmatched else 0

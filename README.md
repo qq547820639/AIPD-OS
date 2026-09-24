@@ -180,6 +180,11 @@ aipd run --project p1 --db state.db              # 继续推进
 aipd manual plan --db state.db                        # 规划手册
 aipd cad preflight --manifest cad_manifest.json      # 图纸发布前检查
 aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket --views FRONT,TOP  # 3D→二维工程图 DXF
+aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket --spec tolerances.json
+#   ↑ 尺寸链按实测孔心自动给出；公差只认 --spec 声明，格式
+#     {"features":[{"feature":"TOP.hole_2","tolerance":{"upper":0.05,"lower":-0.05}}],
+#      "global_tolerance":{"upper":0.2,"lower":-0.2}}；不传则图上不含任何公差，
+#     声明的特征在图上找不到时命令返回 4（未收口）而不是静默少标。
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据
 aipd validate --manifest manifest.json --target C5    # 验证是否达到目标成熟度
 ```

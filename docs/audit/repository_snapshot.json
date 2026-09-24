@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-24T19:23:03",
-  "source_commit": "f2ea7a5c171ff53d8e0e8a9b0c2feb278e743aa9",
+  "generated_at": "2026-09-24T20:08:21",
+  "source_commit": "54b08dd84430b8cbf87e608de91dfedabb0b674b",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "f2ea7a5c171ff53d8e0e8a9b0c2feb278e743aa9",
-  "latest_commit_time": "2026-09-24 19:13:59 +0800",
+  "latest_commit_sha": "54b08dd84430b8cbf87e608de91dfedabb0b674b",
+  "latest_commit_time": "2026-09-24 19:35:47 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 153
+      "tests": 154
     }
   },
   "tags": [
@@ -116,28 +116,42 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 575,
-    "hash_matches": 573,
-    "hash_mismatch_count": 2,
+    "total_files": 576,
+    "hash_matches": 572,
+    "hash_mismatch_count": 4,
     "mismatches": [
       {
-        "path": "src/aipd_os/registry.py",
+        "path": "src/aipd_os/cad/drawings2d.py",
         "reason": "hash_mismatch",
-        "expected": "cc555f2024bdb6b2a9a68e894c51093f9a4be8f9b4a333def9dc36dc5d5c89d7",
-        "actual": "ff1b64ec6dad7b0a9716288b2631d7f5cc59100da40210385a773092dfd096c8"
+        "expected": "590f2688710c4627d8f12c9bf1fbd2f402a1f8bb89f4d73a731091723c2f6e3b",
+        "actual": "1309ea3ec713cfe9150939308bfbc077d224b440bd8c58af56c7e038c93b96b5"
+      },
+      {
+        "path": "src/aipd_os/cli/commands_drawing.py",
+        "reason": "hash_mismatch",
+        "expected": "142424eedc584f20658e9b32bd76d88f9dba60310d2dae21a56243d7944fc26f",
+        "actual": "b21f17c1652dfe088811ddd536fd801b16bacd390ae30093d9ead4ab532837fb"
+      },
+      {
+        "path": "src/aipd_os/cli/main.py",
+        "reason": "hash_mismatch",
+        "expected": "dd2efd032c90cfae4f8c7a469627372ba32e9e1465411626aa59b027c2ba037b",
+        "actual": "0c051028ad03062ebe33c4a0722d659ccf4d4b0fa1e1e12fdaa79ce5b4182735"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "7cd0e67c2acd33dcd31694245e51e1dda55813113d707dbbfbdb7c0883261aa5",
-        "actual": "470dc9e5e93fc36faf219cf7dae7b0e0977b8ea8b04c517c799e253493510987"
+        "expected": "470dc9e5e93fc36faf219cf7dae7b0e0977b8ea8b04c517c799e253493510987",
+        "actual": "5c8e314addc672ab27cb4290db365edb525eba6f489acfe7c253755afaeec123"
       }
     ]
   },
   "untracked_or_generated": [
-    " M src/aipd_os/registry.py",
+    " M src/aipd_os/cad/drawings2d.py",
+    " M src/aipd_os/cli/commands_drawing.py",
+    " M src/aipd_os/cli/main.py",
     " M src/aipd_os/registry_data.py",
-    "?? tests/test_capability_entry_surface.py",
+    "?? tests/test_cad_drawings_chain_tolerance.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

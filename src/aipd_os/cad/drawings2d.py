@@ -18,10 +18,22 @@
   +3 侧判为不隐藏。真实 CAD 靠曲面分类解决，这里靠**显式声明 + 现状钉住用例**
   解决（见 ``tests/test_cad_drawings2d.py::TestTangencyLimit``）。
 - **尺寸数值来自几何测量**（视图并集包围盒 / 检出圆的直径），不来自参数字典——
-  参数是「声称」，投影出来的几何才是「画在图上的东西」。
+  参数是「声称」，投影出来的几何才是「画在图上的东西」。尺寸链同样由实测孔心排出来，
+  并核对「各段之和 == 总体宽」，写在证据的 ``dimension_chain_check`` 里。
+- **公差的符号约定（ezdxf 1.4.2 源码 + 实测，别照抄直觉）**：``set_tolerance(upper, lower)``
+  把两个值**原样**写进 ``dimtp``/``dimtm``，而渲染器 ``Tolerance.update_tolerance_text``
+  对下偏差取 ``sign_char(dimtm * -1)``——也就是说 ``dimtm`` 存的是「下偏差的相反数」。
+  直接把 -0.05 当 lower 传进去，图纸上会打成 ``+0.05``（实测读数）；正确写法是
+  ``set_tolerance(upper, -lower)``，本机实测四种形状（对称 ±0.05、非对称 +0.10/-0.02、
+  双侧正 +0.05/+0.01、三位小数 0.025）渲染文本全部与声明一致。另外 override 只在
+  ``render()`` 时才落到实体上：只 ``set_tolerance`` 不渲染，读回 ``dimtol`` 仍是缺省 0，
+  公差会静默消失（实测；``render()`` 内部自带提交，无需额外 ``commit()``）。
+- **公差只来自声明**：没有 spec 就一个公差不写；spec 里写了但图上没有的特征进
+  ``spec_unmatched_features`` 点名，绝不静默少标。
 
-明确**未实现**（不要当成已具备）：GD&T 形位公差框、尺寸链/公差叠加、剖视与
-局部放大、爆炸图、多零件装配图。见 registry 的 ``current_limitation``。
+明确**未实现**（不要当成已具备）：GD&T 形位公差框、公差叠加分析（链已给出但只做
+闭合核对、不做统计叠加）、剖视与局部放大、爆炸图、多零件装配图。
+见 registry 的 ``current_limitation``。
 """
 from __future__ import annotations
 
@@ -56,6 +68,12 @@ OCCLUSION_EPS = 1e-4             # 射线起点沿视线方向外推，避免自
 HIDDEN_LINE_METHOD = ("ray-occlusion classification over projected edges; "
                       "OCCT HCompound returned no hidden set in this build")
 
+DIMSTYLE = "EZ_M_100_H25_CM"
+DIM_ROW_GAP = 10.0        # 无尺寸链时总体宽尺寸的引出距离
+CHAIN_ROW_GAP = 12.0      # 尺寸链行距零件下沿
+OVERALL_OUTSIDE_GAP = 30.0  # 有链时总体宽尺寸挪到链的外侧，避免两行重叠
+MIN_TOLERANCE_DECIMALS = 2  # 偏差不许因为声明写得粗就被截断显示；只允许显示更多位
+
 
 @dataclass
 class ViewGeometry:
@@ -68,6 +86,7 @@ class ViewGeometry:
     hidden: list[list[tuple[float, float]]] = field(default_factory=list)
     circles: list[dict[str, Any]] = field(default_factory=list)
     bbox: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)  # minx, miny, maxx, maxy
+    chain_check: dict[str, Any] = field(default_factory=dict)
     dimensions: list[dict[str, Any]] = field(default_factory=list)
 
     @property
@@ -377,23 +396,147 @@ def build_view(model: Any, name: str,
     view = ViewGeometry(name=name, direction=direction, up=up,
                         visible=visible, hidden=hidden, circles=circles, bbox=bbox)
     view.dimensions = _measure_dimensions(view)
+    view.chain_check = _chain_check(view, view.dimensions)
     return view
 
 
 def _measure_dimensions(view: ViewGeometry) -> list[dict[str, Any]]:
-    """尺寸来自投影几何的测量值：总体宽/高 + 检出孔的直径。"""
+    """尺寸来自投影几何的测量值：总体宽/高 + 检出孔的直径 + 由孔心排出的尺寸链。
+
+    每条尺寸都带一个跨视图唯一的 ``feature`` 名（``TOP.hole_2``）：同一模型的
+    ``overall_width`` 在前视是 100、在右视是 10，不带视图前缀的公差声明会贴错尺寸。
+    """
     dims: list[dict[str, Any]] = []
     if view.width > 0:
-        dims.append({"kind": "overall_width", "value": round(view.width, 3),
-                     "unit": "mm", "source": "view bbox (projected geometry)"})
+        dims.append({"kind": "overall_width", "feature": f"{view.name}.overall_width",
+                     "value": round(view.width, 3), "unit": "mm", "tolerance": None,
+                     "source": "view bbox (projected geometry)"})
     if view.height > 0:
-        dims.append({"kind": "overall_height", "value": round(view.height, 3),
-                     "unit": "mm", "source": "view bbox (projected geometry)"})
-    for c in view.circles:
-        dims.append({"kind": "hole_diameter", "value": c["diameter"],
-                     "unit": "mm", "center": c["center"], "closed": c["closed"],
+        dims.append({"kind": "overall_height", "feature": f"{view.name}.overall_height",
+                     "value": round(view.height, 3), "unit": "mm", "tolerance": None,
+                     "source": "view bbox (projected geometry)"})
+    holes = _holes_in_measured_order(view)
+    for idx, c in enumerate(holes, start=1):
+        dims.append({"kind": "hole_diameter", "feature": f"{view.name}.hole_{idx}",
+                     "value": c["diameter"], "unit": "mm", "tolerance": None,
+                     "center": c["center"], "closed": c["closed"],
                      "source": "circle fit on projected edges"})
+    dims.extend(_chain_dimensions(view, holes))
     return dims
+
+
+def _holes_in_measured_order(view: ViewGeometry) -> list[dict[str, Any]]:
+    """孔的编号按实测位置（先 x 后 y）排，不按检出/打孔顺序。"""
+    return sorted(view.circles, key=lambda c: (c["center"][0], c["center"][1]))
+
+
+def _chain_dimensions(view: ViewGeometry,
+                      holes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """「左沿→孔心…→右沿」的尺寸链；段值由实测孔心相减得出。
+
+    少于两个不同的 x 位置时不给链：那会画出一段零长尺寸，是不成立的链而不是信息。
+    """
+    marks = sorted({round(c["center"][0], 6) for c in holes})
+    if len(marks) < 2:
+        return []
+    stations = [view.bbox[0], *marks, view.bbox[2]]
+    dims: list[dict[str, Any]] = []
+    for idx in range(len(stations) - 1):
+        lo, hi = stations[idx], stations[idx + 1]
+        dims.append({"kind": "chain", "feature": f"{view.name}.chain_{idx + 1}",
+                     "value": round(hi - lo, 3), "unit": "mm", "tolerance": None,
+                     "from_x": lo, "to_x": hi,
+                     "source": "hole centers from projected geometry"})
+    return dims
+
+
+def _chain_check(view: ViewGeometry, dims: list[dict[str, Any]]) -> dict[str, Any]:
+    """核对「图上印出来的各段之和」是否等于「图上印出来的总体宽」。
+
+    用四舍五入后的显示值而非原始浮点相减——要抓的正是标注本身不闭合。
+    """
+    chain = [d for d in dims if d["kind"] == "chain"]
+    overall = next((d["value"] for d in dims if d["kind"] == "overall_width"), None)
+    check: dict[str, Any] = {
+        "segments": len(chain),
+        "sum": None,
+        "overall_width": overall,
+        "delta": None,
+        "basis": "printed chain segments vs printed overall width",
+    }
+    if not chain or overall is None:
+        check["reason"] = "无可排列的孔心，链不成立" if not chain else "视图没有总体宽尺寸"
+        return check
+    total = round(sum(d["value"] for d in chain), 6)
+    check["sum"] = total
+    check["delta"] = round(total - overall, 6)
+    check["reason"] = ""
+    return check
+
+
+def _tolerance_decimals(upper: float, lower: float) -> int:
+    """显示位数按声明里写得最细的那一侧来，且不低于 2 位。"""
+    def places(value: float) -> int:
+        text = repr(abs(float(value)))
+        return len(text.split(".")[1]) if "." in text else 0
+
+    return max(places(upper), places(lower), MIN_TOLERANCE_DECIMALS)
+
+
+def _declared_tolerance(raw: Any, where: str) -> dict[str, float]:
+    """声明的公差必须是显式的上/下偏差；不猜、不给缺省。"""
+    if not isinstance(raw, dict):
+        raise ValueError(f"{where} 的 tolerance 必须是 {{'upper': …, 'lower': …}}，"
+                         f"实得 {raw!r}")
+    try:
+        upper = float(raw["upper"])
+        lower = float(raw["lower"])
+    except KeyError as exc:
+        raise ValueError(f"{where} 的 tolerance 缺少 {exc.args[0]}，"
+                         f"不做缺省推断") from exc
+    if lower > upper:
+        raise ValueError(f"{where} 的下偏差 {lower} 大于上偏差 {upper}")
+    return {"upper": upper, "lower": lower}
+
+
+def resolve_spec_tolerances(views: list[ViewGeometry],
+                            spec: dict[str, Any] | None) -> dict[str, Any]:
+    """把 spec 声明的公差贴到实测出来的尺寸上；没声明就一个都不贴。
+
+    返回写进图纸证据的统计：贴了几处、声明了但图上没有的特征是哪些。
+    """
+    declared: dict[str, dict[str, float]] = {}
+    order: list[str] = []
+    for entry in (spec or {}).get("features") or []:
+        if not isinstance(entry, dict) or not entry.get("feature"):
+            raise ValueError(f"spec.features 每一项都要有 'feature'，实得 {entry!r}")
+        name = str(entry["feature"])
+        if name in declared:
+            raise ValueError(f"spec 里特征 {name} 重复声明")
+        declared[name] = _declared_tolerance(entry.get("tolerance"), name)
+        order.append(name)
+    glob_raw = (spec or {}).get("global_tolerance")
+    glob = _declared_tolerance(glob_raw, "global_tolerance") if glob_raw else None
+
+    matched: set[str] = set()
+    applied = 0
+    for view in views:
+        for dim in view.dimensions:
+            tolerance = declared.get(str(dim["feature"]))
+            if tolerance is not None:
+                matched.add(str(dim["feature"]))
+            elif glob is not None:
+                tolerance = glob
+            if tolerance is None:
+                continue
+            dim["tolerance"] = {"upper": tolerance["upper"], "lower": tolerance["lower"]}
+            applied += 1
+    return {
+        "tolerance_applied": applied,
+        "spec_declared_features": order,
+        "spec_unmatched_features": [n for n in order if n not in matched],
+        "global_tolerance_declared": glob is not None,
+    }
 
 
 def _fmt(value: float) -> str:
@@ -403,10 +546,15 @@ def _fmt(value: float) -> str:
 def write_dxf(views: list[ViewGeometry], path: Path, *,
               part_name: str, revision: str, scale: float = 1.0,
               material: str = "-", sheet: str = "A3",
-              provenance: dict[str, Any] | None = None) -> dict[str, Any]:
-    """把视图排到图纸上并写 DXF；返回机器可核验的实体统计。"""
+              provenance: dict[str, Any] | None = None,
+              spec: dict[str, Any] | None = None) -> dict[str, Any]:
+    """把视图排到图纸上并写 DXF；返回机器可核验的实体统计。
+
+    ``spec`` 是**唯一**的公差来源；不传则整张图不含任何公差。
+    """
     import ezdxf
 
+    spec_stats = resolve_spec_tolerances(views, spec)
     width, height = SHEET_SIZES[sheet]
     doc = ezdxf.new("R2010", setup=True)
     msp = doc.modelspace()
@@ -443,6 +591,7 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                        "size_mm": [round(view.width * scale, 3), round(view.height * scale, 3)],
                        "visible_polylines": len(view.visible),
                        "hidden_polylines": len(view.hidden),
+                       "chain_check": view.chain_check,
                        "dimensions": view.dimensions})
 
     _draw_title_block(msp, width, height, part_name, revision, scale, material,
@@ -456,8 +605,32 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
         counts[e.dxftype()] = counts.get(e.dxftype(), 0) + 1
     return {"sheet": sheet, "sheet_size_mm": [width, height], "scale": scale,
             "views": placed, "entity_counts": counts,
+            "dimension_chain_check": {v["view"]: v["chain_check"] for v in placed},
             "bytes": path.stat().st_size,
-            "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            **spec_stats}
+
+
+def _set_dim_tolerance(dim: Any, tolerance: dict[str, float] | None) -> None:
+    """把声明的偏差落到 DXF（必须在 ``render()`` 之前调用）。
+
+    ``dimtm`` 存的是下偏差的**相反数**——ezdxf 渲染时对 dimtm 再取负打符号，
+    原样传 -0.05 会打成 "+0.05"（实测）。只 set 不 render 时 override 根本不落到
+    实体上（实测读回 dimtol 缺省 0），所以公差静默消失的唯一防线是照常 render。
+    """
+    if not tolerance:
+        return
+    upper = float(tolerance["upper"])
+    lower = float(tolerance["lower"])
+    dim.set_tolerance(upper, -lower, dec=_tolerance_decimals(upper, lower))
+
+
+def _linear_dim(msp: Any, base: tuple[float, float], p1: tuple[float, float],
+                p2: tuple[float, float], text: str,
+                tolerance: dict[str, float] | None) -> None:
+    dim = msp.add_linear_dim(base=base, p1=p1, p2=p2, text=text, dimstyle=DIMSTYLE)
+    _set_dim_tolerance(dim, tolerance)
+    dim.render()
 
 
 def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float) -> None:
@@ -482,24 +655,37 @@ def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float)
         else:
             msp.add_lwpolyline(pts, dxfattribs={"layer": "HIDDEN"})
 
-    # 总体宽/高线性尺寸（值来自投影测量）
-    w = next((d["value"] for d in view.dimensions if d["kind"] == "overall_width"), None)
-    h = next((d["value"] for d in view.dimensions if d["kind"] == "overall_height"), None)
+    # 尺寸全部来自投影测量值：总体宽/高 + 由孔心排出的尺寸链 + 孔径
+    dims = view.dimensions
+    chain = [d for d in dims if d["kind"] == "chain"]
+    w = next((d for d in dims if d["kind"] == "overall_width"), None)
+    h = next((d for d in dims if d["kind"] == "overall_height"), None)
+    bottom = off_y + view.bbox[1] * scale
+    if chain:
+        base_y = bottom - CHAIN_ROW_GAP
+        for seg in chain:
+            p1 = (off_x + seg["from_x"] * scale, bottom)
+            p2 = (off_x + seg["to_x"] * scale, bottom)
+            _linear_dim(msp, (p1[0], base_y), p1, p2, _fmt(seg["value"]), seg["tolerance"])
     if w:
-        p1 = (off_x + view.bbox[0] * scale, off_y + view.bbox[1] * scale)
-        p2 = (off_x + view.bbox[2] * scale, off_y + view.bbox[1] * scale)
-        msp.add_linear_dim(base=(p1[0], p1[1] - 10.0), p1=p1, p2=p2,
-                           text=_fmt(w), dimstyle="EZ_M_100_H25_CM").render()
+        gap = OVERALL_OUTSIDE_GAP if chain else DIM_ROW_GAP
+        p1 = (off_x + view.bbox[0] * scale, bottom)
+        p2 = (off_x + view.bbox[2] * scale, bottom)
+        _linear_dim(msp, (p1[0], p1[1] - gap), p1, p2, _fmt(w["value"]), w["tolerance"])
     if h:
-        p1 = (off_x + view.bbox[2] * scale, off_y + view.bbox[1] * scale)
+        p1 = (off_x + view.bbox[2] * scale, bottom)
         p2 = (off_x + view.bbox[2] * scale, off_y + view.bbox[3] * scale)
-        msp.add_linear_dim(base=(p1[0] + 10.0, p1[1]), p1=p1, p2=p2,
-                           text=_fmt(h), dimstyle="EZ_M_100_H25_CM").render()
-    for c in [d for d in view.dimensions if d["kind"] == "hole_diameter"]:
+        dim = msp.add_linear_dim(base=(p1[0] + DIM_ROW_GAP, p1[1]), p1=p1, p2=p2,
+                                 text=_fmt(h["value"]), dimstyle=DIMSTYLE)
+        _set_dim_tolerance(dim, h["tolerance"])
+        dim.render()
+    for c in [d for d in dims if d["kind"] == "hole_diameter"]:
         ctr = c["center"]
-        msp.add_diameter_dim(center=(ctr[0] * scale + off_x, ctr[1] * scale + off_y),
-                             radius=c["value"] * scale / 2.0, angle=45,
-                             text=f"%%c{_fmt(c['value'])}").render()
+        dia = msp.add_diameter_dim(center=(ctr[0] * scale + off_x, ctr[1] * scale + off_y),
+                                   radius=c["value"] * scale / 2.0, angle=45,
+                                   text=f"%%c{_fmt(c['value'])}")
+        _set_dim_tolerance(dia, c["tolerance"])
+        dia.render()
 
 
 def _draw_title_block(msp: Any, width: float, height: float, part: str, rev: str,
@@ -527,8 +713,14 @@ def generate_drawing(model: Any, out_path: Path | str, *,
                      views: tuple[str, ...] = ("FRONT", "TOP", "RIGHT"),
                      scale: float = 1.0, material: str = "-",
                      sheet: str = "A3",
-                     provenance: dict[str, Any] | None = None) -> dict[str, Any]:
-    """端到端：模型 -> 视图 -> DXF -> 证据字典（含哈希与实体统计）。"""
+                     provenance: dict[str, Any] | None = None,
+                     spec: dict[str, Any] | None = None) -> dict[str, Any]:
+    """端到端：模型 -> 视图 -> DXF -> 证据字典（含哈希与实体统计）。
+
+    ``spec`` 只用于声明公差（``{"features": [{"feature": "TOP.hole_2",
+    "tolerance": {"upper": 0.05, "lower": -0.05}}], "global_tolerance": {...}}``），
+    尺寸值一律来自几何测量，spec 不参与测量。
+    """
     path = Path(out_path)
     built: list[ViewGeometry] = []
     for name in views:
@@ -538,7 +730,7 @@ def generate_drawing(model: Any, out_path: Path | str, *,
         built.append(build_view(model, name, direction, up))
     evidence = write_dxf(built, path, part_name=part_name, revision=revision,
                          scale=scale, material=material, sheet=sheet,
-                         provenance=provenance)
+                         provenance=provenance, spec=spec)
     evidence.update(provenance or {})
     evidence.update({"part": part_name, "revision": revision,
                      "generated_at": datetime.now(timezone.utc).isoformat(),

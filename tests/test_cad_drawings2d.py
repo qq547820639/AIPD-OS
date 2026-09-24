@@ -320,11 +320,20 @@ class TestCapabilityDeclaration:
         assert probe_entry_callable(
             cap.entry_point, Path(__file__).resolve().parents[1]) is True
         assert cap.run_command == "aipd drawing generate"
-        assert cap.unit_test == "tests/test_cad_drawings2d.py"
-        # 没有 GD&T / 尺寸链 / 剖视 / 爆炸图 ⇒ 不得自称完整生产图纸包
+        root = Path(__file__).resolve().parents[1]
+        declared_tests = [t.strip() for t in (cap.unit_test or "").split(";") if t.strip()]
+        assert set(declared_tests) >= {"tests/test_cad_drawings2d.py",
+                                       "tests/test_cad_drawings_chain_tolerance.py"}
+        for rel in declared_tests:  # 登记的每个测试文件都得真存在
+            assert (root / rel).is_file(), f"登记指向的测试文件不存在：{rel}"
+        # 未覆盖项必须逐项点名；已落地的（尺寸链/按声明的公差）也要写进行内，
+        # 否则 limitation 会把现状说小，等于另一种不诚实。
         assert cap.classification == "partially_implemented"
-        for token in ("GD&T", "尺寸链", "剖视", "爆炸图", "相切"):
+        for token in ("GD&T", "公差叠加", "剖视", "爆炸图", "相切"):
             assert token in cap.current_limitation, cap.current_limitation
+        for token in ("尺寸链", "--spec", "退出码 4"):
+            assert token in cap.current_limitation, cap.current_limitation
+        assert "Product Truth" in cap.current_limitation, "公差声明未接权威事实源这点要写明"
 
 
 class TestGracefulDegradation:

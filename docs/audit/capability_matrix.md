@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-24T19:23:05`
+- 生成时间：`2026-09-24T20:08:23`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`f2ea7a5c171ff53d8e0e8a9b0c2feb278e743aa9`
+- 默认分支：`main`；HEAD：`54b08dd84430b8cbf87e608de91dfedabb0b674b`
 - 版本：`5.6.0`
 - 能力总数：`78`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -84,7 +84,7 @@
 | DFM/DFA | `fully_implemented` | references/cad-engineering-readiness.md | templates/cad_engineering_manifest.json; scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 公差链 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | GD&T | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
-| 二维图纸 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/cad/drawings2d.py | aipd_os.cli.commands_drawing.cmd_drawing | `aipd drawing generate` | tests/test_cad_drawings2d.py | 出图为 DXF 三视图 + 投影测量的总体尺寸/孔径；隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。未实现：GD&T 形位公差框、尺寸链/公差叠加、剖视与局部放大、爆炸图、装配图，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。 |
+| 二维图纸 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/cad/drawings2d.py | aipd_os.cli.commands_drawing.cmd_drawing | `aipd drawing generate` | tests/test_cad_drawings2d.py; tests/test_cad_drawings_chain_tolerance.py | 出图为 DXF 三视图 + 投影测量的总体尺寸/孔径 + 由实测孔心排出的尺寸链（闭合差写进 dimension_chain_check）；公差只能来自 --spec 声明，未声明则不写任何公差，声明落空会判未收口（退出码 4）。隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。未实现：GD&T 形位公差框、公差叠加分析、剖视与局部放大、爆炸图、装配图，且公差声明尚未与 Product Truth 的零件规格打通（只吃 JSON 文件），故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。 |
 | BOM一致性 | `fully_implemented` | references/manual-to-cad-digital-thread.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 检验计划 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 生产发布门 | `fully_implemented` | references/gate-model.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m> --target <level>` | tests/test_production_release_gate.py |  |
