@@ -7,8 +7,7 @@
 
 | 项 | 读数 | 取数方式 |
 | --- | --- | --- |
-| 迁移前 src/ HTTP 出口调用点 | **9 处 / 7 个模块** | `git grep -n "urlopen" HEAD -- src` + `git grep -n "requests\." HEAD -- src` 现算 |
-| 迁移后 src/ 直连出口 | **1 处**（`net/http.py` 内部） | `tests/test_net_egress_convergence.py` AST 扫描，分母 211 个源文件 |
+| 迁移前 src/ HTTP 出口调用点 | **9 处 / 7 个模块** | `git grep -n "urlopen" HEAD -- src` + `git grep -n "requests\." HEAD -- src` 现算 || 迁移后 src/ 直连出口 | **1 处**（`net/http.py` 内部） | `tests/test_net_egress_convergence.py` AST 扫描，分母 211 个源文件 |
 | `# noqa: S310`（scheme 手工豁免） | 3 → **0**（仅 `net/http.py` 统一实现一次） | 同上扫描 + `grep` |
 | src/ 运行时硬依赖 | `jsonschema` 1 个（`requests` 退出核心路径） | `pyproject.toml` `[project.dependencies]` |
 | 新增行为契约用例 | 15（`test_net_http.py`，真跑本地 HTTP 服务） | 上一提交 |
@@ -161,6 +160,54 @@ git grep -n "requests\." HEAD -- src | grep -v "net/http.py"
 .venv/bin/ruff check src tests state_service && .venv/bin/mypy
 # 清单重锚（§6 那 2 条红了才需要；source_commit 仍锚在 v5.6.0 的提交上，
 # 不移动 tag、不重签名、不 push）
-.venv/bin/python scripts/release_evidence.py --source-commit "$(git rev-parse 'v5.6.0^{commit}')"
+.venv/bin/python scripts/release_evidence.py --source-commit "$(git rev-parse 'v5.6.0^{commit}')" \
+  --test-report docs/audit/pytest-report-v5.6.0.json
 .venv/bin/python scripts/regenerate_release_manifest.py
+PATH="$PWD/.venv/bin:$PATH" .venv/bin/python scripts/production_release_gate.py --release-ready --tag v5.6.0
 ```
+
+## 10. F-REL-01：收尾时量出来的第二个缺陷（发布证据读的是可变文件）
+
+本轮按流程重生成 `PROVENANCE.json` 之后，`production_release_gate` 从 8/8 掉到
+7/8，红项是 `test_numbers_from_report`：
+
+```
+test_report source_commit a7fa402… != a660405… (tag v5.6.0): report STALE, cannot gate release
+```
+
+判据没错，**证据链的写法**有问题：`PROVENANCE.test_report` 记录的是
+`docs/audit/pytest-report.json` 这个**每轮都会被覆盖**的路径。它上一次被解析时里面
+恰好还是 v5.6.0 时代的那份报告（`generated_at` 2026-08-13、1096 passed、
+`source_commit = a660405`），于是 8/8 成立；而本轮把新跑的 1385 写进同一路径后，
+「v5.6.0 的发布证据」就变成了一份比 tag 新的树的测试结果——**要么判红，要么假绿**，
+取决于重生成证据的时机。这不是本轮引入的，是它一直没被触碰。
+
+修法（不改门禁、不动 tag、不重签名）：
+
+1. 从 git 历史取回与旧 `PROVENANCE` 所记 sha256 **逐字节相同**的那份报告
+   （`git show 7971545:docs/audit/pytest-report.json` →
+   `sha256=4e4f70223bb8…49a8`，1096 passed / 1099，`source_commit=a660405`），
+   归档为不可变路径 `docs/audit/pytest-report-v5.6.0.json`；
+2. `release_evidence.py --test-report` 改指该归档件 ⇒ 发布证据重新只描述 v5.6.0 自己；
+3. 每轮的 `docs/audit/pytest-report.json` 保留为**轮级**证据，与发布证据不再共用路径。
+
+读法约束（写给下一轮，也纠正上一轮容易误读的一行）：
+`production_release_gate --release-ready --tag v5.6.0` 的 8/8 **认证的是 tag 那一棵树的
+测试结果（1096 例）**，不是本轮 1385 例；本轮这棵树的证据是「全量 1385 passed / 0 failed
++ ruff 0 + mypy 0（365 文件）+ 性能门 PASS」。二者不可互换引用。
+另测得：`--release-ready` 不带 `--tag` 时锚点取 HEAD，而报告是在上一个提交上跑的，
+`report STALE` 必红——所以**轮内不存在 8/8 的合法路径**，8/8 只在从 tag 检出跑测试时成立。
+不要用 `AIPD_SOURCE_COMMIT` 把报告钉到 tag 上（`tests/conftest.py` 的该环境变量是发布流程
+入口，在本轮用它等于用未发布的树冒充已发布提交，与黄金工件不重锚是同一条纪律）。
+
+收尾读数（本轮，全部现场复算）：
+
+| 门禁 | 读数 |
+| --- | --- |
+| `production_release_gate --release-ready --tag v5.6.0` | **8/8，exit 0**（认证 v5.6.0） |
+| 全量 `pytest -q --json-report` | **1385 passed / 0 failed / 3 skipped**（collected 1388） |
+| `state_perf_gate` | **PASS**：嵌套事务边际 23.6µs、批处理比 0.0456 ≤ 0.34 |
+| `skill_quality_audit` | 0 警告 0 失败，exit 0 |
+| ruff / mypy | 0 / 0（365 文件） |
+| 工作树 | `git status --short` 空；提交未 push、tag 未动 |
+

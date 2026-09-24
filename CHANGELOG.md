@@ -116,6 +116,16 @@
   机器代理），改本地真 HTTP 服务；两处 `FakeResp` 缺 `getcode()/headers`；新客户端
   自身被本仓异常卫生门禁判红。`scripts/research/_http_runtime.py` 保留 requests——
   它要给第三方自有的 `requests.Session` 挂策略，标准库做不到；
+- **v5.10 修复 F-REL-01：发布证据读的是每轮都会被覆盖的可变路径**：
+  `PROVENANCE.test_report` 记录的是 `docs/audit/pytest-report.json`，而这份文件自
+  v5.6.0 之后每轮重跑都被覆盖。本轮按流程重生成证据后，发布门从 8/8 掉到 7/8，红项
+  `test_numbers_from_report: report STALE`——「v5.6.0 的发布证据」实际指向一棵比 tag
+  更新的树。修法不动门禁、不动 tag、不重签名：从 git 历史取回与旧 `PROVENANCE` 所记
+  sha256 逐字节相同的 tag 时代报告（1096 passed / `source_commit=a660405`）归档为
+  `docs/audit/pytest-report-v5.6.0.json`，`--test-report` 改指该归档件；轮级报告继续
+  单独存在。读法同时更正：`--release-ready --tag` 的 8/8 认证的是 **tag 那棵树**的测试
+  结果，本轮这棵树的证据是 1385 passed / ruff 0 / mypy 0 / 性能门 PASS，两者不可互换
+  引用；也不得用 `AIPD_SOURCE_COMMIT` 把报告钉到 tag 上（那等于用未发布的树冒充已发布提交）；
 - **经验回灌（定位修正）**：成功轨迹/黄金样本从「评测资产」升级为「运行时
   提示资产」——`llm/experience.py` 把内置黄金经验注入两个 LLM Provider 的系统
   消息（确定性、带指纹可审计，`AIPD_EXPERIENCE_FEEDBACK=0` 可关闭），回归

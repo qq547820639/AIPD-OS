@@ -165,6 +165,9 @@ BOM 数量与模具摊销/成本核算跟着错，图纸也是错图的忠实投
   **仍锚在 `v5.6.0` tag 提交**，不移动 tag、不重签名、不 push。
   §4.1 的 sidecar 修复之后这两条又红了一次（同一机制，不是回归）。
 - 收尾读数：`production_release_gate --release-ready --tag` **8/8 绿**（exit 0），
+  **读法更正（F-REL-01，见 `NET_EGRESS_CONVERGENCE_2026-09-24.md` §10）**：这 8/8
+  认证的是 `PROVENANCE` 所引 tag 时代报告（v5.6.0 那棵树，1096 例）；本轮改动后的树
+  由其自身的证据行认证（下面「全量回归」与本节性能/静态读数），两者不可互换引用。
   `state_perf_gate` **PASS**（批处理比 median 0.0161 ≤ 0.34），
   `skill_quality_audit` 0 警告 0 失败，`audit_repo --strict` 仍按既有原因红：
   「Provenance source commit mismatch: manifest=a660405… vs HEAD=…」——
