@@ -255,8 +255,12 @@ def build_assembly_view(parts: list[dict[str, Any]], view_name: str,
                      "balloon_view": bool(with_balloons),
                      "envelope": [round(v, 6) for v in envelope],
                      "overlap_area_mm2": round(overlap, 6),
-                     "warnings": anchor_warnings,
+                     "warnings": anchor_warnings
+                     + _overlap_messages(view_name, per_part),
                      "issues": issues}
+    # 球标这一层由图纸侧在排完图线后用**同一个 place** 回调；挂函数而不是让
+    # drawings2d import 本模块，是为了保持依赖单向（装配 → 图纸）。
+    view.render_overlay = render_assembly
     return view
 
 
@@ -266,20 +270,20 @@ def parts_list_rows(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
             for p in sorted(parts, key=lambda q: q["balloon"])]
 
 
-def overlap_warnings(view: Any) -> list[str]:
-    """包络两两投影重叠的告警。
+def _overlap_messages(view_name: str, parts: list[dict[str, Any]]) -> list[str]:
+    """包络两两投影重叠的告警文案。
 
     措辞刻意说「包络投影重叠」而不是「干涉」：这里没有做实体求交，
     说干涉就是越过判据下结论。它也不是未收口——图纸能交付，只是叠着的地方看不出前后。
+    在 ``build_assembly_view`` 里就算好、随视图带着走，是为了让 ``drawings2d``
+    不必 import 本模块（那条反向边会被 ``tests/test_import_cycles.py`` 判成环）。
     """
-    data = getattr(view, "assembly", None) or {}
-    parts = data.get("parts") or []
     out: list[str] = []
     for i, one in enumerate(parts):
         for other in parts[i + 1:]:
             area = _rect_overlap(one["bbox"], other["bbox"])
             if area > 0.0:
-                out.append(f"{view.name}：零件 {one['part']} 与 {other['part']} 的"
+                out.append(f"{view_name}：零件 {one['part']} 与 {other['part']} 的"
                            f"包络投影重叠 {area:.3f}mm²（不是干涉判定：本轮不做实体求交，"
                            f"只说明图上这两处叠在一起、看不出前后）")
     return out
@@ -345,3 +349,45 @@ def render_assembly(msp: Any, view: Any, scale: float, place: Any = None) -> Non
                                  "height": BALLOON_TEXT_HEIGHT * scale}) \
            .set_placement((centre[0] - BALLOON_TEXT_HEIGHT * scale * 0.35,
                            centre[1] - BALLOON_TEXT_HEIGHT * scale * 0.35))
+
+
+def generate_assembly_drawing(out_path: Path | str, *, manifest: str, part_name: str,
+                              revision: str = "A",
+                              views: tuple[str, ...] = ("FRONT", "TOP"),
+                              scale: float = 1.0, material: str = "-",
+                              sheet: str = "A3",
+                              provenance: dict[str, Any] | None = None,
+                              bom: dict[str, Any] | None = None) -> dict[str, Any]:
+    """端到端出装配图：清单 -> 逐件投影 -> DXF -> 证据字典。
+
+    放在装配这一侧、由它 import 图纸模块，而不是在 ``generate_drawing`` 里加分支：
+    反向依赖会被无环门判红（``tests/test_import_cycles.py``）。
+    派生视图（剖视、局部放大）在这里**明确拒绝**，而不是默默产出错的图——
+    装配视图的折线按零件归属，裁剪/切割会把归属打散，球标就成了指错零件的假标注。
+    """
+    from aipd_os.cad.drawings2d import STANDARD_VIEWS, _finish_evidence, write_dxf
+
+    for name in views:
+        if name not in STANDARD_VIEWS:
+            raise ValueError(f"未知视图 {name}；可用：{sorted(STANDARD_VIEWS)}")
+    path = Path(out_path)
+    parts = load_assembly_parts(parse_assembly_manifest(manifest))
+
+    def layout(msp: Any, sheet_wh: tuple[float, float]) -> dict[str, Any]:
+        """图纸侧的唯一装配入口：画明细表，并把装配证据交回去。
+
+        ``bom`` 传进来只为在证据里如实记 ``bom_bound``，**不参与**任何一格的取值。
+        """
+        return {"parts_list": draw_parts_list(msp, parts_list_rows(parts), sheet_wh, bom)}
+
+    built = [build_assembly_view(parts, f"ASSY_{name}", *STANDARD_VIEWS[name],
+                                 with_balloons=(idx == 0))
+             for idx, name in enumerate(views)]
+    evidence = write_dxf(built, path, part_name=part_name, revision=revision,
+                         scale=scale, material=material, sheet=sheet,
+                         provenance=provenance, layout_hook=layout,
+                         extra_evidence={
+                             "assembly": {"parts": [{k: v for k, v in p.items()
+                                                     if k != "shape"} for p in parts]},
+                             "bom": bom})
+    return _finish_evidence(path, evidence, part_name, revision, provenance)

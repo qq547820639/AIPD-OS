@@ -289,18 +289,18 @@ def cmd_drawing_assembly(args):
         return _external_task_pack(args, f"CAD 内核缺失（{exc}）",
                                    command="drawing assembly")
 
+    from aipd_os.cad.assembly import generate_assembly_drawing
     from aipd_os.cad.backends import CadQueryBackend
-    from aipd_os.cad.drawings2d import generate_drawing
 
     provenance = {"tool": f"cadquery {CadQueryBackend().tool_version()}",
                   "model_source": str(manifest), "command": "drawing assembly",
                   "ok": True, "status": "DONE"}
     try:
-        evidence = generate_drawing(
-            None, out, part_name=args.part, revision=args.revision,
+        evidence = generate_assembly_drawing(
+            out, manifest=str(manifest), part_name=args.part, revision=args.revision,
             views=tuple(v.strip() for v in args.views.split(",") if v.strip()),
             scale=args.scale, material=args.material, sheet=args.sheet,
-            provenance=provenance, assembly=str(manifest))
+            provenance=provenance)
     except ValueError as exc:
         print(f"装配声明不合法：{exc}")
         return 2

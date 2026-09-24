@@ -44,6 +44,7 @@ import ezdxf  # noqa: E402
 
 from aipd_os.cad.assembly import (  # noqa: E402
     build_assembly_view,
+    generate_assembly_drawing,
     load_assembly_parts,
     parse_assembly_manifest,
     render_assembly,
@@ -89,8 +90,9 @@ def _gen(tmp_path, manifest=None, views=("TOP", "FRONT"), name="assy", **kw):
     out = tmp_path / f"{name}.dxf"
     if manifest is None:
         manifest, _ = _manifest(tmp_path)
-    ev = generate_drawing(None, out, part_name="ASSY-1", revision="A",
-                          views=tuple(views), assembly=str(manifest), **kw)
+    ev = generate_assembly_drawing(out, manifest=str(manifest),
+                                   part_name="ASSY-1", revision="A",
+                                   views=tuple(views), **kw)
     return ev, out
 
 
@@ -402,13 +404,30 @@ class TestSinglePartAssemblyIsAllowed:
         assert ev["assembly_issues"] == []
 
 
-def test_generate_drawing_still_rejects_unknown_single_part_views(tmp_path):
-    """装配分支不能顺手放宽既有判据：单件路径的未知视图仍然报错。"""
+def test_both_drawing_paths_reject_unknown_views(tmp_path):
+    """拆成两条入口后，两条都必须守住「未知视图」这条既有判据。"""
     manifest, _ = _manifest(tmp_path)
     with pytest.raises(ValueError):
-        generate_drawing(None, tmp_path / "bad.dxf", part_name="ASSY",
-                         views=("NOPE",), assembly=str(manifest))
+        generate_assembly_drawing(tmp_path / "bad1.dxf", manifest=str(manifest),
+                                  part_name="ASSY", views=("NOPE",))
+    with pytest.raises(ValueError):
+        generate_drawing(cadquery.importers.importStep(str(_part_a(tmp_path))),
+                         tmp_path / "bad2.dxf", part_name="P", views=("NOPE",))
     assert set(STANDARD_VIEWS) >= {"TOP", "FRONT", "RIGHT"}
+
+
+def test_assembly_drawing_does_not_expose_derived_view_flags(tmp_path):
+    """装配入口没有剖视/局部放大的形参：合并折线被裁剪会把归属打散，球标就成了假标注。
+
+    拆掉 ``generate_drawing(assembly=...)`` 之后，这道防线不能只靠命令行不给 flag——
+    函数面上也得没有入口，否则别的产品代码能绕过去画出指错零件的图。
+    """
+    import inspect
+
+    from aipd_os.cad.assembly import generate_assembly_drawing as gen
+
+    params = inspect.signature(gen).parameters
+    assert not {"sections", "details", "spec"} & set(params), sorted(params)
 
 
 def test_render_assembly_is_the_only_producer_of_the_balloon_layer(tmp_path):

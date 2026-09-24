@@ -147,6 +147,10 @@ class ViewGeometry:
     detail_problems: list[str] = field(default_factory=list)
     detail_markers: list[dict[str, Any]] = field(default_factory=list)
     assembly: dict[str, Any] | None = None
+    # 装配侧往视图上再画一层（球标）时挂进来的回调：``(msp, view, scale, place)``。
+    # 走这个钩子而不是让本模块 import 装配模块 —— 依赖只能单向（装配 → 图纸），
+    # 反向那条边会被 tests/test_import_cycles.py 判成环。
+    render_overlay: Any = None
 
     @property
     def width(self) -> float:
@@ -1085,13 +1089,14 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
               material: str = "-", sheet: str = "A3",
               provenance: dict[str, Any] | None = None,
               spec: dict[str, Any] | None = None,
-              assembly_parts: list[dict[str, Any]] | None = None,
-              bom: dict[str, Any] | None = None) -> dict[str, Any]:
+              layout_hook: Any = None,
+              extra_evidence: dict[str, Any] | None = None) -> dict[str, Any]:
     """把视图排到图纸上并写 DXF；返回机器可核验的实体统计。
 
     ``spec`` 是**唯一**的公差来源；不传则整张图不含任何公差。
-    ``assembly_parts`` 非空表示这是装配图：明细表由它生成，球标由各个视图的
-    ``view.assembly`` 画（编号与零件名都来自 manifest，不是这里推的）。
+    ``layout_hook(msp, sheet_wh) -> dict`` 给装配侧用：它在图框内画明细表并返回
+    要并进证据的键。本模块**不认识**「明细表/球标」这些概念，也不 import 装配模块
+    ——依赖只允许 装配 → 图纸 一个方向（反向会被无环门判红）。
     """
     import ezdxf
 
@@ -1188,16 +1193,12 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
                        "dimensions": view.dimensions})
 
     assembly_views = [v for v in views if v.assembly]
-    parts_list = None
-    assembly_warnings: list[str] = []
-    if assembly_views and assembly_parts:
-        from aipd_os.cad.assembly import draw_parts_list, overlap_warnings, parts_list_rows
-
-        parts_list = draw_parts_list(msp, parts_list_rows(assembly_parts),
-                                     (width, height), bom)
-        assembly_warnings = sorted(
-            {w for v in assembly_views
-             for w in overlap_warnings(v) + list((v.assembly or {}).get("warnings") or [])})
+    hook_evidence: dict[str, Any] = {}
+    if layout_hook is not None:
+        hook_evidence = layout_hook(msp, (width, height)) or {}
+    assembly_warnings = sorted(
+        {str(msg) for v in assembly_views if v.assembly
+         for msg in v.assembly.get("warnings") or []})
 
     _draw_title_block(msp, width, height, part_name, revision, scale, material,
                       sheet, provenance or {})
@@ -1208,37 +1209,40 @@ def write_dxf(views: list[ViewGeometry], path: Path, *,
     counts: dict[str, int] = {}
     for e in msp:
         counts[e.dxftype()] = counts.get(e.dxftype(), 0) + 1
-    return {"sheet": sheet, "sheet_size_mm": [width, height], "scale": scale,
-            "views": placed, "entity_counts": counts,
-            "dimension_chain_check": {v["view"]: v["chain_check"] for v in placed},
-            "stackup_check": stackups,
-            "stackup_inconsistent": any(
-                s["verdict"] == "inconsistent" for s in stackups.values()),
-            "stackup_undecidable": sorted(
-                name for name, s in stackups.items()
-                if s["verdict"] in ("insufficient_data", "no_closing_tolerance")),
-            "gdt_frames": gdt_frames,
-            "gdt_issues": gdt_issues,
-            "gdt_issue_kinds": sorted({str(i["kind"]) for i in gdt_issues}),
-            "gdt_unmatched_features": gdt_unmatched,
-            "section_issues": sorted({msg for v in placed for msg in v["section_problems"]}),
-            "section_letters": section_letters,
-            "section_warnings": sorted({m for v in placed for m in v["section_warnings"]}),
-            "detail_numbers": detail_numbers,
-            "detail_issues": sorted({msg for view in views
-                                     for msg in view.detail_problems}),
-            "assembly": ({"parts": [{k: v for k, v in p.items() if k != "shape"}
-                                    for p in (assembly_parts or [])]}
-                         if assembly_views else None),
-            "parts_list": parts_list,
-            "bom": bom,
-            "assembly_issues": sorted({msg for view in assembly_views
-                                       if view.assembly
-                                       for msg in view.assembly["issues"]}),
-            "assembly_warnings": assembly_warnings,
-            "bytes": path.stat().st_size,
-            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-            **spec_stats}
+    evidence: dict[str, Any] = {
+        "sheet": sheet, "sheet_size_mm": [width, height], "scale": scale,
+        "views": placed, "entity_counts": counts,
+        "dimension_chain_check": {v["view"]: v["chain_check"] for v in placed},
+        "stackup_check": stackups,
+        "stackup_inconsistent": any(
+            s["verdict"] == "inconsistent" for s in stackups.values()),
+        "stackup_undecidable": sorted(
+            name for name, s in stackups.items()
+            if s["verdict"] in ("insufficient_data", "no_closing_tolerance")),
+        "gdt_frames": gdt_frames,
+        "gdt_issues": gdt_issues,
+        "gdt_issue_kinds": sorted({str(i["kind"]) for i in gdt_issues}),
+        "gdt_unmatched_features": gdt_unmatched,
+        "section_issues": sorted({msg for v in placed for msg in v["section_problems"]}),
+        "section_letters": section_letters,
+        "section_warnings": sorted({m for v in placed for m in v["section_warnings"]}),
+        "detail_numbers": detail_numbers,
+        "detail_issues": sorted({msg for view in views
+                                 for msg in view.detail_problems}),
+        # 这三条默认值代表「这张图不是装配图」；装配侧由 extra_evidence / layout_hook
+        # 覆盖，本模块不自己拼装配结构（那需要 import 装配模块，就是环）
+        "assembly": None,
+        "parts_list": None,
+        "bom": None,
+        "assembly_issues": sorted({str(msg) for view in assembly_views if view.assembly
+                                   for msg in view.assembly.get("issues") or []}),
+        "assembly_warnings": assembly_warnings,
+        "bytes": path.stat().st_size,
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        **spec_stats}
+    evidence.update(extra_evidence or {})
+    evidence.update(hook_evidence or {})
+    return evidence
 
 
 def _set_dim_tolerance(dim: Any, tolerance: dict[str, float] | None) -> None:
@@ -1339,10 +1343,9 @@ def _draw_view(msp: Any, view: ViewGeometry, cx: float, cy: float, scale: float,
 
     _draw_section_symbols(msp, view, place, scale, symbol_linetype)
     _draw_detail_marks(msp, view, place, scale)
-    if view.assembly:      # 球标与图线共用同一个 place：自己再算偏移会飞到视图外面
-        from aipd_os.cad.assembly import render_assembly
-
-        render_assembly(msp, view, scale, place)
+    if view.render_overlay is not None:
+        # 与图线共用同一个 place：自己再算偏移会飞到视图外面
+        view.render_overlay(msp, view, scale, place)
 
 
 def _draw_detail_marks(msp: Any, view: ViewGeometry, place: Any, scale: float) -> None:
@@ -1426,40 +1429,6 @@ def _finish_evidence(path: Path, evidence: dict[str, Any], part_name: str, revis
     return evidence
 
 
-def _generate_assembly(model: Any, path: Path, *, assembly: str, part_name: str,
-                       revision: str, views: tuple[str, ...], scale: float,
-                       material: str, sheet: str,
-                       provenance: dict[str, Any] | None,
-                       spec: dict[str, Any] | None,
-                       sections: Sequence[str], details: Sequence[str]) -> dict[str, Any]:
-    """装配图分支：逐件投影成 ``ASSY_<视图>``，画球标与明细表。
-
-    派生视图（剖视、局部放大）在这里**明确拒绝**，而不是默默产出错的图：
-    装配视图的折线按零件归属，裁剪/切割会把归属打散，球标就成了指错零件的假标注。
-    """
-    from aipd_os.cad.assembly import (
-        build_assembly_view,
-        load_assembly_parts,
-        parse_assembly_manifest,
-    )
-
-    if sections or details:
-        raise ValueError("装配图本轮不接受 --section/--detail：剖视与局部放大是按合并折线"
-                         "裁剪的，会把「这条线属于哪个零件」打散，球标就成了假标注。")
-    for name in views:
-        if name not in STANDARD_VIEWS:
-            raise ValueError(f"未知视图 {name}；可用：{sorted(STANDARD_VIEWS)}")
-    specs = parse_assembly_manifest(assembly)
-    parts = load_assembly_parts(specs)
-    built = [build_assembly_view(parts, f"ASSY_{name}", *STANDARD_VIEWS[name],
-                                 with_balloons=(idx == 0))
-             for idx, name in enumerate(views)]
-    evidence = write_dxf(built, path, part_name=part_name, revision=revision,
-                         scale=scale, material=material, sheet=sheet,
-                         provenance=provenance, spec=spec, assembly_parts=parts)
-    return _finish_evidence(path, evidence, part_name, revision, provenance)
-
-
 def generate_drawing(model: Any, out_path: Path | str, *,
                      part_name: str, revision: str = "A",
                      views: tuple[str, ...] = ("FRONT", "TOP", "RIGHT"),
@@ -1468,9 +1437,11 @@ def generate_drawing(model: Any, out_path: Path | str, *,
                      provenance: dict[str, Any] | None = None,
                      spec: dict[str, Any] | None = None,
                      sections: Sequence[str] = (),
-                     details: Sequence[str] = (),
-                     assembly: str | None = None) -> dict[str, Any]:
-    """端到端：模型 -> 视图 -> DXF -> 证据字典（含哈希与实体统计）。
+                     details: Sequence[str] = ()) -> dict[str, Any]:
+    """端到端：单件模型 -> 视图 -> DXF -> 证据字典（含哈希与实体统计）。
+
+    装配图走 ``aipd_os.cad.assembly.generate_assembly_drawing``（它 import 本模块，
+    本模块不 import 它 —— 反向边会被无环门判红）。
 
     ``spec`` 只用于声明公差（``{"features": [{"feature": "TOP.hole_2",
     "tolerance": {"upper": 0.05, "lower": -0.05}}], "global_tolerance": {...}}``），
@@ -1480,12 +1451,6 @@ def generate_drawing(model: Any, out_path: Path | str, *,
     倍数是相对母视图印出比例的放大。母视图名写错直接报错，不静默少一张图。
     """
     path = Path(out_path)
-    if assembly:
-        return _generate_assembly(model, path, assembly=assembly, part_name=part_name,
-                                  revision=revision, views=views, scale=scale,
-                                  material=material, sheet=sheet,
-                                  provenance=provenance, spec=spec,
-                                  sections=sections, details=details)
     built: list[ViewGeometry] = []
     for name in views:
         if name not in STANDARD_VIEWS:
