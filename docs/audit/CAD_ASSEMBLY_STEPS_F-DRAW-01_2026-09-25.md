@@ -122,12 +122,26 @@ release manifest 写出 `assembly_instructions` 那一格**。不建 operations 
 - PDF/图框版式：reportlab 中文本机可用，缺的是排版与分页判据。
 - 步骤顺序的自动求解：与爆炸位移同理，前提（装配约束、无碰撞路径）本仓没有。
 
-## 八、收尾读数
+## 八、收尾读数（落盘后复算，不是计划）
 
-见 git 提交后的 `docs/audit/pytest-report-v5.6.0.json`、`SOURCE_MANIFEST.json`、
-`PROVENANCE.json` 与 `capability_matrix.json`（本片把能力行推到 82）。
-命令口径与第 17 片一致：`scripts/regenerate_release_manifest.py` →
-`scripts/release_evidence.py --source-commit <v5.6.0 指向的 commit>` → 带
-`AIPD_SOURCE_COMMIT` 的全量 pytest 出 JSON → 再跑一次 release_evidence 更新 test_report →
-`production_release_gate --release-ready` / `skill_quality_audit` / `state_perf_gate` /
-`audit_repo --strict`（后者按设计在未真发版前 rc=1，唯一 ✗ 是 Provenance 与 HEAD 的锚点差）。
+提交：`ee89476`（代码 + 文档）→ `7fae8d2`（发布工件重锚）。顺序按第 17 片同一口径：
+`regenerate_release_manifest.py` → `release_evidence.py --source-commit a66040520139…`
+→ 带 `AIPD_SOURCE_COMMIT` 的全量 pytest 出 JSON → 再跑 `release_evidence.py --test-report`。
+
+| 量具 | 读数 |
+|---|---|
+| 全量 pytest（报告 `docs/audit/pytest-report-v5.6.0.json`） | **1801 passed / 0 failed / 3 skipped**（共 1804；上一片收尾 1772/0/3） |
+| `PROVENANCE.json` | `test_report.{passed:1801, failed:0, total:1804, source_commit:a66040520139…}`，与 v5.6.0 标签指向一致 |
+| `SOURCE_MANIFEST.json` | 被哈希面 **597 → 599**（新增的两个正是 `assembly_steps.py` 与 `test_cad_assembly_steps.py`；由脚本读两份 manifest 求差算出，**不是**记忆里的 596——工件提交信息里那句 596 是错数，以本行为准） |
+| `production_release_gate --release-ready --tag v5.6.0` | rc=0，`release_ready: true`，8 项检查全过、未通过列表为空 |
+| `skill_quality_audit.py` | rc=0，0 警告 0 失败（新增的 public 命令已逐条进 `SKILL.md`，总数 48→49 同步） |
+| `state_perf_gate.py` | PASS |
+| `audit_repo.py --strict` | rc=1，唯一 ✗ 是 `Provenance source commit mismatch: manifest=a66040520139… vs HEAD=7fae8d22e5b8…`——**按设计为红**：真发版前 HEAD 必然走在标签之后 |
+| `scripts/c6_coverage.py` | rc=0、`problems: []`、`--self-test` 7/7 开火；档位 **12 producer / 2 checker_only / 1 absent**（缺席只剩 ICD），`装配/维护` 已升到 producer |
+| 变异电池 `/tmp/slice18-mutations.py` | 14 条：杀掉 14 / 存活 0 / 注入本身无效 0（M8 首轮存活→补样本后开火，见 §五） |
+| 端到端 `/tmp/slice18-e2e.sh` | 脚本 rc=0（其中「故意坏声明」那五条各自 rc=2、未收口那次 rc=4，都在预期内）；产物落在 `mktemp -d` 目录，收尾后已删。两份一次性脚本里只有 `/tmp/slice18-mutations.py`（变异电池）还在本机 `/tmp`；端到端脚本 `/tmp/slice18-e2e.sh` 被清理通配符一并删掉了——§六 已把五条命令逐条写明，按那里重建即可（两份都不入库，随系统清理自然消失） |
+
+本片**没有**动的东西（都是刻意的，不是漏的）：`assembly/assembly.py` 的投影路径、
+共享门禁的判据与白名单、tag/bundle/签名、任何开发者数据库。`_bom_lines_or_none` 的抽取
+把装配图那条 BOM 读法逐字搬过去（文案不变），由既有用例 `tests/test_cli.py`、
+`tests/test_cad_assembly_bom_link.py` 与新增 `TestCliSurface` 共同守住。
