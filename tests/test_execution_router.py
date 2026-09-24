@@ -29,7 +29,10 @@ def test_success_records_all_fields_and_persists(tmp_path):
     assert len(rec.input_hash) == 64
     assert len(rec.output_hash) == 64
     assert rec.start_time and rec.end_time
-    assert rec.duration_ms >= 0
+    # 这里只钉「派生过、不是 NULL」。下界用 >=0 或 >0 都不成立：doc.generate 常在
+    # 1ms 内完成，墙钟粒度就能让真值落在 0——那会让用例随机红，也会诱使别人把 0 再写回去。
+    # 「真的在测量」这个性质由 test_duration_ms_measures_real_wall_time（50ms sleep，下界 40）钉。
+    assert rec.duration_ms is not None
     assert isinstance(rec.cost, float)
     assert isinstance(rec.tokens_in, int)
     assert isinstance(rec.tokens_out, int)
@@ -196,3 +199,77 @@ def test_unified_record_all_19_keys_and_fallback_round_trip(tmp_path):
     assert from_db.unified_record()["token_usage"] == {
         "input": from_db.tokens_in, "output": from_db.tokens_out,
     }
+
+
+class _SlowAdapter(ToolAdapter):
+    """睡固定时长的假能力，用来验耗时是真的被测量。"""
+
+    def __init__(self, seconds: float = 0.05) -> None:
+        self._seconds = seconds
+
+    def capability_id(self) -> str:
+        return "slow.op"
+
+    def discover(self):
+        return {"id": "slow.op", "name": "slow", "provider": "test",
+                "version": "1.0", "available": True}
+
+    def validate_input(self, input):
+        return []
+
+    def execute(self, input):
+        import time
+        time.sleep(self._seconds)
+        return {"ok": True}
+
+
+def _slow_router(tmp_path, seconds=0.05):
+    reg = AdapterRegistry()
+    reg.register(_SlowAdapter(seconds))
+    store = RunStore(str(tmp_path / "exec.db"))
+    return store, ExecutionRouter(store, reg)
+
+
+def test_duration_ms_measures_real_wall_time(tmp_path):
+    _, router = _slow_router(tmp_path, seconds=0.05)
+    rec = router.run("W-slow", "slow.op", {})["record"]
+    assert rec.duration_ms >= 40, (
+        f"耗时读数 {rec.duration_ms}ms 没经过这 50ms 的 sleep ⇒ 又在写死 0")
+
+
+def _ts() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+
+def test_duration_ms_is_measured_on_blocked_paths_too(tmp_path):
+    """终止路径同样要有耗时：只有成功路径有耗时 = 失败样本无法用来算 p95。"""
+    store, _ = _router(tmp_path)
+    run_id = store.create_run("W-x", "unknown.cap", "p", "1", "h")
+    updated = store.update_run(run_id, status="succeeded", end_time=_ts())
+    assert updated.duration_ms is not None and updated.duration_ms >= 0
+
+
+def test_update_run_derives_duration_only_when_not_given(tmp_path):
+    """调用方显式给了 duration 就不许覆盖（保留唯一计算点，不制造第二个真相）。"""
+    store = RunStore(str(tmp_path / "exec.db"))
+    run_id = store.create_run("W-y", "cap", "p", "1", "h")
+    updated = store.update_run(run_id, status="succeeded",
+                               end_time=_ts(), duration_ms=1234)
+    assert updated.duration_ms == 1234
+
+
+def test_elapsed_ms_is_conservative():
+    from datetime import datetime, timedelta, timezone
+
+    from aipd_os.execution.runs import elapsed_ms
+    base = datetime.now(timezone.utc)
+    assert elapsed_ms(base.isoformat(),
+                      (base + timedelta(milliseconds=850)).isoformat()) == 850
+    # 墙钟回拨 ⇒ 钳到 0，而不是给出负耗时
+    assert elapsed_ms(base.isoformat(),
+                      (base - timedelta(seconds=5)).isoformat()) == 0
+    # 解析不了 / 缺时区 / 缺值一律 None：不拿 0 冒充「测到了」
+    assert elapsed_ms("not-a-date", base.isoformat()) is None
+    assert elapsed_ms(base.replace(tzinfo=None).isoformat(), base.isoformat()) is None
+    assert elapsed_ms(None, base.isoformat()) is None

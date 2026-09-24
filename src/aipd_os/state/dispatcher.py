@@ -18,6 +18,18 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def attempt_budget(event: dict[str, Any]) -> tuple[int, int, bool]:
+    """唯一一份重试预算判定：(本次之后的已试次数, 上限, 是否已用尽)。
+
+    `claim_available` 返回的是**领取时**的行，`attempt_count` 还是本次之前的次数，
+    所以这里 +1。上限缺失或为 0 一律按「只许一次」处理——预算的失败方向必须是
+    早收口，不能退化成无限重试。事件表与台账都必须用它，否则两边结论会各说各话。
+    """
+    attempts = int(event.get("attempt_count", 0) or 0) + 1
+    budget = int(event.get("max_attempts", 0) or 0) or 1
+    return attempts, budget, attempts >= budget
+
+
 class OutboxDispatcher:
     """异步 outbox 事件消费者。
 
@@ -125,10 +137,9 @@ class OutboxDispatcher:
 
         claim 返回的 `attempt_count` 是**本次之前**的次数，所以本次之后是 +1。
         """
-        attempts = int(event.get("attempt_count", 0)) + 1
-        budget = int(event.get("max_attempts", 0) or 0) or 1
+        attempts, budget, exhausted = attempt_budget(event)
         key = (event["event_id"], event["tenant_id"], event["project_id"])
-        if attempts >= budget:
+        if exhausted:
             self._outbox.mark_terminal(
                 *key, f"retry attempts exhausted ({attempts}/{budget}): {exc}")
             return {"event_id": event["event_id"],

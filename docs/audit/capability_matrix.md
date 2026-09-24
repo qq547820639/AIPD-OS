@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-24T16:12:41`
+- 生成时间：`2026-09-24T16:57:58`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`315cb775dc2b19de3cfd7ad4517b25cea460003a`
+- 默认分支：`main`；HEAD：`a731d82022af362e4671ee6f224b9ea4df7ebcc4`
 - 版本：`5.6.0`
 - 能力总数：`77`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。

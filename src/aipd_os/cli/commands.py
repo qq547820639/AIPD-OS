@@ -506,6 +506,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "cad build": cmd_cad_build,
     "drawing generate": cmd_drawing,
     "outbox drain": cmd_outbox,
+    "outbox review": cmd_outbox,
     "industrialize": cmd_industrialize,
     "validate": cmd_validate,
     "audit": cmd_audit,

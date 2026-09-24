@@ -317,6 +317,10 @@ PASS no_unacknowledged_cve      pip-audit: no unacknowledged CVE
 - `OutboxDispatcher` 在 `src/`、`scripts/` 内**无任何产品调用点**（实测 grep），
   目前只有测试与量具消费它。M5 交付的是机制，接线尚未发生。
   > 2026-09-24 复核：这条仍然成立（dispatcher 依旧无人调用，本轮**没有**把它接上）。
+>
+> 2026-09-24 同日再复核：该状态已被 **F-EXEC-02** 改变——dispatcher 现有产品调用点
+> （`aipd outbox drain`），上方「无调用点」的读数描述的是那一天更早的树。见
+> `EXEC_OUTBOX_WIRING_F-EXEC-02_2026-09-24.md`。
   > 但顺着它量到一个更要紧的相邻缺口并已修复：外部副作用（RFQ 邮件等）在
   > `execution_router` 里从来没有幂等键，重驱动会重复对外发送 —— 见
   > `CAD_2D_DRAWINGS_HOLE_PATTERN_2026-09-24.md` §8.5（F-EXEC-01）。

@@ -34,6 +34,12 @@ VALID_OP_STATUSES = frozenset({
     OP_COMPENSATING, OP_COMPENSATED,
 })
 
+# 未收口的状态：核对视图的分母（SUCCEEDED / FAILED_TERMINAL / COMPENSATED 已收口）
+UNRESOLVED_OP_STATUSES = frozenset({
+    OP_PENDING, OP_DISPATCHED, OP_ACKNOWLEDGED, OP_FAILED_RETRYABLE,
+    OP_UNKNOWN_OUTCOME, OP_COMPENSATING,
+})
+
 # 合法状态转换
 _VALID_TRANSITIONS: dict[str, set[str]] = {
     OP_PENDING: {OP_DISPATCHED, OP_FAILED_TERMINAL},
@@ -252,6 +258,29 @@ class ExternalOperationRepository:
         self._conn.execute(
             f"UPDATE external_operations SET {', '.join(sets)} "
             "WHERE operation_id=? AND tenant_id=? AND project_id=?", params)
+
+    def list_unresolved(self, tenant_id: str = "", project_id: str = "",
+                        limit: int = 100) -> list[dict[str, Any]]:
+        """未收口的外部操作：还挂着、还能重试、结果未知、正在补偿。
+
+        存在的全部理由：`mark_unknown` 会给 outbox 事件置 `completed_at`（它必须离开
+        可领集合，否则超时会被当成可重投 ⇒ 对外发两次），于是这些行从每一个
+        `completed_at IS NULL` 的查询里消失。「供应商到底收没收到」只剩这张台账能回答，
+        所以它需要一个专门的读出口——`idx_ext_ops_status` 就是为这条查询建的。
+        """
+        sql = ("SELECT * FROM external_operations WHERE status IN ("
+               + ",".join("?" * len(UNRESOLVED_OP_STATUSES)) + ")")
+        params: list[Any] = sorted(UNRESOLVED_OP_STATUSES)
+        if tenant_id:
+            sql += " AND tenant_id=?"
+            params.append(tenant_id)
+        if project_id:
+            sql += " AND project_id=?"
+            params.append(project_id)
+        sql += " ORDER BY started_at LIMIT ?"
+        params.append(max(1, int(limit)))
+        return [dict(row) for row in
+                self._conn.execute(sql, params).fetchall()]
 
     @property
     def conn(self) -> sqlite3.Connection:

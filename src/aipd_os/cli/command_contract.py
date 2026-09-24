@@ -107,6 +107,9 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
     CommandEntry("outbox drain", CommandStatus.PUBLIC, CommandCategory.OPERATIONS, "5.10",
                  requires_args=frozenset({"--db"}),
                  description="消费 outbox 事件：真发外部副作用并按幂等台账去重"),
+    CommandEntry("outbox review", CommandStatus.PUBLIC, CommandCategory.OPERATIONS, "5.10",
+                 requires_args=frozenset({"--db"}),
+                 description="核对未收口的外部操作（结果未知/在飞/可重试），有则非零退出"),
 
     # ---- 产品定义 ----
     CommandEntry("product show", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.9",

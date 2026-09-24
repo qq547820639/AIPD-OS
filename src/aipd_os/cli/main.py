@@ -236,6 +236,14 @@ def build_parser() -> argparse.ArgumentParser:
     op.add_argument("--worker-id", default="cli-outbox")
     op.add_argument("--json", action="store_true")
     op.set_defaults(func=COMMAND_FUNCS["outbox drain"])
+    rv = outbox_sub.add_parser(
+        "review",
+        help="列出未收口的外部操作（结果未知/在飞/可重试），有则非零退出。"
+             " Example: aipd outbox review --db state.db")
+    rv.add_argument("--db", required=True)
+    rv.add_argument("--limit", type=int, default=100)
+    rv.add_argument("--json", action="store_true")
+    rv.set_defaults(func=COMMAND_FUNCS["outbox review"])
 
     p = sub.add_parser("industrialize", help="供应链 + 验证执行（报价登记/阶段分析/纠偏任务；无数据则如实报告不虚构）。"  # noqa: E501
                                              " Example: aipd industrialize --db state.db --quote quotes.csv --stage dvt --lab-data lab.csv")  # noqa: E501

@@ -324,6 +324,10 @@ CLI 的 idea.decompose 路径硬传了 `encryption_key=""` ⇒ 空串被当成�
 本轮不做——`OutboxDispatcher` 仍无产品调用点，这条遗留保持原状并已核实在
 §7 记录，不在这里假装已接。
 
+> 2026-09-24 同日之后的 **F-EXEC-02** 已把 dispatcher 接上产品路径
+> （`aipd outbox drain`）；上面那句记录的是写下它时的事实，不是当前状态。见
+> `EXEC_OUTBOX_WIRING_F-EXEC-02_2026-09-24.md`。
+
 ### 8.6 F-GATE-01：Gate 评的是「项目里最后一个想法」，不是这份快照的想法
 
 P2 遗留写的「Gate 绑定 `snap.idea_id`」这句太含糊，所以先量清事实再动手：

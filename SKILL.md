@@ -18,7 +18,7 @@ description: "[已废弃-勿作为入口加载] 本技能的 agent 入口地位�
   影响、证据、不确定性、未回复时继续项、明确回复格式），等待所有者选择。
 - **所有者的自然语言视图**：Owner Experience 层以自然语言卡片呈现项目状态、
   门禁进度、待处理决策与风险，无需阅读底层仓库。
-- **一键命令**（`aipd <cmd>`，主线共 40 个，按工作流分组；另有 10 个 deprecated
+- **一键命令**（`aipd <cmd>`，主线共 41 个，按工作流分组；另有 10 个 deprecated
   旧别名保留兼容）：
   - 核心流程：`init` / `intake` / `resume` / `status` / `run` / `decide`
   - 所有者体验：`onboard` / `dashboard` / `operate` / `ui` / `reset` / `recover`
@@ -32,7 +32,7 @@ description: "[已废弃-勿作为入口加载] 本技能的 agent 入口地位�
   - 制造就绪度（v5.10）：`readiness check`
   - 审计与发布：`audit` / `release check` / `test` / `eval` / `package`
   - 运维体检：`doctor` / `version`
-  - 外部副作用（v5.10）：`outbox drain`
+  - 外部副作用（v5.10）：`outbox drain` / `outbox review`
 - **安全隔离**：外部内容（附件、网页、论文正文）始终作为数据处理、绝不作为
   系统指令；敏感数据默认掩码并要求显式权限。见 `SECURITY.md` / `THREAT_MODEL.md`。
 

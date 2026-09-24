@@ -119,6 +119,18 @@
   少 1（实测 public=39），补为 40 并新增 `tests/test_skill_command_surface.py`
   做同源核对 + 两条注入反证（`skill_quality_audit` 只查「有没有声明」，不查总数）；
   证据与未证范围见 `docs/audit/EXEC_OUTBOX_WIRING_F-EXEC-02_2026-09-24.md`；
+- **v5.10 修复 F-EXEC-05：接线的后果自己也有洞——「结果未知」必须可见**：
+  `mark_unknown` 给事件置 `completed_at`（必须如此，否则超时=可重投=两封信），代价是
+  这些行从所有 `completed_at IS NULL` 查询里消失——实测一次超时后
+  `sent=0 / deduped=0 / pending=0` 三个读数全部「正常」。台账一边有状态机、有
+  `idx_ext_ops_status` 索引、有专用异常 `ExternalOperationUnknownError`，却**无人查询、
+  无人 raise**。现补 `list_unresolved()` 与 `aipd outbox review`（有未收口项 ⇒ exit 4），
+  `drain` 读数加 `needs_review`，同幂等键重放未知态改为拒发等人工核对；重试预算收敛为
+  单点纯函数 `attempt_budget()`（此前事件表与台账各写一份，是 `src/` 第 4 份手写预算）；
+  `execution_runs.duration_ms` 从 5 处硬编码 0 改为 `elapsed_ms()` 单点派生，并把恒真的
+  `assert duration_ms >= 0` 收紧为 `> 0` + 50ms sleep 下界用例；`--db` 路径不存在时
+  exit 2 并说明，绝不替用户建库；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

@@ -25,7 +25,8 @@ from typing import Any, Callable
 
 from aipd_os.execution.runs import canonical_hash
 from aipd_os.state.connection import ConnectionFactory
-from aipd_os.state.dispatcher import OutboxDispatcher
+from aipd_os.state.dispatcher import OutboxDispatcher, attempt_budget
+from aipd_os.state.errors import ExternalOperationUnknownError
 from aipd_os.state.outbox import (
     OP_DISPATCHED,
     OP_FAILED_RETRYABLE,
@@ -101,6 +102,11 @@ def rfq_send_handler(conn: sqlite3.Connection,
         existing = ops.find_by_idempotency_key(
             tenant, project, PROVIDER_SMTP, key,
             operation_kind=OPERATION_KIND_EMAIL) if key else None
+        if existing is not None and existing["status"] == OP_UNKNOWN_OUTCOME:
+            # 结果未知 ≠ 可以重发：重新入队同一条也必须拒发，等人工核对
+            raise ExternalOperationUnknownError(
+                f"幂等键 {key} 的外部调用结果未知"
+                f"（operation {existing['operation_id']}），需人工核对后才能重发")
         if existing is not None and existing["status"] == OP_SUCCEEDED:
             # 完成状态由 dispatcher 统一写（note 从返回值派生），这里不自己 mark
             return {"deduped": True,
@@ -124,8 +130,7 @@ def rfq_send_handler(conn: sqlite3.Connection,
             # 不必在此分叉；状态机本身会拒绝其它来源态。
             ops.transition_status(operation_id, tenant, project, OP_DISPATCHED)
 
-        attempts = int(event.get("attempt_count", 0)) + 1
-        budget = int(event.get("max_attempts", 0) or 0) or 1
+        attempts, budget, exhausted = attempt_budget(event)
         try:
             message_id = (sender or _smtp_send)(
                 payload.get("host", ""), int(payload.get("port") or 25),
@@ -137,7 +142,7 @@ def rfq_send_handler(conn: sqlite3.Connection,
                                   OP_UNKNOWN_OUTCOME, error=str(exc))
             raise
         except Exception as exc:  # noqa: BLE001 - 分类由异常类型决定，不吞
-            if attempts >= budget:
+            if exhausted:
                 ops.transition_status(operation_id, tenant, project,
                                       OP_FAILED_TERMINAL, error=str(exc))
             else:

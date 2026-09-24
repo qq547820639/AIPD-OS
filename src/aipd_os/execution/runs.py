@@ -16,6 +16,24 @@ from typing import Any, cast
 
 from aipd_os.execution.models import ExecutionRecord
 
+
+def elapsed_ms(start_iso: str | None, end_iso: str | None) -> int | None:
+    """两条 ISO 时间戳之间的毫秒数；无法解析则返回 None（不猜 0）。
+
+    只在此处计算。负值钳到 0：墙钟被回拨时宁可显示 0，也不让一次运行看起来
+    耗时为负。
+    """
+    if not start_iso or not end_iso:
+        return None
+    try:
+        start = datetime.fromisoformat(str(start_iso))
+        end = datetime.fromisoformat(str(end_iso))
+    except ValueError:
+        return None
+    if start.tzinfo is None or end.tzinfo is None:
+        return None
+    return max(0, int((end - start).total_seconds() * 1000))
+
 _SCHEMA = r"""
 CREATE TABLE IF NOT EXISTS execution_runs(
  run_id TEXT PRIMARY KEY,
@@ -156,6 +174,16 @@ class RunStore:
 
     def update_run(self, run_id: str, **fields: Any) -> ExecutionRecord:
         """更新运行记录并返回最新 :class:`ExecutionRecord`。"""
+        # 时长只有一个计算点：调用方写了 end_time 而没写 duration_ms 时，由这里
+        # 按行上已存的 start_time 派生。此前四个调用点各自硬写 duration_ms=0，
+        # 于是 execution_runs 里每条记录的耗时都是 0——一个被存下来的假数字。
+        if "end_time" in fields and "duration_ms" not in fields:
+            with self.connect() as c:
+                row = c.execute("SELECT start_time FROM execution_runs"
+                                " WHERE run_id=?", (run_id,)).fetchone()
+            derived = elapsed_ms(row[0] if row else None, fields["end_time"])
+            if derived is not None:
+                fields["duration_ms"] = derived
         allowed = {
             "work_id",
             "tool",
@@ -218,8 +246,9 @@ class RunStore:
         ts = _now()
         with self.connect() as c:
             c.execute(
-                "UPDATE execution_runs SET status='retried',end_time=?,duration_ms=? WHERE run_id=?",  # noqa: E501
-                (ts, 0, prev_run_id),
+                "UPDATE execution_runs SET status='retried',end_time=?,duration_ms=?"
+                " WHERE run_id=?",
+                (ts, elapsed_ms(prev.start_time, ts) or 0, prev_run_id),
             )
         lineage = list(prev.retry_lineage) + [prev_run_id]
         return self.create_run(

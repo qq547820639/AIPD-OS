@@ -163,3 +163,91 @@ grep -rn "build_rfq_dispatcher\|OutboxQueue(" src/aipd_os | grep -v "side_effect
 | `skill_quality_audit` | 0 警告 0 失败（新命令已声明） |
 | 能力矩阵 | 总数仍 77；`industrialize.email_execution` 的分类保持 `external_dependency`（真发仍依赖外部 SMTP），只补齐了入口符号、run_command 与 unit_test 引用 |
 | 工作树 | `git status --short` 空；提交未 push、tag 未动、bundle 未重签 |
+
+---
+
+# 第二部分 F-EXEC-05 · 「结果未知」必须可见，预算与耗时只能有一处真相
+
+接线闭合后复跑遗留清单时量出来的第二条：上一部分把事件化跑通了，但也留下一个
+**只有接线才会出现**的洞。
+
+## 9. 缺陷
+
+1. **未知行凭空蒸发**（上一部分自己造成的）。`mark_unknown` 给事件置
+   `completed_at`——它必须离开可领集合，否则超时=可重投=供应商收到两封信。
+   代价是这些行从此不在任何 `completed_at IS NULL` 的查询里，包括 `drain` 自己
+   唯一的 `pending` 计数。实测一次超时后的读数：`sent=0 / deduped=0 / pending=0`
+   ⇒ 三个数都正常，什么都不说。
+2. **台账有状态机、有索引、有专用异常，但无人查询、无人 raise**：
+   `idx_ext_ops_status`（`migrations/helpers.py:413`）服务的查询全仓不存在；
+   `state/errors.py:54 ExternalOperationUnknownError` 的唯一引用是契约测试里
+   `issubclass(...)` 那一行——它从来没被 raise 过。
+3. **重试预算被写了两遍**：`dispatcher._retry_or_exhaust` 与 handler 各自
+   `attempt_count+1 >= max_attempts`，两条腿可以各说各话（事件终止、台账还在
+   `FAILED_RETRYABLE`）。实测这是 `src/` 里第 4 份手写预算（另两份在
+   `execution_router.py:165-194`、`product_truth/propagation.py:171-205`）。
+4. **`duration_ms` 存的是写死的 0**：`execution_router.py` 四处 +
+   `runs.record_retry` 一处全部 `duration_ms=0`，而常驻用例的断言是
+   `assert rec.duration_ms >= 0` —— 0 >= 0 恒真。数据库里那条耗时字段从来没
+   携带过信息。
+5. **`PropagationEngine`（带 `backoff_until` 的持久化返工预算）产品侧 0 调用点**：
+   `grep` 实测只有它自己 `__init__.py` 的再导出。这是与 outbox 同一类的第四条
+   未跟踪遗留，先登记不做。
+
+## 10. 修法
+
+- `ExternalOperationRepository.list_unresolved(tenant?, project?, limit)`：
+  分母 = `UNRESOLVED_OP_STATUSES`（PENDING / DISPATCHED / ACKNOWLEDGED /
+  FAILED_RETRYABLE / UNKNOWN_OUTCOME / COMPENSATING），收口三态
+  （SUCCEEDED / FAILED_TERMINAL / COMPENSATED）不进来了。走已有的 `idx_ext_ops_status`。
+- 新 CLI 动词 `aipd outbox review`：列未收口台账，**有则 exit 4**（`ok:false` +
+  `status:HOLD`），`drain` 的读数里加 `needs_review` 与 `unresolved_statuses`。
+- `rfq_send_handler` 对同一幂等键已处于 `UNKNOWN_OUTCOME` 的情况
+  **raise `ExternalOperationUnknownError`** ⇒ 重新入队也拒发，等人工核对。
+  该异常从此有 raise 点、有常驻用例。
+- 预算收敛成 `state/dispatcher.attempt_budget(event) -> (已试次数, 上限, 是否用尽)`
+  一处纯函数，事件表与台账都用它；新增配对用例断言两者同时终止。
+- 耗时收敛成 `runs.elapsed_ms(start, end)` 一处，`update_run` 在调用方写了
+  `end_time` 而没写 `duration_ms` 时派生；删掉 5 处硬编码 0；
+  把恒真断言改成 `> 0`，并加 50ms sleep 的下界用例（≥40ms）与
+  「显式给了就不覆盖」用例。缺时区/解析不了/回拨一律 `None` 或钳 0，不拿 0 冒充测量。
+- CLI 传进去的 `--db` 路径**必须先存在**，否则 exit 2 并说明——绝不替用户建库
+  （第一部分 §5-5 那种「在仓库根建了 4 个文件」的事不能再发生）。
+
+## 11. 遗留清单的更正（closure / limits / telemetry 这条基本是陈账）
+
+本轮实测三个模块的调用点后，`overview.md` 里「结构性大项：closure/limits/telemetry 接线」
+需要按事实改写，避免下一轮又照着它去「接线」而重复实现已有的东西：
+
+| 模块 | 产品调用点（实测） | 与今天 outbox 的关系 | 裁决 |
+| --- | --- | --- | --- |
+| `execution/limits.py` 10 个公开名字 | 0（只有 `tests/test_execution_limits.py`） | `RetryPolicy`/`ConcurrencyGate`/`CheckpointStore` 都被事件表的**持久化**版本取代（`attempt_count/max_attempts`、单语句 claim + 租约、`external_operations`）；只有 `DurationBudget` 不是重复，但「进程内累加」对可重启队列是错的形状 | **不再接线**；`RetryPolicy` 明确列为禁止复用项（§9-3 刚清掉一份重复，不迎第二份） |
+| `execution/closure.py` + `closure_core.py`（13 个公开符号） | 0（只有两个测试文件） | 重试/返工/成本/进度台账与 `execution_runs` + `external_operations` 三处重复；`telemetry` 无关；它**不含**补偿逻辑，所以接它也修不好 `COMPENSATING→COMPENSATED` 不可达 | 保留但改标为「未接线的实验层」，并登记「三条腿重复记账」为技术债，不再当作待办功能 |
+| `telemetry/metrics.py` / `logging.py` | 0；`get_telemetry_logger` 连测试都没有 | 无 sink：`snapshot()/to_json()` 只把 dict 交回调用方，没有任何文件/表/导出 | 接线的前提是先决定「数去哪儿」。当前最小有价值动作是本轮已做的 `duration_ms` 真测量——先把已有的表填对，再谈新指标 |
+| `product_truth/PropagationEngine` | 0（新增登记） | 与 dispatcher 的预算重复，但它是**持久化 `backoff_until`** 的那一份 | 登记为第四条遗留；下一轮若做退避，应以它为准而不是再写第三份 |
+
+`docs/audit/IMPRESSION_AND_P2_UX_CLOSURE_2026-08-14.md:125` 早就写过「决定去留
+（接入 run_supervisor 或标记实验层并删除）」——本轮给的就是这个决定：**不接入、
+标记为实验层、删除留给 owner**（1000+ 行仍在被维护的模块不在自动化轮次里删）。
+
+## 12. 本部分自己制造又抓出的两处（同样登记）
+
+1. **把恒真断言改成 `duration_ms > 0` 造出一个偶发红用例。** 单跑
+   `test_success_records_all_fields_and_persists` 永远绿，全量第二次跑就红——
+   `doc.generate` 常在 1ms 内完成，墙钟粒度足以让真值就是 0。判据比问题还抖时，
+   下一步一定有人把 0 写回去。改法：快路径只钉「派生过且非 NULL」，
+   **「真在测量」这个性质下移到 50ms sleep 的用例上钉 ≥40ms**（50 ≫ 1，稳定），
+   并在注释里写清为什么这里不用 `> 0`。改完连跑 3 次全绿。
+2. **CLI 拆函数后遗留两个作用域 bug**：`_drain` 里用了只在 `cmd_outbox` 内 import 的
+   名字（NameError），以及 `review` 的 `limit` 默认值与 `drain` 混用。都是先写测试
+   才立刻暴露的——把仓库根的 `--db` 前提检查写成用例（路径不存在 ⇒ exit 2 且不建库）
+   时一起抓到。
+
+## 13. 第二部分收尾读数（现场复算）
+
+| 门禁 | 读数 |
+| --- | --- |
+| 全量 `pytest -q --json-report` | **1426 passed / 0 failed / 3 skipped** |
+| 本轮新增/改写用例 | 12（reconciliation 8 + duration 4；并把 1 条恒真断言换成可失败形状） |
+| `ruff` / `mypy` | 0 / 0（371 文件） |
+| `production_release_gate --release-ready --tag v5.6.0` | 见本部分末尾（8/8 = v5.6.0 那棵树，非本轮树） |

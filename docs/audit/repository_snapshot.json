@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-24T16:12:37",
-  "source_commit": "315cb775dc2b19de3cfd7ad4517b25cea460003a",
+  "generated_at": "2026-09-24T16:57:56",
+  "source_commit": "a731d82022af362e4671ee6f224b9ea4df7ebcc4",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "315cb775dc2b19de3cfd7ad4517b25cea460003a",
-  "latest_commit_time": "2026-09-24 15:30:57 +0800",
+  "latest_commit_sha": "a731d82022af362e4671ee6f224b9ea4df7ebcc4",
+  "latest_commit_time": "2026-09-24 16:29:31 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -22,10 +22,6 @@
       ".trae/",
       ".venv/",
       ".venv-ci/",
-      "<pytest_fixture(<bound method db of <tests.test_outbox_rfq_wiring.TestCliDrain.test_drain_command_reports_send.<locals>._Args object at 0x10acfb130>>)>",
-      "<pytest_fixture(<bound method db of <tests.test_outbox_rfq_wiring.TestCliDrain.test_drain_command_reports_send.<locals>._Args object at 0x117c79370>>)>",
-      "<pytest_fixture(<bound method db of <tests.test_outbox_rfq_wiring.TestCliDrain.test_drain_command_reports_send.<locals>._Args object at 0x11888c640>>)>",
-      "<pytest_fixture(<bound method db of <tests.test_outbox_rfq_wiring.TestCliDrain.test_drain_command_reports_send.<locals>._Args object at 0x11a5e5b80>>)>",
       "agents/",
       "assets/",
       "build/",
@@ -89,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 147
+      "tests": 149
     }
   },
   "tags": [
@@ -120,114 +116,102 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 563,
-    "hash_matches": 550,
-    "hash_mismatch_count": 13,
+    "total_files": 568,
+    "hash_matches": 556,
+    "hash_mismatch_count": 12,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "6999c26b0be408f0e250e279135b7708658e4c2872d91a9e523fbfc3649dfb80",
-        "actual": "a62f849c085754b68055d7c6c3daa9ec610d6a9e662c16c1a77efd1605526a22"
+        "expected": "3288da7067b2150fffb4b1c62d1cba85a95a51a68bf245bb3f4e5b694ce4eab2",
+        "actual": "fd92b3d4e1ad1c15ffb004330b550b2650646ff94df79d2ea23ac0fd65ebcd82"
       },
       {
-        "path": "docs/architecture/state_ownership.md",
+        "path": "SKILL.md",
         "reason": "hash_mismatch",
-        "expected": "f62f45733ac12c346e6d77d13596570bc0b826216d1205b3bc939f0ca98871d5",
-        "actual": "7907c954c63b43ba69d69623aa74955cb47e55faf479446d00c2d9b41a2dc42e"
+        "expected": "15e8434be6b686c43a8c4ebd08574b601f39ebbe31273d2a6c2f0cb449184277",
+        "actual": "76c18f65bbc66454b50625f86c6fc0cde5bfad45c9554c13bd4a37f23a1be51c"
       },
       {
         "path": "src/aipd_os/cli/command_contract.py",
         "reason": "hash_mismatch",
-        "expected": "1bb4f328de5d74a2de32dafd9b2ae2f51bc11dab8d32b364e267d2ebc70bfe40",
-        "actual": "eaf6b0e632d5dab755c52e1e33bf32a74280fdf8bc3663cf05976884caf90802"
+        "expected": "eaf6b0e632d5dab755c52e1e33bf32a74280fdf8bc3663cf05976884caf90802",
+        "actual": "f9b7628660a4646bd5a1dd8904bdf00b8b341b7e7170a99b560490d95235c438"
       },
       {
         "path": "src/aipd_os/cli/commands.py",
         "reason": "hash_mismatch",
-        "expected": "367c83e3c8deaed604cd37255c57c418e37bb3d6384fe7b9123f1e3a24965150",
-        "actual": "d389e8ec78faf970a2c2e707db1c8429d61d2c3f67215c9e1e8b104966b386a8"
+        "expected": "d389e8ec78faf970a2c2e707db1c8429d61d2c3f67215c9e1e8b104966b386a8",
+        "actual": "c87a6e5078cfe7af5ee593b985c9350e2e316e7885e573c6d62c3b636d3ef406"
+      },
+      {
+        "path": "src/aipd_os/cli/commands_outbox.py",
+        "reason": "hash_mismatch",
+        "expected": "40c8eccb309be73b1d0bc42ae4b43dbf1d73a3fa42bee095d7e5fe39beab2d7d",
+        "actual": "f3bbc4daa48775608ca62df5ea70d40bf1d6d775ab9c510bc81f7f227bd278d4"
       },
       {
         "path": "src/aipd_os/cli/main.py",
         "reason": "hash_mismatch",
-        "expected": "f5053df9ad7f20503b0448ebf04e669e1e74ff41bdd5fa920cf59667cdcc35c0",
-        "actual": "025ed01c93ac8fdd319d2b81a3527cef9cd62f5ef42385069e473b92d4046e07"
+        "expected": "025ed01c93ac8fdd319d2b81a3527cef9cd62f5ef42385069e473b92d4046e07",
+        "actual": "ccad143bdea4beda88ccedce153c36f5bdaebf22dc5375e490a8f0e806fa15c0"
       },
       {
-        "path": "src/aipd_os/registry_data.py",
+        "path": "src/aipd_os/execution/execution_router.py",
         "reason": "hash_mismatch",
-        "expected": "3f666e5f59356ab7729d6baf58d0750e5084c845ed7147dee1c639cdce18a7ce",
-        "actual": "6b6887ba453123b37a804ed86229fd5d430ae741b7d220fb942910658b9deb1b"
+        "expected": "f62bb75eecb63030610f8ada1ab74ff609b797023f3200eb91e77e982371ab08",
+        "actual": "efd9dd89348e1cdf528a244c9f39481ddd9b93a218a86f47341b1e986401c6d2"
+      },
+      {
+        "path": "src/aipd_os/execution/runs.py",
+        "reason": "hash_mismatch",
+        "expected": "55b10e9e2565853234e66794aa4f6dbad3dffb6141a175c26a3dad97ebb9576a",
+        "actual": "e2e8f5df04708cc8f19935fd3027bc99763e735511c2eac3332367dddf45496b"
+      },
+      {
+        "path": "src/aipd_os/execution/side_effects.py",
+        "reason": "hash_mismatch",
+        "expected": "f173616bdd7b951143657e10b883d0e2f5d9b770037e8b022df454610e208046",
+        "actual": "392af13799f1c60340846a4332bb8b2a5b8ebb0e29ca26ff9167f9f2ddcf7d4c"
       },
       {
         "path": "src/aipd_os/state/dispatcher.py",
         "reason": "hash_mismatch",
-        "expected": "0b6529b8201b0ea9e7623b2881be7334745eff9417c5c272eb8da18d6131e9b8",
-        "actual": "34e073ae1d48fe6bfba0fc05462c2f4893dde4289c14d4c5eb9cf04e59c95a04"
+        "expected": "34e073ae1d48fe6bfba0fc05462c2f4893dde4289c14d4c5eb9cf04e59c95a04",
+        "actual": "9d54ac57b4269f383133eb71589e9c51314b3a292d3ccc3e7d2bc2623ec09331"
       },
       {
         "path": "src/aipd_os/state/outbox.py",
         "reason": "hash_mismatch",
-        "expected": "448e6262ae28b38ffe5c2394430e5f305c9c49c52cef04f378063e208e78627d",
-        "actual": "0e5966f776f3bc9738aaa7544d5fed23b5d6bf6b7f6a480593162d49816ed88e"
+        "expected": "0e5966f776f3bc9738aaa7544d5fed23b5d6bf6b7f6a480593162d49816ed88e",
+        "actual": "3a4499bac0668e8f5d505dadc8941c3a2bfe7d2bf263df13331d2e317e69d552"
       },
       {
-        "path": "src/aipd_os/state/stale_propagation.py",
+        "path": "tests/test_execution_router.py",
         "reason": "hash_mismatch",
-        "expected": "fb3b9b4eb1c32579f63112825052f49c8723e884b64b3acc6e03aa7af12dde58",
-        "actual": "59038065386592f629b32db4d69aebe3e4429bd574ec382bc708336ab4a6122c"
-      },
-      {
-        "path": "src/aipd_os/supervisor/supervisor.py",
-        "reason": "hash_mismatch",
-        "expected": "67efcf1d25a826db9d8610b581dc8c83b8d8783b6ee4de2d479962316604165a",
-        "actual": "871b515e5ef18d0a9fc84a1406861aa5b341cc948606afd012f77e6c8ea54810"
-      },
-      {
-        "path": "src/aipd_os/tool_adapters/builtin.py",
-        "reason": "hash_mismatch",
-        "expected": "28b36b73d070756d881233786fc131e1203c7db75cb4993e343549c98b296507",
-        "actual": "faa2fed2c9b6fd747ebfd642034074223d7cca254d783e922222c1b8668f7d4a"
-      },
-      {
-        "path": "src/aipd_os/tool_adapters/mail_rfq_adapter.py",
-        "reason": "hash_mismatch",
-        "expected": "edb8f96f55a6584d44029b3369c2c0070dd85da17c303667e16616c64221cfc4",
-        "actual": "889c69ce0e7f44e3ca2e49f372f9e2c64f0726bf88014ddb301c86555b0d2dd7"
-      },
-      {
-        "path": "tests/maturity_consistency_test.py",
-        "reason": "hash_mismatch",
-        "expected": "158a506b570903caed511efe0c7d91d528c130010de3f6ef322b9672d0a054d0",
-        "actual": "5dfcdb79edb5ed6eab84672f9f8f8d6e8323c67ed1d9b5a0a297ccfe3fb9aa1c"
+        "expected": "b2b294bb1cbd1229272855e5fdae68c9c565ecad2549cd9e312824aa74d08b9a",
+        "actual": "42821e00fb6c946dc9b8ba9e19c8c4c9c488988f2756cdd53083f19639936cc5"
       }
     ]
   },
   "untracked_or_generated": [
     " M CHANGELOG.md",
-    " M docs/architecture/state_ownership.md",
+    " M SKILL.md",
+    " M docs/audit/CAD_2D_DRAWINGS_HOLE_PATTERN_2026-09-24.md",
+    " M docs/audit/EXEC_OUTBOX_WIRING_F-EXEC-02_2026-09-24.md",
+    " M docs/audit/P2_M10_STATE_PERF_CLOSURE_2026-09-24.md",
     " M docs/audit/pytest-report.json",
     " M src/aipd_os/cli/command_contract.py",
     " M src/aipd_os/cli/commands.py",
+    " M src/aipd_os/cli/commands_outbox.py",
     " M src/aipd_os/cli/main.py",
-    " M src/aipd_os/registry_data.py",
+    " M src/aipd_os/execution/execution_router.py",
+    " M src/aipd_os/execution/runs.py",
+    " M src/aipd_os/execution/side_effects.py",
     " M src/aipd_os/state/dispatcher.py",
     " M src/aipd_os/state/outbox.py",
-    " M src/aipd_os/state/stale_propagation.py",
-    " M src/aipd_os/supervisor/supervisor.py",
-    " M src/aipd_os/tool_adapters/builtin.py",
-    " M src/aipd_os/tool_adapters/mail_rfq_adapter.py",
-    " M tests/maturity_consistency_test.py",
-    "?? \"<pytest_fixture(<bound method db of <tests.test_outbox_rfq_wiring.TestCliDrain.test_drain_command_reports_send.<locals>._Args object at 0x10acfb130>>)>\"",
-    "?? \"<pytest_fixture(<bound method db of <tests.test_outbox_rfq_wiring.TestCliDrain.test_drain_command_reports_send.<locals>._Args object at 0x117c79370>>)>\"",
-    "?? \"<pytest_fixture(<bound method db of <tests.test_outbox_rfq_wiring.TestCliDrain.test_drain_command_reports_send.<locals>._Args object at 0x11888c640>>)>\"",
-    "?? \"<pytest_fixture(<bound method db of <tests.test_outbox_rfq_wiring.TestCliDrain.test_drain_command_reports_send.<locals>._Args object at 0x11a5e5b80>>)>\"",
-    "?? docs/audit/EXEC_OUTBOX_WIRING_F-EXEC-02_2026-09-24.md",
-    "?? src/aipd_os/cli/commands_outbox.py",
-    "?? src/aipd_os/execution/side_effects.py",
-    "?? tests/test_outbox_dispatcher_semantics.py",
-    "?? tests/test_outbox_rfq_wiring.py",
+    " M tests/test_execution_router.py",
+    "?? tests/test_outbox_reconciliation.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],
