@@ -241,8 +241,15 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     零件没声明 bom_item / BOM 有行而图上没有球标指它（这张图漏了零件）。
 #     绑不上的数量留空，不折算成 0。--db 与 --bom 必须一起给，且那张 BOM 得真在：
 #     编号写错会当场 rc=2，而不是被当成空 BOM 报成一堆「每行都找不到」。
+#     注意 --db 指的是**状态库**：BOM 按产品口径取同目录的 bom.db（不给权威状态库加表，
+#     状态库迁移已冻结）。读不到那个文件就报错，不顺手建一个空库。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
+#     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。
+#     装配图特有的三条判定：球标↔BOM 未闭合 ⇒ assembly_unresolved（阻断）；
+#     图上数量所属 BOM 与本份证据所核 BOM 不一致 ⇒ assembly_bom_mismatch（阻断）；
+#     出图时没接 BOM ⇒ assembly_bom_unverified（提示，不阻断：图仍成立，只是数量没核）。
+#     一张漏了零件的装配图不能再读成 ok=true。
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"
 #   ↑ 失效传播：沿血缘把下游 truth 标 stale、生成有界返工任务（rework_tasks，默认上限 3 次），
 #     并给出 owner 可读的四段变更说明（改了什么/为何影响/修复计划/需要批准什么）。

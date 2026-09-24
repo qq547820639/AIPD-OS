@@ -532,6 +532,35 @@
   干涉检查、爆炸图与装配约束。证据见
   `docs/audit/CAD_ASSEMBLY_BOM_LINK_F-DRAW-01_2026-09-25.md`；
 
+- **v5.10 F-DRAW-01 第 14 片：发布证据分清单件图与装配图，并对未闭合的球标判阻断**：
+  改前 `aipd release manifest` 只报 `drawing_count`，装配图与单件图在发布文档里长得一样，
+  且装配图证据里的 `assembly_issues` 被整个忽略——真跑量到「一张漏了零件的装配图
+  读起来是 `ok: true`、无问题项」。新增 `evidence.drawings[].kind`（`part`/`assembly`）
+  与 `part_drawing_count` / `assembly_drawing_count` 两个细分计数（`drawing_count`
+  的既有含义不动），以及三条判定：`assembly_unresolved`（球标↔BOM 未闭合 ⇒ 阻断）、
+  `assembly_bom_mismatch`（图上数量取自另一张 BOM ⇒ 阻断，计数一致性不成立）、
+  `assembly_bom_unverified`（出图没接 BOM ⇒ **非阻断**提示：图仍成立，但数量没核）。
+  manifest 不重算绑定，只搬运图纸证据里的判定；分类看证据里的 `assembly` 字段而不是文件名。
+  **同时修掉第 13 片我埋的更严重的坑**：`--db` 指的是状态库，BOM 按产品口径在同目录的
+  `bom.db`（`bom/store.py:3-5` 明写「不给权威状态库加表，状态库迁移已冻结」），
+  而我写成 `BomStore(args.db)`——`BomStore.__init__` 会建库建表，实测一次只读的
+  「出装配图并核数量」把状态库的表从 **42 张加到 46 张**（boms/bom_lines/bom_changes/
+  bom_id_sequences），而那条命令本身还返回了 rc=2：**命令失败，副作用留下**。
+  修法是把换算收成一处 `bom/store.py:bom_store_path`，让 `aipd bom`、`release manifest`、
+  `drawing assembly` 三处共用（后两处原本各抄了一份表达式），并规定只读方在构造
+  `BomStore` 之前必须先确认文件存在——读不到就报 `bom_db_missing` / rc=2，
+  **不凭空建一个空 BOM 库**（那会把「没接线」伪装成「接上但是空的」）。
+  测试夹具也改成走同一个换算：路径口径一旦被改，测试会跟着红而不是继续绿。
+  守卫：`tests/test_release_manifest.py` +11 条、`tests/test_cad_assembly_bom_link.py`
+  +4 条（含「状态库表集不许变」「状态库路径写错即使同目录 bom.db 能读也拒绝」）；
+  变异电池 R1-R8 **8/8 killed**，第 13 片复跑 **17/17 killed**——上一片幸存的 N8
+  在这一片才被杀掉（去掉状态库存在性检查后，同目录恰好有 bom.db 时会照常出图）。
+  R7 首轮把目标用例指错（单件图那条永远走不到 `_check_assembly`，等于空判），
+  补了「未绑 BOM 的装配图」用例后才成立：targeting 本身也要被检。
+  仍未判：明细表材料/供应商与 BOM 的一致性、一张 BOM 对多张装配图的去重、
+  「C6 是否要求装配图必须绑 BOM」（要业务口径，先只留提示）。证据见
+  `docs/audit/RELEASE_EVIDENCE_ASSEMBLY_F-DRAW-01_2026-09-25.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与
