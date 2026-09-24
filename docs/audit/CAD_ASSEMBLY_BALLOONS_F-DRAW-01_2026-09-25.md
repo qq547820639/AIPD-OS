@@ -126,13 +126,16 @@ rc=0
 
 - `src/aipd_os/cad/assembly.py`（新增）：清单解析与声明校验、逐件读 STEP（含 sha256 与
   `solid_count`）、`_translate` 刚体平移、`build_assembly_view`（含质心挂点、包络、重叠、
-  `balloon_view`、锚点冲突告警）、`parts_list_rows`、`overlap_warnings`、`draw_parts_list`、
-  `render_assembly`。
-- `src/aipd_os/cad/drawings2d.py`：`ViewGeometry.assembly` 字段；`write_dxf` 新增
-  `assembly_parts` / `bom` 入参与 `assembly` / `parts_list` / `bom` / `assembly_issues` /
-  `assembly_warnings` 证据键；每视图新增 `segments` / `balloons` / `balloon_view` /
-  `envelope` / `overlap_area_mm2`；`_draw_view` 末尾用**同一个 `place`** 调 `render_assembly`；
-  装配分支 `_generate_assembly` 拒绝 `--section/--detail`；`_finish_evidence` 抽出共用收尾。
+  `balloon_view`、锚点冲突与重叠告警文案，并把 `render_overlay` 挂成 `render_assembly`）、
+  `parts_list_rows`、`draw_parts_list`、`render_assembly`、
+  **`generate_assembly_drawing`（装配图的端到端入口，由它 import 图纸模块）**。
+- `src/aipd_os/cad/drawings2d.py`：`ViewGeometry` 加 `assembly`（纯数据）与 `render_overlay`
+  （回调）两个字段；`write_dxf` 加 `layout_hook(msp, sheet_wh) -> dict` 与 `extra_evidence`
+  两个入参，装配侧靠它们把明细表画进图框、把 `assembly`/`bom` 并进证据，
+  **本模块不再 import 装配模块**；每视图新增 `segments` / `balloons` / `balloon_view` /
+  `envelope` / `overlap_area_mm2`；`_draw_view` 末尾按 `render_overlay` 回调画球标，
+  与图线共用**同一个 `place`**；`_finish_evidence` 抽出共用收尾；
+  `generate_drawing` **不再有 `assembly=` 分支**。
 - CLI：`cmd_drawing_assembly` + `main.py` 的 `drawing assembly` 子命令 +
   `command_contract` 一条 PUBLIC 条目（public 48 条，SKILL.md 同步 47→48）。
 - `registry_data.py` 的 `cad.2d_drawings`：实现文件、input_output、unit_test、e2e_evidence、
@@ -140,26 +143,30 @@ rc=0
   改成「装配建模…（二维的装配图与形位框已本地出图）」，避免被读成图纸侧也没做。
 - `tests/test_cad_assembly_balloons.py`（新增 27 条）、`tests/test_cad_drawings2d.py`（声明看守收紧）。
 
-## 六、用例与变异（9 条变异全部被杀）
+## 六、用例与变异（12 条变异全部被杀）
 
-27 条常驻用例（`tests/test_cad_assembly_balloons.py`）。变异跑法见 §九，逐条与结果：
+28 条常驻用例（`tests/test_cad_assembly_balloons.py`）。变异跑法见 §九，逐条与结果：
 
 | 变异 | 打红的那条 |
 |---|---|
 | M1 锚点冲突告警永不发出 | `test_two_parts_collapsing_to_one_anchor_are_reported_as_ambiguity` |
 | M2 球标编号改成遍历顺序 `slot+1` | `test_balloon_numbers_come_from_the_manifest_and_the_column_is_ordered` |
 | M3 所有 segment 归属写成第一个零件 | `test_each_part_contributes_geometry_and_keeps_its_own_identity` |
-| M4 明细表不画 | `TestPartsList`（整类） |
+| M4 明细表不画（`layout_hook` 不调用） | `TestPartsList`（整类） |
 | M5 每个视图都标球标 | `test_only_the_first_requested_view_gets_balloon_numbers` |
 | M6 命令行把 hold 吞成 rc=0 | `test_part_without_solids_holds_the_command_at_rc4` |
 | M7 `balloon_view` 恒真 | `test_only_the_first_requested_view_gets_balloon_numbers` |
 | M8 登记指向不存在的实现文件 | `test_registry_declares_real_entry_and_honest_limitation` |
 | M9 登记的 limitation 不再写「不是干涉判定」 | 同 M8 |
+| M10 图纸模块反向 import 装配模块 | `tests/test_import_cycles.py::test_no_import_cycles` |
+| M11 `render_overlay` 挂着但从不回调（球标静默消失） | `test_render_assembly_is_the_only_producer_of_the_balloon_layer` |
+| M12 钩子画了但证据被丢弃 | `TestPartsList`（整类） |
 
 M5/M7 是本轮**补出来的**：先前只有圆圈总数在间接看守「只标一个视图」，
-补了显式断言后两条变异才各自有了专属看守。变异器本身也修了一处假绿风险：
-node id 写错时 pytest 返回 rc≠0 会被误记成「杀掉变异」，现在先跑 baseline、
-并对「no tests ran」单独报 INVALID-TEST-ID（M3 的 id 就是这么被抓出来的）。
+补了显式断言后两条变异才各自有了专属看守。M10/M11/M12 是 §十一 那次重构的产物——
+钩子这种「靠约定接线」的形状必须自带会红的看守，否则静默不生效比报错更难查。
+变异器本身也修了一处假绿风险：node id 写错时 pytest 返回 rc≠0 会被误记成「杀掉变异」，
+现在先跑 baseline、并对「no tests ran」单独报 INVALID-TEST-ID（M3 的 id 就是这么被抓出来的）。
 
 ## 七、顺手发现：同一份登记的两种「存在性」检查形状不一致
 
@@ -181,8 +188,11 @@ M8 证明收紧后的尺子真会红。
   要核就得复用 `supply_chain/impact` 的 item 归一化全等规则，并把明细表的数量列接到
   BOM 权威上。**本轮一个猜测值都不印**，明细表只有 ITEM/PART 两列；`--spec` 也不在
   装配命令面上（装配视图只有包络尺寸，件级特征公差属于单件图）。
-- **装配视图上拒绝剖视与局部放大**（rc=2）。裁剪/切割按合并折线做，会把归属打散，
-  球标就成了指错零件的假标注。
+- **装配视图上没有剖视与局部放大的入口**。函数面 `generate_assembly_drawing` 没有
+  `sections/details/spec` 形参，命令行也没有对应 flag（argparse 直接 rc=2）：裁剪/切割
+  按合并折线做，会把归属打散，球标就成了指错零件的假标注。这条由
+  `test_assembly_drawing_does_not_expose_derived_view_flags` 用签名现算钉住——
+  防线不能只靠「命令行没给 flag」，否则别的产品代码能绕过去。
 - **爆炸图与装配约束/配合未做**。`cq.Assembly.solve/constrain` 是已记录的下一步入口。
 - **零件只支持平移摆放**（manifest 的 `offset` 是三个数）。旋转要走 `Location`，与约束一起再做。
 - C6 生产图纸包整体仍不成立：缺的是「总装图 + 爆炸图 + ICD + DFA」这一串，不是再一种画法。
@@ -191,13 +201,12 @@ M8 证明收紧后的尺子真会红。
 
 ```bash
 cd AIPD-OS
-.venv/bin/python -m pytest tests/test_cad_assembly_balloons.py -q      # 27 passed
-.venv/bin/python -m pytest tests/test_cad_*.py -q                       # 243 passed（含本片）
+.venv/bin/python -m pytest tests/test_cad_assembly_balloons.py -q      # 28 passed
+.venv/bin/python -m pytest tests/test_cad_*.py tests/test_import_cycles.py -q   # 246 passed
 .venv/bin/python -m ruff check src tests                                # All checks passed
-.venv/bin/python -m mypy src/aipd_os/cad/assembly.py src/aipd_os/cad/drawings2d.py \
-    src/aipd_os/cli/commands_drawing.py tests/test_cad_assembly_balloons.py
+.venv/bin/python -m mypy src tests                                      # Success: no issues found in 395 source files
 .venv/bin/python -m pytest tests/test_skill_command_surface.py -q       # 3 passed
-.venv/bin/python /tmp/mutate_assembly.py                                # 9/9 mutations killed
+.venv/bin/python /tmp/mutate_assembly.py                                # 12/12 mutations killed
 ```
 
 真机命令行（临时目录，不碰仓库产物）：先造两个 STEP + `assembly.json`，再跑 §四 那条命令。
@@ -212,3 +221,40 @@ cd AIPD-OS
 - 变异：**9/9 killed**（先 baseline 绿、node id 失效单独报 INVALID）。
 - 工作区：提交本片实现后 `git status --short` 只剩本文档与 CHANGELOG/README。
 - 未做且不会做在本轮：`git push`、移动 tag、重建 bundle、重签 Ed25519、放宽任何共享发布门禁。
+
+## 十一、第二个由全量回归抓出来的问题：我给图纸模块装了一条反向依赖
+
+单件/装配的局部用例全绿之后，`pytest -q` 全量跑把
+`tests/test_import_cycles.py::test_no_import_cycles` 判红：
+
+```
+AssertionError: import cycle detected:
+  aipd_os.cad.assembly -> aipd_os.cad.drawings2d -> aipd_os.cad.assembly
+```
+
+第一反应是「我已经把 import 写在函数里了，运行期没有环」。这句解释在这个门禁面前
+不成立：它用 `ast.walk` 扫全文件，**函数体内的 import 一样进图**（`tests/test_import_cycles.py:50`）。
+它答的是「这两个模块互相依赖吗」，不是「导入顺序会不会崩」。我确实开了三条回流：
+`_draw_view` 里画球标、`write_dxf` 里画明细表、`write_dxf` 里算重叠告警。
+
+裁决：改结构，不给门禁开后门。理由有两条——① 这条门禁是全仓 80 个能力行共用的
+架构判据，为一片功能加白名单等于把它改成约定；② 回流本身就是设计问题：图纸模块
+不该知道「明细表」「球标」「干涉」这些装配概念。
+
+改法（`git show bc4bc8b`）：
+- 视图自带一个 `render_overlay` 回调，装配侧建视图时把 `render_assembly` 挂上去，
+  图纸侧只管在排完图线后调用它（`place` 仍然是同一个，球标不会飞到图纸原点）；
+- `write_dxf` 收一个 `layout_hook(msp, sheet_wh) -> dict`，装配侧在里面画明细表并
+  **把要并进证据的键交回来**；`assembly`/`bom` 走 `extra_evidence` 交回；
+  于是 `parts_list` / `assembly` / `bom` 在图纸侧只剩「默认 null + 被覆盖」两种状态，
+  没有任何装配语义；
+- 重叠告警文案在 `build_assembly_view` 里算好随视图带着走（`assembly["warnings"]`），
+  图纸侧只做去重排序；
+- 端到端入口从 `generate_drawing(..., assembly=)` 的分支改成装配模块自己的
+  `generate_assembly_drawing`，CLI 直接调它。附带好处：剖视/局部放大不再是「装配分支
+  里 raise」，而是**函数面上根本没有这个形参**。
+
+钩子这种靠约定接线的形状必须自带会红的看守，所以补了三条变异（M10/M11/M12）：
+回流一旦出现、`render_overlay` 挂了但不调用（球标静默消失）、钩子画了但证据被丢弃，
+三种都必须是红的。M11 尤其值得留着——它对应的正是「图纸出得来、上面没有球标」这种
+最容易当成没事的失败。

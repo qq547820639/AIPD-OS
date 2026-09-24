@@ -484,11 +484,22 @@
   同一趟改完所有描述这件事的散文：`cad.2d_drawings` 行的实现文件/input_output/unit_test/
   e2e_evidence/current_limitation 五处、两行 B-Rep 能力里「装配…仍依赖外部工具」的歧义措辞、
   `drawings2d.py` 模块 docstring 的未实现清单、`drawing generate` 页脚、契约新增 1 条 PUBLIC
-  （48 条）与 SKILL.md 47→48。守卫 `tests/test_cad_assembly_balloons.py`（27 条）+
+  （48 条）与 SKILL.md 47→48。守卫 `tests/test_cad_assembly_balloons.py`（初 27 条，重构后 28 条）+
   `tests/test_cad_drawings2d.py` 声明看守收紧（`implementation_file` 由「单个路径存在」改为
   「`;` 拆开逐个存在」，与本文件 `unit_test` 的写法及 `registry.probe_file_has_impl` 的形状对齐；
   未动那条公共 `any` 判据）。9 条变异全部被杀；变异器自身补了 baseline 前提，避免 node id 写错时
-  「no tests ran」被误记成杀掉变异。证据见
+  「no tests ran」被误记成杀掉变异。
+  **第二个由全量回归抓出来的问题**：局部用例全绿，`tests/test_import_cycles.py` 却判红
+  （`assembly -> drawings2d -> assembly`）——「import 写在函数里就不算环」在这条门禁前不成立，
+  它用 `ast.walk` 扫全文件、函数体内的 import 一样进图。没给它加白名单（那是 80 个能力行共用的
+  架构判据），而是把方向反过来：视图带 `render_overlay` 回调、`write_dxf` 带 `layout_hook` +
+  `extra_evidence`（装配侧画明细表并把要并进证据的键交回来），重叠文案在 `build_assembly_view`
+  里算好随视图走，端到端入口改为装配模块自己的 `generate_assembly_drawing`，`generate_drawing`
+  不再有 `assembly=` 分支。附带收紧：剖视/局部放大在装配函数面上**根本没有形参**
+  （`test_assembly_drawing_does_not_expose_derived_view_flags` 用签名现算），防线不再只靠命令行
+  不给 flag。钩子这种靠约定接线的形状补了三条变异（M10 回流再现、M11 钩子挂了但不调用
+  ⇒ 球标静默消失、M12 钩子画了但证据被丢弃），用例增至 **28 条**、变异 **12/12 全部被杀**。
+  证据见
   `docs/audit/CAD_ASSEMBLY_BALLOONS_F-DRAW-01_2026-09-25.md`；
 
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
