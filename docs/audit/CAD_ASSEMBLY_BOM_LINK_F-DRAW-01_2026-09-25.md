@@ -136,3 +136,30 @@ cd AIPD-OS
 ```
 
 命令行造库与造图：见 §四（临时目录，跑完删；不碰任何开发者数据库）。
+
+## 八、收尾读数（全部来自本轮实跑输出，非记忆）
+
+- 新用例 **20 条**；第 12 片的 28 条一条没改判据（`--db/--bom` 不给时形状完全不变）。
+- 受影响面合跑（`tests/test_cad_*.py tests/test_bom.py
+  tests/test_lab_impact_propagation.py tests/test_supply_chain.py
+  tests/test_import_cycles.py`）：**317 passed**。
+- 全量：**1689 passed / 0 failed / 3 skipped（总 1692）**。
+- `ruff check src tests`：All checks passed；`mypy src tests`：
+  **Success: no issues found in 396 source files**（上轮 395）。
+- 变异：本片 **14 条，首轮 N2/N8 幸存**，各补一条断言后 **14/14 killed**；
+  第 12 片的 12 条复跑仍 **12/12 killed**（无回归）。
+- `RELEASE_MANIFEST.json` / `SOURCE_MANIFEST.json` 各 **594 个文件**（+新测试文件），
+  `SOURCE_MANIFEST.source_commit` 仍是 `a66040520139…`（v5.6.0 那个提交），没跟着 HEAD 漂。
+- `production_release_gate --release-ready --tag v5.6.0`：**8/8 全绿，release_ready true**，
+  `test_numbers_from_report | passed=1689 failed=0 total=1692 source_commit=a66040520139…`。
+  第一次出报告时漏了 `AIPD_SOURCE_COMMIT`，PROVENANCE 落成 HEAD（`47781a9`）——
+  门禁会判 report STALE，是**读数字**时抓到的，重跑并重新盖章。
+- `skill_quality_audit`：rc=0，**0 项警告 0 项失败**；`state_perf_gate`：rc=0，**性能门禁 PASS**。
+- `audit_repo --strict`：**rc=1**，唯一一条
+  `✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=9c5fb7252035…`
+  ——发布锚点在 tag 上而 HEAD 已前进，按设计判红；改绿要移 tag + 重签，属业主侧动作。
+- 提交：`24abaa7` 实现 → `47781a9` 文档 → `9c5fb72` 发布件。
+  本文档 §八 里最初把实现提交写成 `5af3500`，那是 amend 前的孤儿哈希（对象还在但不从分支可达），
+  已改指 `24abaa7`。
+- 未做且有意不做：不 push、不移 tag、不重建 bundle、不重签、不放宽任何共享门禁。
+  临时目录（含造出来的 BOM 库与 DXF）跑完即删；全程没碰开发者/共享数据库。
