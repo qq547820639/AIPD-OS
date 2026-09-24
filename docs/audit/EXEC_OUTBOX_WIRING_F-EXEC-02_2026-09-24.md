@@ -239,9 +239,11 @@ grep -rn "build_rfq_dispatcher\|OutboxQueue(" src/aipd_os | grep -v "side_effect
    **「真在测量」这个性质下移到 50ms sleep 的用例上钉 ≥40ms**（50 ≫ 1，稳定），
    并在注释里写清为什么这里不用 `> 0`。改完连跑 3 次全绿。
 2. **提交信息被 shell 吃掉四处**：`git commit -m "..."` 用双引号时，正文里的反引号
-   被当成命令替换执行（`completed_at`/`aipd outbox review`/`duration_ms >= 0`/`--db`
-   四段变成空字符串），提交内容完好但信息留下空洞。不改写历史（本仓规则：只新增提交），
-   在此登记；后续一律用 HEREDOC 传提交信息。
+   被当成命令替换执行（四段反引号内容变成空字符串），提交内容完好但信息留下空洞。
+   同一个错误还有第二个后果：正文里的 `duration_ms >= 0` 被当作命令执行时，`>= 0` 里的
+   `>` 变成重定向，于是**仓库根又多出一个 0 字节文件，名字叫 `=`**（与 §5-5 那四个
+   `<pytest_fixture(...)>` 文件同一形状，同样是发布门的 `workspace_clean` 抓出来的）。
+   不改写历史（本仓规则：只新增提交），在此登记；后续提交信息一律用 HEREDOC 传。
 3. **CLI 拆函数后遗留两个作用域 bug**：`_drain` 里用了只在 `cmd_outbox` 内 import 的
    名字（NameError），以及 `review` 的 `limit` 默认值与 `drain` 混用。都是先写测试
    才立刻暴露的——把仓库根的 `--db` 前提检查写成用例（路径不存在 ⇒ exit 2 且不建库）
