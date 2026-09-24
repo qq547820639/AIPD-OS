@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-09-25T06:01:52",
+  "generated_at": "2026-09-25T06:27:05",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "4cd2e182b2e20adb14457b88450d5b8526f2c01f",
-  "source_commit": "4cd2e182b2e20adb14457b88450d5b8526f2c01f",
+  "latest_commit_sha": "59faa614d82337befacd3e670158299e76b62cf8",
+  "source_commit": "59faa614d82337befacd3e670158299e76b62cf8",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
@@ -1194,7 +1194,7 @@
           "unit_test": "tests/test_release_manifest.py; tests/test_cad_spec_from_truth.py",
           "integration_test": "tests/test_release_manifest.py::TestGdtGrowsOnlyFromTheDrawing",
           "e2e_evidence": "门禁真判据：tests/test_release_manifest.py 直接跑 production_release_gate 读 gdt_covers_ctq",
-          "current_limitation": "装配图这一维现在看得见：证据按 kind 把图纸分成单件图/装配图（part_drawing_count / assembly_drawing_count），并把装配图证据里的 assembly_issues 升级为阻断项 assembly_unresolved（一张漏了零件的装配图不能再读成 ok=true），图上数量所属 BOM 与本份证据所核 BOM 不一致则阻断 assembly_bom_mismatch，出图时没接 BOM 只记非阻断的 assembly_bom_unverified（图仍成立，只是数量没核）。已绑上但那一行没填材料或没填工艺的，**两半各一条**阻断判定（material_missing / process_missing）并逐图点名球标——C6 要的是「材料与**与工艺**」，合成一条就看不出还差哪一半；读数随各张图的引用带 bound_rows/with_material/with_process/unbound_rows/missing_material/missing_process/drawings_without_bom，文档级 bom_line_coverage 只聚合数得清的那几项——多张装配图的球标都从 1 开始编号，缺哪几行一律逐图读不拍平；没绑上的行不重复算成缺材料/缺工艺，没接 BOM 的图写成盲区而不是 0。BOM 走 state.db 同目录的 bom.db（产品口径，只读方在读不到时报 bom_db_missing 而不是顺手建一个空库）。覆盖凭据分两档并写进 covered_by/verified：尺寸数值一致（dimension）或形位框真画上且挂实测特征（feature_control_frame，verified=deviation 表示位置度偏差已数值核对、presence_only 表示只证到存在）；位置度超带的框**不给**计覆盖并落一条阻断问题。只做证据装配与显式溯源：每条 gdt 覆盖都带 covered_by（dimension 或 feature_control_frame）与 ctq_record_id，形位框按「真画上去了 + 挂在实测特征上」计入覆盖，**不**声称核过形位偏差数值（本仓还不测形位偏差）；同一条需求被尺寸与框同时命中时只计一次。图纸特征与 CTQ 的对应关系可由 aipd drawing spec 从 metadata.drawing_feature 生成 ctq_ref（仍不按名字自动映射，linkage 由需求侧显式写），证据里的每条 gdt 都回写 ctq_record_id 指明是对着哪条记录成立的；模型侧只支持从 STEP 数实体，读不到就不写 model_part_count（不折算成 0）；approval_status 由属主填、缺省 unapproved，生产者不代为置 approved；版本不一致只如实记录不对齐；GD&T 形位公差框已可绘制（见 cad.2d_drawings），但叠加/形位声明的自动生成仍未接入；尺寸实测值是否落在 CTQ 合格域内由图纸侧判（cad.2d_drawings 的 spec_limit_issues），本模块不重复判。",
+          "current_limitation": "装配图这一维现在看得见：证据按 kind 把图纸分成单件图/装配图（part_drawing_count / assembly_drawing_count），并把装配图证据里的 assembly_issues 升级为阻断项 assembly_unresolved（一张漏了零件的装配图不能再读成 ok=true），图上数量所属 BOM 与本份证据所核 BOM 不一致则阻断 assembly_bom_mismatch，出图时没接 BOM 只记非阻断的 assembly_bom_unverified（图仍成立，只是数量没核）。已绑上但那一行没填材料或没填工艺的，**两半各一条**阻断判定（material_missing / process_missing）并逐图点名球标——C6 要的是「材料与**与工艺**」，合成一条就看不出还差哪一半；读数随各张图的引用带 bound_rows/with_material/with_process/unbound_rows/missing_material/missing_process/drawings_without_bom，文档级 bom_line_coverage 只聚合数得清的那几项——多张装配图的球标都从 1 开始编号，缺哪几行一律逐图读不拍平；没绑上的行不重复算成缺材料/缺工艺，没接 BOM 的图写成盲区而不是 0。BOM 走 state.db 同目录的 bom.db（产品口径，只读方在读不到时报 bom_db_missing 而不是顺手建一个空库）。覆盖凭据分两档并写进 covered_by/verified：尺寸数值一致（dimension）或形位框真画上且挂实测特征（feature_control_frame，verified=deviation 表示位置度偏差已数值核对、presence_only 表示只证到存在）；位置度超带的框**不给**计覆盖并落一条阻断问题。只做证据装配与显式溯源：每条 gdt 覆盖都带 covered_by（dimension 或 feature_control_frame）与 ctq_record_id，形位框按「真画上去了 + 挂在实测特征上」计入覆盖，**不**声称核过形位偏差数值（本仓还不测形位偏差）；同一条需求被尺寸与框同时命中时只计一次。图纸特征与 CTQ 的对应关系可由 aipd drawing spec 从 metadata.drawing_feature 生成 ctq_ref（仍不按名字自动映射，linkage 由需求侧显式写），证据里的每条 gdt 都回写 ctq_record_id 指明是对着哪条记录成立的；模型侧只支持从 STEP 数实体，读不到就不写 model_part_count（不折算成 0）；approval_status 由属主填、缺省 unapproved，生产者不代为置 approved；版本不一致只如实记录不对齐；GD&T 形位公差框已可绘制（见 cad.2d_drawings），但叠加/形位声明的自动生成仍未接入；尺寸实测值是否落在 CTQ 合格域内由图纸侧判（cad.2d_drawings 的 spec_limit_issues），本模块不重复判。**C6 那 15 项各自的覆盖度也不由本模块判**：用 `python scripts/c6_coverage.py` 现算（分母取自 references/production-cad-deliverables.md，逐档给「有生产者 / 只有校验方 / 零实现」，是诊断档、刻意不接进发布门禁）。",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,

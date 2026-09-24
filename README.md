@@ -269,6 +269,12 @@ aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom 
 #     bom_line_coverage 只聚合数得清的那几项——多张装配图的球标都从 1 开始编号，
 #     「哪几行缺」一律逐图读、不拍平；没绑上的行不重复算成缺材料/缺工艺，
 #     没接 BOM 的图写成盲区而不是 0。
+python scripts/c6_coverage.py          # C6 那 15 项交付物各自做到哪一步了（诊断档）
+#   ↑ 分母逐字取自 references/production-cad-deliverables.md 那一行：改契约不改映射会当场红。
+#     三档读数：有生产者且有常驻用例 / 只有校验方（门会判声明，但产品侧没有落点）/ 零实现。
+#     今天的实测 10 / 2 / 3，零实现那三项是爆炸图、ICD、装配与维护说明——
+#     这张表的作用就是决定下一片做什么，而不是继续在已交付的项上精雕。
+#     它刻意**没接进** `production_release_gate`：普查里今天就有零实现项，挂成阻断等于没人看。
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"
 #   ↑ 失效传播：沿血缘把下游 truth 标 stale、生成有界返工任务（rework_tasks，默认上限 3 次），
 #     并给出 owner 可读的四段变更说明（改了什么/为何影响/修复计划/需要批准什么）。

@@ -647,6 +647,40 @@
   `release_checklist` 与材料/工艺齐备的合并（要业务口径）。证据见
   `docs/audit/CAD_ASSEMBLY_PROCESS_F-DRAW-01_2026-09-25.md`；
 
+- **C6 交付物覆盖度普查（新诊断量具 `scripts/c6_coverage.py`）**：连续三片在补 C6 的零碎项
+  （分清单件图/装配图、材料列、工艺列），但从来没有一张表说明 C6 那 15 项各自到哪一步——
+  继续做的顺序因此是凭感觉的。本片只产分母与档位，不产新功能。
+  落点选择真比过两条：(A) 扩 `scripts/capability_matrix.py` 加 C6 维度——功能错配（它按能力行
+  聚合四态，普查按契约项算档），且它的 JSON schema 已被用例与 `docs/audit/*` 消费，加维度等于改契约；
+  (B) 新写独立诊断脚本——与仓内既有量具同形（`skill_quality_audit` / `state_perf_gate` /
+  `audit_repo` 各自成档且都不挂能力行）。**选 B**，只从 A 借两点：读表走 `registry_data`
+  （不另立第二份真相）、CLI 形状照 `--repo/--json`。普查**不落 JSON 快照**也**不挂能力行**：
+  读数由常驻用例钉住，多存一份就是两处会各自漂的副本；量具不登记是跟随既有先例，不是遗漏。
+  三档判据都可机器核：`producer`（`src/` 下真有生产者 + 测试文件里真数得出 `def test_`）/
+  `checker_only`（`implementation_file` 只指向门禁脚本或模板——「手写 JSON 把门过去」就落这档，
+  它不等于交付物存在）/ `absent`（零落点）。分母**逐字从
+  `references/production-cad-deliverables.md` 现算**，改契约不改映射当场红。
+  今天的实测：**15 项 = 10 producer / 2 checker_only（DFM-DFA、版本与ECR/ECO）/ 3 absent
+  （爆炸图、ICD、装配/维护）**。
+  顺带暴露三处声明缺口并登记给后续：**5 条能力行 `implementation_file` 与 `unit_test` 两栏皆空**
+  （`research.standards_regulations`、`research.patents_competitors`、
+  `cad.assembly_constraints`、`cad.continuous_kinematics`、`cad.cae_fatigue`）——一行不可核验的声明；
+  **144 个产品模块没被任何行的 `implementation_file` 点名**（含 `cad/stackup.py`、`cad/gdt.py`
+  这种真生产者，而 `cad.tolerance_chain` / `cad.gdt` 两行反倒只写门禁脚本）——是信号不是判决，
+  没点名不等于没被测。
+  自测：`--self-test` 注入 7 条（分母多一项 / 映射留旧项 / 生产者路径不存在 / 档位与所列矛盾 /
+  能力行 id 不存在 / 用例文件零 test / 用例路径不存在），7/7 都开火，并由常驻用例直接跑它。
+  本片自己踩的三个坑一并记下，因为它们都是判据的来源：映射键与契约原文差一个空格
+  （「总装/单件 STEP」vs「总装/单件STEP」）被自家两条判据同时抓住；函数里复用 `caps` 变量名
+  让能力表诊断拿到一串字符串（`cap.get` 才 `AttributeError`，函数作用域是平的）；
+  `grep -i ECO` 命中 107 个 src 文件全是 `SECONDS`/`SECRET` 之类子串噪声，
+  按词边界重查才是 0——「零实现」判定一律用精确路径与词边界，并把这件事写进判读。
+  边界：普查**刻意不接进** `production_release_gate`（今天就有 3 项零实现，挂成阻断等于
+  一个永远红的门），并由 `test_census_is_not_wired_into_the_release_gate` 钉住。
+  守卫：`tests/test_c6_coverage.py` 10 条（含档位棘轮 10/2/3、三档定义互斥、注入全开火）。
+  下一片顺序建议与理由见 `docs/audit/C6_COVERAGE_CENSUS_F-C6-01_2026-09-25.md` §九
+  （爆炸图 → 装配步骤生产者 → ICD/ECR-ECO 先问属主）。
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与
