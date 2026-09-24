@@ -502,6 +502,36 @@
   证据见
   `docs/audit/CAD_ASSEMBLY_BALLOONS_F-DRAW-01_2026-09-25.md`；
 
+- **v5.10 F-DRAW-01 第 13 片：球标 ↔ BOM 行交叉核对，数量只认 BOM**：补第 12 片明确欠下的
+  那一半（当时写明「数量权威在 BOM，尚未接线」）。`aipd drawing assembly` 新增
+  `--db/--bom/--tenant/--project`：给了就按 **manifest 里作者声明的 `bom_item`** 去核 BOM 行，
+  明细表长出 QTY/UNIT 两列；不给就维持 `["ITEM","PART"]`，一个猜测值都不印。
+  **不按零件名字自动映射**——沿用本仓两条既有纪律（`drawing spec` 的「全程不按名字自动映射」、
+  `supply_chain/impact` 的「只认归一化全等，不做子串猜」），所以没声明 `bom_item` 的零件
+  即使与某行 item 完全同名也不对上，这条由一条专门的反证用例钉住。
+  标识归一从 `supply_chain/impact.py:37` 的私有 `_norm` **提成一处定义**
+  `bom.models.norm_item`，impact 改为引用：两处各抄一份迟早各自漂，而它一漂就是
+  「本该判歧义的被判成匹配」。数量与单位一律取自 BOM 行；解析器的白名单里没有 `quantity`，
+  所以 manifest 写了也进不到零件数据（这条原本不显形，见下面的 N2）。
+  四种情形判未收口（rc=4）：声明的行找不到 / 同一 item 在 BOM 里有多行（歧义时随便取一行
+  就是猜数量）/ 零件没声明 `bom_item` / BOM 有行而图上没有球标指它（漏零件）。
+  绑不上留空，**不折算成 0**：图纸上「没核到」与「数量为 0」差一个量级。
+  真跑命令行又抓到一个缺陷：`--bom BOM-999`（编号写错）当时被当成空 BOM，逐条报
+  「球标声明的行找不到」——听着像内容对不上，实际是根本没读到那张表；改成当场 rc=2，
+  并把 `--db` 的 `is_file` 检查提到 `BomStore()` 构造**之前**（它会在给定路径上 mkdir 建表，
+  命令行不许在写错的路径上凭空造一个数据库）。
+  新增一条「数量真的画进 `TABLECONTENT` 层」的用例：证据里有数量不等于图纸上看得见数量。
+  同一趟改完散文：`cad.2d_drawings` 行的 input_output 与 current_limitation、
+  第 12 片审计里那条「球标↔BOM 未做」加同日更新指针、README 场景 4。
+  守卫 `tests/test_cad_assembly_bom_link.py`（20 条）；变异 **14 条，首轮两条幸存**：
+  N2「数量改从 manifest 取」是**等价变异**（解析器本就不读 quantity，使用点注入不进去），
+  说明这条规矩不显形 ⇒ 改成对解析边界直接断言；N8「去掉库文件不存在检查」被新加的
+  BOM 存在性检查**掩盖成同一个 rc=2**（副作用不同：那条分支会建出数据库文件）
+  ⇒ 补 `assert not ghost.exists()`。补完后 14/14 被杀，第 12 片的 12 条不回归。
+  仍未做：明细表材料列（`BomLine.material` 一直有值，本轮不顺手扩输出）、
+  干涉检查、爆炸图与装配约束。证据见
+  `docs/audit/CAD_ASSEMBLY_BOM_LINK_F-DRAW-01_2026-09-25.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

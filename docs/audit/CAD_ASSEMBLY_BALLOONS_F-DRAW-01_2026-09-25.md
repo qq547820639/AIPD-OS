@@ -188,6 +188,11 @@ M8 证明收紧后的尺子真会红。
   要核就得复用 `supply_chain/impact` 的 item 归一化全等规则，并把明细表的数量列接到
   BOM 权威上。**本轮一个猜测值都不印**，明细表只有 ITEM/PART 两列；`--spec` 也不在
   装配命令面上（装配视图只有包络尺寸，件级特征公差属于单件图）。
+
+  > **同日更新（第 13 片，`5af3500`）**：这一条已闭合。对应关系由 manifest 显式声明
+  > `bom_item`（**不按零件名字自动映射**），数量与单位取自 BOM 行，明细表长出 QTY/UNIT 两列，
+  > 绑不上/歧义/没声明/BOM 多出行一律判未收口（rc=4）。仍**未做**的是材料列。
+  > 见 `docs/audit/CAD_ASSEMBLY_BOM_LINK_F-DRAW-01_2026-09-25.md`。
 - **装配视图上没有剖视与局部放大的入口**。函数面 `generate_assembly_drawing` 没有
   `sections/details/spec` 形参，命令行也没有对应 flag（argparse 直接 rc=2）：裁剪/切割
   按合并折线做，会把归属打散，球标就成了指错零件的假标注。这条由

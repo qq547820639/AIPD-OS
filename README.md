@@ -230,6 +230,17 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     明细表只有 ITEM/PART 两列：数量与材料的权威在 BOM，尚未接线，所以一个猜测值都不印。
 #     只报「包络投影重叠面积」，**不是干涉判定**（本轮不做实体求交）；
 #     装配视图上 `--section/--detail` 直接拒绝（2），爆炸图与装配约束仍未做。
+aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 \
+                      --db state.db --bom BOM-001 --project P       # 接上 BOM 的数量
+#   ↑ 给 --db/--bom 就交叉核对球标↔BOM 行，明细表长出 QTY/UNIT 两列；不给就维持
+#     ITEM/PART 两列、一个猜测值都不印。对应关系**只认 manifest 里声明的 bom_item**：
+#     {"parts":[{"name":"支架","step":"a.step","balloon":1,"bom_item":"BRACKET-01"}]}。
+#     不按零件名字自动映射（名字相似不等于同一个东西）；没声明 bom_item 的零件即使
+#     与某行同名也不对上。数量与单位一律取自 BOM 行——manifest 写 quantity 也不读。
+#     四种情形判未收口（退出码 4）：声明的行找不到 / 同一 item 在 BOM 里有多行（歧义）/
+#     零件没声明 bom_item / BOM 有行而图上没有球标指它（这张图漏了零件）。
+#     绑不上的数量留空，不折算成 0。--db 与 --bom 必须一起给，且那张 BOM 得真在：
+#     编号写错会当场 rc=2，而不是被当成空 BOM 报成一堆「每行都找不到」。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"
