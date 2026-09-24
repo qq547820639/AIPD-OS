@@ -271,7 +271,7 @@ def build_parser() -> argparse.ArgumentParser:
     da.add_argument("--material", default="-", help="标题栏材料")
     da.add_argument("--sheet", default="A3", choices=["A3", "A4"], help="图纸幅面")
     da.add_argument("--db", help="状态库路径（与 --bom 一起给）：给了才交叉核对球标↔BOM 行")
-    da.add_argument("--bom", help="BOM 编号：明细表的数量与单位取自这张 BOM 的行")
+    da.add_argument("--bom", help="BOM 编号：明细表的数量、单位与材料取自这张 BOM 的行")
     da.add_argument("--tenant", default="default", help="BOM 所属租户")
     da.add_argument("--project", default="default", help="BOM 所属项目")
     da.add_argument("--json", action="store_true")

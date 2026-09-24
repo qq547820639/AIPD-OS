@@ -369,17 +369,17 @@ def cmd_drawing_assembly(args):
         print(f"明细表：{len(listed.get('rows') or [])} 行，列 {listed.get('columns')}，"
               f"绘制方式 {listed.get('rendered_by')}")
         if bound:
-            print(f"  数量与单位来自 BOM {bound['bom_id'] or bound['bom_ids']}"
+            print(f"  数量、单位与材料都来自 BOM {bound['bom_id'] or bound['bom_ids']}"
                   f"（{bound['lines']} 行）；对应关系靠 manifest 的 bom_item 声明，"
                   f"不按零件名字猜")
         else:
-            print("  未接 BOM：明细表不含数量列，一个猜测值都不印。")
+            print("  未接 BOM：明细表不含数量与材料列，一个猜测值都不印。")
         for msg in issues:
             print(f"  装配未收口：{msg}")
         for msg in warnings:
             print(f"  装配告警：{msg}")
         print("  没有做的事：干涉检查（只报包络投影重叠，不做实体求交）、"
-              "爆炸图/装配约束、明细表材料列（材料在 BOM 行上，尚未取用）。")
+              "爆炸图/装配约束、工艺与表面处理列（C6 的「材料与工艺」只落了材料一半）。")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
     _emit(args, evidence, prose)
     return 4 if issues else 0

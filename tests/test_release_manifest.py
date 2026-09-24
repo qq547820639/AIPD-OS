@@ -6,7 +6,7 @@
 `src/` 内**零生产点**——即 C5/C6 的证据只能手抄，抄的人说什么就是什么。
 旧审计 `docs/audit/v5.4/phase5-cad-audit.md:30` 也记着"仅校验，无生成"。
 
-本文件钉住生产者 `aipd_os.release_manifest` 的四条口径：
+本文件钉住生产者 `aipd_os.release_manifest` 的五条口径：
 
 1. **数字一律现取**：BOM 行数取自 BomStore、图纸数取自实际 DXF 证据、版本取自各自权威
    （BOM 头版本 / 图纸 revision / 模型内容哈希）。三者不一致时**如实报不一致**，
@@ -18,6 +18,10 @@
    一律点名并把命令判未收口（exit 4），不做按名字模糊匹配（那是 F-REG-01 的装饰性接线）。
 4. **门禁是真判据**：正反两向都直接跑 `scripts/production_release_gate.py` 读
    `evidence_checks`，不在测试里复刻它的逻辑。
+5. **材料覆盖只从图上那些行现算**（`TestMaterialIsCoveredByTheEvidence`）：绑上了但
+   BOM 行没填材料 ⇒ 点名球标并阻断；压根没绑上的行不重复计入；出图时没接 BOM ⇒ 写成
+   盲区而不是 0。C6（`references/production-cad-deliverables.md`）要「材料与工艺」，
+   所以「哪几行还没有材料」必须是文档里读得出的一格。
 """
 from __future__ import annotations
 
@@ -88,6 +92,14 @@ def _manifest(tmp_path, db_path, drawings, **kw):
     payload = build_release_manifest(db_path=db_path, tenant_id=T, project_id=P,
                                      drawings=drawings, out_path=out, **kw)
     return out, payload
+
+
+def _coverage(doc, idx):
+    """取第 ``idx`` 张**图**自己的材料覆盖读数。
+
+    缺哪几个球标一律逐图读：多张装配图的球标都从 1 开始，聚合清单会分不清是谁家的 1 号。
+    """
+    return doc["evidence"]["drawings"][idx]["material"]
 
 
 def _gate_verdict(manifest_path, check, target="C5"):
@@ -284,10 +296,11 @@ class TestBomLibraryIsNotCreatedOnRead:
 
 def _assy_drawing(tmp_path, bom_items=(("BRACKET-01", 4.0), ("PLATE-02", 2.0)),
                   parts=(("支架", "BRACKET-01"), ("压板", "PLATE-02")), name="assy",
-                  revision="A"):
+                  revision="A", bind=True):
     """造一张**绑过 BOM** 的装配图（走真实入口，不手搓证据）。
 
-    返回 (dxf 路径, 这张图绑的 bom_id)。bom_items 比 parts 多就是「BOM 有行图上没号」。
+    返回 (dxf 路径, 这张图绑的 bom_id)。bom_items 比 parts 多就是「BOM 有行图上没号」；
+    每一项可写第三格 ``(item, qty, material)``——`bind=False` 则出图时不接 BOM。
     """
     import cadquery as cq
 
@@ -295,9 +308,10 @@ def _assy_drawing(tmp_path, bom_items=(("BRACKET-01", 4.0), ("PLATE-02", 2.0)),
 
     store = BomStore(str(Path(tmp_path) / "bom.db"))
     header = store.create_bom(T, P, "装配 BOM", revision=revision)
-    for item, qty in bom_items:
+    for spec in bom_items:
         store.add_line(BomLine(line_id="", bom_id=header.bom_id, tenant_id=T, project_id=P,
-                               item=item, quantity=qty, unit="pcs"))
+                               item=spec[0], quantity=spec[1], unit="pcs",
+                               material=spec[2] if len(spec) > 2 else None))
     steps = {}
     for i, letter in enumerate("ab"):
         box = cq.Workplane("XY").box(40.0, 20.0, 10.0 + i * 2).solids().vals()[0]
@@ -314,7 +328,8 @@ def _assy_drawing(tmp_path, bom_items=(("BRACKET-01", 4.0), ("PLATE-02", 2.0)),
     out = Path(tmp_path) / f"{name}.dxf"
     generate_assembly_drawing(out, manifest=str(man), part_name=f"ASSY-{name}",
                               revision=revision, views=("TOP",),
-                              bom_lines=store.list_lines(T, P, header.bom_id))
+                              bom_lines=store.list_lines(T, P, header.bom_id) if bind
+                              else None)
     return out, header.bom_id
 
 
@@ -408,3 +423,114 @@ class TestAssemblyDrawingIsVisible:
         assert all(not (i["kind"] == "assembly_bom_unverified" and i["blocking"])
                    for i in doc["issues"]), "没核数量不该把这张图判死"
         assert doc["ok"] is True
+
+
+class TestMaterialIsCoveredByTheEvidence:
+    """第 15 片：C6 要「材料与工艺」，所以发布证据必须说得出**哪几行还没有材料**。
+
+    材料取值与数量同一权威（BOM 行）、同一绑定结果，所以这里不新增一条对应关系，
+    只加一条覆盖判据。三件事分开钉：绑上了但没材料 ⇒ 点名球标并阻断；压根没绑上 ⇒
+    已由 `assembly_unresolved` 判住，不再算成「缺材料」（同一件事报两遍会淹掉真信号）；
+    出图时没接 BOM ⇒ 那是**盲区**，只能明说看不见，不能折成「0 行有材料」。
+    """
+
+    def test_a_bound_row_without_material_holds_the_release(self, tmp_path, db):
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(tmp_path)          # 两行都没填材料
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        hits = [i for i in doc["issues"] if i["kind"] == "material_missing"]
+        assert hits, [i["kind"] for i in doc["issues"]]
+        assert hits[0]["blocking"] is True
+        assert doc["ok"] is False, "图纸一行的材料都说不出来，C6 不算交齐"
+        cov = _coverage(doc, 0)
+        assert (cov["bound_rows"], cov["with_material"]) == (2, 0), cov
+        assert cov["missing_balloons"] == [1, 2], cov
+        assert doc["material_coverage"]["drawings_missing_material"] == 1
+
+    def test_full_material_coverage_leaves_no_blocking_issue(self, tmp_path, db):
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(
+            tmp_path, bom_items=(("BRACKET-01", 4.0, "6061-T6"),
+                                 ("PLATE-02", 2.0, "SUS304")))
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        assert [i["kind"] for i in doc["issues"]] == [], doc["issues"]
+        cov = _coverage(doc, 0)
+        assert (cov["bound_rows"], cov["with_material"]) == (2, 2), cov
+        assert cov["missing_balloons"] == []
+        assert doc["ok"] is True
+
+    def test_the_counted_rows_are_the_ones_the_drawing_did_draw(self, tmp_path, db):
+        """只有一行没材料时，球标号必须逐个点名——「有 1 行缺」这种话没法返工。
+
+        缺材料的那一行故意放在**第一位**：这样「拿位置当计数」（`with_material = 已数到第几行`）
+        这种写法会算成 2 行有材料，而真逐行计数才是 1 行。反过来放只能杀掉另一半变异。
+        """
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(
+            tmp_path, bom_items=(("BRACKET-01", 4.0), ("PLATE-02", 2.0, "SUS304")))
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        hits = [i for i in doc["issues"] if i["kind"] == "material_missing"]
+        assert hits and "球标 [1]" in hits[0]["detail"], hits
+        cov = _coverage(doc, 0)
+        assert cov["missing_balloons"] == [1], cov
+        assert (cov["bound_rows"], cov["with_material"]) == (2, 1), cov
+
+    def test_a_row_that_never_bound_is_not_double_counted_as_missing_material(
+            self, tmp_path, db):
+        """没绑上的行由 `assembly_unresolved` 判；这里既不算「有材料」也不算「缺材料」。"""
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(
+            tmp_path, bom_items=(("BRACKET-01", 4.0, "6061-T6"), ("OTHER", 1.0)),
+            parts=(("支架", "BRACKET-01"), ("压板", "GHOST")))
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        kinds = [i["kind"] for i in doc["issues"]]
+        assert "assembly_unresolved" in kinds, kinds
+        assert "material_missing" not in kinds, kinds
+        cov = _coverage(doc, 0)
+        assert (cov["bound_rows"], cov["with_material"], cov["unbound_rows"]) == \
+            (1, 1, 1), cov
+
+    def test_a_drawing_that_never_saw_a_bom_is_a_blind_spot_not_a_zero(self, tmp_path, db):
+        """没接 BOM 的装配图：材料覆盖**无法判**，只能把盲区写出来。
+
+        把盲区折成 `with_material: 0` 会让「去 BOM 补材料」变成看似正确的返工方向，
+        而真正缺的是出图时那次接线。
+        """
+        _seed_ctq(db)
+        dxf, bom_id = _assy_drawing(tmp_path, bind=False)
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        cov = _coverage(doc, 0)
+        assert cov["drawings_without_bom"] == 1, cov
+        assert cov["bound_rows"] == 0 and cov["missing_balloons"] == [], cov
+        assert doc["material_coverage"]["bound_rows"] == 0
+        assert "material_missing" not in [i["kind"] for i in doc["issues"]]
+
+    def test_two_assembly_drawings_keep_their_own_row_numbers(self, tmp_path, db):
+        """两张装配图的球标都从 1 开始：缺材料的清单必须各自留在各自那张图里。"""
+        _seed_ctq(db)
+        first, bom_id = _assy_drawing(tmp_path, bom_items=(("BRACKET-01", 4.0),),
+                                      parts=(("支架", "BRACKET-01"),), name="one")
+        second, _ = _assy_drawing(tmp_path, bom_items=(("PLATE-02", 2.0, "SUS304"),),
+                                  parts=(("压板", "PLATE-02"),), name="two")
+        path, _ = _manifest(tmp_path, db, [first, second], bom_id=bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        assert [_coverage(doc, i)["missing_balloons"] for i in (0, 1)] == [[1], []]
+        agg = doc["material_coverage"]
+        assert (agg["bound_rows"], agg["with_material"]) == (2, 1), agg
+        assert agg["drawings_missing_material"] == 1
+
+    def test_a_package_without_assembly_drawings_says_nothing_about_material(
+            self, tmp_path, db):
+        """单件图没有明细表，也就没有「行」可判——字段缺席，不是 0。"""
+        _seed_ctq(db)
+        bom = _seed_bom(db, revision="A")
+        dxf = _drawing(tmp_path)
+        path, _ = _manifest(tmp_path, db, [dxf], bom_id=bom.bom_id)
+        doc = json.loads(path.read_text("utf-8"))
+        assert "material_coverage" not in doc, doc.get("material_coverage")
+        assert "material" not in doc["evidence"]["drawings"][0]

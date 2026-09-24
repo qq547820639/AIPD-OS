@@ -11,6 +11,10 @@
 数量与单位的权威在 BOM 行上：manifest 里就算写了数量也不算数（用例专门钉这一条）。
 两头都要闭合：图纸上有号但 BOM 找不到 ⇒ 未收口；BOM 有行但图上没号 ⇒ 也是未收口
 （一张漏了零件的装配图比一张丑的装配图危险得多）。
+
+第 15 片把**材料**接到同一条绑定上：材料与数量同一权威（BOM 行）、同一个 `bom_item`
+声明、同一处留空规矩，所以它复用这里的夹具而不是另起一套对应关系。供应商**不在**
+明细表里（判据与理由见 `TestSupplierIsNotOnTheDrawing`）。
 """
 from __future__ import annotations
 
@@ -71,6 +75,9 @@ def _bom(tmp_path, items):
 
     夹具故意走和命令行同一个换算（``bom_store_path``）：「BOM 放哪个文件」这条规矩
     一旦被改动，这里就跟着红——不会像上一片那样测试与命令行各认一个路径。
+
+    每一项 ``(item, qty, unit[, material[, supplier]])``：材料/供应商留成可选，
+    是为了让「BOM 行没填材料」这种真实数据形状能被画出来，而不是只有满数据的用例。
     """
     from aipd_os.bom.store import bom_store_path
     from aipd_os.state.db import AIPDStateDB
@@ -79,10 +86,15 @@ def _bom(tmp_path, items):
     AIPDStateDB(state).ensure_default_tenant()
     store = BomStore(bom_store_path(state))
     header = store.create_bom(TENANT, PROJECT, "装配 BOM")
-    for i, (item, qty, unit) in enumerate(items, start=1):
+    for i, spec in enumerate(items, start=1):
+        extra: dict = {}
+        if len(spec) > 3:
+            extra["material"] = spec[3]
+        if len(spec) > 4:
+            extra["supplier"] = spec[4]
         store.add_line(BomLine(line_id=f"L-{i}", bom_id=header.bom_id,
                                tenant_id=TENANT, project_id=PROJECT,
-                               item=item, quantity=qty, unit=unit))
+                               item=spec[0], quantity=spec[1], unit=spec[2], **extra))
     return state, header.bom_id
 
 def _lines(db, bom_id):
@@ -186,7 +198,7 @@ class TestDrawingCarriesTheBoundQuantities:
         db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs"),
                                      ("PLATE-02", 2.0, "pcs")])
         ev, _ = self._gen(tmp_path, manifest, db, bom_id)
-        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT"]
+        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT", "MATERIAL"]
         assert [r["qty"] for r in ev["parts_list"]["rows"]] == [4.0, 2.0]
         assert ev["bom"]["bom_id"] == bom_id
         assert ev["assembly_issues"] == []
@@ -211,6 +223,154 @@ class TestDrawingCarriesTheBoundQuantities:
         rows = {r["item"]: r for r in ev["parts_list"]["rows"]}
         assert rows[2]["qty"] is None
         assert any("GHOST" in m for m in ev["assembly_issues"])
+
+class TestMaterialColumnComesFromTheBom:
+    """第 15 片：材料**只认 BOM 行**——与数量同一权威、同一条 `bom_item` 声明、同一处留空。
+
+    判据来源要说实话：本仓 `references/production-cad-deliverables.md:3` 把「材料与工艺」
+    列为 C6 交付物，`references/deliverable-contracts.md:9` 把「规格/材料」写在**每一行 BOM**
+    上；外部只读到 RoyMech 的条目清单（Item/Description/Quantity/Reference/Material，
+    供货信息只算「其他必要信息」）。**ISO 7200 与 GB/T 10609.2 原文没有取到**
+    （检索到的页面对本模型只返回 CSS 或文档分享站的转载），所以列集合按上面两条内部
+    契约裁剪，不假装对照过标准表样。
+    """
+
+    def _gen(self, tmp_path, manifest, db, bom_id, **kw):
+        out = tmp_path / "mat.dxf"
+        return generate_assembly_drawing(out, manifest=str(manifest), part_name="ASSY-1",
+                                         views=("TOP",), bom_lines=_lines(db, bom_id), **kw)
+
+    def _texts(self, path):
+        import ezdxf
+
+        doc = ezdxf.readfile(str(path))
+        return {e.dxf.text for e in doc.modelspace().query('TEXT[layer=="TABLECONTENT"]')}
+
+    def test_the_material_of_a_bound_row_is_the_bom_line_material(self, tmp_path):
+        manifest, _ = _manifest(tmp_path, [
+            {"name": "支架", "balloon": 1, "bom_item": "BRACKET-01"},
+            {"name": "压板", "balloon": 2, "step": "b", "bom_item": "PLATE-02"}])
+        db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs", "6061-T6"),
+                                     ("PLATE-02", 2.0, "pcs", "SUS304")])
+        rows, issues = bind_bom(_load(tmp_path, manifest), _lines(db, bom_id))
+        assert issues == [], issues
+        assert [(r["item"], r["material"]) for r in rows] == \
+            [(1, "6061-T6"), (2, "SUS304")]
+
+    def test_material_is_drawn_in_the_table_not_only_in_the_evidence(self, tmp_path):
+        manifest, _ = _manifest(tmp_path, [
+            {"name": "支架", "balloon": 1, "bom_item": "BRACKET-01"},
+            {"name": "压板", "balloon": 2, "step": "b", "bom_item": "PLATE-02"}])
+        db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs", "6061-T6"),
+                                     ("PLATE-02", 2.0, "pcs", "SUS304")])
+        ev = self._gen(tmp_path, manifest, db, bom_id)
+        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT", "MATERIAL"]
+        texts = self._texts(tmp_path / "mat.dxf")
+        assert {"MATERIAL", "6061-T6", "SUS304"} <= texts, texts
+
+    def test_a_bound_row_without_material_stays_blank_and_holds_no_guess(self, tmp_path):
+        """绑上了但那一行没填材料 ⇒ 格子留空：写 "-" 或「未指定」都会被读成一个材料。"""
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                            "bom_item": "BRACKET-01"}])
+        db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs", None)])
+        ev = self._gen(tmp_path, manifest, db, bom_id)
+        assert ev["parts_list"]["rows"][0]["material"] is None
+        assert ev["assembly_issues"] == [], "材料缺失由 manifest 那条判据点名，不算绑定未收口"
+        texts = self._texts(tmp_path / "mat.dxf")
+        assert "MATERIAL" in texts
+        assert "-" not in texts and "未指定" not in texts, texts
+        assert "None" not in texts, texts       # str(None) 也是一种假装有值
+
+    def test_the_material_column_is_there_even_when_no_row_has_one(self, tmp_path):
+        """列集合跟着**接上的权威**走，不跟着「有没有值」走。
+
+        用 `any(有值才加列)` 的写法，一张全缺材料的图会连列都不长，于是「哪些行没有材料」
+        的答案从图纸上直接消失——而「全部没有」恰是最需要看得见的那一种。
+        """
+        manifest, _ = _manifest(tmp_path, [
+            {"name": "支架", "balloon": 1, "bom_item": "BRACKET-01"},
+            {"name": "压板", "balloon": 2, "step": "b", "bom_item": "PLATE-02"}])
+        db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs"),
+                                     ("PLATE-02", 2.0, "pcs")])
+        ev = self._gen(tmp_path, manifest, db, bom_id)
+        assert "MATERIAL" in ev["parts_list"]["columns"]
+        assert all(r["material"] is None for r in ev["parts_list"]["rows"])
+
+    def test_an_unbound_row_has_no_material_either(self, tmp_path):
+        """没绑上的行：数量、单位、材料一起留空——一个都不许从别处补。"""
+        manifest, _ = _manifest(tmp_path, [
+            {"name": "支架", "balloon": 1, "bom_item": "BRACKET-01"},
+            {"name": "压板", "balloon": 2, "step": "b", "bom_item": "GHOST"}])
+        db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs", "6061-T6")])
+        rows, _ = bind_bom(_load(tmp_path, manifest), _lines(db, bom_id))
+        ghost = next(r for r in rows if r["item"] == 2)
+        assert (ghost["qty"], ghost["unit"], ghost["material"]) == (None, None, None)
+
+    def test_whitespace_only_material_counts_as_missing(self, tmp_path):
+        """``"   "`` 不是材料：留空与「有个空格组成的材料」在图纸上看不出差别，必须归一到 None。"""
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                            "bom_item": "BRACKET-01"}])
+        db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs", "   ")])
+        rows, _ = bind_bom(_load(tmp_path, manifest), _lines(db, bom_id))
+        assert rows[0]["material"] is None, "空白串当材料会盖住「这一行还没材料」这个事实"
+
+    def test_the_title_block_material_is_not_a_fallback(self, tmp_path):
+        """标题栏的 MATL 是作者另填的一格，不许拿它来补明细表里缺的行级材料。"""
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                            "bom_item": "BRACKET-01"}])
+        db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs", None)])
+        ev = self._gen(tmp_path, manifest, db, bom_id, material="ALU-7075")
+        assert ev["parts_list"]["rows"][0]["material"] is None
+        assert "ALU-7075" not in self._texts(tmp_path / "mat.dxf"), \
+            "标题栏材料渗进明细表 = 一个来源两个含义"
+
+    def test_material_never_comes_from_the_manifest(self, tmp_path):
+        """与数量同一条边界规矩：清单里写了 material 也不许进到零件数据。"""
+        a, _ = _parts(tmp_path)
+        path = tmp_path / "withmat.json"
+        path.write_text(json.dumps({"parts": [{"name": "支架", "step": str(a),
+                                               "balloon": 1, "bom_item": "BRACKET-01",
+                                               "material": "自己做主的材料"}]},
+                                   ensure_ascii=False), encoding="utf-8")
+        parts = _load(tmp_path, path)
+        assert "material" not in parts[0], "第二个材料来源会在明细表里和 BOM 抢同一格"
+
+
+class TestSupplierIsNotOnTheDrawing:
+    """裁决：供应商**不进**零件图/装配图明细表，留在 BOM 与采购侧。
+
+    理由写在这里而不只在审计文档里：明细表随图纸版本冻结，而供应商是商务事实
+    （``references/deliverable-contracts.md:17`` 把它归到「供应链开发清单」，
+    BOM 契约里它也只是「候选供应商」）。把供应商印到图上，等于让一张受控技术文件
+    携带一个会变、且未取证就绪的采购承诺。所以这里连列都不长。
+    """
+
+    def test_a_bom_line_supplier_never_reaches_the_parts_list(self, tmp_path):
+        import ezdxf
+
+        manifest, _ = _manifest(tmp_path, [{"name": "支架", "balloon": 1,
+                                            "bom_item": "BRACKET-01"}])
+        db, bom_id = _bom(tmp_path, [("BRACKET-01", 4.0, "pcs", "6061-T6", "ACME-IND")])
+        lines = _lines(db, bom_id)
+        assert lines[0].supplier == "ACME-IND", "前提：BOM 那边真写了供应商"
+        rows, _ = bind_bom(_load(tmp_path, manifest), lines)
+        assert "supplier" not in rows[0], "明细表行里不许带 supplier 字段"
+
+        out = tmp_path / "sup.dxf"
+        ev = generate_assembly_drawing(out, manifest=str(manifest), part_name="ASSY-1",
+                                       views=("TOP",), bom_lines=lines)
+        assert "SUPPLIER" not in ev["parts_list"]["columns"]
+        doc = ezdxf.readfile(str(out))
+        texts = {e.dxf.text for e in doc.modelspace().query('TEXT[layer=="TABLECONTENT"]')}
+        assert "ACME-IND" not in texts, texts
+
+    def test_the_boundary_is_written_in_the_module_that_enforces_it(self):
+        """这条规矩全靠「不实现」成立，所以必须留在代码旁边——否则下一个人会当成漏做。"""
+        import aipd_os.cad.assembly as assembly_module
+
+        assert "供应商" in (assembly_module.__doc__ or ""), \
+            "模块 docstring 要写明供应商被排除及其理由"
+
 
 class TestCliSurface:
     def _run(self, tmp_path, manifest, extra, name="cli"):
@@ -245,9 +405,13 @@ class TestCliSurface:
                                "--tenant", TENANT, "--project", PROJECT])
         text = capsys.readouterr().out
         assert rc == 0, text
-        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT"]
-        assert "数量与单位来自 BOM" in text
+        assert ev["parts_list"]["columns"] == ["ITEM", "PART", "QTY", "UNIT", "MATERIAL"]
+        assert "数量、单位与材料都来自 BOM" in text
         assert "不按零件名字猜" in text
+        # 行内说的话要和真画出来的列一致，也不能再欠一句「材料还没取用」
+        assert "MATERIAL" in text
+        assert "材料列" not in text, "命令行还在说材料没接线"
+        assert "工艺" in text, "「没做的事」里要留下还没做的那一半"
 
     def test_a_leaked_bom_line_holds_the_command_at_rc4(self, tmp_path):
         """BOM 多一个零件 = 图上少一个球标，这种图能画但会漏装，必须判住。"""

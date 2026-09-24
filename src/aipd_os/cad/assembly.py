@@ -23,10 +23,15 @@
 （``Modelspace.add_table`` 不存在，``ezdxf.entities`` 里没有 ``Table`` 类）。
 
 球标↔BOM **已经**交叉核对（``bind_bom``）：对应关系只认 manifest 里作者声明的
-``bom_item``，**不按零件名字自动映射**；数量与单位一律取自 BOM 行（解析器不读
-manifest 的 ``quantity``），绑不上/歧义/没声明/BOM 多出行都判未收口，绑不上留空不折算成 0。
+``bom_item``，**不按零件名字自动映射**；数量、单位与材料一律取自 BOM 行（解析器不读
+manifest 的 ``quantity``，也不读它的 ``material``），绑不上/歧义/没声明/BOM 多出行都判
+未收口，绑不上留空不折算成 0、材料留空不写占位符。
+**供应商（``BomLine.supplier``）刻意不进明细表**——这是裁决不是漏做：明细表随图纸版本
+冻结，而供应商是商务事实（本仓契约把它归在「供应链开发清单」，BOM 侧也只叫「候选供应商」，
+见 ``references/deliverable-contracts.md``），把供应商印到受控技术文件上等于让图纸携带
+一个未取证就绪的采购承诺。要改这条需要先给理由，别当默认值。
 明确**未实现**（不要当成已具备）：干涉/碰撞检查（只报**包络投影重叠**面积，不是实体求交）；
-爆炸图、装配约束/配合；明细表不含材料列（``BomLine.material`` 有值但还没取用）；
+爆炸图、装配约束/配合；工艺/表面处理列（C6 的「材料与工艺」只落了材料一半）；
 同一 item 在 BOM 里出现多行时判歧义而不是合并（本仓还没有合并口径，就不猜）。
 """
 from __future__ import annotations
@@ -282,6 +287,18 @@ def build_assembly_view(parts: list[dict[str, Any]], view_name: str,
     return view
 
 
+def _material_of(line: Any) -> str | None:
+    """BOM 行上的材料：空白串按「没填」处理，不原样搬进表格。
+
+    材料与数量**同一个权威、同一个绑定结果**——``bom_item`` 没声明、找不到、或有歧义，
+    这里就是 ``None``，明细表那一格留空。不写 ``"-"`` 也不写「未指定」：占位符会被读成
+    「图上确实有这么一个材料」，而 C6（``references/production-cad-deliverables.md``）
+    要的是能落到每一行的材料事实。
+    """
+    value = line.material or ""
+    return value.strip() or None
+
+
 def bind_bom(parts: list[dict[str, Any]],
              lines: Sequence[Any]) -> tuple[list[dict[str, Any]], list[str]]:
     """按作者声明的 ``bom_item`` 把球标绑到 BOM 行上；数量与单位一律**取自 BOM**。
@@ -293,6 +310,9 @@ def bind_bom(parts: list[dict[str, Any]],
 
     两头都要闭合：球标有号而 BOM 找不到 ⇒ 未收口；BOM 有行而图上没号 ⇒ 也是未收口。
     绑不上就留空（``None``），**不折算成 0**——图纸上 0 与「没核到」差一个量级。
+    第 15 片起 ``material`` 走同一条绑定：值只来自绑上的那一行 ``BomLine.material``，
+    绑不上或那行没填都是 ``None``。``supplier`` 一律不取（明细表与采购清单的边界，
+    理由写在模块 docstring）。
     """
     from aipd_os.bom.models import norm_item
 
@@ -307,7 +327,7 @@ def bind_bom(parts: list[dict[str, Any]],
         declared = part.get("bom_item")
         row: dict[str, Any] = {"item": int(part["balloon"]), "part": str(part["name"]),
                                "bom_item": declared, "bom_line_id": None,
-                               "qty": None, "unit": None}
+                               "qty": None, "unit": None, "material": None}
         if declared is None:
             issues.append(f"零件 {part['name']}（球标 {row['item']}）未声明 bom_item："
                           "明细表这一行不印数量，也不拿零件名字去 BOM 里猜一行")
@@ -324,7 +344,8 @@ def bind_bom(parts: list[dict[str, Any]],
             else:
                 line = matches[0]
                 row.update({"bom_line_id": line.line_id,
-                            "qty": float(line.quantity), "unit": line.unit})
+                            "qty": float(line.quantity), "unit": line.unit,
+                            "material": _material_of(line)})
                 used.add(line.line_id)
         rows.append(row)
 
@@ -368,16 +389,17 @@ def draw_parts_list(msp: Any, rows: list[dict[str, Any]], sheet_wh: tuple[float,
 
     位置固定在**图框内左下角**（离框 ``MARGIN + 10``），因为标题栏占右下角、视图行
     从上往下排；表体向下长的方向是实测出来的（见下）。
-    ``bom`` 目前只用来如实说明「数量列为什么没有」，**不参与**任何一格的取值：
-    数量/材料的权威在 BOM 侧，接线那一轮之前这里不印任何猜测值。
+    ``bom`` 是「这张表的权威接到哪张 BOM」的声明：给了就多印 QTY/UNIT/MATERIAL 三列，
+    不给就维持 ITEM/PART 两列。三列**在不在**只看权威接没接上，不看那一格有没有值——
+    「全部行都没材料」恰恰是最需要看得见的一格，用「有值才长列」的写法它会整列消失。
     """
     from ezdxf.addons.tablepainter import TablePainter
 
     from aipd_os.cad.drawings2d import MARGIN
 
     columns = ["ITEM", "PART"]
-    if any("qty" in row for row in rows):
-        columns += ["QTY", "UNIT"]
+    if bom is not None:
+        columns += ["QTY", "UNIT", "MATERIAL"]
     painter = TablePainter((0.0, 0.0), nrows=len(rows) + 1, ncols=len(columns),
                            cell_width=TABLE_CELL_W, cell_height=TABLE_CELL_H)
     for col, title in enumerate(columns):
@@ -385,10 +407,13 @@ def draw_parts_list(msp: Any, rows: list[dict[str, Any]], sheet_wh: tuple[float,
     for i, row in enumerate(rows, start=1):
         painter.text_cell(i, 0, str(row["item"]))
         painter.text_cell(i, 1, str(row["part"]))
-        if "qty" in row:
+        if "QTY" in columns:
             # 绑不上就留空：图纸上「没核到」与「数量为 0」差一个量级，不能都写成 0
-            painter.text_cell(i, 2, "" if row["qty"] is None else f"{row['qty']:g}")
+            painter.text_cell(i, 2, "" if row.get("qty") is None
+                              else f"{row['qty']:g}")
             painter.text_cell(i, 3, row.get("unit") or "")
+            # 材料与数量同一留空规矩：没有就空着，不写 "-"（占位符会被读成一个材料）
+            painter.text_cell(i, 4, row.get("material") or "")
     width, height = painter.table_width, painter.table_height
     insert = (MARGIN + 10.0, MARGIN + 10.0 + height)
     painter.render(msp, insert)

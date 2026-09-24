@@ -227,29 +227,41 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     明写这一点（否则「这里故意不编号」与「发号失败」在证据里同形）。
 #     零件沿投影方向叠着 ⇒ 两个球标会指向同一个位置，图能交付但读图分不出归属，
 #     这种情况点名告警并建议换一个能分开零件的视图当球标视图。
-#     明细表只有 ITEM/PART 两列：数量与材料的权威在 BOM，尚未接线，所以一个猜测值都不印。
+#     不接 BOM 时明细表只有 ITEM/PART 两列：数量、单位与材料的权威都在 BOM，
+#     没接线就一个猜测值都不印。
 #     只报「包络投影重叠面积」，**不是干涉判定**（本轮不做实体求交）；
 #     装配视图上 `--section/--detail` 直接拒绝（2），爆炸图与装配约束仍未做。
 aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 \
                       --db state.db --bom BOM-001 --project P       # 接上 BOM 的数量
-#   ↑ 给 --db/--bom 就交叉核对球标↔BOM 行，明细表长出 QTY/UNIT 两列；不给就维持
+#   ↑ 给 --db/--bom 就交叉核对球标↔BOM 行，明细表长出 QTY/UNIT/MATERIAL 三列；不给就维持
 #     ITEM/PART 两列、一个猜测值都不印。对应关系**只认 manifest 里声明的 bom_item**：
 #     {"parts":[{"name":"支架","step":"a.step","balloon":1,"bom_item":"BRACKET-01"}]}。
 #     不按零件名字自动映射（名字相似不等于同一个东西）；没声明 bom_item 的零件即使
-#     与某行同名也不对上。数量与单位一律取自 BOM 行——manifest 写 quantity 也不读。
+#     与某行同名也不对上。数量、单位与材料一律取自 BOM 行，材料走**同一个**绑定结果
+#     （没绑上/歧义/那行本身没填都留空，不写 "-" 这类占位符——占位符会被读成图上有这么个材料）；
+#     manifest 写 quantity 或 material 都不读（解析器两个都不认），明细表只有一个材料来源。
+#     供应商**刻意不上图**（裁决，不是漏做）：明细表随图纸版本冻结，供应商是商务事实，
+#     本仓契约里它只叫「候选供应商」且归在供应链开发清单。
 #     四种情形判未收口（退出码 4）：声明的行找不到 / 同一 item 在 BOM 里有多行（歧义）/
 #     零件没声明 bom_item / BOM 有行而图上没有球标指它（这张图漏了零件）。
-#     绑不上的数量留空，不折算成 0。--db 与 --bom 必须一起给，且那张 BOM 得真在：
+#     绑不上的数量与材料都留空，不折算成 0。三列在不在只看 BOM 接没接上，不看有没有值
+#     （「全部行都没材料」恰恰最需要看得见，用「有值才长列」的写法它会整列消失）。
+#     --db 与 --bom 必须一起给，且那张 BOM 得真在：
 #     编号写错会当场 rc=2，而不是被当成空 BOM 报成一堆「每行都找不到」。
 #     注意 --db 指的是**状态库**：BOM 按产品口径取同目录的 bom.db（不给权威状态库加表，
 #     状态库迁移已冻结）。读不到那个文件就报错，不顺手建一个空库。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。
-#     装配图特有的三条判定：球标↔BOM 未闭合 ⇒ assembly_unresolved（阻断）；
+#     装配图特有的四条判定：球标↔BOM 未闭合 ⇒ assembly_unresolved（阻断）；
+#     已绑上但那一行没填材料 ⇒ material_missing（阻断，逐图点名到球标）；
 #     图上数量所属 BOM 与本份证据所核 BOM 不一致 ⇒ assembly_bom_mismatch（阻断）；
 #     出图时没接 BOM ⇒ assembly_bom_unverified（提示，不阻断：图仍成立，只是数量没核）。
 #     一张漏了零件的装配图不能再读成 ok=true。
+#     材料覆盖读数随各张图的引用带（bound_rows / with_material / unbound_rows /
+#     missing_balloons / drawings_without_bom），文档级 material_coverage 只聚合数得清的四项——
+#     多张装配图的球标都从 1 开始编号，「哪几行缺」一律逐图读、不拍平；
+#     没绑上的行不重复算成缺材料，没接 BOM 的图写成盲区而不是 0。
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"
 #   ↑ 失效传播：沿血缘把下游 truth 标 stale、生成有界返工任务（rework_tasks，默认上限 3 次），
 #     并给出 owner 可读的四段变更说明（改了什么/为何影响/修复计划/需要批准什么）。

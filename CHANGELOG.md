@@ -561,6 +561,50 @@
   「C6 是否要求装配图必须绑 BOM」（要业务口径，先只留提示）。证据见
   `docs/audit/RELEASE_EVIDENCE_ASSEMBLY_F-DRAW-01_2026-09-25.md`；
 
+- **v5.10 F-DRAW-01 第 15 片：明细表的材料只认 BOM 行，发布证据说得出「哪几行还没有材料」**：
+  第 13 片接上了数量与单位，材料留在 BOM 行上没人取用；C6 的交付物清单
+  （`references/production-cad-deliverables.md:3`）要的是「材料与工艺」，所以「这张装配图
+  有没有把材料落到图上」必须是机器读得出的一格。三条裁决：
+  (1) **材料只有一个来源**——`bind_bom` 那同一个绑定结果里的 `BomLine.material`：
+  没声明 `bom_item`、声明找不到、有歧义、或那一行本身没填，一律 `None`；
+  **不写 `-` 也不写「未指定」**（占位符会被读成图上真有这么个材料），不拿标题栏
+  `--material` 回填（那是作者另填的一格），manifest 里的 `material` 与 `quantity`
+  同遇——解析器两个都不读，所以零件数据里不存在第二个材料来源；
+  (2) **供应商刻意不上图**（是裁决不是漏做）：明细表随图纸版本冻结，供应商是商务事实，
+  本仓契约里它只叫「候选供应商」且归在供应链开发清单（`deliverable-contracts.md:9,17`）；
+  裁决写在 `cad/assembly.py` 的模块 docstring，并用一条用例钉住「代码旁边得留着这句话」。
+  (3) **列集合跟着接上的权威走，不跟着「有没有值」走**：`draw_parts_list` 的门槛从
+  `any("qty" in row)` 改成 `bom is not None`，于是接上 BOM 恒有 QTY/UNIT/MATERIAL 三列，
+  每格独立留空——「全部行都没材料」恰恰最需要看得见，用旧写法它会整列消失。
+  发布证据加第四条判定 `material_missing`（已绑上而那一行没填 ⇒ **阻断**并逐图点名球标）：
+  压根没绑上的行**不重复计入**（那是 `assembly_unresolved` 判住的事），出图时没接 BOM
+  记 `drawings_without_bom` 这一格**盲区**而不是折成 `with_material: 0`；
+  「哪几行缺」一律逐图读（多张装配图的球标都从 1 开始，拍平就分不清是谁家的 1 号），
+  文档级 `material_coverage` 只聚合数得清的四项。
+  调研如实记录：**没拿到 ISO 7200 / GB/T 10609.2 / ASME Y14.38 原文**——中文检索命中多是
+  文档分享站转载，SolidWorks/DraftSight 两个帮助页抓取只返回 CSS 正文为空，xometry 403，
+  GitHub 代码检索对 TechDraw PartList 三种查询式 0 命中；真正读到内容的只有 RoyMech 的
+  条目清单（Item/Description/Quantity/Reference/Material，供货信息仅算「其他必要信息」），
+  列集合因此按本仓两条既有契约裁剪。
+  守卫：`tests/test_cad_assembly_bom_link.py` +10 条、`tests/test_release_manifest.py`
+  +7 条（含「两张装配图各留各的球标号」「没有装配图就不写这一格」「从 TABLECONTENT
+  读回 `6061-T6` 且不许出现 `-`/`未指定`/`None`」）；变异电池 **12/12 killed**，
+  且每条红在哪几个用例是关掉 `-x` 重跑记下来的，不是推的。**M10 首轮存活**
+  （`with_material = bound_rows` 这种「拿位置当计数」只在「有材料那行排在缺材料那行之后」
+  才算错，而我两条混合用例都恰好把有材料的放前面）→ 把断言改成缺在前、有在后，
+  并同时核 `(2, 1)` 与 `球标 [1]`（原本 `"1" in detail` 也偏松：句子开头就带「1 行」）。
+  真命令行端到端：出图 rc=0、`TABLECONTENT` 含 `MATERIAL/6061-T6` 而第 2 行材料格为空、
+  全图找不到供应商串 `ACME`；`release manifest` rc=4、`ok=false`、
+  `evidence.drawings[0].material.missing_balloons=[2]`。
+  补一处第 13 片的账：`tests/test_cad_assembly_bom_link.py` 当时没登记进
+  `cad.2d_drawings.unit_test`（registry 里出现 0 次），声明面少一栏等于那片没有测试。
+  顺带记一个工具坑：往 registry 那条超长字符串里塞带 ASCII 引号的 `"-"`，
+  `ast.parse`/`py_compile` 全过（那是合法的字符串减法表达式）而 `import` 才 `TypeError`
+  ⇒ 能力表静默变空，**改完字符串数据必须真 import 一次**。
+  仍未做：工艺/表面处理列（「材料与工艺」只落了材料这一半）、行级材料与标题栏 MATL 的
+  一致性（做判定得先说清谁权威）、爆炸图与装配约束。证据见
+  `docs/audit/CAD_ASSEMBLY_MATERIAL_F-DRAW-01_2026-09-25.md`；
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与
