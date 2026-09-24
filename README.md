@@ -209,6 +209,14 @@ aipd drawing generate --out out/bracket.dxf --part bracket --views FRONT,TOP --s
 #     切不到材料/边界接不成闭合环 ⇒ 明说原因并判未收口（4），不交空白剖视当成果。
 #     母视图上会画剖切符号（剖切线 + 指向保留侧的短划 + 两端字母），剖视标 «A-A»、
 #     第二刀 «B-B»；切到空气的那一刀不编号也不标符号。
+aipd drawing generate --out out/bracket.dxf --part bracket --views TOP --detail "TOP@(-30,0)/12=2"
+#   ↑ 局部放大：`--detail 母视图@(u,v)/半径=倍数`，圆心/半径是**母视图局部坐标与模型单位**
+#     （可直接抄证据里的孔心），倍数是相对母视图印出比例的放大（须 >1，否则不是放大）。
+#     做法是拿放大圆去解析式裁剪母视图**已判定可见/隐藏**的折线：母视图上画裁剪圈 + 编号，
+#     放大图按「全局比例 × 倍数」画并标 «DETAIL 1  2:1»；尺寸只从母视图**继承**测点落在圈内
+#     的那些且保留原名（`inherited_from`），所以声明好的公差与 ctq_ref 一起带到放大图上，
+#     而总尺寸/以零件边缘为锚的链段一律不带（裁剪窗的大小不是零件尺寸）。
+#     圆内没有图线 ⇒ 不编号、不画圈，判「放大未收口」并返回 4；母视图名写错直接报错（2）。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据
