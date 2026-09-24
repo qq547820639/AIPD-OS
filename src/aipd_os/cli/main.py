@@ -447,6 +447,38 @@ def build_parser() -> argparse.ArgumentParser:
     pg.add_argument("--waiver-risks", help="approve_with_waiver：接受的已知风险")
     pg.set_defaults(func=COMMAND_FUNCS["product gate"])
 
+    # ---- v5.11 结构化事实的失效传播（F-TRUTH-PROP-01）----
+    p = sub.add_parser(
+        "truth",
+        help="Product Truth 失效传播（propagate 标 stale + 建返工任务 / "
+             "tasks 看待办）。 Example: aipd truth propagate --db state.db "
+             "--project p1 --upstream T-3")
+    truth_sub = p.add_subparsers(dest="truth_cmd", required=True)
+    tp = truth_sub.add_parser(
+        "propagate",
+        help="沿血缘把下游事实标 stale 并生成有界返工任务；有下游待返工即退出码 4。"
+             "只接传播这半条链，返工的**执行**（run_rework）本仓尚未接线。")
+    tp.add_argument("--db", required=True)
+    tp.add_argument("--project", required=True)
+    tp.add_argument("--tenant", default="default")
+    tp.add_argument("--upstream", required=True,
+                    help="上游 id：truth 记录 id，或 Product Intelligence 对象 id"
+                         "（认不出时会如实标成 intelligence_or_external）")
+    tp.add_argument("--reason", help="变更原因，写进每条返工任务")
+    tp.add_argument("--max-attempts", type=int,
+                    help="返工上限（缺省 3）；必须 > 0")
+    tp.add_argument("--json", action="store_true")
+    tp.set_defaults(func=COMMAND_FUNCS["truth propagate"])
+    tt = truth_sub.add_parser(
+        "tasks",
+        help="列本作用域的返工待办（只读）。")
+    tt.add_argument("--db", required=True)
+    tt.add_argument("--project", required=True)
+    tt.add_argument("--tenant", default="default")
+    tt.add_argument("--status", help="按任务状态过滤，如 pending / blocked / succeeded")
+    tt.add_argument("--json", action="store_true")
+    tt.set_defaults(func=COMMAND_FUNCS["truth tasks"])
+
     # ---- v5.10 制造就绪（bom 物料清单 / cost 成本核算）----
     p_bom = sub.add_parser(
         "bom", help="物料清单（show 汇总+发布检查 / add 添加行 / release 检查后发布）。"

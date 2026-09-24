@@ -85,12 +85,15 @@ class PropagationEngine:
         return task
 
     def _next_task_id(self) -> str:
-        tenant = self._store.tenant_id
-        project = self._store.project_id
+        """任务号必须按**整表**分配，不能按 scope 分配。
+
+        ``rework_tasks.task_id`` 是全局主键，而按 tenant/project 过滤取 max 会让两个项目
+        各自算出 ``RW-001`` —— 第二条直接撞 ``UNIQUE constraint failed``（实测：跨项目
+        传播时命令以 IntegrityError 退出 2）。作用域隔离靠的是 tenant_id/project_id 两列，
+        不是靠 id 号段；这里读全局不泄露任何东西。
+        """
         with self._store.connect() as c:
-            rows = c.execute(
-                "SELECT task_id FROM rework_tasks WHERE tenant_id=? AND project_id=?",
-                (tenant, project)).fetchall()
+            rows = c.execute("SELECT task_id FROM rework_tasks").fetchall()
         nums = []
         for r in rows:
             if r["task_id"].startswith("RW-"):

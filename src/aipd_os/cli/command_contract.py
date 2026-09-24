@@ -106,6 +106,14 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                  requires_args=frozenset({"--db", "--out"}),
                  description="从 Product Truth 的 CTQ 生成 --spec 用的公差声明（缺口即不写文件）"),
 
+    # ---- 结构化事实的失效传播（F-TRUTH-PROP-01）----
+    CommandEntry("truth propagate", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
+                 requires_args=frozenset({"--db", "--project", "--upstream"}),
+                 description="沿血缘把下游标 stale 并生成有界返工任务（有待返工即退出码 4）"),
+    CommandEntry("truth tasks", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
+                 requires_args=frozenset({"--db", "--project"}),
+                 description="列本作用域的返工待办（只读，不改任何状态）"),
+
     # ---- 对外副作用（outbox）----
     CommandEntry("outbox drain", CommandStatus.PUBLIC, CommandCategory.OPERATIONS, "5.10",
                  requires_args=frozenset({"--db"}),

@@ -83,6 +83,7 @@ from .commands_release import (
     cmd_test,
 )
 from .commands_supply import cmd_quote
+from .commands_truth import cmd_truth_propagate, cmd_truth_tasks
 from .commands_validation import (
     cmd_issue_list,
     cmd_issue_resolve,
@@ -508,6 +509,8 @@ COMMAND_FUNCS: dict[str, Any] = {
     "cad build": cmd_cad_build,
     "drawing generate": cmd_drawing,
     "drawing spec": cmd_drawing_spec,
+    "truth propagate": cmd_truth_propagate,
+    "truth tasks": cmd_truth_tasks,
     "outbox drain": cmd_outbox,
     "outbox review": cmd_outbox,
     "industrialize": cmd_industrialize,
