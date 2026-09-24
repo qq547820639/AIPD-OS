@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 23308,
-      "sha256": "d2c0ccfdc073209de5d57ccc51f1a46ac26882c0e4f701408bc0a2f91675aa45"
+      "size": 24143,
+      "sha256": "e4035a1b82e486897426b19c330798acf88be743aa6e159bbede7d459fd4130d"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -377,8 +377,8 @@
     },
     {
       "path": "docs/architecture/state_infrastructure.md",
-      "size": 4715,
-      "sha256": "245e5d856ddcd2160af93f568e43934b691eb052203c996507fba1e9006be28f"
+      "size": 5826,
+      "sha256": "8632dea21ce236fc4237670fba3f1d4feae8f30d0f97f842cc067955676bbb87"
     },
     {
       "path": "docs/architecture/state_inventory.md",
@@ -1637,8 +1637,8 @@
     },
     {
       "path": "src/aipd_os/state/connection.py",
-      "size": 4858,
-      "sha256": "38a9e6dbf8c1085bdf3dbd103d15d7c32831c37cecb20f7536856e3bc00a5069"
+      "size": 5271,
+      "sha256": "d2cf34d8a6b1e7bdbcfaa5e5da954a3457f71700ea147f133bc4dec87c83ad01"
     },
     {
       "path": "src/aipd_os/state/crypto.py",
@@ -1647,8 +1647,8 @@
     },
     {
       "path": "src/aipd_os/state/db.py",
-      "size": 54905,
-      "sha256": "d7f61cd146c77cfc0687025c9a1d7a98b5e35173e2d6058444c6a96118bb8ec1"
+      "size": 54160,
+      "sha256": "8c0131b410d88a399abccf324e9205975a540ede2d68dda34eb9e958f75da71f"
     },
     {
       "path": "src/aipd_os/state/dispatcher.py",
@@ -2222,8 +2222,8 @@
     },
     {
       "path": "tests/test_connection_reentrancy.py",
-      "size": 5207,
-      "sha256": "c335a99348085b8d935806fd2c971794128348733f6e8041fceb99303d7f9d3b"
+      "size": 7659,
+      "sha256": "8baf727d8d28627799113a354675ee3c6d4899d89ed52deb40aefc7768cde621"
     },
     {
       "path": "tests/test_credibility.py",
