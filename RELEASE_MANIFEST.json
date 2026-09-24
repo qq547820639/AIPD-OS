@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 26874,
-      "sha256": "43cbe70fa6f40a4f885ea5e38b56f0998aed7721b851b26622d0ec6b5f2390d9"
+      "size": 27952,
+      "sha256": "450fce5c4e5561a4603da50e33a3d9d8c465bf3c8e16285a170c3881097086ac"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1422,13 +1422,13 @@
     },
     {
       "path": "src/aipd_os/product_intelligence/gate.py",
-      "size": 28461,
-      "sha256": "5993cc84db11fcc0b35b81f3ed092eae29158ffa7f6146ae620ada6da2a29694"
+      "size": 28659,
+      "sha256": "ff92cb26d002509afd7e79480b9618b6a259db23e3361407c45248aac09bba5d"
     },
     {
       "path": "src/aipd_os/product_intelligence/gate_criteria.py",
-      "size": 23243,
-      "sha256": "cd8d5e7580660170897da832169fcdfee9abaafa9a943c3e4ba8fe55a9b3c74f"
+      "size": 24246,
+      "sha256": "97645106423f3fc82482885d5613e67584f2d4c8f063889ebe51c0e52f10698d"
     },
     {
       "path": "src/aipd_os/product_intelligence/impact.py",
@@ -1457,8 +1457,8 @@
     },
     {
       "path": "src/aipd_os/product_intelligence/snapshot.py",
-      "size": 27345,
-      "sha256": "393e383b0a5d3dbef1c6b1d52bd59119385e602d485145b8f4f1c47861678b3d"
+      "size": 27535,
+      "sha256": "89acaa44d8b5bf51ca435e9c4f45282ffe960248b5c66ce4bf353a458dfa0eb1"
     },
     {
       "path": "src/aipd_os/product_truth/__init__.py",
@@ -2694,6 +2694,11 @@
       "path": "tests/test_server_local.py",
       "size": 4712,
       "sha256": "dbb4ab1e7ae34bc39d9774a319ddaf7556108ba59d2aac4e45792dad161cadae"
+    },
+    {
+      "path": "tests/test_snapshot_idea_lineage.py",
+      "size": 4805,
+      "sha256": "8ce88e5e5fb2a015511dfb75fc1f7ec2076566470b35e73155ffdcff5a07029e"
     },
     {
       "path": "tests/test_stale_propagation.py",

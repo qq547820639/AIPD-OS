@@ -16,14 +16,15 @@
 | 全能力分布 | fully 36 / partially 28 / external 13 / 其余 0（共 77） | `docs/audit/capability_matrix.json` |
 | 图纸用例 | 27 passed | `tests/test_cad_drawings2d.py` |
 | CAD 黄金闭环用例 | 18 passed（新增 6 条） | `tests/test_cad_golden_loop.py` |
-| 全量回归 | **1354 passed / 0 functional failed / 3 skipped**（另 2 条为清单哈希，重算后转绿） | 收尾复跑 |
+| 全量回归 | **1359 passed / 0 failed / 3 skipped / 2 deselected** | 收尾复跑（机器报告已入库） |
 | F-CAD-01 | 已修 + 已入门禁 + 已配反证 | §5 |
 | F-STATE-05 | 已复现（5 处）+ 已修 + 配对对照（11 passed） | §8.1 |
 | F-STATE-06 | 跨库串连接已复现 + 登记表收敛为一（3 条回归） | §8.2 |
 | F-STATE-07 | 空串吞掉已配置密钥，已修 + 3 条解析回归 | §8.3 |
 | F-STATE-08 | 无盐单轮 KDF → 带盐 PBKDF2（`f2:`，migration v18） | §8.4 |
 | F-EXEC-01 | 外部副作用补内容幂等键 + 未知结果挂起（5 条用例） | §8.5 |
-| ruff（`src tests state_service`）/ mypy（360 文件） | 0 项 | CI 作用域 |
+| F-GATE-01 | Gate/快照/stale 统一按 `snap.idea_id` 解析（5 条 + 变异反证） | §8.6 |
+| ruff（`src tests state_service`）/ mypy（361 文件） | 0 项 | CI 作用域 |
 | 发布门 / 性能门 / skill 自审 | 8/8 绿 · PASS（比值 0.0161） · 0 警告 0 失败 | §6、§9 命令 |
 
 ---
