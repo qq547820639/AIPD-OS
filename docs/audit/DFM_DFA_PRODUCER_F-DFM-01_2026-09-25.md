@@ -143,7 +143,35 @@ D16/D18 的锚点最初是**凭记忆写的字符串**（漏了行首的 `+ `）
 - 阈值来处是两家厂商工艺能力页 + 一份转述的 ISO 表，**都不是标准正文**；
   要按标准判定得先拿到 ISO 2768-1 与厂商能力合同的正式文本（属主/采购侧的事）。
 
-## 八、收尾读数
+## 八、收尾读数（落盘后由量具复算，不是计划）
 
-见提交后的 `docs/audit/pytest-report-v5.6.0.json`、`SOURCE_MANIFEST.json`、
-`PROVENANCE.json`、`capability_matrix.json` 与 §九 的复算表（本片落款时填）。
+提交：`4c82264`（代码 + 文档）→ `c3860bf`（发布工件重锚）。
+
+| 量具 | 读数 |
+|---|---|
+| 全量 pytest（`docs/audit/pytest-report-v5.6.0.json`） | **1836 passed / 0 failed / 3 skipped**（共 1839；上一片收尾 1801/0/3=1804，本片 +35 条用例） |
+| `PROVENANCE.json` | `test_report.{passed:1836, failed:0, total:1839, source_commit:a66040520139…}` |
+| `SOURCE_MANIFEST.json` | 被哈希面 **599 → 601**（与上一轮 manifest 逐项求差，新增就是 `src/aipd_os/cad/dfm.py` 与 `tests/test_cad_dfm.py`） |
+| `production_release_gate --release-ready --tag v5.6.0` | rc=0，`release_ready: true`，8 项检查、未通过列表为空 |
+| `skill_quality_audit.py` | rc=0，0 警告 0 失败 |
+| `state_perf_gate.py` | PASS |
+| `audit_repo.py --strict` | rc=1，唯一 ✗ 是 Provenance 锚点与 HEAD 之差（`a66040520139…` vs `c3860bf09ee9…`）——真发版前按设计为红 |
+| `scripts/c6_coverage.py` | rc=0、problems 为空、`--self-test` 7/7；档位 **13 / 1 / 1**（缺席只剩 ICD，只有校验方只剩 版本与ECR/ECO） |
+| 变异电池 `/tmp/slice19-mutations.py` | 18 条：杀掉 18 / 存活 0 / 注入无效 0 |
+| 端到端 `/tmp/slice19-e2e.sh` | 脚本 rc=0，十个小节全部对上预期 rc（1/2/4/5/8 为 0，3/6 为 4，反证两条各自成立） |
+
+一处操作性教训值得记进登记表：本片收尾时执行了 `ruff check --fix src tests scripts`，
+把 **32 个与本片无关的 `scripts/*.py`** 一起改了（本仓 ruff 口径只覆盖 `src tests`）。
+发现后立即逐文件比对（`git diff` 只有 `scripts/c6_coverage.py` 是我自己的改动）并用
+`git checkout --` 把 32 个文件还原，再重跑门禁。规矩：**`--fix` 的作用域必须与项目
+lint 口径一致**，越界修复会污染交付面；mypy 同时暴露了 `main.py` 里一个把参数插到
+文件尾的错误（`Name "mp" is not defined`），说明「跑一遍静态检查」要跑**全仓**而不是只跑新文件。
+
+## 九、下一片候选（供排序，不代表已决定）
+
+1. **ICD**：仍 `absent`——需要接口清单这一事实来源，本仓没有接口实体，要属主给；
+2. **版本与ECR/ECO**：仍 `checker_only`——变更单是流程与审批事实，涉及「AI 不自批」边界；
+3. `总装/单件STEP` 那一项的 note 里明写着 **装配级 STEP 未导出**（`assembly.py` 只逐件
+   `importStep` 再投影）——这是可数字化、不需属主拍板的一项；
+4. DFM 侧可继续做深的两件：沿面法向射线（把斜置薄壁测准）与插入方向计数
+   （数据源是 manifest 已声明的 `explode`，不需要新事实）。
