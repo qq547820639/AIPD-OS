@@ -55,19 +55,21 @@ rollback 会执行第 N 格的 down，而 down 用的正是同一份重建模板
    若某条产品路径确实依赖默认值（v9 之前的 0.5 哨兵就是这种历史），
    要靠各自的用例钉，不在这把尺子的射程内。
 2. **`scripts/aipd_store.py` 那份废弃旧库 DDL 未纳入对账**（同前三片）。
-3. **列之外的对象（索引、触发器、视图）不在射程内**：
-   实测 v20-v22 三张表都没有具名索引，但**下一格重建别的表时未必**——
-   真要覆盖，得把 `sqlite_master` 里 `type IN ('index','trigger')` 且 `sql IS NOT NULL`
-   的对象一起纳入 before/after 对账。这一条留作下一片的候选。
+3. **视图不在射程内**：今天链上没有视图；索引与触发器已在同一片内补成第二根轴（见 §二.1）。
+4. **`sqlite_autoindex_*` 不在射程内**：那是 PK/UNIQUE 的隐式索引，`sql` 为 NULL，
+   名字还会随重建顺序变，纳入只会制造噪音——列的对账已经覆盖了约束本身。
 
 ## 五、收口读数
 
 | 项 | 读数 |
 |----|------|
-| 新增常驻用例 | **8 条**（`tests/test_migration_rebuild_fidelity.py`），全量 2227 → **2235**（工作树整跑 2232 passed / 0 failed / 3 skipped） |
+| 新增常驻用例 | **11 条**（`tests/test_migration_rebuild_fidelity.py`：形状轴 8 + 索引轴 3），全量 2227 → **2238**（工作树整跑 2233 passed / 2 failed / 3 skipped，两条红只有清单哈希锚点，属未重锚的预期） |
 | 变异电池 | `/tmp/slice36-mutations.py` **4 条：杀 4 / 存活 0 / 注入无效 0 / 崩溃式红 0**，每条带未注入对照臂；已知无撤回案例 1（白名单存在性那条，撤回面已被逐格对账覆盖） |
 | 静态检查 | `mypy src` 0 error；`ruff check src tests state_service` rc=0 |
 | 产品代码 | 零改动（本片只加尺子与登记） |
+| 索引轴实测 | 21 格逐格前进式重放：具名索引/触发器「被丢掉」0 处、「定义被改写」0 处；
+  v20/v21/v22 三次重建都没有漏带回任何索引（`gates`/`risks` 在 HEAD 上没有具名索引，
+  `claim_evidence_relations` 等三张表也没有）|
 | 签出 attestation | `git worktree` 的 HEAD 干净签出 + `AIPD_SOURCE_COMMIT=<tag SHA>`：**2232 passed / 0 failed / 3 skipped**（2235 收集，3m41s），报告 `sha256` 前缀 `ec9defd49bc7` 已绑进 `PROVENANCE.test_report` |
 | 发布门 | `production_release_gate --release-ready --tag v5.6.0`：**8/8、rc=0、`release_ready: true`**（带 venv PATH）|
 | 仓库审计 | `audit_repo --strict` rc=1，唯一一条红仍是既有的 tag 锚点判定；两份清单 `hash_mismatch_count = 0`（新尺子入册后 628 条）|

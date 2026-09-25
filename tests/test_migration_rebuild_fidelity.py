@@ -150,3 +150,75 @@ def test_the_ruler_fires_when_a_rebuild_looses_a_columns_not_null(tmp_path, monk
 def test_the_ruler_is_silent_on_the_real_v22():
     """合规侧：不注入时同一把尺子对 v22 只报声明过的那三列。"""
     assert set(replay_changes(22)) == set(DECLARED_SHAPE_CHANGES[22])
+
+# --- 另一根轴：具名索引与触发器 -------------------------------------------
+def _named_objects(conn: sqlite3.Connection) -> dict[str, tuple]:
+    """用户具名的索引与触发器（隐式索引不在内：它们的 `sql` 是 NULL）。"""
+    return {r[0]: (r[1], r[2], r[3]) for r in conn.execute(
+        "SELECT name, type, tbl_name, sql FROM sqlite_master "
+        "WHERE type IN ('index','trigger') AND sql IS NOT NULL")}
+
+
+def dropped_or_redefines(migration: dict, conn: sqlite3.Connection) -> list[str]:
+    """跑这一格的 up，报告它**弄丢或改写**了哪些已有的具名索引/触发器。
+
+    新增不算（建表带索引是常态）。这条只管一件事：
+    拷贝重建最容易漏带回来的，就是别人留在同一张表上的查询支撑点。
+    """
+    before = _named_objects(conn)
+    for step in migration["up"]:
+        exec_script(conn, step) if isinstance(step, str) else step(conn)
+    after = _named_objects(conn)
+    out = [f"{name} 被丢掉（原属 {before[name][1]}）" for name in before if name not in after]
+    out += [f"{name} 的定义被改写" for name in before
+            if name in after and before[name] != after[name]]
+    return out
+
+
+def test_no_migration_drops_or_redefines_a_named_index_or_trigger():
+    """实测整条链今天一处都没有 ⇒ 这条不需要白名单。"""
+    from aipd_os.state.migrations import runner
+
+    original_chain = runner.MIGRATIONS
+    offenders: dict[int, list[str]] = {}
+    for migration in original_chain:
+        version = int(migration["version"])
+        if version == 1:
+            continue
+        with tempfile.TemporaryDirectory() as td:
+            path = str(Path(td) / "idx.db")
+            runner.MIGRATIONS = [m for m in original_chain if int(m["version"]) < version]
+            try:
+                migrate(path)
+            finally:
+                runner.MIGRATIONS = original_chain
+            with sqlite3.connect(path) as conn:
+                got = dropped_or_redefines(migration, conn)
+            if got:
+                offenders[version] = got
+    assert not offenders, f"这些迁移动了别人留下的具名索引/触发器：{offenders}"
+
+
+def test_the_index_axis_fires_when_a_rebuild_forgets_to_carry_an_index_back():
+    """反向对照：同一段读数在「忘了把索引搬回来」时必须开火，不是永远绿。"""
+    with tempfile.TemporaryDirectory() as td:
+        path = str(Path(td) / "drop.db")
+        migrate(path)
+        with sqlite3.connect(path) as conn:
+            existing = sorted(_named_objects(conn))
+            assert "idx_changes_scope_time" in existing, existing[:5]
+            got = dropped_or_redefines(
+                {"up": ["DROP INDEX idx_changes_scope_time;"]}, conn)
+    assert got == ["idx_changes_scope_time 被丢掉（原属 changes）"], got
+
+
+def test_the_index_axis_is_silent_when_a_step_only_adds_one():
+    """合规侧：只加索引的那一格不该被这条判据拦。"""
+    with tempfile.TemporaryDirectory() as td:
+        path = str(Path(td) / "add.db")
+        migrate(path)
+        with sqlite3.connect(path) as conn:
+            got = dropped_or_redefines(
+                {"up": ["CREATE INDEX idx_risks_project ON risks(project_id);"]}, conn)
+    assert got == []
+
