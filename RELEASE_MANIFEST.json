@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 184615,
-      "sha256": "e6278962b4ace7993066767bab6e14622f75179a1f373bec4e5f1b09d82bc7b5"
+      "size": 187626,
+      "sha256": "2431307347413b13a5247b24cfde123bf5bdb4cb01402ccb22bbefaa642826f3"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 6990,
-      "sha256": "3aeac2f59c735245319dc0af31ec62c21dd26a9be10ff31486f449d1df8dcf19"
+      "size": 7785,
+      "sha256": "171d995c49ec4f7def85bb64f294c24b1fc37cc47a6a27c5455c35bbe9df0f65"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -1031,6 +1031,11 @@
       "sha256": "5b9d9436e702c49ad807e84e24fa629c401983b3d55a421bbf79b49a2cfb248f"
     },
     {
+      "path": "src/aipd_os/cad/spec_lineage.py",
+      "size": 4126,
+      "sha256": "eb27df07cc7cc1938acfb302ea13c3e39781abd9ad95f5a171bbb7a0a7a8e053"
+    },
+    {
       "path": "src/aipd_os/cad/stackup.py",
       "size": 4104,
       "sha256": "b4e4eb0ca39406e81baac7e1d7a99ac6223d0e1ce05cefe1e4b0f81d1181598e"
@@ -1082,8 +1087,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 30214,
-      "sha256": "5807bb7d1918ea15e6c7b3eb2fa202a03594466c822e17f02f73a0bca171680e"
+      "size": 31598,
+      "sha256": "364fee037066c5e13b753fc2ce75adeaceb87c9e266f93e82e64f144d6cca1ca"
     },
     {
       "path": "src/aipd_os/cli/commands_eco.py",
@@ -1632,8 +1637,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 88839,
-      "sha256": "66d74b361bb02c92fabf0d81e84597cb5f33cc471849efae81d36b29814cdaa0"
+      "size": 89222,
+      "sha256": "eacf34eee8ed35b3b4737e4666371cd55ad3678ae90b1f92b0439c9bf344e6e6"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2519,6 +2524,11 @@
       "path": "tests/test_doc_reference_census.py",
       "size": 5048,
       "sha256": "db5c4fa6f428050a644a55342a3ceef81ca0d9113f6d93eee1e4691d96d46bdd"
+    },
+    {
+      "path": "tests/test_drawing_spec_lineage.py",
+      "size": 12355,
+      "sha256": "04083b864d882858c3f8eba7542c00f09260c09683b36a8394646ec8313d1b2e"
     },
     {
       "path": "tests/test_encryption_key_policy.py",
