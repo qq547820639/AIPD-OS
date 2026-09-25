@@ -83,8 +83,28 @@
 
 全量与两道发布门禁的终读数由 `production_release_gate` / `audit_repo --strict` 跑完后补在下节。
 
-## 六、终读数（工作树干净后跑）
+## 六、终读数（工作树干净后跑，两跑全在 `git worktree` 的 HEAD 签出里）
 
-- 全量（干净 HEAD 签出、`AIPD_SOURCE_COMMIT=v5.6.0 tag 提交`）：
-- `production_release_gate --release-ready --tag v5.6.0`：
-- `audit_repo --strict`：
+| 跑 | 树 | collected | passed | failed | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| A | `d4b8c64`（代码与镜像，清单未刷） | 2281 | 2276 | 2 | 只红在 `test_release_manifest_hashes_match_disk` / `test_source_manifest_hashes_match_disk`（新用例文件未入册），预期 |
+| B | `fa9611f`（清单已重锚） | 2281 | **2278** | **0** | 报告 `source_commit = a660405…`（v5.6.0 tag 提交）、sha256 前缀 `ba8a5a6be008`；同一份既作本轮记录也作锚定用（`HEAD=310774a` 时 PROVENANCE 绑的就是它） |
+
+- 上一片 2263 → 本片 **2278** 通过（+15；收集 2266 → 2281），跳过仍为 3。
+- 这一片**没再踩**第 39 片那两条 5× 比值性能门的并发假红（load 已降到 ~12）。
+  读数与「上一片也红过所以大概是噪声」无关：B 跑本身就是 0 failed。
+- `scripts/command_surface_census.py`：`cli 66 / alias 0 / handler 0 / handler_ambiguous 0 / none 0`。
+- `skill_quality_audit.py`：0 警告 / 0 失败，rc=0，「测试文件覆盖」49 → **66**。
+- `production_release_gate --release-ready --tag v5.6.0`（带 `.venv/bin` 进 PATH）：
+  **8/8 全绿、`release_ready: true`、rc=0**；跑完 `git status` 仍为空。
+- `audit_repo --strict`：**rc=1，唯一一条红**仍是既有的
+  `Provenance source commit mismatch: manifest=a66040520139… vs HEAD=310774aea0de…`
+  ——锚点按设计停在 tag 提交（见项目记忆「release 锚点」条），两份清单 `hash_mismatch_count` 为 0。
+
+## 七、下一步
+
+命令面这条轴到这里没有已知残留：66 条注册命令都有 argv 位证据，且证据来自哪条用例可逐条指认。
+再往前要换轴，不再在同一个问题上加深（例如「走过 CLI 入口」不等于「断言了产物内容」——
+`test` / `package` 两格今天靠桩把重活换掉，那是**接线证据**不是**行为证据**，
+要不要把这两格升成行为级，属于下一个待裁项而不是本片欠账）。
+
