@@ -186,7 +186,7 @@ $ aipd interfaces --repo . --out … --strict                            rc=4
 | --- | --- |
 | 全量用例 | 2074 → **2121** 条（+47：`test_interface_contract` 18→41、`test_schema_check` 3→16、新增 `test_quality_gate_shape` 11）。收口跑（提交 `b6c2a32` 之后、带 `AIPD_SOURCE_COMMIT=tag`）：**2118 passed / 0 failed / 3 skipped**，156.41s |
 | 中间两轮 | 第一轮（重锚前）`2 failed, 2116 passed`——红的正是 `test_packaging.py` 那两条哈希对照；第二轮（只刷了 `RELEASE_MANIFEST`、`SOURCE_MANIFEST` 还没重算）`1 failed`——这条不是回归，是**清单生成顺序**：`SOURCE_MANIFEST` 只由 `release_evidence.py` 产，`regenerate_release_manifest.py` 只刷 `RELEASE_MANIFEST` |
-| 命令面漏提交这一族 | 本片**没有再犯**：先提交代码，再在提交后的树上跑全量（第 29 片的教训落成规矩，见《第 29 片》§八） |
+| 命令面漏提交这一族 | 本片**没有再犯**，并补了第 29 片缺的那一步：代码提交之后另开 `git worktree add /tmp/s30head HEAD`，用 `PYTHONPATH` 指到签出树（避开 editable 装回指工作树）重跑全量 ⇒ **2118 passed / 0 failed / 3 skipped**，rc=0，126.34s，并先断 `aipd_os.__file__` 真的落在 `/tmp/s30head/src/…` 再采信这个读数 |
 | 被哈希面 | 616 → **619**（`src/aipd_os/schema_binding.py`、`tests/test_quality_gate_shape.py`、`assets/templates/fact.json`），`SOURCE_MANIFEST` 与磁盘逐条一致（`test_packaging` 8 passed） |
 | `PROVENANCE.test_report` | `2118 passed / 0 failed / 总 2121`，报告 `docs/audit/pytest-report-v5.6.0.json`（`sha256=ea50b195d379…`）；`source_commit = a66040520139…`（tag） |
 | 发布门 `--release-ready --tag` | **8/8 绿**，`release_ready: true`，rc=0（在 `7994516` 的干净树上） |
