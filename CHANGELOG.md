@@ -982,9 +982,14 @@
   空账本不许写成「都有真人认领」（对空集下断言）。
 
   读数：全量用例 **2182 → 2205**（+23，全在 `tests/test_risk_ownership.py`）；
-  本轮唯一的红是那两条清单哈希锚点（`test_release_manifest_hashes_match_disk`、
-  `test_source_manifest_hashes_match_disk`），按既有配方重锚后归零；
-  `mypy src` 0 error、CI 口径 ruff（`src tests state_service`）rc=0。
+  签出 attestation（`git worktree` 的 HEAD 干净签出 + `AIPD_SOURCE_COMMIT=<tag SHA>`）
+  **2202 passed / 0 failed / 3 skipped**，同一份报告绑进 `PROVENANCE.test_report`；
+  第一跑只红在 `test_batched_transaction_outranks_per_statement_writes` 那格 5× 比值门
+  （与并发 agent 抢 CPU，同条单跑 0.29s 过）⇒ 整跑重放，不放宽比值门也不把红绑进证据。
+  `production_release_gate --release-ready --tag v5.6.0` 带 venv PATH 后 **8/8 rc=0**
+  （默认 PATH 下 `no_unacknowledged_cve` fail-closed 假红，是环境缺位不是代码回归）；
+  `audit_repo --strict` 仍只剩那一条按既有裁决永远红的 tag 锚点判定，两份清单
+  `hash_mismatch_count = 0`；`mypy src` 0 error、CI 口径 ruff（`src tests state_service`）rc=0。
   变异电池 `/tmp/slice34-mutations.py` **15 条：杀 15 / 存活 0 / 注入无效 0 / 崩溃式红 0 /
   已知无撤回案例 2**；同树复跑第 32 片 **14/14**（其 I4 锚点因本片给 `add_risk` 加了同形守卫
   而命中 2 次，重锚到 `approved_by` 那句报错文案）、第 30 片 **21/21**、

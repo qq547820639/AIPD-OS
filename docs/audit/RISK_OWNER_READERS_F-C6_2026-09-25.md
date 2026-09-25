@@ -96,9 +96,14 @@
 | 项 | 读数 |
 |----|------|
 | 全量用例 | 2182 → **2205**（+23，全在 `tests/test_risk_ownership.py`；HEAD 侧用 `git worktree` 干净签出实测 collected 数，不用记忆） |
-| 变异电池（本片） | `/tmp/slice34-mutations.py` **15 条：杀 15 / 存活 0 / 注入无效 0 / 崩溃式红 0 / 已知无撤回案例 2** |
-| 同树复跑 | 第 32 片 **14/14**（I4 锚点因本片新增同形守卫命中 2 次，重锚到 `approved_by` 那句报错文案）；第 30 片 **21/21**；第 31 片 **8/8**；第 33 片 **9 杀 / 0 存活 / 0 注入无效 / 2 已知无撤回** |
-| 静态检查 | `mypy src` 0 error；`ruff check src tests state_service`（CI 口径）rc=0 |
+| 签出 attestation | `/tmp/anchor34` 的 HEAD 干净签出 + `AIPD_SOURCE_COMMIT=<tag SHA>`：**2202 passed / 0 failed / 3 skipped**，报告 `source_commit = a66040520139405095648461f7144d4f00629924`，同一份绑进 `PROVENANCE.test_report`（`sha256` 记在证据里） |
+| 第一跑的一格红 | 同一棵签出第一跑只红 `test_state_perf_gates.py::TestConnectionAndTransactionGates::test_batched_transaction_outranks_per_statement_writes`（断 5× 比值，与并发 agent 抢 CPU）；同条在干净树单跑 0.29s 过 ⇒ 按配方**整跑重放**拿 0 failed，不放宽比值门、不把这一红绑进证据 |
+| 发布门 | `production_release_gate --release-ready --tag v5.6.0`：默认 PATH 下 `no_unacknowledged_cve` fail-closed 假红（rc=2，7/8）；`export PATH="$PWD/.venv/bin:$PATH"` 后 **8/8、rc=0、`release_ready: true`** |
+| 仓库审计 | `audit_repo --strict` rc=1，唯一一条红是既有的「Provenance source commit mismatch（锚点 = tag，HEAD 在后）」；两份清单 `hash_mismatch_count = 0` |
+| 变异电池（本片） | `/tmp/slice34-mutations.py` **15 条：杀 15 / 存活 0 / 注入无效 0 / 崩溃式红 0 / 已知无撤回案例 2**（带未注入对照臂） |
+| 同树复跑 | 第 32 片 **14/14**（I4 锚点因本片新增同形守卫命中 2 次，重锚到 `approved_by` 那句报错文案）；第 30 片 **21/21**；第 31 片 **8/8**；第 33 片 **9 杀 / 0 存活 / 0 注入无效 / 2 已知无撤回**——五片都在最终提交树上重跑，全部 rc=0 |
+| 静态检查 | `mypy src` 0 error；`ruff check src tests state_service`（CI 口径）rc=0；`ruff check .` 的 693 条是 CI 范围外目录，不在本片范围也未动 |
+| 提交序列 | `99b808a`（代码+用例）→ `833e8dd`（文档）→ `86f1617`（两份清单重锚，626 条）→ `b400f1c`（本轮记录改绑签出那一跑）→ 本条文档 |
 | 文档镜像 | `docs/architecture/state_inventory.md` 页眉与正文 HEAD、版本清单表三处同步到 v21，并由 `TestTheDocMirrorMatchesTheChain` 与 `MIGRATIONS` 对账 |
 
 ## 七、几处自己抓自己的读数
