@@ -2,13 +2,18 @@
 
 分工先说清楚，因为这是这片的全部要点：
 
-* **事实来自内核实测**：壁厚、孔径与孔深、内圆角半径、同轴孔系、包络与体积——都是
-  OCP 拓扑/几何量出来的，不读名字、不按「看着像」猜。整孔与圆角的区分用**角向张角是否
+* **事实来自内核实测**：壁厚、孔径与孔深、孔周留肉、内圆角半径、同轴孔系、包络与体积——
+  都是 OCP 拓扑/几何量出来的，不读名字、不按「看着像」猜。整孔与圆角的区分用**角向张角是否
   满一周**（圆柱面 u 参数区间 ÷ 2π），这是拓扑判据；Ø6×10 通孔张角 1.0000、R2 圆角 0.2500，
-  本机实测。
+  本机实测。**但张角满一周还不足以说是孔**：Ø20 圆棒的侧面同样满一周，所以再加一根正交判据
+  ——从面上一点**径向外移** 1µm 问 `BRepClass3d_SolidClassifier`，落进材料里才是孔
+  （本机实测：垫片 Ø30 外圆 + Ø8 中心孔 → 只报 1 个孔 Ø8）。
 * **阈值一律带来处**：每条规则自带 `source`（URL + 访问日期 + 是厂商能力还是转述的标准表 +
   一句限定）。本仓**不发明阈值**：量不出可比对象的建议（比如厂商给的「内圆角 ≥ 腔深 1/3」
   是个比值，本仓没有一个可比的「腔深」定义）就**只报事实不判红**，条目 `limit` 为 ``None``。
+  确实要把厂商给**甲特征**的数用到**乙特征**上时（孔周留肉借壁厚那条），必须走
+  ``borrowed_out_of_scope`` 并写明「原述是给甲的」——挂个 URL 就自称有出处，是把外推
+  冒充标准。
 * **测不出来就说测不出来**：规则前提不成立（材料认不出类别、没有整孔、没有声明公差）时记
   ``blind`` 并写明原因，**绝不折算成 pass**。一次都没测出来的分析不能读成「没有 DFM 问题」。
 
@@ -60,11 +65,23 @@ NOT_COVERED = ["DFA 装配力与紧固顺序", "模具侧抽芯与脱模方向",
                "热变形/振动的 CAE 仿真", "工序工时与加工成本"]
 
 
-def _src(url: str, accessed: str, kind: str, note: str) -> dict[str, str]:
-    return {"url": url, "accessed": accessed, "kind": kind, "note": note}
+def _src(url: str, accessed: str, kind: str, note: str,
+         stated_for: str | None = None) -> dict[str, str]:
+    """`stated_for` 只有借数（``borrowed_out_of_scope``）那条路才填：页子把那个数
+    **原本**是给哪条特征的 —— 缺这一格，借数就退化成「挂了个 URL 的自造阈值」。"""
+    out = {"url": url, "accessed": accessed, "kind": kind, "note": note}
+    if stated_for is not None:
+        out["stated_for"] = stated_for
+    return out
 
 
-#: 规则表。`basis` 与 `source.kind` 必须一致（常驻用例逐条核对）；
+#: basis/kind 的人话名字（报告里出现的是这个，不是机器码）。
+_KIND_LABEL = {"vendor_capability": "厂商能力页",
+               "borrowed_out_of_scope": "借来的数：厂商页原述是别的特征"}
+
+
+#: 规则表。`basis` 与 `source.kind` 必须一致（运行时 `_check_source_integrity` 与
+#: 常驻用例都会逐条核对），三种取值见该函数的 docstring；
 #: `limit` 为 ``None`` 表示这条**只报事实**——没有可引用的阈值来处时不编一个数。
 RULES: list[dict[str, Any]] = [
     {
@@ -136,6 +153,41 @@ RULES: list[dict[str, Any]] = [
             "本仓口径、不设阈值：同一根轴上量出几个整孔，对应「一次装夹能钻几个孔」，"
             "不是合格与否"),
     },
+    {
+        "id": "hole_land_reported", "name": "孔周最小留肉（只报事实）", "basis": "own_measure",
+        "measure": "facts.min_hole_land_mm", "op": "report",
+        "limit": None, "unit": "mm", "severity": "info",
+        "source": _src(
+            "", "2026-09-25", "own_measure",
+            "本仓口径：孔口圆到最近自由边（含相邻孔的口边）的精确极值距离。"
+            "检索到的厂商页（HLH Rapid、Xometry）都没写孔边距；3ERP 转述的 ISO 2768 "
+            "只把 edge distance 当成「由一般公差覆盖的尺寸」，不是阈值"),
+    },
+    {
+        "id": "hole_land_metal", "name": "金属孔周留肉", "basis": "borrowed_out_of_scope",
+        "measure": "facts.min_hole_land_mm", "op": "<", "limit": 0.8, "unit": "mm",
+        "severity": "advisory",
+        "source": _src(
+            "https://hlhrapid.com/knowledge/design-guide-cnc-machining/", "2026-09-25",
+            "borrowed_out_of_scope",
+            "**这个数页子上是给「金属最小壁厚」的，不是给孔边距的**（本轮检索证实：HLH Rapid "
+            "与 Xometry 都没有 machined 件的孔边距规则，3ERP 转述的 ISO 2768 只把 edge distance "
+            "当成「由一般公差覆盖的尺寸」）。借的理由：孔口到自由边剩下的那段肉与「一堵墙」"
+            "是同一类特征——钻完孔后悬着的一条窄料，会让孔口翻边、刀具让不住。"
+            "判 advisory：这一步外推由制造方核，本仓不自证为标准",
+            stated_for="wall_thickness_metal"),
+    },
+    {
+        "id": "hole_land_plastic", "name": "塑料孔周留肉", "basis": "borrowed_out_of_scope",
+        "measure": "facts.min_hole_land_mm", "op": "<", "limit": 1.5, "unit": "mm",
+        "severity": "advisory",
+        "source": _src(
+            "https://hlhrapid.com/knowledge/design-guide-cnc-machining/", "2026-09-25",
+            "borrowed_out_of_scope",
+            "同 metal 那条：数是页子上「塑料最小壁厚 ±1.5mm」的（Xometry 同页独立给 1.5mm），"
+            "外推到孔周留肉；厂商没有孔边距规则可引，故仍是 advisory 不是 hold",
+            stated_for="wall_thickness_plastic"),
+    },
 ]
 
 #: 材料关键词。认不出来返回 ``None``（= 不知道），**不**按「非塑料即金属」兜底。
@@ -151,6 +203,39 @@ def rule_by_id(rule_id: str) -> dict[str, Any]:
         if rule["id"] == rule_id:
             return rule
     raise ValueError(f"规则表里没有 {rule_id!r}；现有：{[r['id'] for r in RULES]}")
+
+
+def _check_source_integrity(rule: dict[str, Any]) -> None:
+    """阈值必须有来处，且来处的说法必须自洽。
+
+    三种 basis 各有规矩：``own_measure`` 不许挂 URL（本仓口径不自称标准）；
+    ``vendor_capability`` 必须有页；``borrowed_out_of_scope`` 是「页上那个数原本是给
+    别的特征的」，所以除了页，还必须指回表内那条**真被页撑着**的规则，并且**借的是同一个数、
+    同一页** —— 不然一条自造的阈值挂上任意 URL 就冒充有出处了。
+    """
+    source = rule.get("source")
+    if not isinstance(source, dict):
+        raise ValueError(f"规则 {rule.get('id')!r} 没有 source：阈值必须有来处，"
+                         "本仓不发明公差/壁厚数")
+    if source.get("kind") != rule.get("basis"):
+        raise ValueError(f"规则 {rule.get('id')!r} 的 basis 与 source.kind 不一致")
+    if rule.get("basis") == "own_measure" and source.get("url"):
+        raise ValueError(f"规则 {rule.get('id')!r} 自称本仓口径却挂了 URL")
+    if rule.get("basis") != "borrowed_out_of_scope":
+        return
+    donor_id = source.get("stated_for")
+    if not donor_id:
+        raise ValueError(f"规则 {rule.get('id')!r} 自称借数却没写 stated_for："
+                         "页子上那个数原本是给哪个特征的，必须指名")
+    donor = rule_by_id(str(donor_id))
+    if donor["basis"] != "vendor_capability":
+        raise ValueError(f"规则 {rule.get('id')!r} 从 {donor_id!r} 借数，"
+                         "但那条自己就不是页子上的数")
+    if donor.get("limit") != rule.get("limit"):
+        raise ValueError(f"规则 {rule.get('id')!r} 借的是 {donor_id!r} 的数，"
+                         f"limit 却写成 {rule.get('limit')!r}（那条是 {donor.get('limit')!r}）")
+    if donor["source"].get("url") != source.get("url"):
+        raise ValueError(f"规则 {rule.get('id')!r} 与被借的 {donor_id!r} 挂的不是同一页")
 
 
 def material_is_plastic(material: str | None) -> bool | None:
@@ -283,19 +368,92 @@ def _oriented(axis: Sequence[float]) -> list[float]:
     return [round(axis[i] * sign, 6) for i in range(3)]
 
 
+#: 判「孔还是外圆」时径向外移多少去问分类器。这里是拓扑分类（IN/OUT）不是量长度，
+#: 但移太大会穿过薄壁落到另一侧的空气里。
+_BORE_PROBE_MM = 1e-3
+
+
+def _solid_classifiers(shape: Any) -> list[Any]:
+    """逐**实体**建 `BRepClass3d_SolidClassifier`（compound 里的每个实体各一个）。"""
+    from OCP.BRepClass3d import BRepClass3d_SolidClassifier
+    from OCP.TopAbs import TopAbs_ShapeEnum
+    from OCP.TopExp import TopExp_Explorer
+    from OCP.TopoDS import TopoDS
+
+    out = []
+    exp = TopExp_Explorer(shape, TopAbs_ShapeEnum.TopAbs_SOLID)
+    while exp.More():
+        out.append(BRepClass3d_SolidClassifier(TopoDS.Solid_s(exp.Current())))
+        exp.Next()
+    return out
+
+
+def _cylinder_is_bore(face: Any, classifiers: Sequence[Any],
+                      offset_mm: float = _BORE_PROBE_MM) -> bool | None:
+    """整周回转的圆柱面是**孔**还是**外圆**：从面上一点径向外移，落进材料里就是孔。
+
+    「弧长满一周」这一个条件分不出来：Ø20 圆棒的侧面也满一周。按旧口径它会被当成
+    一个 Ø20×深 20 的孔，于是孔数、深径比、孔周留肉全跟着错（留肉那条会拿外圆
+    到内孔的距离当「孔边剩下的肉」）。所以加这根正交的判据：
+    孔壁**外面**是材料（分类器给 IN），外圆**外面**是空气（给 OUT）。
+
+    没有实体可分类（纯曲面/纯线框输入）⇒ 返回 ``None`` = **不知道**，不猜成孔也不猜成外圆。
+    """
+    from OCP.BRepAdaptor import BRepAdaptor_Surface
+    from OCP.GeomAbs import GeomAbs_Cylinder
+    from OCP.gp import gp_Pnt, gp_Vec
+    from OCP.TopAbs import TopAbs_State
+
+    if not classifiers:
+        return None
+    surf = BRepAdaptor_Surface(face)
+    if surf.GetType() != GeomAbs_Cylinder:
+        return None
+    axis = surf.Cylinder().Axis()
+    dirv = gp_Vec(axis.Direction())
+    point = surf.Value(0.5 * (surf.FirstUParameter() + surf.LastUParameter()),
+                       0.5 * (surf.FirstVParameter() + surf.LastVParameter()))
+    vec = gp_Vec(axis.Location(), point)
+    axial = vec.Dot(dirv)
+    perp = gp_Vec(vec.X() - axial * dirv.X(), vec.Y() - axial * dirv.Y(),
+                  vec.Z() - axial * dirv.Z())
+    if perp.Magnitude() < 1e-9:
+        return None                       # 采到了轴上（半径退化成 0）
+    perp.Normalize()
+    probe = gp_Pnt(point.X() + offset_mm * perp.X(), point.Y() + offset_mm * perp.Y(),
+                   point.Z() + offset_mm * perp.Z())
+    states = set()
+    for clf in classifiers:
+        clf.Perform(probe, 1e-7)
+        states.add(clf.State())
+    if TopAbs_State.TopAbs_IN in states:
+        return True
+    if states & {TopAbs_State.TopAbs_ON, TopAbs_State.TopAbs_UNKNOWN}:
+        return None                       # 落在边界上或分类器没结论：不猜
+    return False
+
+
 def geometry_facts(shape: Any) -> dict[str, Any]:
     """从 TopoDS_Shape 量出 DFM 要用的几何事实；读不出面就抛，不交一份空分析。"""
     faces = _walk_faces(shape)
     if not faces:
         raise ValueError("这个形状里一个面都读不到：孔数/壁厚/圆角都无从测量，"
                          "不折算成「0 个孔、没有薄壁」")
+    classifiers = _solid_classifiers(shape)
     holes: list[dict[str, Any]] = []
     partials: list[float] = []
+    outer_cylinders = undecided = 0
     for face in faces:
         read = _cylinder_reading(face)
         if read is None:
             continue
         if read["arc_fraction"] >= FULL_REVOLUTION_RATIO:
+            bore = _cylinder_is_bore(face, classifiers)
+            if bore is False:
+                outer_cylinders += 1     # 外圆不是孔：不计入孔数、深径比与留肉
+                continue
+            if bore is None:
+                undecided += 1
             diameter = round(2.0 * read["radius_mm"], 6)
             depth = round(read["depth_mm"], 6)
             holes.append({"diameter_mm": diameter, "depth_mm": depth,
@@ -310,6 +468,8 @@ def geometry_facts(shape: Any) -> dict[str, Any]:
         "partial_cylinder_count": len(partials),
         "inside_radius_mm": round(min(partials), 6) if partials else None,
         "coaxial_groups": _coaxial_groups(holes),
+        "outer_cylinder_count": outer_cylinders,
+        "bore_undecided_cylinder_count": undecided,
         "envelope_mm": env,
         "volume_mm3": round(_volume(shape), 6),
         "face_count": len(faces),
@@ -408,7 +568,143 @@ def _face_normal_thickness(shape: Any, spacing_mm: float,
     return {"min_mm": round(best, 6) if best is not None else None,
             "faces_probed": faces_seen, "samples": probed,
             "samples_usable": usable, "samples_degenerate_normal": skipped,
+            "sample_cap_per_face": max_samples_per_face,
             "sample_domain": "参数域中间 60%（躲棱边与角点）"}
+
+
+def measure_hole_lands(shape: Any) -> dict[str, Any]:
+    """孔口到**最近自由边**的最小留肉宽度（含相邻孔之间那一段）。
+
+    量法：**孔**（不是外圆，判据见 `_cylinder_is_bore`）的圆柱面取出它的孔口圆边，
+    对每一条找到「法向平行于孔轴且包含该圆圆心」的那个平面面片（就是孔开口的那一面），
+    再取这个面片上**除孔自己那圈周边之外**的所有边，
+    用 OCCT 的精确极值距离量「孔口圆 ↔ 那条边」的最小距离。
+    相邻孔的口圆也是「别的边」，所以两孔之间的留肉天然落在同一个数里；
+    同心/共面的台阶孔会各自量到自己那一层开口，取最小。
+
+    为什么不报「中心到边」而是报留肉：中心距把孔径混进去了，读的人还得自己减半径；
+    留肉就是**剩下的肉有多厚**，和壁厚那条判据说的是同一件事。中心距仍一并给出。
+    一个孔的**每一个口**都各给一条读数（``rim_readings``），交出去的那条取其中最薄的一个——
+    读数成对给出，别把「只量了遍历碰到的第一个口」这件事藏成一个数。
+
+    量不出来给 ``land_mm=None`` + 原因（找不到开口面 / 那个面片除了孔边没有别的边 /
+    口边根本不是圆），不折成 0，也不折成「很大」。
+    """
+    from OCP.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
+    from OCP.BRepExtrema import BRepExtrema_DistShapeShape
+    from OCP.GeomAbs import GeomAbs_Circle, GeomAbs_Cylinder, GeomAbs_Plane
+    from OCP.TopAbs import TopAbs_ShapeEnum
+    from OCP.TopExp import TopExp_Explorer
+    from OCP.TopoDS import TopoDS
+
+    def sub(holder, kind, cast):
+        exp = TopExp_Explorer(holder, kind)
+        out = []
+        while exp.More():
+            out.append(cast(exp.Current()))
+            exp.Next()
+        return out
+
+    def circle_edges(face):
+        out = []
+        for edge in sub(face, TopAbs_ShapeEnum.TopAbs_EDGE, TopoDS.Edge_s):
+            curve = BRepAdaptor_Curve(edge)
+            if curve.GetType() != GeomAbs_Circle:
+                continue
+            circ = curve.Circle()
+            centre, axis = circ.Location(), circ.Axis().Direction()
+            out.append({"edge": edge, "radius": float(circ.Radius()),
+                        "centre": (centre.X(), centre.Y(), centre.Z()),
+                        "axis": (axis.X(), axis.Y(), axis.Z())})
+        return out
+
+    def plane_of(face):
+        surf = BRepAdaptor_Surface(face)
+        if surf.GetType() != GeomAbs_Plane:
+            return None
+        pl = surf.Plane()
+        normal, loc = pl.Axis().Direction(), pl.Location()
+        return ((normal.X(), normal.Y(), normal.Z()), (loc.X(), loc.Y(), loc.Z()))
+
+    def parallel(a, b):
+        return all(abs(abs(a[i]) - abs(b[i])) < 1e-6 for i in range(3))
+
+    faces = _walk_faces(shape)
+    classifiers = _solid_classifiers(shape)
+    planar = [(face, plane_of(face)) for face in faces]
+    planar = [(face, info) for face, info in planar if info]
+    rows: list[dict[str, Any]] = []
+    for face in faces:
+        surf = BRepAdaptor_Surface(face)
+        if surf.GetType() != GeomAbs_Cylinder:
+            continue
+        arc = abs(surf.LastUParameter() - surf.FirstUParameter())
+        if arc < 2.0 * math.pi * FULL_REVOLUTION_RATIO:
+            continue                                   # 不是整周回转（圆角/槽壁）
+        if _cylinder_is_bore(face, classifiers) is False:
+            continue                                   # 整周但是外圆：没有「孔口」可言
+        cyl = surf.Cylinder()
+        radius = float(cyl.Radius())
+        axis3 = cyl.Axis().Direction()
+        axis = (axis3.X(), axis3.Y(), axis3.Z())
+        reasons: list[str] = []
+        rims = [one for one in circle_edges(face)
+                if abs(one["radius"] - radius) < 1e-6 and parallel(one["axis"], axis)]
+        if not rims:
+            # 孔口开在曲面上：那条口边不是圆（是两条曲面的交线），量不到「孔口圆」
+            reasons.append("rim_circle_not_found")
+        per_rim: list[dict[str, Any]] = []
+        for rim in rims:
+            host = None
+            for candidate, (normal, point) in planar:
+                if not parallel(normal, axis):
+                    continue
+                if abs(sum(normal[i] * (rim["centre"][i] - point[i]) for i in range(3))) > 1e-6:
+                    continue                           # 平面不含这个孔口（台阶孔的另一层）
+                host = candidate
+                break
+            if host is None:
+                reasons.append("rim_plane_not_found")
+                per_rim.append({"land_mm": None, "centerline_to_edge_mm": None})
+                continue
+            others = []
+            for edge in sub(host, TopAbs_ShapeEnum.TopAbs_EDGE, TopoDS.Edge_s):
+                if any(abs(one["radius"] - radius) < 1e-6
+                       and all(abs(one["centre"][i] - rim["centre"][i]) < 1e-6 for i in range(3))
+                       and one["edge"].IsSame(edge) for one in circle_edges(host)):
+                    continue                           # 孔自己的周边不是「边」
+                others.append(edge)
+            if not others:
+                reasons.append("rim_isolated")
+                per_rim.append({"land_mm": None, "centerline_to_edge_mm": None})
+                continue
+            dists = []
+            for edge in others:
+                probe = BRepExtrema_DistShapeShape(rim["edge"], edge)
+                if probe.IsDone():
+                    dists.append(float(probe.Value()))
+            if not dists:
+                reasons.append("distance_unresolved")
+                per_rim.append({"land_mm": None, "centerline_to_edge_mm": None})
+                continue
+            land = min(dists)
+            per_rim.append({"land_mm": round(land, 6),
+                            "centerline_to_edge_mm": round(land + radius, 6)})
+        thin = [one for one in per_rim if one["land_mm"] is not None]
+        picked = min(thin, key=lambda one: one["land_mm"]) if thin else None
+        rows.append({"diameter_mm": round(2.0 * radius, 6),
+                     "land_mm": picked["land_mm"] if picked else None,
+                     "centerline_to_edge_mm": (picked["centerline_to_edge_mm"]
+                                               if picked else None),
+                     "rim_count": len(rims),
+                     "rim_readings": per_rim,
+                     "why": sorted(set(reasons))})
+    measured = [row["land_mm"] for row in rows if row["land_mm"] is not None]
+    return {"holes": rows,
+            "min_land_mm": round(min(measured), 6) if measured else None,
+            "measurable_count": len(measured),
+            "hole_count": len(rows),
+            "method": "rim-to-free-edge 精确极值距离（BRepExtrema），相邻孔的口边同算一边"}
 
 
 def measure_min_wall_thickness(shape: Any,
@@ -420,7 +716,9 @@ def measure_min_wall_thickness(shape: Any,
     这是**采样**，且量到的永远是**斜弦**——本机实测 3mm 斜板被它读成 1.00mm，
     所以「斜置只测厚不测薄」这句旧话是错的，误差两个方向都有。
     沿面法向那条补的是**方向**，但它每面最多采 12×12 个点，比三轴网格稀，
-    所以它可能**漏掉**三轴抓到的薄特征（金样品 bracket 上：三轴 2.00、法向 3.73）。
+    所以它可能**漏掉**三轴抓到的薄特征（金样品 bracket 上：三轴 2.00、法向 2.24；
+    这条读数还**随每面上限变**：上限降到 6×6 同一个件读成 3.73，故 `sample_cap_per_face`
+    与两个数一起交出去）。
 
     两个数都留在读数里（`axis_min_mm` / `normal_min_mm`），`min_mm` 取两者较小：
     判阈值宁可多问一次制造方，也不把墙说厚。谁和谁不一致，报告里看得见。
@@ -505,13 +803,26 @@ def _markdown(part_name: str, revision: str, report: dict[str, Any]) -> str:
              f"有命中的射线 {wall['rays_with_hits']} 条、奇数命中 {wall['odd_hit_rays']} 条；"
              f"沿面法向探 {wall['normal_measurement']['samples']} 点、"
              f"可用 {wall['normal_measurement']['samples_usable']} 段、"
+             f"每面最多 {wall['normal_measurement']['sample_cap_per_face']}"
+             f"×{wall['normal_measurement']['sample_cap_per_face']} 点、"
              f"法向退化跳过 {wall['normal_measurement']['samples_degenerate_normal']} 点。"
              f"三轴 {axis_txt} mm、法向 {normal_txt} mm）："
              + (f"{wall['min_mm']:g} mm" if wall["min_mm"] is not None else "没量出来"),
              f"- {wall['caveat']}",
+             "- 孔周最小留肉（孔口圆到最近自由边，相邻孔口边同算一边）："
+             + (f"{facts['min_hole_land_mm']:g} mm，量到 "
+                f"{facts['hole_land_measurement']['measurable_count']}/"
+                f"{facts['hole_land_measurement']['hole_count']} 个整孔"
+                if facts["min_hole_land_mm"] is not None else
+                f"没量出来（{facts['hole_land_measurement']['hole_count']} 个整孔"
+                f"一个都找不到可量的边）"),
              f"- 整孔 {len(facts['holes'])} 个；部分回转圆柱面 "
-             f"{facts['partial_cylinder_count']} 个；材料 {report['material'] or '未给'}"
-             f"（分类：{report['material_class']}）", ""]
+             f"{facts['partial_cylinder_count']} 个；整周外圆（不计入孔）"
+             f"{facts['outer_cylinder_count']} 个；材料 {report['material'] or '未给'}"
+             f"（分类：{report['material_class']}）"
+             + (f"。**有 {facts['bore_undecided_cylinder_count']} 个整周圆柱面分不出是孔还是外圆**"
+                f"（这个形状里读不出实体，只能按最坏情况仍计成孔）"
+                if facts["bore_undecided_cylinder_count"] else ""), ""]
     if facts["holes"]:
         lines += ["| 孔 | 直径 mm | 深度 mm | 深径比 |", "|---|---|---|---|"]
         for hole in facts["holes"]:
@@ -528,8 +839,13 @@ def _markdown(part_name: str, revision: str, report: dict[str, Any]) -> str:
                      f"（{item['measured']}）｜{_SEVERITY_LABEL[item['severity']]}")
         lines.append(f"  - 来处：{item['source']['note']}")
         if item["source"]["url"]:
+            extra = ""
+            if item["source"].get("stated_for"):
+                donor = rule_by_id(item["source"]["stated_for"])
+                extra = f"，页内原述是给「{donor['name']}」的"
             lines.append(f"    （{item['source']['url']}，访问 {item['source']['accessed']}，"
-                         f"{item['source']['kind']}）")
+                         f"{_KIND_LABEL.get(item['source']['kind'], item['source']['kind'])}"
+                         f"{extra}）")
     if report["blind"]:
         lines += ["", "## 盲区（没判的条目与原因）", ""]
         for item in report["blind"]:
@@ -624,16 +940,15 @@ def analyze(shape: Any, *, material: str | None = None,
     """
     active = list(rules) if rules is not None else list(RULES)
     for rule in active:
-        if not isinstance(rule.get("source"), dict):
-            raise ValueError(f"规则 {rule.get('id')!r} 没有 source：阈值必须有来处，"
-                             "本仓不发明公差/壁厚数")
-        if rule["source"].get("kind") != rule.get("basis"):
-            raise ValueError(f"规则 {rule.get('id')!r} 的 basis 与 source.kind 不一致")
+        _check_source_integrity(rule)
 
     facts = geometry_facts(shape)
     wall = measure_min_wall_thickness(shape, spacing_mm)
     facts["min_wall_thickness_mm"] = wall["min_mm"]
     facts["wall_measurement"] = wall
+    lands = measure_hole_lands(shape)
+    facts["min_hole_land_mm"] = lands["min_land_mm"]
+    facts["hole_land_measurement"] = lands
 
     plastic = material_is_plastic(material)
     findings: list[dict[str, Any]] = []
@@ -697,6 +1012,27 @@ def _judge(rule: dict[str, Any], facts: dict[str, Any], plastic: bool | None,
                        f"最小半径 {facts['inside_radius_mm']:g}mm")
         out["verdict"] = "info"
         return out
+    if rule["id"] in ("hole_land_reported", "hole_land_metal", "hole_land_plastic"):
+        lands = facts["hole_land_measurement"]
+        if not lands["holes"]:
+            return {"blind": True, "reason": "no_full_cylindrical_hole"}
+        if lands["min_land_mm"] is None:
+            # 有整孔但一圈都量不到边（孔开在曲面上 / 那个面片除了孔边没有别的边）：
+            # 这是量不出来，不是「留肉很足」
+            return {"blind": True, "reason": "hole_land_unmeasurable"}
+        if rule["id"] == "hole_land_reported":
+            out = _verdict(base, lands["min_land_mm"],
+                           f"{lands['measurable_count']}/{lands['hole_count']} 个整孔量到留肉，"
+                           f"最小 {lands['min_land_mm']:g}mm")
+            out["verdict"] = "info"
+            return out
+        if plastic is None:
+            return {"blind": True, "reason": "material_class_unknown"}
+        wanted = rule["id"] == "hole_land_plastic"
+        if wanted != plastic:
+            return {"blind": True, "reason": "material_is_the_other_class"}
+        return _verdict(base, lands["min_land_mm"],
+                        f"孔口到最近自由边留肉 {lands['min_land_mm']:g}mm")
     if rule["id"] == "same_axis_hole_count":
         if not facts["coaxial_groups"]:
             return {"blind": True, "reason": "no_full_cylindrical_hole"}

@@ -110,10 +110,13 @@ MAPPING: dict[str, dict[str, Any]] = {
         "verdict": "producer", "capabilities": ["cad.dfm_dfa",
                                                "industrialize.release_evidence"],
         "producers": ["src/aipd_os/cad/dfm.py", "src/aipd_os/release_manifest.py"],
-        "tests": ["tests/test_cad_dfm.py", "tests/test_production_release_gate.py"],
-        "note": "几何事实由内核实测（壁厚射线采样、深径比、内圆角、同轴孔系），"
-                "阈值每条带来源；测不出来的记盲区不折算合格。DFA 只到「同轴孔系数」这一件事实，"
-                "装配力/模具方向/CAE/工时仍未做。"},
+        "tests": ["tests/test_cad_dfm.py", "tests/test_cad_dfm_hole_land.py",
+                  "tests/test_production_release_gate.py"],
+        "note": "几何事实由内核实测（壁厚两法采样并带间距/上限、深径比、孔周留肉逐口读数、"
+                "内圆角、同轴孔系；孔与外圆靠「张角满一周 + 径向外移落在材料里」两根正交判据分），"
+                "阈值每条带来源，**借来的数另标 borrowed_out_of_scope 并指回原述特征**；"
+                "测不出来的记盲区不折算合格。孔边距阈值厂商页没有 ⇒ 从壁厚外推、只判 advisory。"
+                "DFA 只到「同轴孔系数」这一件事实，装配力/模具方向/CAE/工时仍未做。"},
     "装配/维护": {
         "verdict": "producer", "capabilities": ["cad.assembly_instructions"],
         "producers": ["src/aipd_os/cad/assembly_steps.py",

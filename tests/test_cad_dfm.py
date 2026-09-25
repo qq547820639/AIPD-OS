@@ -4,8 +4,9 @@
 
 1. **事实是内核实测的**：壁厚、孔径/孔深、内圆角、同轴孔系、包络与体积——用例拿
    *已知形状*（0.6mm 板、Ø6 通孔、R2 圆角）去比对物理真值，不是比对快照。
-2. **阈值必须带来处**：每条规则自带 `source`（URL + 访问日期 + 是厂商能力还是转述标准），
-   本仓口径的判据 `url` 留空且 `basis == "own_measure"`，绝不自称标准。
+2. **阈值必须带来处**：每条规则自带 `source`（URL + 访问日期 + 来处是哪一类 + 一句限定）。
+   本仓口径的判据 `url` 留空且 `basis == "own_measure"`，绝不自称标准；把厂商给**甲特征**
+   的数用到**乙特征**上，必须走 `borrowed_out_of_scope` 并指回甲那条（用例机器核对链路）。
 3. **测不出来就说测不出来**：前提不成立记 `blind`，不折算成 pass；
    一次都没测出来的分析，读起来必须一眼看出是盲区。
 """
@@ -25,6 +26,7 @@ from aipd_os.cad.dfm import (
     geometry_facts,
     material_is_plastic,
     measure_min_wall_thickness,
+    rule_by_id,
 )
 from aipd_os.release_manifest import build_release_manifest
 
@@ -143,7 +145,10 @@ class TestRulebookCarriesItsSources:
     def test_every_rule_declares_where_its_number_came_from(self):
         for rule in RULES:
             src = rule["source"]
-            assert set(src) == {"url", "accessed", "kind", "note"}, rule["id"]
+            assert set(src) == ({"url", "accessed", "kind", "note"}
+                                | ({"stated_for"}
+                                   if rule["basis"] == "borrowed_out_of_scope" else set())), \
+                rule["id"]
             assert src["kind"] == rule["basis"], rule["id"]
             if rule["basis"] == "own_measure":
                 assert src["url"] == "", f"{rule['id']}：本仓口径不许挂 URL"
@@ -151,6 +156,23 @@ class TestRulebookCarriesItsSources:
             else:
                 assert src["url"].startswith("https://"), rule["id"]
                 assert src["accessed"] == "2026-09-25", rule["id"]
+
+    def test_a_borrowed_number_points_back_at_the_rule_it_was_stated_for(self):
+        """「挂个 URL 就有出处」不算出处：借来的数必须指回表内真被页撑着的那条。
+
+        链路四格全核：被借的那条自己是厂商页的数、limit 一字不差、同一页，
+        而且这条必须自认是外推（note 里写着）并只判 advisory ——外推不能阻断发布。
+        """
+        borrowed = [r for r in RULES if r["basis"] == "borrowed_out_of_scope"]
+        assert borrowed, "表里已没有借数规则：要么删了它（连带删这条用例），要么改口径"
+        for rule in borrowed:
+            donor = rule_by_id(rule["source"]["stated_for"])
+            assert donor["id"] != rule["id"], f"{rule['id']}：自己借自己不叫来处"
+            assert donor["basis"] == "vendor_capability", rule["id"]
+            assert donor["limit"] == rule["limit"], rule["id"]
+            assert donor["source"]["url"] == rule["source"]["url"], rule["id"]
+            assert "外推" in rule["source"]["note"], rule["id"]
+            assert rule["severity"] == "advisory", rule["id"]
 
     def test_sourced_thresholds_are_the_pages_own_numbers(self):
         """阈值不是可以随手改的：改数就得同时改来处，否则这条红。"""
@@ -163,12 +185,48 @@ class TestRulebookCarriesItsSources:
         # 内圆角**没有**可引用的绝对阈值来处（厂商给的是「≥ 腔深 1/3」这个比值），
         # 所以那条只报事实、不设 limit —— 有 limit 就是编数。
         assert limits["inside_radius_reported"] is None
+        # 孔周留肉同理：本轮检索（HLH Rapid / Xometry / 3ERP 转述的 ISO 2768）都没有
+        # 机加件的孔边距规则。这两格钉的是「借的是壁厚那条数」，改数=改借的来处。
+        assert limits["hole_land_reported"] is None
+        assert limits["hole_land_metal"] == limits["wall_thickness_metal"]
+        assert limits["hole_land_plastic"] == limits["wall_thickness_plastic"]
 
     def test_rule_id_set_is_a_ratchet(self):
         assert {r["id"] for r in RULES} == {
             "wall_thickness_metal", "wall_thickness_plastic", "hole_depth_to_diameter",
             "gun_drill_required", "inside_radius_reported",
-            "tolerance_below_achievable", "same_axis_hole_count"}
+            "tolerance_below_achievable", "same_axis_hole_count",
+            "hole_land_reported", "hole_land_metal", "hole_land_plastic"}
+
+    def test_a_borrowed_rule_is_refused_for_each_way_its_link_can_be_wrong(self):
+        """运行时逐格拦，且**每种坏法各有一句话**：只要求「抛 ValueError」会让
+        一道检查被另一道顶替而无人察觉（实测：删掉 donor 检查后仍被 limit 检查拦住，
+        用例照样绿）。"""
+        shape = _plate(thickness=2.0, size=12.0, hole_diameter=2.0)
+        borrower = next(r for r in RULES if r["basis"] == "borrowed_out_of_scope")
+        source = borrower["source"]
+        cases = [
+            ({k: v for k, v in source.items() if k != "stated_for"}, "stated_for"),
+            (dict(source, stated_for="inside_radius_reported"), "不是页子上的数"),
+            (dict(source, url="https://xometry.hk/en/industry-standards-in-cnc-machining/"),
+             "不是同一页"),
+        ]
+        for bad_source, message in cases:
+            with pytest.raises(ValueError, match=message):
+                analyze(shape, material="6061-T6",
+                        rules=[dict(borrower, source=bad_source)])
+        for bad_limit in (0.3, 0.81):
+            with pytest.raises(ValueError, match="limit 却写成"):
+                analyze(shape, material="6061-T6", rules=[dict(borrower, limit=bad_limit)])
+
+    def test_a_rule_calling_itself_own_measure_can_not_carry_a_url(self):
+        """自称「本仓口径」却挂着厂商页：那是拿别人的页给自己造的数撑腰，运行时拒。"""
+        shape = _plate(thickness=2.0, size=12.0, hole_diameter=2.0)
+        liar = dict(rule_by_id("hole_land_reported"),
+                    source=dict(rule_by_id("hole_land_reported")["source"],
+                                url="https://hlhrapid.com/knowledge/design-guide-cnc-machining/"))
+        with pytest.raises(ValueError, match="URL"):
+            analyze(shape, material="6061-T6", rules=[liar])
 
     def test_hole_to_face_wall_is_measured_not_the_plate_thickness(self):
         """这条是判据的物理正确性：孔壁到外侧面 7mm，比板厚 10mm 更该被 DFM 关心。"""

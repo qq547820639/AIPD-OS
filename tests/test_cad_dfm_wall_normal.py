@@ -12,7 +12,8 @@
 
 但它**不取代**三轴那条：它每面最多 12×12 个采样、还刻意只采参数域中间 60%
 （躲棱边与角点——CATIA 的 Ray 模式正是在尖边处误差可超容差，故其默认用球），
-所以它会漏掉三轴抓到的薄特征（金样品 bracket：三轴 2.00、法向 3.73）。
+所以它会漏掉三轴抓到的薄特征（金样品 bracket：三轴 2.00、法向 2.24；把每面上限降到
+6×6，同一个件读成 3.73 —— 上限随读数一起交出去，见 `TestTheNormalReadingCarriesItsResolution`）。
 
 结论口径：**两法各量各的，`min_mm` 取较小者**，两个数都留在读数里。
 阈值那两条壁厚规则是 advisory（不阻断就绪），宁可多提一次「找制造方看看」，
@@ -25,7 +26,12 @@ from pathlib import Path
 import cadquery as cq
 import pytest
 
-from aipd_os.cad.dfm import _face_normal_thickness, measure_min_wall_thickness
+from aipd_os.cad.dfm import (
+    _face_normal_thickness,
+    _markdown,
+    analyze,
+    measure_min_wall_thickness,
+)
 
 _REPO = Path(__file__).resolve().parents[1]
 
@@ -188,7 +194,8 @@ class TestAVoidIsNotAWall:
 class TestTheNormalReadingDoesNotDependOnTheGrid:
     """三轴那条的读数随网格间距跳（同一块斜板 1.00 / 2.02 / 3.00），法向那条不跳。
 
-    这条是这一片真正的卖点：**不随采样分辨率改口的读数**。
+    这条钉的是**网格间距**那一根轴。它不是说「法向读数与分辨率无关」——
+    采样上限那一根轴上它照样动，见 `TestTheNormalReadingCarriesItsResolution`。
     """
 
     @pytest.mark.parametrize("spacing", [0.5, 1.0, 2.0, 5.0])
@@ -202,6 +209,44 @@ class TestTheNormalReadingDoesNotDependOnTheGrid:
         assert fine["axis_min_mm"] != pytest.approx(coarse["axis_min_mm"], abs=1e-3), \
             "三轴读数本该随间距变化——这一条不成立就说明夹具退化成了轴对齐的板"
         assert fine["normal_min_mm"] == coarse["normal_min_mm"]
+
+
+class TestTheNormalReadingCarriesItsResolution:
+    """法向那条**随每面采样上限变**：金样品 6×6 读 3.73、出厂默认 12×12 读 2.24。
+
+    这一条是第 25 片复算上一片文档时量出来的：文档里写的 3.73 不是假数，
+    但也不是出厂口径下的读数。一个随分辨率改口的数，读数里必须带着它是多少分辨率——
+    与网格间距那格（`spacing_mm`）同一个道理。
+    """
+
+    def _bracket(self):
+        step = (_REPO / "releases" / "golden-projects"
+                / "B-cad-engineering-change" / "bracket.step")
+        return cq.importers.importStep(str(step)).val().wrapped
+
+    def test_the_cap_it_used_is_in_the_reading_not_only_in_the_source(self):
+        got = _face_normal_thickness(self._bracket(), 0.5, max_samples_per_face=6)
+        assert got["sample_cap_per_face"] == 6
+        assert _face_normal_thickness(self._bracket(), 0.5)["sample_cap_per_face"] == 12
+
+    def test_a_coarser_cap_reads_this_part_thicker(self):
+        """同一个件、同一间距，只动上限：3.73 vs 2.24 —— 法向这条不是分辨率无关的。"""
+        coarse = _face_normal_thickness(self._bracket(), 0.5, max_samples_per_face=6)
+        shipped = _face_normal_thickness(self._bracket(), 0.5)
+        assert coarse["min_mm"] == pytest.approx(3.733018, abs=1e-3)
+        assert shipped["min_mm"] == pytest.approx(2.235221, abs=1e-3)
+        assert coarse["min_mm"] > shipped["min_mm"]
+
+    def test_the_shipped_cap_is_the_one_the_report_quotes(self):
+        """报告里那个数必须来自出厂默认上限，且把上限一起印出来。"""
+        report = analyze(self._bracket(), material="6061-T6")
+        normal = report["facts"]["wall_measurement"]["normal_measurement"]
+        assert normal["sample_cap_per_face"] == 12
+        assert report["facts"]["wall_measurement"]["normal_min_mm"] == pytest.approx(
+            normal["min_mm"], abs=1e-9)
+        text = _markdown("BRK-1", "A", report)
+        assert "每面最多 12×12 点" in text
+        assert f"法向 {report['facts']['wall_measurement']['normal_min_mm']:g} mm" in text
 
 
 class TestWhyTheDegenerateNormalGuardIsThere:
