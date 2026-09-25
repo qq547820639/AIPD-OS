@@ -373,6 +373,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=COMMAND_FUNCS["audit"])
 
+    p = sub.add_parser("interfaces",
+                       help="接口清单与契约证据（不是 ICD）：逐条列本机声明的接口、"
+                            "定义件哈希与取证用例。 Example: aipd interfaces --repo . "
+                            "--out interface-contract.json")
+    p.add_argument("--repo")
+    p.add_argument("--out", default="", help="落盘路径，缺仓根 interface-contract.json")
+    p.add_argument("--strict", action="store_true",
+                   help="判定不是 complete 就退 4（默认只把发现写进文档，不改退出码）")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=COMMAND_FUNCS["interfaces"])
+
     # release（两级）：release check
     p_release = sub.add_parser("release", help="发布管理（check 就绪检查）。"
                                                " Example: aipd release check --target C7 --repo .")

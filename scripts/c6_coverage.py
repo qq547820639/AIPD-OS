@@ -81,16 +81,24 @@ MAPPING: dict[str, dict[str, Any]] = {
         "tests": ["tests/test_bom.py", "tests/test_quote_to_cost_chain.py"],
         "note": "独立库 bom.db；乐观锁 + 审计 + 成本 + 发布检查清单。"},
     "ICD": {
-        "verdict": "absent", "capabilities": [], "producers": [], "tests": [],
-        "note": "接口控制文档：**按形状就不该由本仓单方产**。NASA《SE Handbook》附录 L 的接口大纲"
-                "（免费全文，访问 2026-09-25；注意该页把自己叫 **IRD** 不叫 ICD）里 "
-                "§1.3「Responsibility and Change Authority」与 §3.1.2「Interface Responsibilities」"
-                "两节的内容只能由**对侧**给；本地生成器最多填 §1 的子集，"
-                "把它叫 ICD 就是伪造签署。可自查的那半（接口清单、数据形状、"
-                "每个接口的定义件版本 + sha256、逐接口用例证据）另出一份《接口清单与契约证据》，"
-                "**不叫 ICD**（该片尚未做）。命中数由判据现算：`src/` 0 处，"
-                "`tests/` 3 + `scripts/` 3 全是本普查自己点名（含 test_c6_coverage 的 "
-                "`assert absent == {\"ICD\"}`）——即「除普查自身点名外 0 命中」。"},
+        "verdict": "producer",
+        "capabilities": ["industrialize.release_evidence"],
+        "producers": ["src/aipd_os/interface_contract.py"],
+        "tests": ["tests/test_interface_contract.py"],
+        "note": "**升上去的是可自查的那一半，产物不叫 ICD**（与「装配/维护」只升装配那一半同一形状）。"
+                "NASA《SE Handbook》附录 L 的接口大纲（免费全文，访问 2026-09-25；该页把自己叫 "
+                "**IRD** 不叫 ICD）里 §1.3「Responsibility and Change Authority」与 §3.1.2"
+                "「Interface Responsibilities」两节的内容只能由**对侧**给 ⇒ 本仓单方产一份叫 ICD 的"
+                "文件等于伪造签署，这一格永远不升成「ICD 已交付」。已交付的是《接口清单与契约证据》"
+                "（`aipd interfaces`，kind=aipd.interface_contract.v1 + 同名侧车）：85 条接口逐条带"
+                "定义件 sha256、取证用例（AST 解析并有一条与 `pytest --collect-only` 对齐的复核）与"
+                "「证到什么 / 证不到什么」，分母全部重算（CLI 命令面 56 条取自 command_contract、"
+                "MCP 6 条取自 mcp_server.py 的 def mcp_*、schema 5 份取自目录实况、"
+                "出网消费者 11 个取自 import 反查）。今天这份真清单的判定是 incomplete："
+                "assets/schemas 里有 3 份（manual_chain_state / project_checkpoint / supervisor_project）"
+                "**全仓没有任何文件按名字引用** ⇒ 记成 declared_but_unconsumed，不折算成已验证。"
+                "「ICD」字样在本仓的出现面由判据现算：src/ 4 处、tests/ 2 处、scripts/ 1 处，"
+                "全部来自本片自己写的「为什么这不叫 ICD」那句话，没有一处把它当 ICD 产。"},
     "尺寸链": {
         "verdict": "producer", "capabilities": ["cad.tolerance_chain"],
         "producers": ["src/aipd_os/cad/stackup.py", "src/aipd_os/cad/drawings2d.py"],
@@ -331,8 +339,19 @@ def render(report: dict[str, Any]) -> str:
 
 
 def _an_absent_item() -> str:
-    """取一项当前判为零实现的，用于「档位与所列文件矛盾」这条注入。"""
-    return next(k for k, v in MAPPING.items() if v["verdict"] == "absent")
+    """挑一项来演「标了零实现却列了文件」这条注入。
+
+    第 29 片之后仓里可能已经没有 absent 项了 —— 那就**当场造一个**（把某项临时降成
+    absent 并清空两栏，跑完由 _self_test 的逐项快照还原）。否则这条反证会因为
+    「今天的仓恰好没有零实现项」而失去可红性，判据看着还在、其实尺子空了。
+    """
+    for key, spec in MAPPING.items():
+        if spec["verdict"] == "absent":
+            return key
+    victim = next(iter(MAPPING))
+    MAPPING[victim] = {"verdict": "absent", "capabilities": [], "producers": [],
+                       "tests": [], "note": "自测用：临时降档"}
+    return victim
 
 
 def _self_test(root: Path) -> int:

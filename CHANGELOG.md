@@ -951,6 +951,36 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6 第 29 片：接口清单与契约证据（C6 最后一格零实现，只闭可自查的那一半）**：
+  「ICD」这一项从第 26 片起一直挂 absent，note 早写好该做什么：**可自查的那一半**
+  （接口清单、数据形状、每个接口的定义件版本 + sha256、逐接口用例证据），
+  而且**不叫 ICD**——NASA 附录 L 的 §1.3「责任与变更授权」与 §3.1.2「接口职责」只能由对侧给，
+  本仓单方产一份叫 ICD 的文件等于伪造签署。落点 `src/aipd_os/interface_contract.py` +
+  公开命令 `aipd interfaces`（55 → 56 个），kind=`aipd.interface_contract.v1` + 同名侧车
+  （拼法仍走 `cad/evidence.sidecar_path` 那唯一一处）。今天真跑 **85 条接口**：
+  CLI 56、MCP 工具 6、JSON Schema 5、文件格式契约 5、HTTP 提供面 2、出网消费者 11。
+  三条形状规矩：**① 分母一律重算**（`PUBLIC_COMMANDS`、`mcp_server.py` 的 `def mcp_*` AST、
+  `assets/schemas/` 目录实况、`aipd_os.net.http` 的 import 反查）——抄计数会在改名那天静默漏项；
+  **② 「被引用」不等于「被验证」**：`verified_by` 要 AST 解析到「文件在 + 符号在 + 真收得到 test」，
+  自制解析另配一条与 `pytest --collect-only` 真读数对齐的复核用例 + must-not-fire 一侧
+  （真被引用的 `cad_contract.schema.json` 不许一起躺进孤儿清单，否则反查坏掉时孤儿栏整栏膨胀）；
+  **③ 判定三态**：定义件不在盘上 ⇒ 与 `--strict` 无关必退 4；有孤儿契约/未取证行 ⇒ incomplete，
+  默认只写进文档、`--strict` 才拦；不把今天的 3 个孤儿做成永久红门（那只会训练人忽略门）。
+  **清单读出来的事实**（本片只登记不顺手修）：`project_checkpoint.schema.json` 的处境最坏——
+  `quality_gate.py:33` 的 G9 要求那个交付物**在**、`outcome_acceptance.py:22` 只 `exists(...)`，
+  即**存在性有门、内容不合形没人管**；`manual_chain_state` 与 `supervisor_project` 在
+  `src/`、`scripts/`、`tests/`、`state_service/` 里连名字都没出现。
+  选型只引真打开过的页面（2026-09-25）：Pact（Apache-2.0，契约由消费者测试生成、
+  验证=对 provider 公布过的结果）借「两侧点名 + 未验证≠已验证」；OpenAPI v3.2.1（Apache-2.0，
+  自述只描述接口、不断言服务端实现）借那句边界；check-jsonschema（页面标 NOASSERTION 且无机器
+  可读报告）不引入。⇒ 本地实现、零新依赖。
+  18 条常驻用例 + 变异电池 **12 条：杀 12 / 活 0 / 注入无效 0**。
+  顺手立住一件副产品：普查那把尺子自己的注入 `_an_absent_item()` 会因「今天的仓恰好没有 absent 项」
+  而 StopIteration——改成**没有就当场造一个**，否则反证静默失去可红性；
+  档位棘轮 14/0/1 → **15/0/0**（升的是可自查的一半，与「装配/维护只升装配那一半」同形状）。
+  全量用例数 2056 → 2074（+18）；公开命令面 55 → 56。
+  证据见 `docs/audit/INTERFACE_CONTRACT_F-C6_2026-09-25.md`。
+
 - **v5.12 F-C6-ECO 第 28 片：上一版交付物清单当基线（把「没单提到」拆成两种结论）**：
   第 27 片留下的半句是「只证明内容与某张闭合单一致，不证明自上次发布以来只改了这些」。
   之所以证不了，是因为**两种完全不同的事实在字节层面同形**：这条交付物「没动过」（本来就不需要单）

@@ -61,14 +61,16 @@ def test_verdict_rack_is_pinned_so_moves_are_deliberate():
     """
     report = cov.audit(ROOT)
     assert report["item_count"] == 15, report["item_count"]
-    assert report["verdict_counts"] == {"producer": 14, "checker_only": 0,
-                                        "absent": 1}, report["verdict_counts"]
+    assert report["verdict_counts"] == {"producer": 15, "checker_only": 0,
+                                        "absent": 0}, report["verdict_counts"]
 
 
 def test_the_absent_items_are_the_ones_we_say_they_are():
     report = cov.audit(ROOT)
     absent = {r["item"] for r in report["rows"] if r["verdict"] == "absent"}
-    assert absent == {"ICD"}, absent
+    # 第 29 片之后 C6 那 15 项没有零实现项了；ICD 那一格只升「可自查的一半」，
+    # 产物本身不叫 ICD（对侧签的两节本仓产不了）。
+    assert absent == set(), absent
 
 
 def test_checker_only_items_have_no_src_producer():

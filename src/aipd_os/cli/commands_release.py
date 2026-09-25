@@ -35,6 +35,34 @@ def cmd_audit(args):
     return 0
 
 
+# ---- interfaces：接口清单与契约证据（不是 ICD）----
+def cmd_interfaces(args):
+    from aipd_os.interface_contract import build, verdict_rc, write
+
+    repo = Path(args.repo) if args.repo else _repo_root()
+    doc = build(repo)
+    out = Path(args.out) if args.out else repo / "interface-contract.json"
+    write(doc, out)
+
+    def prose():
+        c = doc["counts"]
+        print(f"接口清单与契约证据：{out}（+ 同名 .evidence.json 侧车）")
+        print(f"  {c['rows']} 条接口：{c['by_kind']}")
+        print(f"  判定={doc['verdict']}（未取证 {c['unverified']}、"
+              f"声明了但没人消费 {c['declared_but_unconsumed']}、"
+              f"定义件缺失 {c['missing_defines']}）")
+        for name in doc["declared_but_unconsumed"]:
+            print(f"    [发现] 全仓没有任何文件按名字引用 {name} ⇒ 这是一张没人校验的契约")
+        for miss in doc["missing_defines"]:
+            print(f"    [阻断] 定义件不在盘上：{miss}")
+        print(f"  为什么这份东西不叫 ICD：{doc['not_icd_because']}")
+    _emit(args, doc, prose)
+    rc = verdict_rc(doc, strict=args.strict)
+    if rc and args.strict:
+        print("  --strict：判定不是 complete，按不放行退出")
+    return rc
+
+
 # ---- release check：版本真实性审计 + 生产发布门禁 + 通过性报告 ----
 def cmd_release_check(args):
     repo = Path(args.repo) if args.repo else _repo_root()

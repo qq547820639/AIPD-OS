@@ -166,6 +166,9 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
     # ---- 审计与发布 ----
     CommandEntry("audit", CommandStatus.PUBLIC, CommandCategory.AUDIT_RELEASE, "5.1",
                  description="仓库审计"),
+    CommandEntry("interfaces", CommandStatus.PUBLIC, CommandCategory.AUDIT_RELEASE, "5.12",
+                 description="接口清单与契约证据：逐条列本机声明的接口、定义件哈希与取证用例"
+                             "（刻意不叫 ICD：对侧签的那两节本仓产不了）"),
     CommandEntry("release check", CommandStatus.PUBLIC, CommandCategory.AUDIT_RELEASE, "5.1",
                  description="发布检查"),
     CommandEntry("release manifest", CommandStatus.PUBLIC, CommandCategory.AUDIT_RELEASE,

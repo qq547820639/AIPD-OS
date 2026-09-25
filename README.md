@@ -306,6 +306,18 @@ aipd drawing dfm --step bracket.step --out dfm.md --part BR-1 --material 6061-T6
 #     测不出来就记盲区（材料认不出类别、没有整孔、孔口开在曲面上量不到口边圆、没有 --spec、
 #     单个平面量不出厚度），**不折算成合格**；误差方向两法各自写明，这条印在报告的 caveat 里。
 #     hold 类结论（深孔 >10×、公差严于 0.025）让命令退 4；advisory 与盲区只提示不阻断。
+aipd interfaces --repo . --out interface-contract.json
+#   ↑ 接口清单与契约证据（**不叫 ICD**：ICD 的「责任与变更授权」「接口职责」两节只能由对侧给，
+#     本仓单方产一份叫 ICD 的文件等于伪造签署）。85 条接口逐条带定义件 sha256、取证用例与
+#     「证到什么 / 证不到什么」两栏，分母全部**重算**：CLI 56 条取自 command_contract、
+#     MCP 6 条取自 mcp_server.py 的 def mcp_*、schema 5 份取自 assets/schemas 实况、
+#     出网消费者 11 个按 aipd_os.net.http 的 import 反查——抄计数会在改名那天静默漏项。
+#     取证用的是 AST 解析（文件在 + 符号在 + 真收得到 test），另有一条常驻用例把这套解析
+#     与 `pytest --collect-only` 的真读数对齐，并配 must-not-fire 一侧（真被引用的 schema
+#     不许一起躺进孤儿清单）。判定三态：定义件不在盘上 ⇒ 与 --strict 无关必退 4；
+#     有孤儿契约或未取证行 ⇒ incomplete，默认只写进文档、--strict 才拦。
+#     今天的真读数：3 份 schema（manual_chain_state / project_checkpoint / supervisor_project）
+#     全仓没有任何文件按名字引用 ⇒ 记 declared_but_unconsumed，不折算成已验证。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。
@@ -467,7 +479,7 @@ AIPD 的**一键命令**（`aipd <cmd>`；权威清单是 `src/aipd_os/cli/comma
 - 工业化：`industrialize` / `validate`
 - 制造就绪：`bom show` / `bom add` / `bom release` / `quote apply` / `cost calc`
 - 工程变更（v5.12）：`eco create` / `eco affected` / `eco transition` / `eco show`（影响清单带改前/改后 sha256；批准人必须与创建人不同，被状态机拒 ⇒ 退 4）
-- 审计与发布：`audit` / `release check` / `test` / `eval` / `package`
+- 审计与发布：`audit` / `interfaces` / `release check` / `test` / `eval` / `package`
 - 运维体检：`doctor` / `version --verbose`
 
 ---
