@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 171072,
-      "sha256": "65bd103398d34d12134af9b11a67d3125c0669f56e34e9095ec5909675f3a103"
+      "size": 175247,
+      "sha256": "16d62dfc6995944c3847b661de5f3a974c6ba4f28e78119aa98f65fc0f7e73f3"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 43447,
-      "sha256": "75d10f8d68d0046bf1d6273278ac110f87edfd232c2f3acd3e7396f8d43faf88"
+      "size": 44596,
+      "sha256": "ce615928fafa4e3ffebd09178ed5ead9b0e1396a0f0bfe1eba2d611632df9712"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -741,6 +741,11 @@
       "sha256": "1036a4a24769dc1962ad5adc379188acd738e8682746aaf98790432d17428d56"
     },
     {
+      "path": "scripts/command_surface_census.py",
+      "size": 20255,
+      "sha256": "9cbb56bc801ff77628bfb63a61f73b9b8b13ea9648723cecc4ae6d86d3e1d10f"
+    },
+    {
       "path": "scripts/decision_policy.py",
       "size": 1671,
       "sha256": "371de81a1dfdd16e367cc5ee31d2aef4657830b3aa09ff95b0603d144002c864"
@@ -922,8 +927,8 @@
     },
     {
       "path": "scripts/skill_quality_audit.py",
-      "size": 8819,
-      "sha256": "df63f86ccf2bd6c8ee5987ac008e1470e3e47c9a361ed9266814df9dd193f33c"
+      "size": 9397,
+      "sha256": "f66b1506e2cbd826b9a783d0eacb32cfbf5094e02e83e6c34e131f29fc12508d"
     },
     {
       "path": "scripts/state_perf_gate.py",
@@ -2447,8 +2452,13 @@
     },
     {
       "path": "tests/test_command_coverage.py",
-      "size": 6928,
-      "sha256": "aebd1a644a0c7f34e538195d55faed9df2387947f34eb931c858c396f3c8075b"
+      "size": 8751,
+      "sha256": "003ccf37b98708a3b31c8fe652229ce465ee969c83cab3214f7f3d884bc5c570"
+    },
+    {
+      "path": "tests/test_command_surface_census.py",
+      "size": 7391,
+      "sha256": "67c44a0349ae23b2044e4dbc1139ed8cbf0e7b501bd5b6099c0b5800081c9c04"
     },
     {
       "path": "tests/test_completion_endpoint.py",
