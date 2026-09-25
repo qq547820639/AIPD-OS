@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 UNATTRIBUTED = "unattributed"
@@ -41,3 +42,24 @@ def classify_actor(value: Any) -> str:
 def is_human_actor(value: Any) -> bool:
     """只有「写了名字、而且那个名字不在机器身份表里」才算人。"""
     return classify_actor(value) == HUMAN
+
+
+def summarize_actor_column(rows: Iterable[dict[str, Any]], *, column: str,
+                           id_field: str) -> dict[str, Any]:
+    """按某一 actor 列给一批行做三态计数（gates 的 `approved_by`、risks 的
+    `owner`……共用同一份词表，但各自的投影留在各自模块里，这里只做通用计数）。
+
+    `unassigned` 收的是「没有被读成真人」的那些行的 id —— 缺责任人与机器代签
+    在「下一步要谁动」这个问题上是同一类，所以合在一列里给调用方看。
+    """
+    counts = {HUMAN: 0, NON_HUMAN: 0, UNATTRIBUTED: 0}
+    unassigned: list[Any] = []
+    total = 0
+    for row in rows:
+        total += 1
+        kind = classify_actor(row.get(column)) if column in row else UNATTRIBUTED
+        counts[kind] += 1
+        if kind != HUMAN:
+            unassigned.append(row.get(id_field))
+    return {"column": column, "total": total, "counts": counts,
+            "unassigned": [x for x in unassigned if x is not None]}

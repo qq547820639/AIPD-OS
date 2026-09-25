@@ -31,7 +31,11 @@ import pytest
 from aipd_os import gate_attribution as ga
 from aipd_os.actors import NON_HUMAN_ACTORS, classify_actor
 from aipd_os.state.db import AIPDStateDB
-from aipd_os.state.migrations import migrate, rollback
+from aipd_os.state.migrations import MIGRATIONS, migrate, rollback
+
+# v19 之上那几格现算：链上每进一格这里就多跑一格。硬写 `[20]` 会让第 34 片的
+# v21 变成一次假红——它想钉的从来不是"尾巴停在哪一格"。
+VERSIONS_ABOVE_19 = [m["version"] for m in MIGRATIONS if m["version"] > 19]
 
 ROOT = Path(__file__).resolve().parents[1]
 GATE = ROOT / "scripts" / "quality_gate.py"
@@ -70,7 +74,7 @@ class TestColumnShape:
         db = _db(tmp_path)
         rollback(db.path, 19)
         assert _gate_col(db.path)[3] == "'AI-internal'", "降回 v19 应当还原旧形状"
-        assert migrate(db.path) == [20]
+        assert migrate(db.path) == VERSIONS_ABOVE_19
         fresh = _db(tmp_path / "fresh")
         assert _gate_col(db.path) == _gate_col(fresh.path)
 
@@ -95,7 +99,7 @@ class TestColumnShape:
                     "INSERT INTO gates(project_id,tenant_id,gate,result,checks_json,"
                     "approved_by,created_at) VALUES('P-GATE','default',?,'PASS','{}',?,"
                     "'2026-01-01T00:00:00+00:00')", (gate, actor))
-        assert migrate(db.path) == [20]
+        assert migrate(db.path) == VERSIONS_ABOVE_19
         assert [r["approved_by"] for r in db.list_gates("default", "P-GATE")] \
             == ["AI-internal", "wang"]
         out = ga.project_gates(db, "default", "P-GATE")
@@ -277,7 +281,7 @@ class TestDownMigration:
         before = [(r["gate_record_id"], r["approved_by"])
                   for r in db.list_gates("default", "P-GATE")]
         rollback(db.path, 19)
-        assert migrate(db.path) == [20]
+        assert migrate(db.path) == VERSIONS_ABOVE_19
         after = [(r["gate_record_id"], r["approved_by"])
                  for r in db.list_gates("default", "P-GATE")]
         assert [x[0] for x in after] == [x[0] for x in before], "重建表把主键挪了"

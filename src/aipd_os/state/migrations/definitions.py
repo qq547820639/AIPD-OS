@@ -46,6 +46,8 @@ from .helpers import (
     _v19_eco_tables,
     _v20_gates_approved_by_no_default,
     _v20_restore_gates_approved_by_default,
+    _v21_restore_risks_owner_default,
+    _v21_risks_owner_no_default,
 )
 from .schema import V1_INITIAL_SCHEMA
 
@@ -580,6 +582,20 @@ MIGRATIONS: list[dict[str, Any]] = [
         ],
         "down": [
             _v20_restore_gates_approved_by_default,
+        ],
+    },
+    # v21: F-C6 第 34 片。`risks.owner` 原本是 `TEXT NOT NULL DEFAULT 'AI'`，
+    # 而写入口 add_risk 连 owner 形参都没有、INSERT 里硬写 "AI" ⇒
+    # 「这条风险谁负责」在创建时无法表达，库里每一条都记成 AI 负责。
+    # 与 v20 同一处置：重建为可空、无默认值，历史值原样保留，读侧按机器身份词表分类。
+    {
+        "version": 21,
+        "name": "risks_owner_no_default",
+        "up": [
+            _v21_risks_owner_no_default,
+        ],
+        "down": [
+            _v21_restore_risks_owner_default,
         ],
     },
 ]

@@ -693,3 +693,65 @@ def _v20_restore_gates_approved_by_default(conn: sqlite3.Connection) -> None:
     """
     _v20_rebuild_gates(conn, "approved_by TEXT NOT NULL DEFAULT 'AI-internal'",
                        "COALESCE(approved_by, '')")
+
+
+# ---------------------------------------------------------------------------
+# v21 helpers
+# ---------------------------------------------------------------------------
+_V21_RISK_COLUMNS = ("risk_id", "project_id", "tenant_id", "title", "probability",
+                     "impact", "mitigation", "status", "owner", "trigger",
+                     "updated_at", "version_no")
+
+
+def _v21_rebuild_risks(conn: sqlite3.Connection, owner_ddl: str,
+                       owner_expr: str) -> None:
+    """risks 表拷贝重建（SQLite 无 ALTER COLUMN）。形状照 `claims`/`gates` 的先例。
+
+    与 v20 同一纪律：up 与 down 只差「owner 那一列的形态」和「搬旧值时的表达式」，
+    列清单两边共用一份常量。`trigger` 是列名也是关键字，但原 DDL 与既有 INSERT 都
+    未加引号且能用，这里保持一致，不顺手加引号（加了反而与 V1 文本不同形）。
+    """
+    from .sqlsplit import exec_script
+
+    cols = ", ".join(_V21_RISK_COLUMNS)
+    select = cols.replace("owner", owner_expr)
+    exec_script(conn, f"""
+    CREATE TABLE risks_new (
+      risk_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      probability TEXT,
+      impact TEXT,
+      mitigation TEXT,
+      status TEXT NOT NULL DEFAULT 'open',
+      {owner_ddl},
+      trigger TEXT,
+      updated_at TEXT NOT NULL,
+      version_no INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (risk_id, project_id, tenant_id)
+    );
+    INSERT INTO risks_new({cols}) SELECT {select} FROM risks;
+    DROP TABLE risks;
+    ALTER TABLE risks_new RENAME TO risks;
+    """)
+
+
+def _v21_risks_owner_no_default(conn: sqlite3.Connection) -> None:
+    """v21 up：`owner NOT NULL DEFAULT 'AI'` → 可空、无默认值。
+
+    历史值**原样保留**（含已经写进去的 `'AI'`）：这一片改的是「以后没人负责就落
+    NULL」，不替历史改写。旧写入口更糟——`add_risk` 连形参都没有，INSERT 里硬写
+    `"AI"`（`state/db.py`），所以库里每一条风险的 owner 都是 `'AI'`；写入口同批修。
+    """
+    _v21_rebuild_risks(conn, "owner TEXT", "owner")
+
+
+def _v21_restore_risks_owner_default(conn: sqlite3.Connection) -> None:
+    """v21 down：还原 v20 那一列的形态（NOT NULL + DEFAULT 'AI'）。
+
+    NULL 落**空串**而不是 `'AI'`：与 v20 的降级同一取舍——空串在机器身份表之外，
+    读侧按「填了但等于没填」处理；落 `'AI'` 等于降级时凭空给一批风险指派了负责人。
+    """
+    _v21_rebuild_risks(conn, "owner TEXT NOT NULL DEFAULT 'AI'",
+                       "COALESCE(owner, '')")

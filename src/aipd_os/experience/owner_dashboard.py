@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from ..actors import summarize_actor_column
 from ..state.checkpoint import CheckpointManager
 from ..state.db import AIPDStateDB
 from .artifact_preview import artifact_preview
@@ -76,6 +77,21 @@ def _reversible_operations(db: AIPDStateDB, project_id: str,
     return ops
 
 
+def _risk_ownership_view(risks: list[dict[str, Any]]) -> dict[str, Any]:
+    """风险责任人这块的默认视图：三态计数 + 一句人话，不带内部编号。"""
+    got = summarize_actor_column(risks, column="owner", id_field="risk_id")
+    counts = got["counts"]
+    waiting = counts["non_human"] + counts["unattributed"]
+    if got["total"] == 0:
+        # 「0 条风险都有真人认领」是对空集下的断言；人话是「没有风险条目」。
+        summary = "暂无风险条目"
+    elif waiting:
+        summary = f"{got['total']} 条风险里 {waiting} 条还没有真人负责（含机器代签）"
+    else:
+        summary = f"{got['total']} 条风险都有真人认领"
+    return {"counts": counts, "waiting_for_owner": waiting, "summary": summary}
+
+
 def build_dashboard(db: AIPDStateDB, project_id: str,
                     tenant_id: str = "default") -> dict[str, Any]:
     """构建统一 Owner Dashboard（10 个所有者区块 + details 内部细节）。"""
@@ -108,6 +124,9 @@ def build_dashboard(db: AIPDStateDB, project_id: str,
         "top_risk": ps.get("top_risk"),
         "next_milestone": ps.get("next_milestone"),
         "external_waits": external.get("summary", "无外部等待事项"),
+        # 第 34 片：风险的责任人今天才**可读**（v21 之前这一列写死了 'AI'，
+        # 而且没有任何读者）。默认视图只给自然语言与计数，风险编号留在 details。
+        "risk_ownership": _risk_ownership_view(risks),
         "single_decision": single_decision,
         "recent_changes": changes,
         "reversible_operations": reversible,
@@ -127,6 +146,8 @@ def build_dashboard(db: AIPDStateDB, project_id: str,
             "counts": ps.get("details", {}).get("counts", {}),
             "decision_id": (card or {}).get("decision_id"),
             "deliverable_count": ap.get("details", {}).get("deliverable_count", 0),
+            "unassigned_risk_ids": summarize_actor_column(
+                risks, column="owner", id_field="risk_id")["unassigned"],
         },
     }
 
@@ -158,6 +179,7 @@ def render_dashboard_text(view: dict[str, Any],
         lines.append(f"已完成：{view['done']}")
         lines.append(f"缺口：{view['missing']}")
         lines.append(f"风险：{view['top_risk']}")
+        lines.append(f"风险责任：{view['risk_ownership']['summary']}")
         lines.append(f"外部等待：{view['external_waits']}")
         if dec:
             lines.append(f"待您决定：{dec['topic']}")
@@ -183,6 +205,8 @@ def render_dashboard_text(view: dict[str, Any],
     lines.append(f"还缺什么：{view['missing']}")
     lines.append("")
     lines.append(f"最大风险：{view['top_risk']}")
+    lines.append("")
+    lines.append(f"风险责任：{view['risk_ownership']['summary']}")
     lines.append("")
     lines.append(f"外部等待：{view['external_waits']}")
     lines.append("")

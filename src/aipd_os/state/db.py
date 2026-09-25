@@ -194,7 +194,7 @@ CREATE TABLE IF NOT EXISTS risks (
   impact TEXT,
   mitigation TEXT,
   status TEXT NOT NULL DEFAULT 'open',
-  owner TEXT NOT NULL DEFAULT 'AI',
+  owner TEXT,
   trigger TEXT,
   updated_at TEXT NOT NULL,
   version_no INTEGER NOT NULL DEFAULT 1,
@@ -975,13 +975,20 @@ class AIPDStateDB:
     def add_risk(self, tenant_id: str, project_id: str, title: str,
                  probability: str | None = None, impact: str | None = None,
                  mitigation: str | None = None, status: str = "open",
-                 trigger: str | None = None) -> str:
+                 trigger: str | None = None,
+                 owner: str | None = None) -> str:
+        """登记一条风险。**没人负责就落 NULL**——旧形状在 INSERT 里硬写 `"AI"`
+        （连形参都没有），于是每条自动开出的风险都被记成 AI 负责（migration v21 修列，
+        这一片修写入口）。给了值就必须非空，空白串不许冒充一个名字。"""
+        actor = None if owner is None else str(owner).strip()
+        if actor is not None and not actor:
+            raise ValueError("owner 给了就必须是名字，空白串不许冒充有人负责")
         ts = now_iso()
         with self.connect() as c:
             rid = self.next_sequence("risk", "RISK")
             c.execute("INSERT INTO risks(risk_id,project_id,tenant_id,title,probability,impact,mitigation,"  # noqa: E501
                       "status,owner,trigger,updated_at,version_no) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-                      (rid, project_id, tenant_id, title, probability, impact, mitigation, status, "AI",  # noqa: E501
+                      (rid, project_id, tenant_id, title, probability, impact, mitigation, status, actor,  # noqa: E501
                        trigger, ts, 1))
         return rid
 

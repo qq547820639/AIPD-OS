@@ -140,13 +140,15 @@ def test_split_statements_handles_semicolon_in_literal():
 
 def test_v18_db_meta_up_and_down(tmp_path):
     """v18：`db_meta` 建得出也退得掉（字段加密的每库盐住在这里）。"""
-    from aipd_os.state.migrations import current_version, migrate, rollback
+    from aipd_os.state.migrations import MIGRATIONS, current_version, migrate, rollback
 
     path = str(tmp_path / "v18.db")
     migrate(path)
-    # v19（ECO 三张表）、v20（gates 那一列）进链后，HEAD 不再是 18：
-    # 先退到 v18，才测得到 v18 自己的 up/down。
-    assert rollback(path, 18) == [20, 19]
+    # 尾巴从 MIGRATIONS 现算：链上每进一格，这里就多退一格。
+    # 硬写 [20, 19] 会在每次加迁移时假红一次，而它想钉的从来不是"有几个版本"。
+    above = sorted((m["version"] for m in MIGRATIONS if m["version"] > 18), reverse=True)
+    assert above, "v18 之上得真有迁移，否则这条测不到 v18 的 up/down"
+    assert rollback(path, 18) == above
     assert current_version(path) == 18
     with sqlite3.connect(path) as c:
         assert c.execute("SELECT name FROM sqlite_master WHERE type='table' "

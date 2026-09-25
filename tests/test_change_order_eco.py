@@ -454,8 +454,10 @@ class TestMigrationV19:
         path = str(tmp_path / "eco.db")
         AIPDStateDB(path)
         assert current_version(path) == MIGRATIONS[-1]["version"]
-        # 链尾现在是 v20：退到 v18 要连着退两格
-        assert rollback(path, 18) == [20, 19]
+        # 退到 v18 要连着退「v18 之上那几格」：格数从 MIGRATIONS 现算，
+        # 硬写 [20, 19] 会让每加一次迁移都假红一次。
+        assert rollback(path, 18) == sorted(
+            (m["version"] for m in MIGRATIONS if m["version"] > 18), reverse=True)
         assert current_version(path) == 18
         with sqlite3.connect(path) as conn:
             names = {row[0] for row in conn.execute(
