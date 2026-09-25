@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-25T05:40:33+00:00",
+  "generated_at": "2026-09-25T06:47:41+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 124964,
-      "sha256": "560b9cd27729d7c0d4acb72c6b64aa36a7c1c4b0b59e190e72900dfc2d100216"
+      "size": 129299,
+      "sha256": "915df0469c8ac06c93fadd8ac9979dab6d1695f87a913914c055ac6af412c1b6"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 34398,
-      "sha256": "d48b301ee25c834626152dd9f639fc3716a7b3947b645a9d8f1a3cd91a7fe1ed"
+      "size": 35818,
+      "sha256": "18f6fdb5f4d8319a6715c902a1d642e90b953b4935ca2d7ad2ad3b844251eb33"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -697,8 +697,8 @@
     },
     {
       "path": "scripts/c6_coverage.py",
-      "size": 23092,
-      "sha256": "ba0bbd64a69fab21832d1a9187753d7e84cf199f88d2d332b2aace6905515dc9"
+      "size": 23768,
+      "sha256": "ea920cf2e729410b78d66428f2995a1a4e81f46957ba91ce168fad864ee24204"
     },
     {
       "path": "scripts/cad_convergence.py",
@@ -792,8 +792,8 @@
     },
     {
       "path": "scripts/production_release_gate.py",
-      "size": 31609,
-      "sha256": "1006ec683f8fa208f84132f904b3d4b39a2faf5709b6b15dfff611901b68d5ea"
+      "size": 33656,
+      "sha256": "2b4b396b49a9263d4d38864edf0dc851f769e949abf75e9ae744c2ae61fddb00"
     },
     {
       "path": "scripts/quality_gate.py",
@@ -1027,8 +1027,8 @@
     },
     {
       "path": "src/aipd_os/change_orders/eco.py",
-      "size": 21329,
-      "sha256": "8b2b61bd7cc0ecd528738327234c638b23663da5024995a437d7791bf57df0a5"
+      "size": 21743,
+      "sha256": "be7fc9962a3f3e469da673c955715041b9376a35c708a8adcf1d9ef711e7aa19"
     },
     {
       "path": "src/aipd_os/cli/__init__.py",
@@ -1097,8 +1097,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_release.py",
-      "size": 5579,
-      "sha256": "762f765b92dea64a6dbd6c1405932052a945fc9a30942266cdcfdc43dd73136a"
+      "size": 6163,
+      "sha256": "26942c903f208535e8552a587f85fff42fef3c6ab0646f0f1033ce07e9bcf994"
     },
     {
       "path": "src/aipd_os/cli/commands_supply.py",
@@ -1592,13 +1592,13 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 77556,
-      "sha256": "c0ca751dc7cf1f1eedb22c394fe897ca728708837a737c08021bc6642038f837"
+      "size": 80741,
+      "sha256": "12668fb32b12e37f3a727130fff55cf99e986d4d1c56999737f22e3f37dc4439"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
-      "size": 38051,
-      "sha256": "1fb5b4ba0a9eae243f987264b50741501554d43d4ec60d4fc0f74b94ae8162b4"
+      "size": 45213,
+      "sha256": "121653e323572e6c287b0b7bc4ecf0dfe7f606c9ac934a87f1c1eed71a2cdbbd"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -2382,8 +2382,8 @@
     },
     {
       "path": "tests/test_cli.py",
-      "size": 19508,
-      "sha256": "4d3a378e011745e01ec4db52114629741229de471f6dc76e07a4f136a0993204"
+      "size": 19792,
+      "sha256": "25660ab5ca9806fe6a0e2f382aa1789b1c3da7f37e667d6da8be071ff1f9cf47"
     },
     {
       "path": "tests/test_cli_deprecation.py",
@@ -2812,13 +2812,13 @@
     },
     {
       "path": "tests/test_production_release_gate.py",
-      "size": 10237,
-      "sha256": "cbf9294038471d904138583baf5f391c45067f178383f3fb77ed18bf05bdb159"
+      "size": 13488,
+      "sha256": "9a5a097be9499af739524e198590473d7c58df7a693f1a05e936e63e0a141738"
     },
     {
       "path": "tests/test_production_release_gate_file_lists.py",
-      "size": 7048,
-      "sha256": "e736b5e01c0c0d8b90bf314aad5bb94399a816f9a1cbd0b4b46aa30baa51c76d"
+      "size": 7192,
+      "sha256": "3bc0a0f26d567f02a785647576063884c7f425d73930cd012b1757cafebc44f7"
     },
     {
       "path": "tests/test_prompt_injection.py",
@@ -2874,6 +2874,11 @@
       "path": "tests/test_release_manifest_assembly_step.py",
       "size": 16229,
       "sha256": "0388692eaa0ea8609074dc1534983249c787e43589040268c1f5149062e7869c"
+    },
+    {
+      "path": "tests/test_release_manifest_eco_coverage.py",
+      "size": 17812,
+      "sha256": "2922eb9c6d5e85633d2d88df470720ec3b90feb48d5224fc7bf532381fa1ff9b"
     },
     {
       "path": "tests/test_release_signing.py",

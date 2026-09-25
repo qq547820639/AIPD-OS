@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-25T13:34:22",
+  "generated_at": "2026-09-25T14:47:17",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 176
+      "tests": 177
     }
   },
   "tags": [
@@ -116,13 +116,14 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 611,
-    "hash_matches": 611,
+    "total_files": 612,
+    "hash_matches": 612,
     "hash_mismatch_count": 0,
     "mismatches": []
   },
   "untracked_or_generated": [
     " M RELEASE_MANIFEST.json",
+    " M docs/audit/pytest-report.json",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],
