@@ -90,6 +90,7 @@ from .commands_owner import (
 from .commands_release import (
     cmd_audit,
     cmd_eval,
+    cmd_interfaces,
     cmd_package,
     cmd_release_check,
     cmd_release_manifest,
@@ -533,6 +534,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "industrialize": cmd_industrialize,
     "validate": cmd_validate,
     "audit": cmd_audit,
+    "interfaces": cmd_interfaces,
     "release check": cmd_release_check,
     "release manifest": cmd_release_manifest,
     "test": cmd_test,
