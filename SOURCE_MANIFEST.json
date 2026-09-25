@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-25T12:39:02+00:00",
+  "generated_at": "2026-09-25T13:17:03+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 151661,
-      "sha256": "6da1892c3147512bc8304c46da032a449414112174bfc1bee29c4af54351ca37"
+      "size": 155189,
+      "sha256": "aabb366d7d7d86681ddffc3897c4ef8d21e0f61d56e6032a0be90b2b15e490aa"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 40917,
-      "sha256": "a42f92066e42924e0765906cfd606e22ec7b7d1e24cd2662c7df4b6d47c4e933"
+      "size": 41767,
+      "sha256": "caccb60c0e4558e0f014f20f77a808a3e2622594270badf50da32c0a5f12dcc0"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -802,8 +802,8 @@
     },
     {
       "path": "scripts/quality_gate.py",
-      "size": 6499,
-      "sha256": "a40f8e9fc3a6dfa376391ab6caeab66721587cde116ea284b3f1da1fbc25a5b1"
+      "size": 6814,
+      "sha256": "3a1db6432f20e9d66e3d496b39782500fa2c80b7a8679cae77d135a6ab682bbc"
     },
     {
       "path": "scripts/regenerate_release_manifest.py",
@@ -897,8 +897,8 @@
     },
     {
       "path": "scripts/selftest_quality.py",
-      "size": 1584,
-      "sha256": "04a2d5e848cfe8b1e339d5c5b1e70de143a19bda5175e66360ae8f61ac06afd5"
+      "size": 6416,
+      "sha256": "5d6cf6920ecae191a14ccc5327fe007356b711809c842012b70fbda37435af55"
     },
     {
       "path": "scripts/selftest_state.py",
@@ -1692,8 +1692,8 @@
     },
     {
       "path": "src/aipd_os/schema_binding.py",
-      "size": 14656,
-      "sha256": "a4288f7ca45be77ef5883e969366c3bef28ba2bc78fe13221f04be49056e999b"
+      "size": 14877,
+      "sha256": "dba5a8634a5be1aab9e381b7fa3307d25fcf4051f322e84e82fe8da43289a6d8"
     },
     {
       "path": "src/aipd_os/scripts/__init__.py",
@@ -2579,6 +2579,11 @@
       "path": "tests/test_gate_requirements.py",
       "size": 11061,
       "sha256": "92462025b7010c55c146782bf46a352fa4b3c163f29e708c622f9f3346f5a919"
+    },
+    {
+      "path": "tests/test_gate_runners.py",
+      "size": 12415,
+      "sha256": "8cb7f5b64d9b8bb8d811cc2339e037647b5789e1ecdd27b872cf63648803a500"
     },
     {
       "path": "tests/test_generic_lineage.py",
