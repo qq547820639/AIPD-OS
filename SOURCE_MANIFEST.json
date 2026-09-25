@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-25T15:40:54+00:00",
+  "generated_at": "2026-09-25T15:49:22+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 166089,
-      "sha256": "bd2dbb72039c19bf15090f99c0c5047787b9ecbf56aa7fafa5042edb0ed35120"
+      "size": 166554,
+      "sha256": "2a34fcc4cc68c95dbd41bb4e39f60e4fa5afced5a4584d50a58ea9f8bad6353b"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -2772,8 +2772,8 @@
     },
     {
       "path": "tests/test_migration_rebuild_fidelity.py",
-      "size": 7314,
-      "sha256": "d8ea71198f86cf178e6bb041287a37ffd5174717f51c396ca951f1feb27e2f5a"
+      "size": 10613,
+      "sha256": "d6d7192e09a2a10ad9f02efcca2d9bcff552422c8c3e08ca855145b9d4646f7e"
     },
     {
       "path": "tests/test_model_evals_honesty.py",
