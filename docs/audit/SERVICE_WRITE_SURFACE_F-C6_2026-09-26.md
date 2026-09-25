@@ -68,7 +68,7 @@
 | 变异电池 | `/tmp/slice38-mutations.py` **6 条：杀 6 / 存活 0 / 注入无效 0 / 崩溃式红 0**，带未注入对照臂；已知无撤回案例 1 |
 | 静态检查 | `mypy src` 0 error；`ruff check src tests state_service` rc=0 |
 
-| 签出 attestation | HEAD 干净签出 + `AIPD_SOURCE_COMMIT=<tag SHA>`：**2250 passed / 0 failed / 3 skipped**（2253 收集，8m30s），报告前缀 `2916a14ca08a` 已绑进 `PROVENANCE.test_report` |
+| 签出 attestation | 写面补齐后第一跑：2250/0（报告前缀 `2916a14ca08a`）；**读侧断言入册后在最终 HEAD 上重跑并改绑**：**2252 passed / 0 failed / 3 skipped**（2255 收集，4m26s），报告前缀 `7fecc45332f8` |
 | 发布门 | `production_release_gate --release-ready --tag v5.6.0`：**8/8、rc=0、`release_ready: true`**；`audit_repo --strict` rc=1 只剩既有的 tag 锚点判定 |
-| 电池重放 | 收尾时在最终树重跑第 38 片 **5/5** 杀掉、字节复算干净 |
-| 提交序列 | `b14b7f5`（代码+用例+登记）→ `e99a762`（清单重锚 629 条）→ `ac1e90d`（证据绑签出那一跑）→ 本笔文档 |
+| 电池重放 | 收尾时在最终树重跑第 38 片 **6/6** 杀掉、字节复算干净 |
+| 提交序列 | `b14b7f5`（代码+用例+登记）→ `e99a762`（清单重锚 629 条）→ `ac10e07`（读侧断言+登记）→ `4be63a8`（清单重锚）→ `941ad62`（证据改绑 2252/0 那一跑）→ 本笔文档 |
