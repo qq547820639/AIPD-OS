@@ -91,4 +91,8 @@ migration **v22 `actor_columns_no_default`**：拷贝重建这三张表。
 | 静态检查 | `mypy src` 0 error；`ruff check src tests state_service` rc=0 |
 | 文档镜像 | `state_inventory.md` 页眉/正文 HEAD 与版本清单三处同步到 v22；对账尺子 `TestTheDocMirrorMatchesTheChain` 已改为由链尾现算 |
 
-签出 attestation 与两道发布门的读数在最后一笔提交里补上（不留占位）。
+| 签出 attestation | `git worktree` 的 HEAD 干净签出 + `AIPD_SOURCE_COMMIT=<tag SHA>`：**2224 passed / 0 failed / 3 skipped**（2227 收集），报告 `sha256` 前缀 `edaea5330b97` 已绑进 `PROVENANCE.test_report` |
+| 发布门 | `production_release_gate --release-ready --tag v5.6.0`：**8/8、rc=0、`release_ready: true`**（带 venv PATH；第一次跑 7/8 只欠 `workspace_clean`，因为证据产物尚未提交，提交后归零） |
+| 仓库审计 | `audit_repo --strict` rc=1，唯一一条红仍是既有的「Provenance source commit mismatch（锚点 = tag，HEAD 在后）」，两份清单 `hash_mismatch_count = 0` |
+| 六片电池同树重放 | 第 30 **21/21**、31 **8/8**、32 **14/14**、33 **9 杀+2 已知无撤回**、34 **15/15**、35 **12/12**，全部 rc=0（每条带未注入对照臂） |
+| 提交序列 | `d1f891d`（代码+用例+文档）→ `3fb32ad`（两份清单重锚，627 条）→ `7bc7354`（证据绑签出那一跑）→ 本笔文档 |
