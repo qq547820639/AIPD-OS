@@ -974,6 +974,28 @@
   验证=对 provider 公布过的结果）借「两侧点名 + 未验证≠已验证」；OpenAPI v3.2.1（Apache-2.0，
   自述只描述接口、不断言服务端实现）借那句边界；check-jsonschema（页面标 NOASSERTION 且无机器
   可读报告）不引入。⇒ 本地实现、零新依赖。
+
+  > **收口更正（同日，全部现算）**：上面那句「`manual_chain_state` 与 `supervisor_project`
+  > 连名字都没出现」是真的，但由它推「没人校验」是**错的**——
+  > `src/aipd_os/scripts/schema_check.py` 按**命名约定**
+  > （`stem.removesuffix('.schema')` + `DATA_DIRS=('templates','assets/templates')`）
+  > 绑实例并真跑 `jsonschema.validate`，而且挂在 `.github/workflows/ci.yml:45,58` 的 job 上；
+  > 实测五份 schema 里 **4 份有约定绑定的实例并被校验**，只有 `fact.schema.json` 落
+  > `INFO …（跳过数据校验）` ⇒ 孤儿 **3 份 → 1 份**，理由换成「没有实例被按它校验过」。
+  > 同一次核对翻出更重的一条：`project_checkpoint.schema.json` 的**内联** `$defs.fact`
+  > 的 `status.enum` 缺 `U`，而权威枚举 `src/aipd_os/state/db.py:48 FACT_STATUSES` 含 `U`
+  > （`research/models.py:38`、`idea/evidence_graph.py:188`、
+  > `product_intelligence/gate_criteria.py:145,372` 都在按 `U` 判定）⇒ 含一条 `U` 事实的
+  > 真实 checkpoint 在本仓自己的契约下非法。两处闭在第 30 片。
+  > 另有两处量具自引用：提交后重跑 `aipd interfaces` 得 **86 条 / 出网消费者 12**（不是这里的
+  > 85 / 11），多的那 1 条正是 `interface_contract.py` **自己**——它 `PROVES` 文案里写了
+  > `aipd_os.net.http`，而排除条件只有 `endswith("net/http.py")`；12 条里还有 3 条是 `tests/…`，
+  > 与 9 条生产模块混在同一个 kind 里数。
+  > **本片还有一次命令面漏提交**：`3ab466a` 少带了 `commands.py` 的 `COMMAND_FUNCS` 注册行，
+  > 而同一提交的 `main.py:385` 要读它 ⇒ 在 `3ab466a` 的干净签出里 `build_parser()` 直接
+  > `KeyError: 'interfaces'`，三个 CLI 用例文件 **28 failed / 25 passed**。之前那次全量绿是
+  > 在带修复的工作树上跑的。修向前进 `3d096c4`；收口读数因此一律改从 HEAD 的签出取。
+
   18 条常驻用例 + 变异电池 **12 条：杀 12 / 活 0 / 注入无效 0**。
   顺手立住一件副产品：普查那把尺子自己的注入 `_an_absent_item()` 会因「今天的仓恰好没有 absent 项」
   而 StopIteration——改成**没有就当场造一个**，否则反证静默失去可红性；
