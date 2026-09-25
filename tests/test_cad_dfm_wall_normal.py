@@ -20,10 +20,10 @@
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import cadquery as cq
 import pytest
-
-from pathlib import Path
 
 from aipd_os.cad.dfm import _face_normal_thickness, measure_min_wall_thickness
 
@@ -155,7 +155,6 @@ class TestTheReportShowsBothNumbers:
         assert f"三轴 {wall['axis_min_mm']:g} mm" in text and \
             f"法向 {wall['normal_min_mm']:g} mm" in text
         assert "三轴" in wall["caveat"] and "会漏" in wall["caveat"]
-        assert "45°" not in text or True     # 报告里不写推断来的角度，只写量出来的数
 
 
 class TestAVoidIsNotAWall:

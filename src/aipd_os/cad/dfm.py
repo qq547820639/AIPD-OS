@@ -332,11 +332,11 @@ def _face_normal_thickness(shape: Any, spacing_mm: float,
     逐**实体**分类而不是对整个 shape 分类：壁厚是一个实体本身的属性，
     两个互不相连的实体不应互相把对方的内部当成「材料内」。
     """
+    from OCP.Bnd import Bnd_Box
     from OCP.BRepAdaptor import BRepAdaptor_Surface
     from OCP.BRepBndLib import BRepBndLib
     from OCP.BRepClass3d import BRepClass3d_SolidClassifier
     from OCP.BRepGProp import BRepGProp_Face
-    from OCP.Bnd import Bnd_Box
     from OCP.gp import gp_Dir, gp_Lin, gp_Pnt, gp_Vec
     from OCP.IntCurvesFace import IntCurvesFace_ShapeIntersector
     from OCP.TopAbs import TopAbs_ShapeEnum, TopAbs_State
