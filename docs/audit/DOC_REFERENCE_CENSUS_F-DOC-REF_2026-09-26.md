@@ -101,6 +101,32 @@ D4 一开始只报"抓住 0 条 rc=1"，是电池的半径解析只收 `FAILED` 
 
 ## 七、终读数（工作树干净后跑）
 
-- 全量：
-- `production_release_gate --release-ready --tag v5.6.0`：
-- `audit_repo --strict`：
+收尾链：`5b6f023`（文档改写）→ `2e3e9f6`（两份清单重锚）→ 全量 → `dcb61e6`（绑证据）→
+`2e53931`（报告入库）→ 门禁。
+
+- **全量**：**2285 passed / 3 skipped / 0 failed**，791.56s，跑在 `2e3e9f6` 的
+  `git worktree` 干净签出里（`PYTHONPATH` 指向该签出的 `src`，
+  `AIPD_SOURCE_COMMIT` = tag SHA）。报告 sha256 `6960f647ad1c4f7d…`，
+  已入库 `docs/audit/pytest-report-v5.6.0.json` 并绑进 `PROVENANCE.test_report`
+  （passed 2285 / failed 0 / total 2288）。上一片同规模用例 477.60s，本轮 791.56s ——
+  并行会话把机器压到 load 21，**性能比门禁未被拖红**（阈值 5×，见 §附）。
+- **普查终读数（同一棵树 `2e3e9f6`）**：145 份文档 / 3555 处引用，
+  `resolved` 3158 / `missing` 149 / `multi` 99 / `external` 75 / `elided` 61 /
+  `line_beyond_eof` 13；Σ 分类 = 3555 = 分母 ✓；**现状面 0 条**、历史面 138 条（只报不判）。
+  与 §二 表（基准 `693fa2a`）差的那 2 处引用，就是 §二 那段漂移说明的现场复现：
+  从 `693fa2a` 到 `2e3e9f6` 之间我只改了两份文档，分母就从 3553 涨到 3555。
+- **`production_release_gate --release-ready --tag v5.6.0`**：**8/8 PASS，rc=0**
+  （`workspace_clean`、`commit_matches_head`、`source_manifest_zero_diff`、
+  `bundle_manifest_zero_diff`、`test_numbers_from_report`、`signature_verifiable`、
+  `no_secrets`、`no_unacknowledged_cve`）。
+- **`audit_repo --strict`**：rc=1，**唯一一条 ✗** 是按设计保留的 tag 锚点项
+  （`Provenance source commit mismatch: manifest=a66040520139… vs HEAD=2e5393154c18…`）；
+  两份清单的 `hash_mismatch_count` 均为 0、`mismatches` 均为空。
+
+## 附、本片学到的一条（进用户级记忆）
+
+判据的语料**包含记录它读数的文档**时，绝对数不能写进参与发布哈希的文件：
+`CHANGELOG.md` 在历史面里，所以往它写"读成 missing 149 / multi 99"这种句子，
+下一次编辑文档就会让它自己变假——而且**假得很安静**（没有任何红会亮）。
+处置：哈希文件只写树无关事实（档位划分、"现状面 0 条"），
+绝对数只写进 `docs/audit/`（被排除在哈希外、可事后更正），并给表格标明它是**哪个提交的树**。
