@@ -313,11 +313,18 @@ aipd interfaces --repo . --out interface-contract.json
 #     MCP 6 条取自 mcp_server.py 的 def mcp_*、schema 5 份取自 assets/schemas 实况、
 #     出网消费者 11 个按 aipd_os.net.http 的 import 反查——抄计数会在改名那天静默漏项。
 #     取证用的是 AST 解析（文件在 + 符号在 + 真收得到 test），另有一条常驻用例把这套解析
-#     与 `pytest --collect-only` 的真读数对齐，并配 must-not-fire 一侧（真被引用的 schema
-#     不许一起躺进孤儿清单）。判定三态：定义件不在盘上 ⇒ 与 --strict 无关必退 4；
-#     有孤儿契约或未取证行 ⇒ incomplete，默认只写进文档、--strict 才拦。
-#     今天的真读数：3 份 schema（manual_chain_state / project_checkpoint / supervisor_project）
-#     全仓没有任何文件按名字引用 ⇒ 记 declared_but_unconsumed，不折算成已验证。
+#     与 `pytest --collect-only` 的真读数对齐，并配 must-not-fire 一侧。判定七轴：
+#     未取证 / 没有实例被按它校验的契约 / 绑定读不到 / 只判存在的落点 / 形状副本与权威不一致 /
+#     权威读不到 / 定义件缺失——定义件不在盘上必退 4，其余只让判定 incomplete，
+#     默认不拦、--strict 才拦。七轴**逐轴**都有必须开火的用例（整体断 incomplete 会被
+#     「别的轴本来就脏」掩盖，第 30 片的电池放过两条这样的注入）。
+#     第 30 片更正过这条判据的方向：第 29 片按**文件名字面量**反查消费者，看不见
+#     schema_check.py 的**命名约定**绑定（stem + DATA_DIRS），把四份「有人按约定校验」的
+#     契约报成孤儿；现在绑定目录用 AST 从真校验器**现抽**，抽不到单列 blind 轴。
+#     今天的真读数：五份契约都有实例被按约定校验过（含新补的 assets/templates/fact.json），
+#     contracts_without_instance=0、只判存在的落点=0（quality_gate G9 与 outcome_acceptance
+#     现在按同名词干的契约核形状，五态 valid/invalid/unreadable/no_schema/missing 都不折成通过）、
+#     形状与 FACT_STATUSES 不一致=0（$defs.fact 已单源化到 fact.schema.json）、未取证 2。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。

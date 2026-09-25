@@ -951,6 +951,52 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6 第 30 片：契约绑定判据修正 + 把形状校验接到产物落点**：这一片起于**第 29 片
+  自己的一条假阳性**。那片的 `scan_consumers` 按**文件名字面量**反查消费者，报「三份 schema 没人
+  引用 ⇒ 没人校验的契约」；而 `src/aipd_os/scripts/schema_check.py` 其实按**命名约定**
+  （`stem.removesuffix('.schema')` + `DATA_DIRS`）绑实例并真跑 `jsonschema.validate`，
+  还挂在 `.github/workflows/ci.yml:45,58` 的 `schema-validation` job 上——那句文件名在它的代码里
+  一个字都没出现，按名字反查必然读不到。现算：五份 schema 里 **4 份有人按约定校验**，只有
+  `fact.schema.json` 落 `INFO …（跳过数据校验）` ⇒ 孤儿 3 → 1，理由换成「没有实例被按它校验过」。
+  **同一次核对翻出两条比那条假阳性重的**：
+  ① `project_checkpoint.schema.json` 的 `$defs.fact` 是 `fact.schema.json` 的**内联副本**且已漂移到
+  互相矛盾——副本的 `status.enum` **缺 `U`**，而权威 `src/aipd_os/state/db.py:48 FACT_STATUSES` 含 `U`
+  （`research/models.py:38`、`idea/evidence_graph.py:188`、
+  `product_intelligence/gate_criteria.py:145,372` 都在产 `U`）⇒ 含一条 `U` 事实的真实 checkpoint
+  **在本仓自己的契约下非法**。修法是把形状**单源化**：`$defs.fact` 换成
+  `allOf: [$ref → fact.schema.json]` 并在 checkpoint 侧**保留**自己多出来的 `fact_id` 要求。
+  三档判据对同一份重建文档实测：内联档拦 `U`；裸 `$ref` 档放 `U` 但**丢掉** `fact_id`（这一档就是
+  "单源化顺手放宽"的样子）；采用档收 `U`、保住 `fact_id`、并继承 `key.minLength`。今天真语料
+  **0 条** fact 文档 ⇒ **0 处翻转**，登记里明写「无差」而**不是**「等价」，必开火对照交给合成实例。
+  ② **落点只判存在**：`scripts/outcome_acceptance.py:22` 的 `exists()` 只要求 `size>0`，
+  `quality_gate.py` 的 G9 只看 deliverable **类型**在不在。旧码签出实测：形状坏掉的 checkpoint 与
+  **文件根本不存在的** checkpoint，旧门都返回 `pass=true`。现在两处都按同名词干的契约核形状，
+  五态分开（`valid` / `invalid` / `unreadable` / `no_schema` / `missing`，外加 `path_missing`），
+  **都不折成通过**；G9 加 `--root` 让 `deliverables.path` 有相对根，哪些类型该核由
+  `REQ` 的类型名 ∩ 盘上契约**现算**（今天 40 类里只有 1 类有契约 ⇒ 爆炸半径就是 1）。
+  判据收成**新模块 `src/aipd_os/schema_binding.py`**：绑定目录与权威枚举都用 AST 从真出处现抽
+  （抄常量=第二个会漂移的镜像；抽不到单列 `binding_blind` / `authority_readable=False`，
+  盲区既不折成"有绑定"也不折成"一致"）；跨文件 `$ref` 用 `referencing` 0.36.2 解析
+  （`jsonschema` 4.25.1 自带，零新依赖；`RefResolver` 自 4.18 弃用，实测本机警告，不用）。
+  `schema_check` 从今天起把「没有实例被按它校验」报成 **UNBOUND 并计失败**（旧行为 INFO 后 rc=0），
+  要留空白必须进 `UNBOUND_EXEMPT` **具名写理由**；元校验改按各文件自己声明的方言——现役五份
+  两档都 ok（今天 0 处翻红），但**不等价**：`prefixItems`/`unevaluatedProperties` 两类缺陷只有
+  新方言抓得到，两条都进了常驻用例。`schema_check.py` 的 `DATA_DIRS` 是绑定约定的**唯一权威**，
+  清单侧从这里现抽。**量具不进自己的分母**（三个面都被实测咬过）：`PROVES` 文案里写了
+  `aipd_os.net.http` ⇒ 模块自己被数成出网消费者；补一条断言之后**分母从 11 涨到 12**（用例正文
+  也算一次引用）；同一文件点了某张契约的名字 ⇒ 那张契约被算成"已被消费方取证"。三者统一由
+  `INSTRUMENT_FILES` 排除，并配一条"表里每个路径必须真在盘上、且正好是模块+它的用例"的用例防改名。
+  **清单判定新增三轴并拆成 `verdict_of()` 逐轴钉**：`contracts_without_instance` /
+  `binding_blind` / `landing_existence_only`（再加形状 `divergent`/`blind`）。拆逐轴的原因写进文档：
+  前两版判定是 `build()` 里一长串 `or`，电池把「删掉其中一格」的两条注入**放过去了**
+  （别的轴本来就脏，整体断 `incomplete` 永远绿）。顺手闭掉 `command_contract.py` 那句停在
+  「当前为 29」的过期注释——改成说明**为什么不写死数字**。
+  验证：全量 2074 → **2121** 条（`2118 passed / 0 failed / 3 skipped`，提交后的树上跑）；
+  ruff 全绿；mypy 419 files 无问题；本片电池 **21 条全杀**，同树复跑第 29 片 **12/12**
+  （其 C6 锚因判定改形重指）、第 27 片 **17/17**、第 28 片 **15/15**；C6 普查 15/0/0 且
+  `--self-test` 7/7；发布门 8/8 绿。证据见
+  `docs/audit/CONTRACT_BINDING_F-C6_2026-09-25.md`。
+
 - **v5.12 F-C6 第 29 片：接口清单与契约证据（C6 最后一格零实现，只闭可自查的那一半）**：
   「ICD」这一项从第 26 片起一直挂 absent，note 早写好该做什么：**可自查的那一半**
   （接口清单、数据形状、每个接口的定义件版本 + sha256、逐接口用例证据），
