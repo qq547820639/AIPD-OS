@@ -72,8 +72,12 @@ def shape_findings(deliverables: list[dict], root: Path,
         result = sb.validate_artifact_file(root, path)
         if result["status"] == sb.VALID:
             continue
-        findings.append(dict(base, finding=result["status"],
-                             detail="; ".join(result["errors"]) or result["status"]))
+        detail = "; ".join(result["errors"]) or result["status"]
+        if result["status"] == sb.MISSING:
+            # 「声明过要交付」是**这里**才知道的事实（上面已按状态筛过），
+            # 不是校验器的判断 ⇒ 由调用方补这句，别让被调用方替它下结论。
+            detail += f"（该交付物已标 {row.get('status')}）"
+        findings.append(dict(base, finding=result["status"], detail=detail))
     return findings
 
 

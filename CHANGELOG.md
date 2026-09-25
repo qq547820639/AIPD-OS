@@ -951,6 +951,46 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6 第 33 片：把「门没人跑」这一族闭掉，并给自检补合规侧**：
+  `references/end-to-end-closure-model.md:10` 把 `scripts/e2e_acceptance.py` 写成
+  「数字全链路已打通」的**唯一**判据（`references/local-cad-fallback.md:25` 第 8 步要求跑它，
+  `scripts/runtime_preflight.py:46` 也明写 preflight 不宣布闭环、闭环要它），
+  而第 31 片登记过的事实是：**全仓没有任何 CI 或用例调用** `e2e_acceptance.py`、
+  `selftest_quality.py`、`selftest_v4.py`（去掉 `| head` 截断重跑 `grep -rn` 才敢说这句）。
+  另一处更阴的：旧 `selftest_quality.py` 两条判据**都只断言子进程 `rc != 0`**，
+  一支合规侧对照都没有 ⇒ 把 `outcome_acceptance.py` 或 `cad_maturity_gate.py` 改成
+  「任何输入都退 1」，这份自检照样绿。第三条是文案越界：`outcome_acceptance.py` 走
+  `schema_binding.validate_artifact_file` 报 `missing` 时那句
+  `["标了交付，但文件不在"]`，对**空目录**也照样回同一句（实测）——那个函数拿不到交付清单，
+  「标了交付」是它无从知道的前提。
+
+  改法：`scripts/selftest_quality.py` 重写成**四支两两对照**
+  （A1 只有产物 ⇒ communication 不放行，且断言落在 `communication_accepted=false` 这一格；
+  A2 全链路 + 验收字段达标 ⇒ 放行，这是 A1 的开火前提；B1 `faceted_brep` 到不了 C7；
+  B2 `native_brep` 填满 C0..C7 要求项 ⇒ C7 放行，这是 B1 的开火前提），
+  少跑到任何一支都退 7（不是退 0），证据字典改为 `importlib` 取 `REQUIREMENTS` 而不是
+  `runpy.run_path` 执行脚本顶页；新增 `tests/test_gate_runners.py` 把三件事变成常驻断言：
+  ①**普查**——每台门都要有「spawn 形态」的真读者（`subprocess.run/call/check_call/Popen`），
+  只被文本提到不算跑过，普查面只排除脚本自身；②包装器的四个行为（绿档 rc=0、
+  撤一样东西⇒rc=5、`--require-full` 映射 `production`、`--json-out` 真落盘）；
+  ③三台自检/门脚本子进程真跑（`selftest_v4.py` 也在内）。
+  `validate_artifact_file` 的 `missing` 只说「文件不在盘上」，
+  「该项已标 complete」由**知道交付清单**的 `scripts/quality_gate.py` 自己补上。
+
+  读数：全量 **2170 → 2182**（+12，全在新用例）；今天真跑的三台门状态是
+  `e2e_acceptance` 在完整数字链上 rc=0/`classification=communication_accepted`、
+  撤掉验收分数后 rc=5、`--require-full` rc=5，`selftest_quality.py` 四支全绿 rc=0，
+  `selftest_v4.py` rc=0。变异电池 `/tmp/slice33-mutations.py` **11 条：杀 9 / 存活 0 /
+  注入无效 0 / 已知无撤回案例 2**（J8「字段照读但不参与判定」、J11「普查判据放宽成提到过名字」
+  ——这两条只有在真读者消失时才观测得到，而真读者就是本用例，删它不等于证明判据有牙；
+  写进 KNOWN_SURVIVORS 而不是假装杀得动）。CI 不必改：这三台门现在经**常驻用例**在 CI 里跑。
+  ruff（CI 范围）全过，mypy `Success: no issues found in 425 source files`。证据见
+  `docs/audit/GATE_RUNNERS_WIRED_F-C6_2026-09-25.md`。
+
+  **没做**：`selftest_quality.py` 的 `len(results) != 4 → rc=7` 只护住「少跑」，
+  护不住「少判」（见 J8）；`outcome_acceptance.py` 仍是 1 空格压缩风格的老脚本，
+  本轮只改它消费的那句话，没顺手重排。
+
 - **v5.12 F-C6 第 32 片：`gates.approved_by` 不再自带 `'AI-internal'`（没人批不许读成 AI 批了）**：
   第 26 片建 ECO 三张表时，本仓已经把这条写成反面教材（`change_orders/eco.py` 的规矩 1：
   「本仓 `gates.approved_by` 的默认值是 `'AI-internal'`，照抄那个形状就等于任何写入点

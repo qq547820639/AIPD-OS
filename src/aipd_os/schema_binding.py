@@ -210,7 +210,9 @@ def validate_artifact_file(project_root: Path | str, artifact_rel: str,
     """按契约核**落盘产物**的形状。五态：`valid` / `invalid` / `unreadable` /
     `no_schema` / `missing`。
 
-    五态分开是因为这五种情况的下一步完全不同：`missing` 是「门说交付了但文件不在」，
+    五态分开是因为这五种情况的下一步完全不同：`missing` 只说明**这一格要核的文件不在盘上**，
+    至于「是不是有人声明过要交付它」这一函数不知道，也不许写进错误串里
+    （声明与否只有拿着交付物清单的调用方知道，见 `scripts/quality_gate.py` 怎么补这句）；
     `unreadable` 是「文件在但核不了」（不是它违规），`no_schema` 是「这形状今天没契约」。
     后两种都**不许**被读成通过。
     """
@@ -220,7 +222,7 @@ def validate_artifact_file(project_root: Path | str, artifact_rel: str,
     path = Path(project_root) / artifact_rel
     if not path.is_file():
         return {"status": MISSING, "schema": schema_name, "artifact": artifact_rel,
-                "errors": ["标了交付，但文件不在"]}
+                "errors": ["文件不在盘上"]}
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:

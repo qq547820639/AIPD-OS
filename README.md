@@ -340,6 +340,14 @@ aipd interfaces --repo . --out interface-contract.json
 #     （`src/aipd_os/actors.py`，与 ECO 共用一份）分成 human / non_human / unattributed。
 #     今天的真读数：`quality_gate` 输出多一段 `gate_approval_attribution`，只报不判——
 #     「这个 actor 真是某个人」没有身份源可证，拿它当放行依据等于把署名当证据。
+#   ↑ 门有没有人跑（第 33 片）：契约把 `scripts/e2e_acceptance.py` 写成「数字全链路已打通」的
+#     唯一判据，但过去全仓没有一处调用它（`selftest_quality.py`、`selftest_v4.py` 同样没人跑）；
+#     今天由 `tests/test_gate_runners.py` 常驻盯着：每台门都要有 spawn 形态的真读者
+#     （只被文本提到不算跑过），包装器的退出码透传/`--require-full` 映射/`--json-out` 落盘逐条核。
+#     `selftest_quality.py` 也从「两条只看 rc≠0」改成 A1/A2/B1/B2 四支两两对照——
+#     **没有合规侧的自检，分不清「门在拦」和「门永远红」**。
+#     同一批把 `missing` 的文案归位：校验器只说「文件不在盘上」，
+#     「该交付物已标 complete」由拿着交付清单的 `quality_gate` 自己补。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。
