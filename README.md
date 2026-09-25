@@ -536,8 +536,10 @@ AIPD 的**一键命令**（`aipd <cmd>`；权威清单是 `src/aipd_os/cli/comma
 > 49 条走过 argv 位，17 条没有——其中 10 条一次都没真调过
 > （`cad preflight` `dashboard` `onboard` `operate` `product show` `product gate`
 > `recover` `reset` `ui` `version`）。旧的那把尺子把「测试文件里出现过这个名字」当成
-> 「命令被测过」，于是同时给出 15 条假未测与 13 条假已测；`main(["drawing", "dfm", ...])`
-> 这种两个相邻字符串的写法它读不见，而 `from ezdxf import recover` 它算成测过 `recover`。
+> 「命令被测过」，于是给出 15 条假未测（`main(["drawing", "dfm", ...])` 这种两个相邻
+> 字符串的写法它读不见）与 7 条零证据的假已测（`from ezdxf import recover` 算成测过
+> `recover`、dict 键 `"version"` 算成测过 `version`、`ui` 撞在 `builtin` 中间），
+> 而 47/66 这个总数看着仍然合理。
 
 ---
 

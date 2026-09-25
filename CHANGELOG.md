@@ -951,7 +951,7 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
-- **v5.12 F-CLI-COV 第 39 片：命令覆盖率那把尺子两头都在错（19 条假未测 + 13 条假已测）**：
+- **v5.12 F-CLI-COV 第 39 片：命令覆盖率那把尺子两头都在错（15 条假未测 + 7 条零证据假已测）**：
   轴换到「常驻测试到底有没有走过这条命令的 CLI 入口」。`tests/test_command_coverage.py`
   把 `tests/` 拼成一个大字符串再用 `cmd in blob` 判「被测」，同一个命令名在测试里有
   毫不相干的出现方式，于是读数两头错：`main(["drawing", "dfm", ...])` 是两个相邻字符串
@@ -960,7 +960,10 @@
   这种转发器，更是完全看不见。反过来 `from ezdxf import recover` 顶了 `recover`、
   dict 键 `"version"` 顶了 `version`、`cmd_doctor` 这个 import 顶了 `doctor`、
   `test_new_commands_registered` 里那张名字清单顶了 `cad preflight`/`test`/`package`
-  （假已测 **13** 条）。旧读数 66 注册 / 47 已测 / 19 未测，真读数是 **49 条走过 argv 位**、
+  （假已测 **7** 条：`cad preflight` `dashboard` `onboard` `recover` `reset` `ui` `version`；
+  另 6 条判对但理由错——`cad build`/`package`/`resume`/`test` 只被别名走过、`doctor` 只被
+  直接调处理函数走过、`outbox drain` 调的是与 `outbox review` 共用的 `cmd_outbox`）。
+  旧读数 66 注册 / 47 已测 / 19 未测，真读数是 **49 条走过 argv 位**、
   4 条只被 deprecated 别名走过、1 条只被直接调处理函数走过、2 条处理函数被两条命令共用
   分不清 verb、**10 条一次都没走过**——两个方向的错互相抵掉，总数看着还挺合理。
 

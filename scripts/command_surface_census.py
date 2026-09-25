@@ -6,15 +6,21 @@
 
 为什么换判据（本轮量出的读数，全部可复算）：
 `tests/test_command_coverage.py` 原来把 `tests/` 整个拼成一个大字符串，再用
-`cmd in blob` 判「被测」。同一个命令名在测试里有四种毫不相干的出现方式，
-于是读数两头都错：
+`cmd in blob` 判「被测」。同一个命令名在测试里有好几种毫不相干的出现方式，
+于是读数两头都错（两错互相抵掉，47/66 这个总数看着还挺合理）：
 
 - **假未测 15 条**：`main(["drawing", "dfm", ...])` 是两个相邻字符串常量，
   子串 `"drawing dfm"` 匹配不上；`main(["eco", *argv, ...])` 这种转发器更是看不见
-  （eco 四条命令全靠它）。旧探针报 19 条未测，真 CLI 调过的一批被记成没测。
-- **假已测 13 条**：`from ezdxf import recover` 顶了 `recover`，dict 键 `"version"`
-  顶了 `version`，`cmd_doctor` 这个 import 顶了 `doctor`，注释里写一句
-  `aipd outbox drain` 顶了 `outbox drain`。这些一次 CLI 都没走。
+  （eco 四条命令全靠它）。受影响：`bom release`、`drawing assembly-step(s)`、
+  `drawing dfm`、`eco` 四条、`issue` 三条、`readiness check`、`validation` 三条。
+- **假已测 7 条**（一次 CLI 没走，也没有任何别的凭据）：`from ezdxf import recover`
+  顶了 `recover`，dict 键 `"version"` 顶了 `version`，`test_new_commands_registered`
+  里那张名字清单顶了 `cad preflight`，`owner_dashboard` / `onboarding` / `def _reset()`
+  这类同名 import 顶了 `dashboard` / `onboard` / `reset`，而 `ui` 干脆撞在
+  `builtin`、`build` 这些词的中间——两个字符的名字连子串判据都不该信。
+- **另有 6 条判对但理由错**：`cad build` / `package` / `resume` / `test` 只被
+  deprecated 别名走过，`doctor` 只被直接调处理函数走过，`outbox drain` 调的是
+  与 `outbox review` 共用的 `cmd_outbox`——都不是「这条命令的 CLI 入口被走过」。
 
 档位（每条命令恰好落一档，Σ 档位 == 分母是硬断言）：
 

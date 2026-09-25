@@ -13,7 +13,7 @@
 | --- | --- | --- |
 | 已注册 | 66 | 66（不变） |
 | 「被测」 | 47 | **49 走过 argv 位**（另 4 只被别名走过、1 只被直接调处理函数走过、2 处理函数共用分不清 verb） |
-| 「未测」 | 19 | **17 低于 cli 档**（其中 10 条零证据） |
+| 「未测」 | 19 | **17 低于 cli 档**（其中 10 条零证据）。旧探针那 19 条里 15 条是假未测，同时另有 7 条零证据被它算成已测 —— 22 条判错，占 66 的三分之一 |
 
 - **假未测 15 条**：`main(["drawing", "dfm", "--step", ...])` 里 `"drawing"` 与 `"dfm"`
   是两个相邻字符串常量，子串 `"drawing dfm"` 匹配不上；`eco` 四条走
@@ -21,11 +21,18 @@
   受影响清单：`bom release`、`drawing assembly-step(s)`、`drawing dfm`、
   `eco affected/create/show/transition`、`issue list/resolve/show`、`readiness check`、
   `validation list/plan/show`。
-- **假已测 13 条**：`from ezdxf import recover` 顶了 `recover`、dict 键
-  `"version"` 顶了 `version`、`cmd_doctor` 这个 import 顶了 `doctor`、
-  `test_new_commands_registered` 里那张名字清单（`["init", "intake", …, "cad preflight",
-  "test", "package"]`）顶了 `cad preflight`/`test`/`package`/`resume`/`reset`/`ui` 等，
-  注释里一句 `aipd outbox drain` 顶了 `outbox drain`。这些一次 CLI 都没走。
+- **假已测 7 条**（零证据）：`from ezdxf import recover` 顶了 `recover`、dict 键
+  `"version"` 顶了 `version`、`test_new_commands_registered` 里那张名字清单
+  （`["init", "intake", …, "cad preflight", "test", "package"]`，它断言的是
+  `name in PLANNED_COMMANDS`，不是调用）顶了 `cad preflight`、
+  `owner_dashboard` / `onboarding` / `def _reset()` 顶了 `dashboard` / `onboard` / `reset`、
+  `ui` 撞在 `builtin`、`build` 这些词的中间。这 7 条一次 CLI 都没走过。
+- **另 6 条判对但理由错**：`cad build` / `package` / `resume` / `test` 只有 deprecated
+  别名走过 argv 位；`doctor` 只有 `cmd_doctor(...)` 直调；`outbox drain` 调的 `cmd_outbox`
+  与 `outbox review` 共用。旧探针给它们盖的"已测"章理由是错的，所以本片把它们**分档记账**
+  而不是简单判红。（本文件初稿把这两类合起来写成"假已测 13 条"，属过度断言，已更正为
+  7 + 6，并按排除量具自身后的 blob 复算——第一次复算忘了排除，`operate`/`product gate`
+  被新登记基线里的同名字符串污染成了"旧探针已测"，那是一次自引用假读数。）
 
 同文件的声明面更静：`_declared_commands()` 从**含「一键命令」的那一行**开始往后收集
 反引号命令名，遇到第一个不含反引号的行 break。而 SKILL.md 里那一行是标题

@@ -6,10 +6,12 @@
 - 旧探针报 **19 条未测**，其中 **15 条其实真调过**：`main(["drawing", "dfm", ...])`
   是两个相邻字符串常量，子串 `"drawing dfm"` 匹配不上；`eco` 四条走的是
   `main(["eco", *argv, ...])` 这种转发器，旧探针更看不见。
-- 旧探针算成已测的 47 条里有 **13 条一次 CLI 都没走**：`from ezdxf import recover`
-  顶了 `recover`、dict 键 `"version"` 顶了 `version`、`cmd_doctor` 这个 import
-  顶了 `doctor`、`test_new_commands_registered` 里那张名字清单顶了
-  `cad preflight` / `test` / `package`。两头同时错，总数还看着合理——
+- 旧探针算成已测的 47 条里有 **7 条零证据**：`from ezdxf import recover` 顶了
+  `recover`、dict 键 `"version"` 顶了 `version`、`test_new_commands_registered` 里那张
+  名字清单顶了 `cad preflight`、`owner_dashboard`/`onboarding`/`def _reset()` 顶了
+  `dashboard`/`onboard`/`reset`、`ui` 撞在 `builtin`/`build` 中间。另有 6 条**判对但理由错**
+  （`cad build`/`package`/`resume`/`test` 只被别名走过、`doctor` 只被直接调处理函数走过、
+  `outbox drain` 调的是共用处理函数）。两头同时错，47/66 这个总数还看着合理——
   这正是「量具读数可信度」和「代码覆盖率」被混为一谈的代价。
 
 这里钉的是**双向棘轮**：低于 `cli` 档的集合必须与下面的登记完全相等——
