@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 99432,
-      "sha256": "c335e432d040d053c3f4c136fa6b6b7ccf4772134c94345bf0dec8e8eda73434"
+      "size": 103564,
+      "sha256": "eaf1f66a9b8a2cf4a0885b320f12f8875804e3918637f985e62932712fc81489"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 27817,
-      "sha256": "57a5e428f035140644ea0f492674d8362644b176dd8acf02868aac5ee9c9e22f"
+      "size": 29538,
+      "sha256": "707d254d363d017755b3ce5adc5131a399745f42d2a94fbb91f5a33557abe4a3"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -177,8 +177,8 @@
     },
     {
       "path": "SKILL.md",
-      "size": 3195,
-      "sha256": "55b8f22d5650775ec50845784f60199d328a9f63cffc20197c2a94b6cd39198a"
+      "size": 3211,
+      "sha256": "1c1e24c818db51a44dde38c18d4af77947f5299d7c8475d1f5ed3a7859cc75aa"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -697,8 +697,8 @@
     },
     {
       "path": "scripts/c6_coverage.py",
-      "size": 20657,
-      "sha256": "72d364018f6f949a5493597bab5537318a62b67e87261eeb3c79f9c5a7e90dd2"
+      "size": 20960,
+      "sha256": "b6c3f7578c5da3383d2b0f31810f2115acef7753748d7293eb6408d44fff6e50"
     },
     {
       "path": "scripts/cad_convergence.py",
@@ -981,6 +981,11 @@
       "sha256": "9b00bf02feed70dccb299e4fc6b9f90c404e86135d5511b5dc62ce79ecc40ea6"
     },
     {
+      "path": "src/aipd_os/cad/dfm.py",
+      "size": 31080,
+      "sha256": "4610ae937cdf32a3bce76793c75e82bee0c9eb959792c8bdf8ae64734fbac9be"
+    },
+    {
       "path": "src/aipd_os/cad/drawings2d.py",
       "size": 71140,
       "sha256": "6a611c6b3cdd984d45bdafe71c8b08f8277288e2d602c03ceb44957e3efef9a7"
@@ -1027,13 +1032,13 @@
     },
     {
       "path": "src/aipd_os/cli/command_contract.py",
-      "size": 14989,
-      "sha256": "cfdb9a074b3fd7ffc4ea7cd1eba5662280006385aef6582d769c081fbc925e75"
+      "size": 15354,
+      "sha256": "42a8d6b0ce683e54277775144fb6d9f34a9458938530893337ed8e4b665bd65e"
     },
     {
       "path": "src/aipd_os/cli/commands.py",
-      "size": 23127,
-      "sha256": "b35a51d630dd9b01a997aeac411a248c03a74637c142e79c1c780838a76986e8"
+      "size": 23184,
+      "sha256": "8ef225ae1d24166b75e07225dc7f6b9b4ff1bd662ba0290b09835248f7efb097"
     },
     {
       "path": "src/aipd_os/cli/commands_cad.py",
@@ -1047,8 +1052,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 23806,
-      "sha256": "81bae45d44417ce2eb03da95a0164a45e594d7ab0048c953b9ec61fcef659f32"
+      "size": 27808,
+      "sha256": "4136ae93b77142aaa13da8ccda1c5982a8d3a65e1e2d931c212db9dbbc941d29"
     },
     {
       "path": "src/aipd_os/cli/commands_legacy.py",
@@ -1077,8 +1082,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_release.py",
-      "size": 5404,
-      "sha256": "ac07e0a6595741d2daac276ad889084a78de3f2d62d7830074436b883d6fc8ab"
+      "size": 5480,
+      "sha256": "f31fb6da9726491145ba55881f925388ce4c5940b2e444fb8941604557fe0c41"
     },
     {
       "path": "src/aipd_os/cli/commands_supply.py",
@@ -1097,8 +1102,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 43064,
-      "sha256": "e60be34a63a7fc7cf8ea1cc2da47ece6bc1eea38792141c064669deb3d8af33a"
+      "size": 44509,
+      "sha256": "8bb0beef97e0d102e0092d696f08a46946475f34447b60129a25477512eca1e0"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1572,13 +1577,13 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 69808,
-      "sha256": "c217eda54c9f1414555d2c51ee73c4cc9cca0bbafc24c8f3a7f981ca88800788"
+      "size": 71305,
+      "sha256": "47c4a32b790f3f65b163750f89c02554f9dc637b461c0a0f528bd7b8de34323e"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
-      "size": 26347,
-      "sha256": "7cc1f14080bbe802c58c7232bc3c1bed54d1d11bed011f85359070c423344573"
+      "size": 29395,
+      "sha256": "38428c24e1d8d47097dafb3bf9e59747f11e23debf92e2a1bc9178439bdbe2a4"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -2222,8 +2227,8 @@
     },
     {
       "path": "tests/test_c6_coverage.py",
-      "size": 5060,
-      "sha256": "2ec8fd34d954e199652d15d7c7b0f7908633bef46f4fa4dfd6817503131c115a"
+      "size": 5157,
+      "sha256": "ae7c14fe772a0dcd7a7022fefd7eb18172e3462823e1f2430e6bc26e8b663802"
     },
     {
       "path": "tests/test_cad_assembly_balloons.py",
@@ -2254,6 +2259,11 @@
       "path": "tests/test_cad_detail_views.py",
       "size": 18082,
       "sha256": "45ec438998fd7d03596acb8a645133468601a5cdccbfb94fbfa045ccdb6fe920"
+    },
+    {
+      "path": "tests/test_cad_dfm.py",
+      "size": 19522,
+      "sha256": "e39678e312a638581e3c17c16bcb3202c0a2e0b650b7f88434ee504c1cc82096"
     },
     {
       "path": "tests/test_cad_drawings2d.py",
