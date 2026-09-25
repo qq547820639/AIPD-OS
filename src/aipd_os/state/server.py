@@ -269,10 +269,16 @@ class StateService:
     # ---------------------------------------------------------------- facts
     def add_fact(self, tenant_id: str, project_id: str, key: str, value: Any, status: str,
                  unit: str | None = "", source: str | None = "", confidence: float = 0.5,
+                 tolerance: str | None = None, conditions: str | None = None,
+                 version: str | None = None,
                  actor: str | None = None) -> str:
+        """CTQ 的公差与条件只能从这里进来：库层早就收 `tolerance`/`conditions`/`version`，
+        服务面以前不转，等于多租户这条路上**录不进**这两格（第 38 片补，配常驻对账）。"""
         self._authorize(actor, tenant_id, project_id)
         fid = self.db.add_fact(tenant_id, project_id, key, value, status, unit or None,
-                               confidence=confidence, source=source or None)
+                               tolerance=tolerance, conditions=conditions,
+                               confidence=confidence, source=source or None,
+                               version=version)
         self._audit(actor, "add_fact", tenant_id, project_id, after={"fact_id": fid, "key": key})
         return fid
 
@@ -308,10 +314,11 @@ class StateService:
                      url: str | None = None, identifier: str | None = None,
                      quality: str | None = None, summary: str | None = None,
                      metadata: dict[str, Any] | None = None,
+                     accessed_at: str | None = None,
                      actor: str | None = None) -> str:
         self._authorize(actor, tenant_id, project_id)
         eid = self.db.add_evidence(tenant_id, project_id, kind, title, url, identifier,
-                                   quality, summary, metadata)
+                                   quality, summary, metadata, accessed_at=accessed_at)
         self._audit(actor, "add_evidence", tenant_id, project_id, after={"evidence_id": eid, "title": title})  # noqa: E501
         return eid
 
@@ -319,14 +326,14 @@ class StateService:
     def add_risk(self, tenant_id: str, project_id: str, title: str,
                  probability: str | None = None, impact: str | None = None,
                  mitigation: str | None = None, status: str = "open",
-                 owner: str | None = None,
+                 trigger: str | None = None, owner: str | None = None,
                  actor: str | None = None) -> str:
         """`owner` 是「谁负责这条风险」，与 `actor`（谁在调用）是两件事：
         把 actor 当 owner 转发出去，等于用调用方身份替所有人认领风险（migration
         v21 / 第 34 片刚把这类默认值清掉）。两者都留空才落 NULL。"""
         self._authorize(actor, tenant_id, project_id)
         rid = self.db.add_risk(tenant_id, project_id, title, probability, impact,
-                               mitigation, status, owner=owner)
+                               mitigation, status, trigger=trigger, owner=owner)
         self._audit(actor, "add_risk", tenant_id, project_id,
                     after={"risk_id": rid, "title": title, "owner": owner})
         return rid
