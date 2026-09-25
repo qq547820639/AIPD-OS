@@ -340,11 +340,22 @@ aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom 
 #     早先各写入点各自「换个后缀」，`assy.step` 与 `assy.dxf` 会拼成同一个 `assy.evidence.json`
 #     并互相顶掉——出完图再读模型，读到的是图的凭据（F-EVID-03，已修；拼法收进
 #     `cad/evidence.sidecar_path` 一处，写侧读侧都走它，留一处旧写法就有常驻用例判红）。
+#     **eco 这一格（第 27 片）**：把文档里所有带 `path`+`sha256` 的条目递归收出来（不硬编码
+#     「报告 + 侧车」），逐条问「这份内容是哪张单带来的、那张单复验了没有」。四处置不合成
+#     一个百分比：`covered`（`VERIFIED` 单的那行 `after_sha256` 与实际一致）／
+#     `eco_change_uncovered`（阻断：有单提到但没有一张**有效**单对得上——被否、被替代、
+#     还没批的都不背书）／`eco_change_unverified`（阻断：对得上但单还没走到 `VERIFIED`，
+#     **批了不等于复验了**，`open_orders` 点名到单号）／`undetermined`（不阻断只交清单：
+#     没有单提到它 ⇒ 本仓没有上一版基线可比，判合格是假绿、判违规是把「没登记」当「改了没提单」）。
+#     `coverage` 三档 `complete`/`partial`/`incomplete`：有单却没全覆盖只敢说 partial。
+#     门读同一格但口径更严：`production_release_gate` 的 `change_control_closes_deliverables`
+#     把「一张单都没有」也读成**不通过**——生产者管「这份证据有没有说错话」，门管「够不够格签字」。
+#     **不证明**「自上次发布以来只改了这些」（缺上一版产物清单当基线，未做）。
 python scripts/c6_coverage.py          # C6 那 15 项交付物各自做到哪一步了（诊断档）
 #   ↑ 分母逐字取自 references/production-cad-deliverables.md 那一行：改契约不改映射会当场红。
 #     三档读数：有生产者且有常驻用例 / 只有校验方（门会判声明，但产品侧没有落点）/ 零实现。
-#     2026-09-25 第 19 片后实测 13 / 1 / 1：零实现只剩 ICD 一项，只有校验方只剩
-#     版本与ECR/ECO 一项。「装配/维护」升 producer 指的是**装配那一半**（维护指引仍无
+#     2026-09-25 第 26 片后实测 14 / 0 / 1（第 19 片那次是 13 / 1 / 1）：零实现只剩 ICD 一项，
+#     「版本与ECR/ECO」由第 26 片升 producer，第 27 片把它接进发布门（判据读同一格，档位不再变）。「装配/维护」升 producer 指的是**装配那一半**（维护指引仍无
 #     生产者），「DFM/DFA」是第 19 片从 checker_only 升上来的；这两句写在映射 note 里、
 #     不在档位里，动档位之前先读 note。
 #     这张表的作用就是决定下一片做什么，而不是继续在已交付的项上精雕。

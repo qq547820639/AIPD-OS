@@ -156,13 +156,20 @@ MAPPING: dict[str, dict[str, Any]] = {
         "producers": ["src/aipd_os/change_orders/eco.py",
                       "src/aipd_os/cli/commands_eco.py",
                       "src/aipd_os/release_manifest.py"],
-        "tests": ["tests/test_change_order_eco.py", "tests/test_release_manifest.py"],
+        "tests": ["tests/test_change_order_eco.py", "tests/test_release_manifest.py",
+                  "tests/test_release_manifest_eco_coverage.py"],
         "note": "版本那一半：SOURCE_MANIFEST / RELEASE_MANIFEST / PROVENANCE 三份带哈希与 "
                 "source_commit，门禁真读它们。变更单这一半是第 26 片补的：migration v19 的 "
                 "eco_records / eco_affected / eco_transitions 三张表——影响清单必须带改前/改后 "
                 "sha256（送审即冻结），批准人必须是**与创建人不同的真人**，"
-                "「已实施/已复验」必须交凭据。**仍未做**：发布门没有"
-                "「manifest 哈希有差却没有一笔闭合 ECO」这条 fail-closed 判据；"
+                "「已实施/已复验」必须交凭据。第 27 片起发布证据读它："
+                "`aipd release manifest` 逐条核对「带哈希的交付物 ↔ 闭合单」，"
+                "未覆盖/未复验都阻断；`production_release_gate` 的 "
+                "`change_control_closes_deliverables` 再读一遍同一格，并把「一条单都没有」"
+                "读成**不通过**（生产者那一侧记盲区不阻断，门这一侧不许拿盲区去放行）。"
+                "**仍未做**：没有上一版产物清单当基线，"
+                "所以只证明「内容与某张闭合单一致」，不证明「自上次发布以来只改了这些」；"
+                "没被任何单提到的文件记 undetermined（盲区）而不是违规；"
                 "署名也没有身份源可查——那是声明，不是证据。"},
 }
 

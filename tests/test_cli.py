@@ -335,6 +335,8 @@ def test_validate_minimal_manifest(tmp_path, capsys):
         "model_part_count": 1, "bom_line_count": 1, "drawing_count": 1,
         "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
         "gdt": [{"feature": "hole_a"}],
+        "eco": {"coverage": "complete", "artifacts": 1, "covered": 1,
+                "uncovered": [], "unverified": [], "undetermined": []},
         "timestamp": "2026-08-01T00:00:00Z",
     }), encoding="utf-8")
     rc = cli_main.main(["validate", "--manifest", str(manifest), "--target", "C0"])
@@ -354,6 +356,8 @@ def test_release_check_on_minimal_repo(tmp_path, capsys):
         "model_part_count": 1, "bom_line_count": 1, "drawing_count": 1,
         "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
         "gdt": [{"feature": "hole_a"}],
+        "eco": {"coverage": "complete", "artifacts": 1, "covered": 1,
+                "uncovered": [], "unverified": [], "undetermined": []},
         "timestamp": "2026-08-01T00:00:00Z",
     }), encoding="utf-8")
     rc = cli_main.main([

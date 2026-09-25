@@ -51,6 +51,8 @@ def _pack(tmp_path: Path, **overrides) -> Path:
          "approval_status": "approved",
          "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
          "gdt": [{"feature": "hole_a"}], "timestamp": "2026-08-01T00:00:00Z",
+         "eco": {"coverage": "complete", "artifacts": 2, "covered": 2,
+                 "uncovered": [], "unverified": [], "undetermined": []},
          "evidence": _base_evidence()}
     m.update(overrides)
     p = tmp_path / "manifest.json"

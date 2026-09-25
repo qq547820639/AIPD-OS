@@ -47,6 +47,12 @@ ECO_STATUSES = frozenset({DRAFT, PENDING_REVIEW, APPROVED, IMPLEMENTED,
                           VERIFIED, REJECTED, SUPERSEDED})
 TERMINAL_STATUSES = frozenset({VERIFIED, REJECTED, SUPERSEDED})
 
+#: 已批但还没复验的：内容可以进发布吗？不行，但它是**活的**单，等复验就行。
+VERIFICATION_PENDING = frozenset({APPROVED, IMPLEMENTED})
+#: 已经死掉的单（被否或被替代）。它们**不能给内容背书**——
+#: 哈希恰好对得上也不算覆盖：那等于用一张作废的批件证明现在的东西是对的。
+DEAD_STATUSES = frozenset({REJECTED, SUPERSEDED})
+
 #: 允许的转移边。少一条与多一条都是同一类缺陷，所以写成数据而不是 if。
 ECO_TRANSITIONS: dict[str, frozenset[str]] = {
     DRAFT: frozenset({PENDING_REVIEW, REJECTED, SUPERSEDED}),

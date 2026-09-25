@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import posixpath
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
@@ -590,6 +591,136 @@ def _collect_assembly_step(assembly_step: Path | str | None, root: Path,
                          "sha256": _sha256(sidecar)}}}
 
 
+def _hashed_artifacts(node: Any, found: dict[str, str] | None = None) -> dict[str, str]:
+    """把这份证据里**所有带 path + sha256 的条目**收成 {规范路径: 声称哈希}。
+
+    递归找而不是点死字段：新增一类产物（下次可能是仿真报告）自动就在覆盖判据里，
+    不需要记得改这里。路径先归一（`./a` 与 `a` 同一个东西、`\\` 当 `/` 看），
+    否则同一份内容会因为写法不同被算成两个对象。
+    """
+    if found is None:
+        found = {}
+    if isinstance(node, dict):
+        path, digest = node.get("path"), node.get("sha256")
+        if isinstance(path, str) and isinstance(digest, str) and path and digest:
+            found.setdefault(posixpath.normpath(path.replace("\\", "/")), digest)
+        for value in node.values():
+            _hashed_artifacts(value, found)
+    elif isinstance(node, (list, tuple)):
+        for value in node:
+            _hashed_artifacts(value, found)
+    return found
+
+
+def _collect_eco(db_path: Path | str, tenant_id: str, project_id: str,
+                 artifacts: dict[str, str],
+                 issues: list[dict[str, Any]]) -> dict[str, Any]:
+    """交付物哈希必须有**闭合的**工程变更单覆盖；没有单可查就记盲区，不判合格。
+
+    三种处置（刻意不合成一个百分比）：
+
+    - **covered**：某张 `VERIFIED` 的单里有一行 `object_id` 指到这个路径，
+      且那行的 `after_sha256` 与本次发布里的实际哈希一致 ⇒ 这次内容有单、已实施、已复验；
+    - **uncovered / unverified（都阻断）**：内容有单但哈希对不上（改了却没提单），
+      或对得上但那单还没 `VERIFIED`（变更进了发布却没复验）；
+    - **undetermined（不阻断，只记账）**：这张交付物**从来没有**单提到它 ⇒
+      本仓没有「上一版基线」可比，**不知道**它有没有被改过；判成合格是假绿，
+      判成违规是把「没登记」当成「改了没提单」。所以交出去的是一个数 + 清单。
+
+    一句话边界：这一格证明的是「内容哈希与某张闭合的单一致」，
+    不证明「自上次发布以来只改了这些」——那需要上一版产物清单作基线（未做）。
+    """
+    import sqlite3
+
+    from aipd_os.change_orders.eco import (
+        TERMINAL_STATUSES,
+        VERIFICATION_PENDING,
+        VERIFIED,
+    )
+
+    empty: dict[str, Any] = {}
+    try:
+        from aipd_os.change_orders.eco import EcoStore
+        from aipd_os.state.db import AIPDStateDB
+
+        store = EcoStore(AIPDStateDB(str(db_path)))
+    except sqlite3.Error as exc:
+        _issue(issues, "eco_unreadable", f"读不了变更单库（{db_path}）：{exc}", blocking=True)
+        return {"eco": {**empty, "coverage": "unreadable"}}
+
+    orders = store.list_orders(tenant_id=tenant_id, project_id=project_id)
+    by_status: dict[str, int] = {}
+    for order in orders:
+        by_status[order["status"]] = by_status.get(order["status"], 0) + 1
+    claims: dict[str, list[dict[str, Any]]] = {}
+    for order in orders:
+        for row in store.affected(eco_id=order["eco_id"], tenant_id=tenant_id,
+                                  project_id=project_id):
+            key = posixpath.normpath(str(row["object_id"]).replace("\\", "/"))
+            claims.setdefault(key, []).append({"eco_id": order["eco_id"],
+                                                "status": order["status"],
+                                                "change_type": row["change_type"],
+                                                "after_sha256": row["after_sha256"]})
+    if not orders:
+        return {"eco": {"orders": 0, "by_status": {}, "artifacts": len(artifacts),
+                        "covered": 0, "uncovered": [], "unverified": [],
+                        "undetermined": sorted(artifacts),
+                        "coverage": "undetermined",
+                        "why": "no_change_orders_in_scope",
+                        "not_covered": "本作用域内一张变更单都没有 ⇒ 无法判断这些交付物"
+                                       "是否被改过；这一格不是「已覆盖」"}}
+
+    covered: list[str] = []
+    uncovered: list[str] = []
+    unverified: list[str] = []
+    undetermined: list[str] = []
+    for path, digest in sorted(artifacts.items()):
+        rows = claims.get(path, [])
+        if not rows:
+            undetermined.append(path)
+            continue
+        matching = [r for r in rows if r["after_sha256"] and r["after_sha256"] == digest]
+        if any(r["status"] == VERIFIED for r in matching):
+            covered.append(path)
+            continue
+        # 「等复验」只涵盖**批过并动过手**的单（APPROVED/IMPLEMENTED）。
+        # 还没批的、被否的、被替代的：哈希再怎么对也背不了书 ⇒ uncovered。
+        living = [r for r in matching if r["status"] in VERIFICATION_PENDING]
+        if living:
+            unverified.append(path)
+            _issue(issues, "eco_change_unverified",
+                   f"{path} 的内容与单 {sorted({r['eco_id'] for r in living})} 的"
+                   f" after_sha256 一致，但那些单还没到 VERIFIED"
+                   f"（现状态 {sorted({r['status'] for r in living})}）："
+                   "未复验的变更不该进发布", blocking=True)
+            continue
+        uncovered.append(path)
+        _issue(issues, "eco_change_uncovered",
+               f"{path} 的实际哈希 {digest[:12]}… 没有任何**有效**（VERIFIED）变更单覆盖："
+               + "；".join(f"{r['eco_id']}({r['status']}) 声称 "
+                           f"{(r['after_sha256'] or '—')[:12]}…" for r in rows)
+               + "。改了内容却没有对应的闭合变更单", blocking=True)
+
+    open_orders = [{"eco_id": o["eco_id"], "status": o["status"], "title": o["title"]}
+                   for o in orders if o["status"] not in TERMINAL_STATUSES]
+    not_shipped = sorted(set(claims) - set(artifacts))
+    return {"eco": {
+        "orders": len(orders), "by_status": by_status,
+        "artifacts": len(artifacts), "covered": len(covered),
+        "covered_paths": covered, "uncovered": uncovered, "unverified": unverified,
+        "undetermined": undetermined,
+        "claimed_not_shipped": not_shipped,
+        "open_orders": open_orders,
+        # 有单却没全覆盖 ⇒ 只能说 partial：路径写法不一致、或漏了侧车，
+        # 都可能让「全部交付物都有闭合单」这句话悄悄变成假话。
+        "coverage": ("complete" if not (uncovered or unverified or undetermined)
+                     else "partial" if not (uncovered or unverified)
+                     else "incomplete"),
+        "basis": "交付物 path+sha256 ← eco_affected.object_id + after_sha256，"
+                 "闭合口径是 VERIFIED（已复验）",
+    }}
+
+
 def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENANT,
                            project_id: str = DEFAULT_TENANT,
                            drawings: Sequence[Path | str] = (),
@@ -677,6 +808,8 @@ def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENA
     doc["evidence"] = {"drawings": refs,
                        "ctq_source": "product_truth",
                        "gdt_source": "drawing_evidence"}
+    # 变更单覆盖：只对「这份证据里带哈希的条目」判，且在一张单都没有时记盲区。
+    doc.update(_collect_eco(db, tenant_id, project_id, _hashed_artifacts(doc), issues))
     blocking = any(i["blocking"] for i in issues)
     doc["issues"] = issues
     doc["blocking"] = blocking

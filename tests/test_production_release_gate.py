@@ -43,6 +43,10 @@ def write_complete_manifest(tmp_path: Path, **overrides) -> Path:
         # fail-closed 证据项所需数据（缺失即失败，不得空真通过）
         "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
         "gdt": [{"feature": "hole_a"}],
+        # 变更控制那一格由生产者（aipd release manifest）写好；缺它即判红，
+        # 与上面 ctq/gdt 同一口径：没有证据 ≠ 证据说没问题。
+        "eco": {"coverage": "complete", "artifacts": 2, "covered": 2,
+                "uncovered": [], "unverified": [], "undetermined": []},
         "timestamp": "2026-08-01T00:00:00Z",
         "evidence": full_evidence(),
     }
@@ -145,6 +149,68 @@ def test_consistent_c2_manifest_passes(tmp_path):
     assert out["achieved"] == "C7"
     assert r.returncode == 0
     assert all(c["passed"] for c in out["evidence_checks"])
+
+
+ECO_CHECK = "change_control_closes_deliverables"
+
+
+def test_change_control_complete_passes(tmp_path):
+    """每条带哈希的交付物都有已复验的单覆盖 ⇒ 这一项绿，detail 给出对上了几条。"""
+    p = write_complete_manifest(tmp_path)
+    chk = get_check(json.loads(run_gate(p, "C6").stdout), ECO_CHECK)
+    assert chk["passed"] is True and "2/2" in chk["detail"], chk
+
+
+def test_change_control_section_missing_fails_closed(tmp_path):
+    """没有 eco 这一格 = 从没核过变更控制，不能读成「核过且没问题」。"""
+    m = json.loads(write_complete_manifest(tmp_path).read_text(encoding="utf-8"))
+    del m["eco"]
+    p = tmp_path / "m_eco.json"
+    p.write_text(json.dumps(m), encoding="utf-8")
+    out = json.loads(run_gate(p, "C6").stdout)
+    chk = get_check(out, ECO_CHECK)
+    assert chk["passed"] is False and "no eco section" in chk["detail"]
+    assert out["passed"] is False
+
+
+def test_change_control_uncovered_and_unverified_name_the_paths(tmp_path):
+    """违规那一支必须点名到路径：只说「没过」等于看不出差哪一条。"""
+    p = write_complete_manifest(
+        tmp_path,
+        eco={"coverage": "incomplete", "artifacts": 3, "covered": 1,
+             "uncovered": ["dfm.md"], "unverified": ["assy.step.evidence.json"],
+             "undetermined": []})
+    chk = get_check(json.loads(run_gate(p, "C6").stdout), ECO_CHECK)
+    assert chk["passed"] is False
+    assert "dfm.md" in chk["detail"] and "assy.step.evidence.json" in chk["detail"]
+
+
+def test_change_control_with_no_orders_is_a_blind_spot_not_a_pass(tmp_path):
+    """一条单都没有 ⇒ 生产者记成盲区（不阻断），但门**不**把它读成通过。
+
+    两侧口径不同是有意的：`aipd release manifest` 的 rc 管「这份证据自己有没有
+    说错话」，发布门管「你敢不敢拿这句话去放行」。不知道改没改过不该用来放行。
+    """
+    p = write_complete_manifest(
+        tmp_path,
+        eco={"coverage": "undetermined", "artifacts": 2, "covered": 0,
+             "uncovered": [], "unverified": [],
+             "undetermined": ["dfm.md", "dfm.md.evidence.json"]})
+    out = json.loads(run_gate(p, "C6").stdout)
+    chk = get_check(out, ECO_CHECK)
+    assert chk["passed"] is False
+    assert "无任何变更单可判 2 条" in chk["detail"] and "不知道改没改" in chk["detail"]
+    assert out["passed"] is False
+
+
+def test_change_control_partial_blind_does_not_read_as_complete(tmp_path):
+    """有单但没全覆盖（partial）：同样不通过，且盲区条数照报。"""
+    p = write_complete_manifest(
+        tmp_path,
+        eco={"coverage": "partial", "artifacts": 3, "covered": 2,
+             "uncovered": [], "unverified": [], "undetermined": ["assy.step"]})
+    chk = get_check(json.loads(run_gate(p, "C6").stdout), ECO_CHECK)
+    assert chk["passed"] is False and "assy.step" in chk["detail"]
 
 
 def test_missing_revision_data_fails_closed(tmp_path):

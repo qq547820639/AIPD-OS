@@ -94,6 +94,16 @@ def cmd_release_manifest(args):
                 print(f"  {key} = {doc[key]}")
             else:
                 print(f"  {key} = （未取到，不编造）")
+        eco = doc.get("eco") or {}
+        if eco:
+            print(f"  eco 覆盖={eco.get('coverage', '（未取到，不编造）')} "
+                  f"单={eco.get('orders')} 条 / 交付物={eco.get('artifacts')} 条："
+                  f"已闭合 {len(eco.get('covered_paths', []))}"
+                  f"、无有效单 {len(eco.get('uncovered', []))}"
+                  f"、待复验 {len(eco.get('unverified', []))}"
+                  f"、无单可判 {len(eco.get('undetermined', []))}")
+        else:
+            print("  eco 覆盖 = （未取到，不编造）")
         for issue in doc["issues"]:
             mark = "阻断" if issue["blocking"] else "提示"
             print(f"  [{mark}] {issue['kind']}: {issue['detail']}")

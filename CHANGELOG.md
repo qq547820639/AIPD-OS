@@ -951,6 +951,46 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6-ECO 第 27 片：发布证据读 ECO——带哈希的交付物必须有**闭合**变更单覆盖**：
+  第 26 片收尾写着「发布门没有『manifest 哈希有差却没有一笔闭合 ECO』这条 fail-closed 判据
+  （下一片）」，这片把它接上。`_hashed_artifacts()` 递归走整份证据文档，凡同时带 `path` 与
+  `sha256` 的节点都算一条交付物（先 `\`→`/` 再 `posixpath.normpath`，`./x//y.md` 与 `x/y.md`
+  认成同一个）——**不硬编码**「报告 + 侧车」那两条：判据读的东西必须由文档自己声明，
+  否则明天多一类产物就悄悄落在闸外。对每条四处置，**刻意不合成一个百分比**：
+  `covered`（某张 `VERIFIED` 单的那行 `after_sha256` 与实际哈希一致）／
+  `eco_change_uncovered`（阻断：有单提到但没有一张**有效**单对得上——被否的、被替代的、
+  还没批的都不背书，哈希恰好对上只说明「当初有人这么想过」）／
+  `eco_change_unverified`（阻断：对得上但单还活着没走到 `VERIFIED`，**批了不等于复验了**，
+  `open_orders` 点名到 eco_id 与现状态）／`undetermined`（**不**阻断，只交清单：本仓没有
+  上一版基线可比，判合格是假绿，判违规是把「没登记」当成「改了没提单」）。`coverage` 三档
+  `complete`/`partial`/`incomplete`：有单却没全覆盖只敢说 partial。分档写成
+  `VERIFICATION_PENDING`/`DEAD_STATUSES` 两个常量，并由
+  `TestTheEndorsementBucketsAreExhaustive` 钉住**四桶互不相交且并起来 == `ECO_STATUSES`**
+  ⇒ 以后加一档状态不归类即判红。
+  **门那一侧读的是同一格，但口径刻意不同**：`production_release_gate` 新增
+  `change_control_closes_deliverables`（C6），把「一张单都没有」的盲区读成**不通过**——
+  生产者的 rc 管「这份证据有没有说错话」，门管「这句话够不够格用来签字」。
+  收紧代价是**现算**的：这道门本就「任何一档判据失败即整体 rc=2，不看 `--target`」
+  （`production_release_gate.py:751-753`），所以 3 个夹具文件 4 处清单补齐 + 全量首跑 4 条红
+  （2 条属预期：产物清单还没重锚）。`aipd release manifest` 的人读输出多一行 `eco 覆盖=…`。
+  端到端真命令行走完**红→绿→红→绿**六步（§六逐字）：零单 ⇒ `undetermined`；单里哈希写错 ⇒
+  逐条点名 `uncovered` 且 `covered=1` 同时成立（判据看的是这条内容的这个哈希，不看有没有单）；
+  只推到 `APPROVED` ⇒ `eco_change_unverified`；推到 `VERIFIED` ⇒ `complete`；复验后追加一行 ⇒
+  又 `uncovered`（detail 把两张单各声称什么全印出来）；补一张覆盖新哈希的单 ⇒ 真 `aipd validate`
+  的子进程读数从 `false` 翻成 `true` 并给出 `2/2`。
+  **不读过头**：那一步里 `aipd release manifest` 仍 `rc=4`、`aipd validate` 的 `passed` 仍 `false`
+  （临时文档本来就缺图纸/CTQ/BOM，四条判据各自都红）——本片只主张「这一条判据的读数跟着
+  `eco` 段动了」，不主张「这份文档可以放行」。
+  25 条常驻用例（生产者 20 + 门 5，其中 3 条用子进程真过门）+ 变异电池
+  **17 条：杀 17 / 活 0 / 注入无效 0**。电池自己也被修过一次：原 E2 的锚点还写着上一版的
+  `not in DEAD_STATUSES`，判据改形后命中 0 次 ⇒ 电池报「注入无效」而不是「杀掉」（这正是
+  把 `rc∈{4,5}` 且无失败行判成无效的用处）；门侧另两条候选注入（`'complete' in str(coverage)`、
+  短路缺键分支）审下来**行为等价**，属化妆，按第 26 片 G19 的教训丢掉，换成四条真会翻转读数的。
+  没做：没有上一版产物清单当基线 ⇒ 只证明「内容与某张闭合单一致」，不证明「自上次发布以来
+  只改了这些」；`undetermined` 不区分「新文件」与「老文件动了没提单」；门只信生产者写进文档的
+  读数、不重算哈希；署名仍无身份源（第 26 片记着）；ECO 不联动失效传播。
+  全量用例数 2003 → 2028。证据见 `docs/audit/ECO_RELEASE_COVERAGE_F-C6-ECO_2026-09-25.md`。
+
 - **v5.12 F-C6-ECO 第 26 片：ECR/ECO 工程变更单有了生产者（C6 档位 13/1/1 → 14/0/1）**：
   普查里「版本与ECR/ECO」长期停在 checker_only，note 写着原因：版本那一半有生产者，
   **变更单这一半零实现**。本仓 `changes` 表是审计流水（谁在什么时候改了什么），

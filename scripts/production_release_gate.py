@@ -299,6 +299,35 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
         add('ctq_has_inspection', 'C6', False,
             'no ctq present; cannot verify inspection coverage')
 
+    # change_control_closes_deliverables: 每个带哈希的交付物都要有一笔**已复验**的变更单背书。
+    # 生产者（aipd release manifest）已经写了 eco 这一格；判红与否由这里定，
+    # 否则「写了没人读」等于装饰（与 F-EVID-03 同一类缺陷）。
+    eco = d.get('eco')
+    if not isinstance(eco, dict) or 'coverage' not in eco:
+        # 数据缺失即失败（fail-closed），不允许空真通过：
+        # 没有 eco 这一格 = 从没核过变更控制，不能读成「核过且没问题」。
+        add('change_control_closes_deliverables', 'C6', False,
+            'no eco section; cannot verify change control covers the deliverables')
+    else:
+        coverage = eco.get('coverage')
+        bad = sorted(set(eco.get('uncovered') or []) | set(eco.get('unverified') or []))
+        blind = sorted(eco.get('undetermined') or [])
+        if bad or coverage in ('incomplete', 'unreadable'):
+            add('change_control_closes_deliverables', 'C6', False,
+                f"coverage={coverage}; 缺闭合单或未复验: {bad}"
+                + (f"; eco 库读不到: {eco.get('why')}" if coverage == 'unreadable' else ''))
+        elif blind or coverage in ('undetermined', 'partial'):
+            # 盲区**不**折算成违规（生产者那一侧已经不阻断），但也**不**折算成通过：
+            # 「这次发出去的内容都提过单」这句话在没有单可查时没有证据支撑。
+            add('change_control_closes_deliverables', 'C6', False,
+                f"coverage={coverage}; 无任何变更单可判 {len(blind)} 条交付物"
+                f"（不是「没改」，是「不知道改没改」）: {blind[:5]}"
+                + ('…' if len(blind) > 5 else ''))
+        else:
+            add('change_control_closes_deliverables', 'C6', coverage == 'complete',
+                f"coverage={coverage}; {eco.get('covered')}/{eco.get('artifacts')} 条带哈希"
+                f"交付物由 VERIFIED 单逐条对上 after_sha256")
+
     # tool_capability_supports_level: runtime ceiling must allow the claimed level.
     cap_ok = ceiling_idx >= target_idx
     add('tool_capability_supports_level', 'C0', cap_ok,
