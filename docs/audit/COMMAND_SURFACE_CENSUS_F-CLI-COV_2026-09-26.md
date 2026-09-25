@@ -123,20 +123,25 @@ CI 侧的 `scripts/skill_quality_audit.py` 一直是按小节边界取段（找 
 补法按棘轮只有一种：往 `tests/` 里加真 `main(["<命令>", …])` 调用，然后**删掉登记那一格**。
 不许为把它绿掉而放宽判据或把新命令塞进基线。
 
-## 七、全量与门禁读数（三跑，全部在 `git worktree` 的干净 HEAD 签出里）
+## 七、全量与门禁读数（四跑，全部在 `git worktree` 的干净 HEAD 签出里）
 
 | 跑 | 树 | collected | passed | failed | 说明 |
 | --- | --- | --- | --- | --- | --- |
-| A | `84b800c` + `a836810`（代码与镜像，清单未刷） | 2266 | 2261 | 2 | 只红在 `test_release_manifest_hashes_match_disk` 与 `test_source_manifest_hashes_match_disk`——新量具与改过的 README/CHANGELOG 还没进清单，属预期 |
+| A | `84b800c`（代码与镜像，清单未刷） | 2266 | 2261 | 2 | 只红在 `test_release_manifest_hashes_match_disk` 与 `test_source_manifest_hashes_match_disk`——新量具与改过的 README/CHANGELOG 还没进清单，属预期 |
 | B | `677f60f`（清单已重锚） | 2266 | 2262 | 1 | 清单两条转绿；红的是 `test_state_perf_gates.py:146` 那条 **5× 比值门**：load 28 下实测批处理 311.9ms / 逐条 1334.1ms = 4.28×。隔离复跑 0.53s 绿 ⇒ 并发噪声，不放宽门、不改比值 |
-| C | 同 B（`--json-report` 那份） | 2266 | **2263** | **0** | 报告里 `source_commit = a660405…`（v5.6.0 tag 提交），同一份既作本轮记录 `pytest-report.json`，也作锚定用的 `pytest-report-v5.6.0.json` |
+| C | 同 B | 2266 | 2263 | 0 | 第一份 0 failed；但其后落了一次收口补记（CHANGELOG 措辞 + 本文件），报告不再后于最终树 |
+| D | `c861282` | 2266 | **2263** | **0** | 绑进 `PROVENANCE.test_report` 的那份（sha256 前缀 `9a9629f2c3f4`，`source_commit = a660405…` = v5.6.0 tag 提交）；`docs/audit/pytest-report.json` 与 `pytest-report-v5.6.0.json` 同源一份 |
 
 - 全量用例数：上一片 2252 → 本片 **2263**（+11：`test_command_surface_census.py` 9 条、
   `test_command_coverage.py` 6→8 条）。
 - `skill_quality_audit`：0 警告 / 0 失败，rc=0；「测试文件覆盖」从 47（子串）变成 49（argv 位）。
-- 两道发布门禁（`production_release_gate --release-ready --tag v5.6.0` 与
-  `audit_repo --strict`）必须在工作树干净时跑，所以它们的终读数写在**下一次提交**里
-  （gate 自身会写 `docs/audit/repository_snapshot.json`，跑完再补一次提交是常态）。
+- `production_release_gate --release-ready --tag v5.6.0`（带 `.venv/bin` 进 PATH）：
+  **8/8 全绿、`release_ready: true`、rc=0**，其中 `test_numbers_from_report` 认的就是 D 那份；
+  跑完 `git status` 仍为空（本跑的 `repository_snapshot.json` 内容与已提交版一致，无补提交）。
+- `audit_repo --strict`：**rc=1，唯一一条红**是既有的
+  `Provenance source commit mismatch: manifest=a66040520139… vs HEAD=b412cdf6283f…`
+  ——锚点按设计停在 tag 提交上（见项目记忆「release 锚点」条），两份清单的
+  `hash_mismatch_count` 都是 0。
 
 ## 八、复算入口
 
