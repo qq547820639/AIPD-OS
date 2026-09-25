@@ -986,9 +986,11 @@
   证据里不许出现量具自身。`test_command_coverage.py` 删掉那份恒 0 的解析器，
   声明面改按契约双向核（`registered == PUBLIC ∪ DEPRECATED ∪ INTERNAL`）、
   并补上「解析器能红」的注入反证——原来 6 条现 8 条。
-  读数：全量 **2252 → 2263**（+11，2266 收集）；第二跑红在 `test_state_perf_gates.py:146`
+  读数：全量 **2252 → 2263**（+11，2266 收集），连跑四趟：第一趟只红在两条清单哈希
+  （新量具与镜像未入册，预期），第二趟清单转绿但红在 `test_state_perf_gates.py:146`
   那条 5× 比值门（load 28 下实测 4.28×，隔离复跑 0.53s 绿 ⇒ 并发噪声，**不放宽门**），
-  第三跑 0 failed 才是绑进 `PROVENANCE` 的那份；电池 `/tmp/s39/battery.py`
+  第三趟 0 failed，第四趟（收口补记落盘后的树）同样 0 failed、报告
+  sha256 前缀 `9a9629f2c3f4` 绑进 `PROVENANCE`；电池 `/tmp/s39/battery.py`
   **7 条：杀 7 / 存活 0 / 注入无效 0 / 崩溃式红 0**（第一条注入把「丢掉 argv 位置要求」
   写成了「取第一个字符串元素」，与未注入形态等价 ⇒ 是注入无效不是判据弱，改成逐元素记账后
   才真开火），逐条点名见 `docs/audit/COMMAND_SURFACE_CENSUS_F-CLI-COV_2026-09-26.md`。
