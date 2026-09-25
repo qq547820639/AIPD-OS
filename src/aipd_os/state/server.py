@@ -319,10 +319,16 @@ class StateService:
     def add_risk(self, tenant_id: str, project_id: str, title: str,
                  probability: str | None = None, impact: str | None = None,
                  mitigation: str | None = None, status: str = "open",
+                 owner: str | None = None,
                  actor: str | None = None) -> str:
+        """`owner` 是「谁负责这条风险」，与 `actor`（谁在调用）是两件事：
+        把 actor 当 owner 转发出去，等于用调用方身份替所有人认领风险（migration
+        v21 / 第 34 片刚把这类默认值清掉）。两者都留空才落 NULL。"""
         self._authorize(actor, tenant_id, project_id)
-        rid = self.db.add_risk(tenant_id, project_id, title, probability, impact, mitigation, status)  # noqa: E501
-        self._audit(actor, "add_risk", tenant_id, project_id, after={"risk_id": rid, "title": title})  # noqa: E501
+        rid = self.db.add_risk(tenant_id, project_id, title, probability, impact,
+                               mitigation, status, owner=owner)
+        self._audit(actor, "add_risk", tenant_id, project_id,
+                    after={"risk_id": rid, "title": title, "owner": owner})
         return rid
 
     # ---------------------------------------------------------- deliverables

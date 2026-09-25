@@ -257,6 +257,62 @@ class TestMigrationRoundTrip:
         assert _full_row(db.path, rid) == before
 
 
+class TestServiceSurface:
+    """`StateService.add_risk` 是这条数据的**对外写面**：owner 必须能从这里进来，
+    而且不许拿调用者身份（`actor`）冒充责任人——那正是 v21 刚清掉的那类假归属。"""
+
+    def _svc(self, tmp_path: Path):
+        """`_authorize` 是真授权：actor 必须是注册过并被授予该项目的使用者 id。"""
+        from aipd_os.state.server import StateService
+
+        svc = StateService(str(tmp_path / "svc.db"), encryption_key="k",
+                           secret="test-secret")
+        svc.db.ensure_default_tenant()
+        svc.db.init_project("default", "P-SVC", "服务写面", "slice 37")
+        svc.auth_register("u-li", "default", "li", "pw", project_id="P-SVC")
+        return svc
+
+    def _owner_of(self, svc, rid: str):
+        return [r["owner"] for r in svc.db.list_risks("default", "P-SVC")
+                if r["risk_id"] == rid][0]
+
+    def test_owner_given_through_the_service_is_stored(self, tmp_path):
+        svc = self._svc(tmp_path)
+        rid = svc.add_risk("default", "P-SVC", "r1", owner="li", actor="u-li")
+        assert self._owner_of(svc, rid) == "li"
+
+    def test_the_callers_identity_does_not_become_the_owner(self, tmp_path):
+        """与上一条成对：只给 actor 时 owner 仍是 NULL，不是「调用者自动认领」。"""
+        svc = self._svc(tmp_path)
+        rid = svc.add_risk("default", "P-SVC", "r2", actor="u-li")
+        assert self._owner_of(svc, rid) is None
+
+    def test_an_empty_owner_is_refused_at_the_service_boundary_too(self, tmp_path):
+        svc = self._svc(tmp_path)
+        with pytest.raises(ValueError, match="空白串"):
+            svc.add_risk("default", "P-SVC", "r3", owner="   ", actor="u-li")
+        assert svc.db.list_risks("default", "P-SVC") == []
+
+    def test_the_rpc_dispatch_reaches_the_new_parameter(self, tmp_path):
+        """网络/泛化派发那条路：`service.call(...)` 必须把 owner 带到，
+        而不是只有直接调用的形参形状对。"""
+        svc = self._svc(tmp_path)
+        rid = svc.call("add_risk", tenant_id="default", project_id="P-SVC",
+                       title="r4", owner="zhao", actor="u-li")
+        assert self._owner_of(svc, rid) == "zhao"
+
+    def test_the_audit_record_carries_the_owner_being_set(self, tmp_path):
+        import json
+
+        svc = self._svc(tmp_path)
+        rid = svc.add_risk("default", "P-SVC", "r5", owner="li", actor="u-li")
+        entry = [a for a in svc.db.list_audit(20)
+                 if a["action"] == "add_risk"][0]
+        after = json.loads(entry["after_json"])
+        assert after["owner"] == "li" and after["risk_id"] == rid
+        assert entry["actor"] == "u-li", "记录者是谁与被记的责任人是两个字段"
+
+
 class TestTheDocMirrorMatchesTheChain:
     """`state_inventory.md` 抄了迁移链的两处：页眉/正文的 `HEAD = vNN` 和版本清单表。
 

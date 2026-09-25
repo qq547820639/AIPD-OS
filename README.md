@@ -362,6 +362,8 @@ aipd interfaces --repo . --out interface-contract.json
 #     再被 `to_dict` 对外发出去。migration v22 保留 NOT NULL、只摘掉 DEFAULT
 #     （漏传 ⇒ `IntegrityError`，fail-closed），数据类字段与 `from_dict`/`to_dict`
 #     同步改成 `None`；历史值两个方向都不改写。
+#     第 37 片把这一列接到对外写面：`StateService.add_risk` 现在收 `owner` 并转发，
+#     但**不拿调用者 `actor` 冒充责任人**（那是同一族假归属的另一种写法）。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。

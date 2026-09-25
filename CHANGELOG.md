@@ -951,6 +951,25 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6 第 37 片：`owner` 能从服务写面进来了，并且 actor ≠ 责任人**：
+  第 35 片把「服务/HTTP 写面不暴露 `owner`」标成需要产品裁决，重判之后它不是：
+  **接收一个 owner 字段不需要身份源**，身份源只在「拿归属当放行依据」时才需要
+  （那正是第 34 片决定 C 拒绝做的事）。改的是 `StateService.add_risk`：
+  它原先收下 `actor` 用于授权与审计，却在往下调 `db.add_risk` 时把尾参整个丢掉
+  ⇒ 第 34 片给库层加的 `owner` 谁都够不到。现在加 `owner: str | None = None` 并转发，
+  审计 `after` 同时记 `owner` 与写它的 `actor`；RPC 是泛化派发
+  （`service.call(method, **params)`），签名加了参数就自动可达，不必另开路由。
+  **决定：不许把 `actor` 当 `owner` 转发**——前者是「谁在调用」，后者是「谁负责这条风险」，
+  混起来等于用调用者身份替所有人认领，正是 v20/v21/v22 三格在清的同一类假归属。
+  两处自抓：服务层夹具先用用户名直调被真授权拦下（`_authorize` 要的是注册过的 user id），
+  「actor 不渗入 owner」那条第一次红也是夹具没注册用户——两次都修夹具，不放宽断言。
+  读数：全量 **2238 → 2243**（+5，全在服务写面这一类）；
+  电池 `/tmp/slice37-mutations.py` **4 条全杀**（actor 当 owner／收下不转发／
+  审计不落 owner／签名退回旧形状）；`test_authorization.py` + `test_mcp_authorization.py`
+  共 20 条 rc=0；`mypy src` 0 error、CI 口径 ruff rc=0。证据见
+  `docs/audit/RISK_OWNER_SERVICE_SURFACE_F-C6_2026-09-26.md`。
+  调研豁免：同族第 34-36 片已确立写法，且本片只补一个形参与一条转发。
+
 - **v5.12 F-C6 第 36 片：给「拷贝重建的迁移会不会顺手改了别的列」装一把常驻尺子**：
   这一族的修复全靠拷贝重建（V1 冻结文本改不得、SQLite 没有 `ALTER COLUMN`），
   而重建最容易出的事故不是「没改成」，是**顺手动了别人**——列清单少一根、
