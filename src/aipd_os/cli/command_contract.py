@@ -297,5 +297,6 @@ ALL_REGISTERED_COMMANDS: frozenset[str] = frozenset(
     if e.status != CommandStatus.PLANNED
 )
 
-# 公开命令数量断言（用于审计时的 sanity check）
-EXPECTED_PUBLIC_COUNT = len(PUBLIC_COMMANDS)  # 当前为 29
+# 审计时的 sanity check。**刻意不写死数字**：写死过一次的注释停在了「当前为 29」，
+# 而真实命令面早已是 56 条——一条会过期的数不如没有。
+EXPECTED_PUBLIC_COUNT = len(PUBLIC_COMMANDS)

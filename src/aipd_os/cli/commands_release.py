@@ -49,10 +49,30 @@ def cmd_interfaces(args):
         print(f"接口清单与契约证据：{out}（+ 同名 .evidence.json 侧车）")
         print(f"  {c['rows']} 条接口：{c['by_kind']}")
         print(f"  判定={doc['verdict']}（未取证 {c['unverified']}、"
-              f"声明了但没人消费 {c['declared_but_unconsumed']}、"
+              f"没有实例被按它校验的契约 {c['contracts_without_instance']}、"
+              f"绑定读不到 {c['binding_blind']}、"
+              f"只判存在的落点 {c['landing_existence_only']}、"
+              f"形状副本与权威不一致 {c['shape_divergent']}、"
+              f"权威读不到 {c['shape_authority_blind']}、"
               f"定义件缺失 {c['missing_defines']}）")
-        for name in doc["declared_but_unconsumed"]:
-            print(f"    [发现] 全仓没有任何文件按名字引用 {name} ⇒ 这是一张没人校验的契约")
+        authority = doc.get("shape_authority") or {}
+        for site in authority.get("divergent", []):
+            row = next((r for r in authority.get("sites", [])
+                        if f"{r.get('schema')}#{r.get('at')}" == site), {})
+            print(f"    [发现] {site}：声明的形状与权威 "
+                  f"{authority.get('authority_source')} 不一致"
+                  f"（缺 {row.get('missing_vs_authority')} / 多 {row.get('extra_vs_authority')}）")
+        if authority.get("sites") and not authority.get("authority_readable"):
+            print(f"    [盲区] 权威枚举读不到（{authority.get('authority_source')}）"
+                  "⇒ 差集留空是「不知道」，不是「一致」")
+        for name in doc["contracts_without_instance"]:
+            print(f"    [发现] {name} 从来没有实例被按它校验过 ⇒ 这张契约的形状"
+                  "从没被执行过（不是「没人引用文件名」）")
+        for name in doc["binding_blind"]:
+            print(f"    [盲区] 抽不出命名约定（schema_check 读不到）"
+                  f"⇒ {name} 有没有人校验**不知道**，不折算成通过")
+        for site in doc["landing_existence_only"]:
+            print(f"    [落点] {site}：只被 exists() 拦住，有同名契约却没核形状")
         for miss in doc["missing_defines"]:
             print(f"    [阻断] 定义件不在盘上：{miss}")
         print(f"  为什么这份东西不叫 ICD：{doc['not_icd_because']}")

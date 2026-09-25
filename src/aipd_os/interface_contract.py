@@ -5,7 +5,7 @@
 它自己把自己叫 IRD 不叫 ICD）。本仓单方生成一份叫「ICD」的文件，等于替别人签字。
 所以这里只做可自查的那一半：**接口清单 + 每条的定义件 + 每条的验证证据 + 明确写出证不到什么**。
 
-三条形状规矩，都是这片反复在防的假绿：
+四条形状规矩，都是这片反复在防的假绿：
 
 1. **分母一律重算，不抄表**。CLI 命令面取自 `command_contract.PUBLIC_COMMANDS`，
    MCP 工具取自 `state_service/mcp_server.py` 的 `def mcp_*`，schema 清单取 `assets/schemas/`
@@ -13,8 +13,12 @@
    改名那天就悄悄漏项。
 2. **「被引用」不等于「被验证」**。每条的 `verified_by` 必须是**真存在、真收集得到 test 的文件**
    （AST 解析，不靠人记得测试还在不在）；解析不到就进 `unverified`，不折算成已验证。
-3. **声明了却没人消费 = 一条发现，不是一条通过**。schema 文件在盘上但全仓没人按它校验，
-   记进 `declared_but_unconsumed`，整份文档的 verdict 因此只能 `incomplete`。
+3. **「有人提到这个名字」和「有实例被按它校验过」是两回事**（第 30 片的更正）。
+   契约的校验覆盖按 `schema_check` 的**命名约定**现算：没有实例被按它校验过的契约记进
+   `contracts_without_instance`；约定本身抽不出来（校验器脚本不在）记 `binding_blind`。
+   两者都让整份文档只能 `incomplete`，但**默认不拦、`--strict` 才拦**。
+4. **量具不进自己的分母**（`INSTRUMENT_FILES`）。按字面量反查判据有个反噬：
+   在常驻用例里写一句「`aipd_os.net.http` 不许算成消费者」，分母就从 11 涨到 12。
 """
 from __future__ import annotations
 
@@ -26,10 +30,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from aipd_os import schema_binding as sb
+from aipd_os.schema_binding import VALIDATOR_SCRIPT
+from aipd_os.scripts.schema_check import UNBOUND_EXEMPT
+
 CONTRACT_KIND = "aipd.interface_contract.v1"
 
 #: 反查消费者时要扫的目录（不含 releases/ 与 build/：那是产物，不是接口的一方）。
 SCAN_DIRS = ("src", "scripts", "tests", "state_service")
+
+#: 量具**自己**的文件：模块本体与它的常驻用例。
+#: 不排掉的后果实测过一次——在这份用例里写一句「`aipd_os.net.http` 不许出现在分母里」，
+#: 出网消费者就从 11 涨到 12：**写一条断言就把分母加一**。这些文件里出现的被反查字符串
+#: 是判据正文，不是产品行为。
+INSTRUMENT_FILES = ("src/aipd_os/interface_contract.py", "tests/test_interface_contract.py")
 
 #: 本仓自己声明的文件格式契约：定义件与「拼法/名字」的唯一出处。
 FILE_FORMAT_CONTRACTS: list[dict[str, Any]] = [
@@ -57,8 +71,10 @@ PROVES = {
                     "命令的行为对不对——那由各家族自己的用例管"),
     "mcp_tool": ("工具函数存在、走同一套 principal 认证",
                  "MCP 客户端真按这个签名调用（对侧不在此仓）"),
-    "json_schema": ("schema 文件在盘、可解析、哈希与清单一致",
-                    "有实例真按它被校验；对侧是否实现同一契约"),
+    "json_schema": ("schema 在盘、可解析，且按 `schema_check` 的命名约定**有实例真被按它校验过**"
+                    "（`validated_against` 列的就是那些实例）",
+                    "被校验的实例是不是**真产物**（今天核的是 `assets/templates/` 里的形状样本）；"
+                    "对侧是否实现同一契约"),
     "file_format": ("该格式的读写代码与常量在同一处定义",
                     "外部工具能读这个格式"),
     "http_surface": ("服务端路由方法存在（do_GET/do_POST）与认证入口在位",
@@ -138,16 +154,29 @@ def mcp_rows(repo: Path) -> list[dict[str, Any]]:
 
 
 def schema_rows(repo: Path) -> list[dict[str, Any]]:
-    """schema：文件清单取目录实际内容；消费者按**精确文件名**全仓反查。"""
+    """schema：清单取目录实况；**谁在校验它**按 `schema_binding` 的约定现算。
+
+    第 29 片这里按文件名字面量反查消费者，于是看不见 `schema_check.py` 的命名约定绑定，
+    把四份「有人按约定校验」的契约报成孤儿（假阳性）。字面引用仍然带在 `consumers` 里
+    （那是「谁点了这个名」的真事实），但**判孤儿不再看它**，看的是有没有实例真被按它校验过。
+    """
     rows = []
+    dirs = sb.binding_dirs(repo)
     for path in sorted((repo / "assets" / "schemas").glob("*.json")):
         consumers = scan_consumers(repo, path.name)
+        bound = sb.bound_instances(repo, path.name)
         rows.append(_row("json_schema", path.name,
                          [f"assets/schemas/{path.name}"],
-                         [c for c in consumers if c.startswith("tests/")],
+                         # 量具自己的用例点了这个名字，不算那张契约被它的消费方验过
+                         [c for c in consumers
+                          if c.startswith("tests/") and c not in INSTRUMENT_FILES],
                          consumers=consumers,
+                         validated_against=bound,
+                         validator=[VALIDATOR_SCRIPT] if dirs is not None else [],
+                         binding_readable=dirs is not None,
                          parses=_schema_parses(path)))
     return rows
+
 
 
 def _schema_parses(path: Path) -> bool:
@@ -192,14 +221,22 @@ def http_rows(repo: Path) -> list[dict[str, Any]]:
 
 
 def egress_rows(repo: Path) -> list[dict[str, Any]]:
-    """HTTP 消费面：谁真的经由唯一出网点访问外部。"""
-    consumers = [r for r in scan_consumers(repo, "aipd_os.net.http")
-                 if not r.endswith("net/http.py")]
+    """HTTP 消费面：谁真的经由唯一出网点访问外部。
+
+    两处收口时发现的修正：**① 量具不许进自己的分母**——本模块的 `PROVES` 文案里写了
+    `aipd_os.net.http`，按字面量反查就会把它自己数成一个出网消费者（连它的常驻用例也算，
+    见 `INSTRUMENT_FILES`）；**② 生产侧与测试侧分层数**，否则「产品有几个消费者」
+    这句话从混数里读不出来。
+    """
+    consumers = [rel for rel in scan_consumers(repo, "aipd_os.net.http")
+                 if not rel.endswith("net/http.py") and rel not in INSTRUMENT_FILES]
     return [_row("egress_consumer", rel, ["src/aipd_os/net/http.py"],
                  ["tests/test_net_http.py", "tests/test_net_egress_convergence.py"],
                  direction="consumes",
+                 layer="test" if rel.startswith("tests/") else "production",
                  counterpart="外部 HTTP 端点（各家 provider）")
             for rel in sorted(consumers)]
+
 
 
 def resolve_tests(repo: Path, spec: str) -> tuple[bool, int]:
@@ -241,6 +278,38 @@ def resolve_tests(repo: Path, spec: str) -> tuple[bool, int]:
     return True, count
 
 
+def schema_findings(rows: list[dict[str, Any]]) -> dict[str, list[str]]:
+    """从 schema 行里算两条发现：没有实例被按它校验过的契约 / 绑定读不到的契约。
+
+    单独一个函数是为了**能在合成仓上测**：`build()` 要整棵真树（MCP、HTTP 那些文件），
+    判据本身却只需要行。判据留在 build() 里，就只能拿真仓测，反证做不出来。
+    """
+    without_instance: list[str] = []
+    blind: list[str] = []
+    for row in rows:
+        if row.get("kind") != "json_schema":
+            continue
+        if not row.get("binding_readable"):
+            blind.append(row["name"])
+        elif not row.get("validated_against") and row["name"] not in UNBOUND_EXEMPT:
+            without_instance.append(row["name"])
+    return {"without_instance": without_instance, "blind": blind}
+
+
+def verdict_of(*, unverified: list, missing_defines: list, without_instance: list,
+               binding_blind: list, existence_only: list,
+               shape_divergent: list, shape_blind: list) -> str:
+    """七个轴各自都能单独把判定压成 incomplete。
+
+    单独一个函数、参数全是关键字、每条一格，是为了**逐轴测**：写在 build() 里的一长串
+    `or` 只能整体测，而整体测必然被「今天本来就不 complete」那一格掩盖
+    （这一片就被电池抓过两次这样的假测）。
+    """
+    dirty = (unverified or missing_defines or without_instance or binding_blind
+             or existence_only or shape_divergent or shape_blind)
+    return "incomplete" if dirty else "complete"
+
+
 def build(repo: Path | str) -> dict[str, Any]:
     """装配整份接口清单与契约证据（不落盘）。"""
     root = Path(repo)
@@ -256,7 +325,6 @@ def build(repo: Path | str) -> dict[str, Any]:
 
     unverified: list[str] = []
     missing_defines: list[str] = []
-    unconsumed: list[str] = []
     for row in rows:
         for rel in row["defines"]:
             if not (root / rel).is_file():
@@ -269,8 +337,20 @@ def build(repo: Path | str) -> dict[str, Any]:
         row["verified_by_resolved"] = resolved
         if not resolved:
             unverified.append(row["id"])
-        if row["kind"] == "json_schema" and not row.get("consumers"):
-            unconsumed.append(row["name"])
+
+    found = schema_findings(rows)
+    without_instance = found["without_instance"]
+    binding_blind = found["blind"]
+
+    landing = sb.landing_sites(root)
+    # 只被 `exists()` 拦住、且**有同名契约**可核的落点：这一格非空就是「存在性有门、
+    # 内容不合形没人管」。门接上形状校验之后这一格应当自己变空（`--root` 那侧的用例钉住）。
+    existence_only = sorted(f"{s['artifact']} ← {s['gate']}" for s in landing if s["schema"])
+    # 同一形状在两处声明时，与**数据库权威枚举**逐处对照（副本互比只能证明抄得一样）
+    authority = sb.shape_vs_authority(root)
+    shape_divergent = authority["divergent"]
+    shape_blind = ([] if authority["authority_readable"]
+                   else ["<authority unreadable>"] if authority["sites"] else [])
 
     digest = {rel: _sha256(root / rel) for row in rows for rel in row["defines"]
               if (root / rel).is_file()}
@@ -283,12 +363,24 @@ def build(repo: Path | str) -> dict[str, Any]:
         "counts": {"rows": len(rows),
                    "by_kind": _tally(rows),
                    "unverified": len(unverified),
-                   "declared_but_unconsumed": len(unconsumed),
+                   "contracts_without_instance": len(without_instance),
+                   "binding_blind": len(binding_blind),
+                   "landing_existence_only": len(existence_only),
+                   "shape_divergent": len(shape_divergent),
+                   "shape_authority_blind": len(shape_blind),
                    "missing_defines": len(missing_defines)},
-        "verdict": ("complete" if not (unverified or missing_defines or unconsumed)
-                    else "incomplete"),
+        "verdict": verdict_of(unverified=unverified, missing_defines=missing_defines,
+                              without_instance=without_instance,
+                              binding_blind=binding_blind,
+                              existence_only=existence_only,
+                              shape_divergent=shape_divergent,
+                              shape_blind=shape_blind),
         "unverified": unverified,
-        "declared_but_unconsumed": unconsumed,
+        "contracts_without_instance": without_instance,
+        "binding_blind": binding_blind,
+        "artifact_landing_sites": landing,
+        "landing_existence_only": existence_only,
+        "shape_authority": authority,
         "missing_defines": missing_defines,
         "definition_digests": digest,
         "interfaces": rows,

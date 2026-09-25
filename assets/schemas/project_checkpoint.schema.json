@@ -101,57 +101,21 @@
   },
   "$defs": {
     "fact": {
+      "allOf": [
+        {
+          "$ref": "fact.schema.json"
+        }
+      ],
       "type": "object",
       "required": [
-        "fact_id",
-        "key",
-        "value",
-        "status"
+        "fact_id"
       ],
       "properties": {
         "fact_id": {
           "type": "string"
-        },
-        "key": {
-          "type": "string"
-        },
-        "value": {},
-        "unit": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "status": {
-          "enum": [
-            "V",
-            "S",
-            "C",
-            "E",
-            "A",
-            "P",
-            "T",
-            "R"
-          ]
-        },
-        "confidence": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        },
-        "conditions": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "source": {
-          "type": [
-            "string",
-            "null"
-          ]
         }
-      }
+      },
+      "description": "形状单源于 assets/schemas/fact.schema.json（含 status=U）；这里只补 checkpoint 侧多出来的 fact_id 要求。以前是一份内联副本，副本的 enum 缺 U，与 src/aipd_os/state/db.py 的 FACT_STATUSES 矛盾。"
     },
     "evidence": {
       "type": "object",

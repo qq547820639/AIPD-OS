@@ -83,8 +83,11 @@ MAPPING: dict[str, dict[str, Any]] = {
     "ICD": {
         "verdict": "producer",
         "capabilities": ["industrialize.release_evidence"],
-        "producers": ["src/aipd_os/interface_contract.py"],
-        "tests": ["tests/test_interface_contract.py"],
+        "producers": ["src/aipd_os/interface_contract.py", "src/aipd_os/schema_binding.py",
+                      "src/aipd_os/scripts/schema_check.py", "scripts/quality_gate.py",
+                      "scripts/outcome_acceptance.py"],
+        "tests": ["tests/test_interface_contract.py", "tests/test_schema_check.py",
+                  "tests/test_quality_gate_shape.py"],
         "note": "**升上去的是可自查的那一半，产物不叫 ICD**（与「装配/维护」只升装配那一半同一形状）。"
                 "NASA《SE Handbook》附录 L 的接口大纲（免费全文，访问 2026-09-25；该页把自己叫 "
                 "**IRD** 不叫 ICD）里 §1.3「Responsibility and Change Authority」与 §3.1.2"
@@ -94,9 +97,10 @@ MAPPING: dict[str, dict[str, Any]] = {
                 "定义件 sha256、取证用例（AST 解析并有一条与 `pytest --collect-only` 对齐的复核）与"
                 "「证到什么 / 证不到什么」，分母全部重算（CLI 命令面 56 条取自 command_contract、"
                 "MCP 6 条取自 mcp_server.py 的 def mcp_*、schema 5 份取自目录实况、"
-                "出网消费者 11 个取自 import 反查）。今天这份真清单的判定是 incomplete："
-                "assets/schemas 里有 3 份（manual_chain_state / project_checkpoint / supervisor_project）"
-                "**全仓没有任何文件按名字引用** ⇒ 记成 declared_but_unconsumed，不折算成已验证。"
+                "出网消费者 11 个取自 import 反查）。判定 incomplete 的理由在第 30 片换过一次："
+                "第 29 片按文件名字面量反查消费者，看不见 `schema_check.py` 的**命名约定**绑定，"
+                "把 4 份「有人按约定校验」的契约报成孤儿（假阳性）。今天的真读数是五份契约"
+                "都有实例被按约定校验过，`contracts_without_instance` 为空，剩 `unverified` 2 条。"
                 "「ICD」字样在本仓的出现面由判据现算：src/ 4 处、tests/ 2 处、scripts/ 1 处，"
                 "全部来自本片自己写的「为什么这不叫 ICD」那句话，没有一处把它当 ICD 产。"},
     "尺寸链": {
