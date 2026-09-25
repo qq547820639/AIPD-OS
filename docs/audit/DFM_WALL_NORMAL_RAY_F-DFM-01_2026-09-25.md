@@ -102,3 +102,22 @@
   「两法谁薄谁赢」的语义糊掉。要做得先定报告里以谁为准。
 - 没给 `axis_min_mm` 与 `normal_min_mm` 分歧过大时加一条判定（比如差 2× 就提示
   「模型有斜壁，两法不一致」）——那是**新阈值**，本仓不自己发明数。
+
+## 七、收尾读数（落盘后由量具复算，不是计划）
+
+提交：`e435395`（代码 + 文档）→ `b8f8382`（lint 修）→ 发布工件重锚。
+
+| 量具 | 读数 |
+|---|---|
+| 全量 pytest（`docs/audit/pytest-report-v5.6.0.json`） | **1920 passed / 0 failed / 3 skipped**（共 1923；上一片收尾 1899/0/3=1902） |
+| `PROVENANCE.json` | `test_report.{passed:1920, failed:0, total:1923, source_commit:a66040520139…}` |
+| `SOURCE_MANIFEST.json` | 被哈希面 **605 → 606**（新增就是 `tests/test_cad_dfm_wall_normal.py`） |
+| `production_release_gate --release-ready --tag v5.6.0` | rc=0，`release_ready: true`，8 项全过 |
+| `ruff check src tests state_service` / `mypy` | 均 rc=0 |
+| `scripts/c6_coverage.py --self-test` | 7/7；档位仍 **13 / 1 / 1** |
+| 变异电池 `/tmp/slice24-mutations.py` | 9 条：杀 6 / **活 3**（逐条解释见 §五，不含糊过去） |
+
+一处自己抓自己的读数：上一条提交是**带着 3 处 ruff 红进树的**（CI 的 lint job 口径就是
+`ruff check src tests state_service`）。提交后才发现，单独补一次修：两处 import 排序，
+加一处我自己写的恒真断言 `assert "45°" not in text or True`——它什么都不断，
+删掉而不是换个写法留着。规矩上该在提交前跑 CI 同口径的 lint，这次没跑。
