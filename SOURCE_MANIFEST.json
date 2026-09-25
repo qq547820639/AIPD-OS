@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-25T16:07:07+00:00",
+  "generated_at": "2026-09-25T16:32:46+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 168346,
-      "sha256": "b9ed4296017ddf088bcfb732938a32923a8b93d2aa2692b015d1ca3bf3bc12cf"
+      "size": 170808,
+      "sha256": "8945c1bf287a4021a01c73eb364dbad229413e82666fe594d26b5f9f4c14856d"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1842,8 +1842,8 @@
     },
     {
       "path": "src/aipd_os/state/server.py",
-      "size": 30688,
-      "sha256": "98106448ac95bbe3780211d1cdc5a72f45f9cd61b3e13d08bfac15203faec837"
+      "size": 31293,
+      "sha256": "6043a151c1d60f5663d8dca52991d4a0f7139a0d0198c81c072842f6ae7ae1a8"
     },
     {
       "path": "src/aipd_os/state/stale_propagation.py",
@@ -3029,6 +3029,11 @@
       "path": "tests/test_server_local.py",
       "size": 4712,
       "sha256": "dbb4ab1e7ae34bc39d9774a319ddaf7556108ba59d2aac4e45792dad161cadae"
+    },
+    {
+      "path": "tests/test_service_write_surface_parity.py",
+      "size": 9045,
+      "sha256": "2c1dbbf390ef00b4762f844f9608a68cc071754d67653a408b27fb157a5ff9fd"
     },
     {
       "path": "tests/test_skill_command_surface.py",
