@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 163390,
-      "sha256": "b1158c4237733a7cdac5ae89959f9e331923077b95ae44b75f9c309e3e8242d0"
+      "size": 166089,
+      "sha256": "bd2dbb72039c19bf15090f99c0c5047787b9ecbf56aa7fafa5042edb0ed35120"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -2769,6 +2769,11 @@
       "path": "tests/test_migration_freeze.py",
       "size": 7154,
       "sha256": "2378df814612b48228339cedb9cc37dc3b20a9e04086a5f56df74f6d5ddf7593"
+    },
+    {
+      "path": "tests/test_migration_rebuild_fidelity.py",
+      "size": 7314,
+      "sha256": "d8ea71198f86cf178e6bb041287a37ffd5174717f51c396ca951f1feb27e2f5a"
     },
     {
       "path": "tests/test_model_evals_honesty.py",
