@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 178340,
-      "sha256": "da065cac5b20d1a5b54d7decbb4a8671a3bb80bd8eaaf3f6f31b604940386c63"
+      "size": 181947,
+      "sha256": "8af45ddb7bfa52df12f3ae3ea99642b40c14add994475724581a7984e550b995"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -587,8 +587,8 @@
     },
     {
       "path": "references/local-cad-fallback.md",
-      "size": 1378,
-      "sha256": "4c522f2a953793d61abb840b59e0e73fea2e9eb65e9db1352c6ecddf15e45c1a"
+      "size": 1393,
+      "sha256": "b365298839c784addfdd67567d39ac954836fcb2690b643f5fa48039620bd7bc"
     },
     {
       "path": "references/manual-chain-workflow.md",
@@ -749,6 +749,11 @@
       "path": "scripts/decision_policy.py",
       "size": 1671,
       "sha256": "371de81a1dfdd16e367cc5ee31d2aef4657830b3aa09ff95b0603d144002c864"
+    },
+    {
+      "path": "scripts/doc_reference_census.py",
+      "size": 16937,
+      "sha256": "4b5b7f6ef6b807dbd51ae65df2fee21d87f9c8774036a13b6c53ecf5403cf756"
     },
     {
       "path": "scripts/e2e_acceptance.py",
@@ -2509,6 +2514,11 @@
       "path": "tests/test_dispatcher.py",
       "size": 4326,
       "sha256": "e83e6678b4c49684ce69dcd3fb0ca3598344349c643d8a7958df7486d43b98b8"
+    },
+    {
+      "path": "tests/test_doc_reference_census.py",
+      "size": 5048,
+      "sha256": "db5c4fa6f428050a644a55342a3ceef81ca0d9113f6d93eee1e4691d96d46bdd"
     },
     {
       "path": "tests/test_encryption_key_policy.py",
