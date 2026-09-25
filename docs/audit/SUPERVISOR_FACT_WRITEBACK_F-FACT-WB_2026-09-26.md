@@ -82,6 +82,30 @@ B6 是给"登记措辞"这一条自己的对照：那条用例只写"不许出�
 
 ## 六、终读数
 
-- 全量：待本轮收尾（预期 2292 passed / 3 skipped，collected 2295）
-- `production_release_gate --release-ready --tag v5.6.0`：待填
-- `audit_repo --strict`：待填
+收尾链：`b543f83`（代码 + 清单重锚 634→635）→ 全量 → `3513a63`（绑证据 + 报告入库）→ 门禁。
+
+- **全量**：**2292 passed / 3 skipped / 0 failed**，288.14s，跑在 `b543f83` 的
+  `git worktree` 干净签出里（`PYTHONPATH` 指向该签出的 `src`，`AIPD_SOURCE_COMMIT` = tag SHA）。
+  报告 sha256 `cf655c6cbf41c14a…`，已入库并绑进 `PROVENANCE.test_report`
+  （passed 2292 / failed 0 / total 2295）。上一片同一份用例集要 791.56s——
+  差别只在机器负载（那片 load 21，本片 load 5），不是代码变快。
+- **`production_release_gate --release-ready --tag v5.6.0`**：**8/8 PASS，rc=0**。
+- **`audit_repo --strict`**：rc=1，唯一一条 ✗ 是按设计保留的 tag 锚点项
+  （`manifest=a66040520139… vs HEAD=3513a63fb59b…`），两份清单 `hash_mismatch_count` 均为 0。
+- 连带面复算：`-k "supervisor or capabilit or registry or golden or doc_reference"`
+  **146 passed**（改 `entry_point` 与登记文案之后），文档引用普查**现状面 0 条**。
+
+## 七、收尾留痕（过程事实，不写进 CHANGELOG 的那类）
+
+1. 电池第一版只有 5 条，登记措辞那条用例（第 7 条）**没有任何臂能打红**——
+   一句"不许出现某句话"的断言，删掉断言就永久绿。补 B6（把旧错话抄回登记）之后
+   它才有牙，半径 1 条。凡是"文案改对了"型的断言，都要问一句"抄回错的会不会红"。
+2. 幂等那条用例最初打算从结果 dict 还原一个真的 `RunRecord` 再喂给被测函数，
+   但 `to_dict()` 的键与方法实际读的字段不完全同名（例如 `id` / `record_id`），
+   **没有实测过就走这条路，等于让夹具去赌字段表**；改为 `SimpleNamespace` 只造
+   `_write_back_facts` 真正读的三列（run 标识、输出哈希、证据引用）。
+   教训：夹具的形状只覆盖被测函数的读取面，不复刻整个数据结构——
+   复刻面越大，越容易测到自己造的形状而不是生产的形状。
+3. 提交说明与 CHANGELOG 全程用 `git commit -F -`/heredoc，本轮零反引号事故
+   （第 40 片那次是 `-m` 里的反引号被 shell 执行掉）。
+
