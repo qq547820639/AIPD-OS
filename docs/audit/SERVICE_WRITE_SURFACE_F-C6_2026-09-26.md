@@ -65,4 +65,7 @@
 | 变异电池 | `/tmp/slice38-mutations.py` **5 条：杀 5 / 存活 0 / 注入无效 0 / 崩溃式红 0**，带未注入对照臂；已知无撤回案例 1 |
 | 静态检查 | `mypy src` 0 error；`ruff check src tests state_service` rc=0 |
 
-（签出 attestation 与两道发布门的读数在最后一笔提交里补上。）
+| 签出 attestation | HEAD 干净签出 + `AIPD_SOURCE_COMMIT=<tag SHA>`：**2250 passed / 0 failed / 3 skipped**（2253 收集，8m30s），报告前缀 `2916a14ca08a` 已绑进 `PROVENANCE.test_report` |
+| 发布门 | `production_release_gate --release-ready --tag v5.6.0`：**8/8、rc=0、`release_ready: true`**；`audit_repo --strict` rc=1 只剩既有的 tag 锚点判定 |
+| 电池重放 | 收尾时在最终树重跑第 38 片 **5/5** 杀掉、字节复算干净 |
+| 提交序列 | `b14b7f5`（代码+用例+登记）→ `e99a762`（清单重锚 629 条）→ `ac1e90d`（证据绑签出那一跑）→ 本笔文档 |
