@@ -88,6 +88,17 @@ CTQ 改了 ⇒ 正文变 ⇒ 自然另起一版（用例里真的改一次 CTQ �
 
 ## 七、终读数
 
-- 全量：待收尾（预期 2302 passed / 3 skipped，collected 2305）
-- `production_release_gate --release-ready --tag v5.6.0`：待填
-- `audit_repo --strict`：待填
+收尾链：`ce6a8d3`（代码 + 两份清单重锚 635→637）→ 全量 → `0d8a2df`（绑证据 + 报告入库）→ 门禁。
+
+- **全量**：**2302 passed / 3 skipped / 0 failed**，354.40s，跑在 `ce6a8d3` 的
+  `git worktree` 干净签出里（`PYTHONPATH` 指向该签出的 `src`，`AIPD_SOURCE_COMMIT` = tag SHA）。
+  报告 sha256 `a0bdb62f42557e96…`，已入库 `docs/audit/pytest-report-v5.6.0.json`
+  并绑进 `PROVENANCE.test_report`（passed 2302 / failed 0 / total 2305）。
+- **`production_release_gate --release-ready --tag v5.6.0`**：**8/8 PASS，rc=0**。
+- **`audit_repo --strict`**：rc=1，唯一一条 ✗ 是按设计保留的 tag 锚点项
+  （`manifest=a66040520139… vs HEAD=0d8a2df48e90…`）；两份清单 `hash_mismatch_count` 均为 0。
+- **文档引用普查（开发树 @`0d8a2df`，写本节之前测的）**：147 份文档 / 3587 处引用，
+  `resolved` 2872 / `missing` 136 / `multi` 429 / `external` 79 / `elided` 61 /
+  `line_beyond_eof` 10（Σ == 分母 ✓），**现状面 0 条**、历史面 123 条。
+  绝对数是开发树读数（未跟踪副本文件会把 `multi` 抬高，见 F-DOC-REF 第 41 片 §二 的漂移规则），
+  本节写完还会再变——所以只有"现状面 0"这一格被门禁钉住。
