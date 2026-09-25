@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-25T02:20:14+00:00",
+  "generated_at": "2026-09-25T03:05:07+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 114485,
-      "sha256": "a664d540a45867616bde0f6b9981fc05f8187a69b08f7459302c0b39f26e3d3f"
+      "size": 117506,
+      "sha256": "b02edef83093e12d329c8564216eff7a2effa973f96bbc6143b7ad0ee9121cbd"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 32893,
-      "sha256": "0574078c77e685d2655286b35ca387a361d727c9d6571d47685254b94b240a33"
+      "size": 33244,
+      "sha256": "48395e4054be9400fe0c9386642a441c5bcec7f6d7625d06e5cb86d833456044"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -982,8 +982,8 @@
     },
     {
       "path": "src/aipd_os/cad/dfm.py",
-      "size": 31115,
-      "sha256": "86723f978026c2b19085f4e221effbc1c7e01a61427c485dc7a4268bf63333bb"
+      "size": 38259,
+      "sha256": "8ef5c048da269f1ad37b906c02f738d42a76f9cfe8b7b876d905fa1f5a7fba19"
     },
     {
       "path": "src/aipd_os/cad/drawings2d.py",
@@ -1577,8 +1577,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 73961,
-      "sha256": "11877e5bfea9b8e12de4ef24dfa40198c2ada2096745fe075c770562e8c092be"
+      "size": 74555,
+      "sha256": "38dc26edd55f686f0205880e37c9e603a173cf772bfaf338ed93c7256837c87c"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2269,6 +2269,11 @@
       "path": "tests/test_cad_dfm.py",
       "size": 19528,
       "sha256": "9377639db5fd7366790006da2cb084e076f73f6b10c3057c36d9b1f32c749c03"
+    },
+    {
+      "path": "tests/test_cad_dfm_wall_normal.py",
+      "size": 11662,
+      "sha256": "6d948bba1639b1d8e84e73fd426c343df08c266884fc6b2b43634f501823ea10"
     },
     {
       "path": "tests/test_cad_drawings2d.py",
