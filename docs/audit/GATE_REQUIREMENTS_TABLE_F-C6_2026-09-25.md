@@ -89,4 +89,26 @@
 
 ## 六、收口读数
 
-（全量、电池、门与重锚见下方补记。）
+| 项 | 读数 |
+| --- | --- |
+| 全量用例 | 2121 → **2139** 条（+18，全在新增的 `tests/test_gate_requirements.py`）。**先提交代码（`11dea0f`）再取读数**：在 `git worktree add /tmp/s31head HEAD` 的干净签出里跑（`PYTHONPATH` 指签出树并先断 `aipd_os.__file__` 落在签出上），得 `2 failed / 2134 passed / 3 skipped` —— 两条红正是预期的 `test_*_manifest_hashes_match_disk`（清单还没重锚）；重锚后同树复跑 `2136 passed / 0 failed / 3 skipped`，136.78s |
+| 被哈希面 | 619 → **621**（新增 `src/aipd_os/gate_requirements.py`、`tests/test_gate_requirements.py`）。审计文档在 `docs/audit/` 下，两份清单都整体排除它（实测该前缀条目数 0）⇒ 只改本文件不牵动哈希；改 `README.md`/`CHANGELOG.md` 会，所以那两处先写完再刷证据 |
+| `PROVENANCE.test_report` | `2136 passed / 0 failed / 总 2139`，报告 `docs/audit/pytest-report-v5.6.0.json`（`sha256=0abd7adf6585…`）；`source_commit = a66040520139…`（tag，按既有裁决不重锚到 HEAD） |
+| 发布门 `--release-ready --tag` | **8/8 绿**，`release_ready: true`，rc=0（干净树） |
+| `audit_repo --strict` | rc=1，唯一 ✗ 仍是既有裁决那条 tag 锚点红 |
+| ruff（CI 范围 `src tests state_service`） | All checks passed! |
+| mypy（`src tests`） | Success: no issues found in **421** source files（+1：`gate_requirements.py`） |
+| C6 普查 | 15 项 = **15 / 0 / 0**，`--self-test` 7/7；skill 自审 0 警告 0 失败 |
+| 变异电池 | 本片 `/tmp/slice31-mutations.py` **8 条：杀 8 / 活 0 / 注入无效 0**。同树复跑四片旧电池：第 30 片 **21/21**（其 H3「契约类型表写死」的锚点被本片改形打中 ⇒ 命中 0 次报「注入无效」，重指到运行期参数 `table` 后回到 21/21——**这就是每次改形都要复跑上一片电池的原因**）、第 29 片 **12/12**、第 27 片 **17/17**、第 28 片 **15/15** |
+| 镜像 | `registry_data`（实现/用例两栏 + 登记段落）、`scripts/c6_coverage.py`（ICD 行的 producers/tests/note）、`README.md` 的门那一段、`CHANGELOG.md` 条目；都由常驻用例消费（`test_capability_matrix`、`test_c6_coverage`、`test_registry_export`、`test_command_coverage` 共 50 条一起过） |
+
+### 两处诚实记录
+
+1. **本片自己的 lint 门禁救了一次场**：镜像脚本往 `registry_data.py` 那一条超长字符串里
+   多写了一个引号 ⇒ `ruff` 报 `invalid-syntax: missing closing quote`，连带 5 条
+   能力表用例红。这类「登记面是一整行字」的文件靠人眼 diff 是看不住的，
+   硬门禁的拒绝本身就是判据（同族：`scripts/` 不在 CI lint 范围内，所以那里的存量红
+   不能当门禁绿用——只查自己动过的文件）。
+2. **一次全量测试被一个不存在的路径整体打断**：`pytest tests/… tests/test_skill_quality_audit.py`
+   里最后那个文件不存在 ⇒ pytest 报 `no tests ran`、**整批不跑**，而不是跳过缺的那项。
+   读数前必须确认文件在盘上（`ls tests | grep …`），否则「0 红」是假的。
