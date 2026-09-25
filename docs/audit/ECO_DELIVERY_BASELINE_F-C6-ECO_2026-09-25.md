@@ -220,7 +220,7 @@ E3（盲区折叠成合格）与 E4（零张单也算已覆盖）的锚点被本
 | 被哈希面 | 612 → **614**（新增 `src/aipd_os/delivery_baseline.py` 与 `tests/test_delivery_baseline.py`），`SOURCE_MANIFEST` 与磁盘逐条一致（0 条不匹配） |
 | `PROVENANCE.test_report` | 2053 passed / 0 failed / 2056 total，`source_commit` = `a66040520139…`（tag） |
 | `production_release_gate --release-ready --tag` | **8/8 绿**，`release_ready: true`，rc=0 |
-| `audit_repo --strict` | rc=1，唯一 ✗ 仍是既有裁决那条「Provenance source commit mismatch: manifest=a66040520139… vs HEAD=…」——锚点按裁决停在 tag，不是本片回归 |
+| `audit_repo --strict` | rc=1，唯一 ✗ 仍是既有裁决那条「Provenance source commit mismatch: manifest=a66040520139… vs HEAD=0f720d482b4c…」——锚点按裁决停在 tag，不是本片回归（`release_ready: true` 与这条红并存，是第 26/27 片就记录在案的两套判据冲突）|
 
 ## 七、这一片没做的事
 
