@@ -1,91 +1,113 @@
 """Task 4 (AIPD-OS v5.3)：命令覆盖一致性测试。
 
-对三类命令集合做三向一致性校验：
+三向：契约/文档声明的命令 ↔ CLI 注册的命令 ↔ 常驻测试真调过的命令。
 
-1. ``declared_commands``  —— 从 ``SKILL.md`` / ``README.md`` 的一键命令清单解析而来；
-2. ``registered_commands`` —— 来自 CLI 的 ``COMMAND_FUNCS`` 分发表；
-3. ``tested_commands``    —— 在 ``tests/`` 中被至少一个测试函数引用/覆盖的命令。
+本文件原先那两条「声明 ⊆ 注册」与「注册 ⊇ 声明」是把 SKILL.md 从
+**含「一键命令」的那一行**往后收集反引号命令名——而 SKILL.md 里那一行是标题
+`## 0. 一键命令`，下一行是空行，收集循环第一下就 break ⇒ **解析结果恒为 0 条**。
+0 ⊆ 任何东西恒真，所以两条断言六轮来一直绿着，报告里同时印出
+「声明命令数：0 / 已注册但未声明：66」这种自相矛盾的读数。
+（同文件后半的 F-CLI-01 早就给解析器面配了注入反证，这两条却没有——
+「探针能不能匹配」这件事在整个文件里只被考虑了一次。）
 
-已知情况：``SKILL.md`` 只声明了 v5.0 的 10 个命令，而实现已注册 27 个命令
-（v5.1 新增 16 个）。因此本测试在「声明侧」保持宽松：
-- 硬性断言「声明 ⊆ 注册」（文档声明的命令必须真实注册）；
-- 注册集合是声明集合的超集（注册命令可以多于文档声明）；
-- 「注册 ⊆ 测试」因 ``run-supervisor`` 等命令暂无测试而不可判定，故只上报不失败，
-  由独立的 ``SKILL.md`` 刷新任务补齐声明。
+现在的口径：
+
+- **声明面只有一个权威**：CLI 契约 ``command_contract``（``PUBLIC`` / ``DEPRECATED``
+  / ``INTERNAL``）。SKILL.md 的解析交给 ``scripts/skill_quality_audit.py`` 里那份
+  **按小节边界取段**的实现（CI 与本文共用一份，不再各写一个解析器），
+  并给它配注入反证：真实清单解析出 56 条、坏句式解析出 0 条都必须能判红。
+- **「注册 ⊆ 真调」不再是只报不判**：读数换成 ``scripts/command_surface_census.py``
+  的 argv 位判据，由 ``tests/test_command_surface_census.py`` 钉成双向棘轮。
+  旧的子串探针两头都错（15 条真调过被记成未测、13 条没走过 CLI 被记成已测），
+  所以"不可判定 ⇒ 不失败"这个结论本身就是坏探针造出来的。
 """
 from __future__ import annotations
 
-import re
+import sys
 from pathlib import Path
 
+from aipd_os.cli.command_contract import (
+    ALL_REGISTERED_COMMANDS,
+    DEPRECATED_COMMANDS,
+    INTERNAL_COMMANDS,
+    PUBLIC_COMMANDS,
+)
 from aipd_os.cli.commands import COMMAND_FUNCS
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
 
-# 命令名：单/双词小写（如 "manual plan"、"cad preflight"、"release check"）
-_CMD_NAME = r"[a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*)?"
-_BACKTICK_RE = re.compile(r"`(" + _CMD_NAME + r")`")
-_PAREN_RE = re.compile(r"（([^（）]+)）")
+import skill_quality_audit as skill_audit  # noqa: E402
 
 
 def _registered_commands() -> set[str]:
     return set(COMMAND_FUNCS.keys())
 
 
+def _contract_commands() -> set[str]:
+    """契约里登记过的命令：public ∪ deprecated ∪ internal（三态并集）。"""
+    return set(PUBLIC_COMMANDS) | set(DEPRECATED_COMMANDS) | set(INTERNAL_COMMANDS)
+
+
 def _declared_commands() -> set[str]:
-    """解析 SKILL.md / README.md 中「一键命令」清单里实际声明的命令。"""
-    declared: set[str] = set()
-
-    # SKILL.md：从含「一键命令」的行开始，向后收集反引号包裹的命令名
-    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8").splitlines()
-    start = next(i for i, ln in enumerate(skill) if "一键命令" in ln)
-    for ln in skill[start:]:
-        if "`" not in ln:
-            break
-        declared.update(_BACKTICK_RE.findall(ln))
-
-    # README.md：处理所有含「一键命令」的行
-    readme = (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
-    for ln in readme:
-        if "一键命令" not in ln:
-            continue
-        # 反引号包裹的命令（v5.1 的 16 个，含双词命令）
-        declared.update(_BACKTICK_RE.findall(ln))
-        # 纯文本列表（v5.0 的 10 个，形如 “init-project / restore-project / ...”）
-        for inner in _PAREN_RE.findall(ln):
-            tokens = [t.strip() for t in inner.split("/")]
-            declared.update(t for t in tokens if re.fullmatch(_CMD_NAME, t))
-    return declared
+    """SKILL.md「## 0.」清单声明的命令——用 CI 那一份解析器，不另写一套。"""
+    return skill_audit.declared_from_skill((ROOT / "SKILL.md").read_text(encoding="utf-8"))
 
 
 def _tested_commands() -> set[str]:
-    """在 tests/ 中被至少一个测试引用/覆盖的已注册命令。"""
-    blob = ""
-    for p in sorted((ROOT / "tests").glob("test_*.py")):
-        if p.name == "test_command_coverage.py":
-            continue  # 排除本文件自身，避免文档字符串自引用造成误判
-        blob += p.read_text(encoding="utf-8") + "\n"
-    return {cmd for cmd in _registered_commands() if cmd in blob}
+    """常驻测试里**走过 CLI 入口**（argv 位/转发器）的已注册命令。"""
+    import command_surface_census as census
+
+    _, shapes, alias_of, handler_of, siblings = census._repo_shapes()
+    scan = census.scan_corpus(ROOT / "tests", _registered_commands(), shapes,
+                              alias_of=alias_of, handler_of=handler_of,
+                              handler_siblings=siblings)
+    return {c for c, t in scan["tiers"].items() if t == census.TIER_CLI}
+
+
+def test_registered_matches_the_contract_exactly() -> None:
+    """注册表与契约必须**恰好**相等（双向）：只有一边动过就红。"""
+    registered, contract = _registered_commands(), _contract_commands()
+    assert registered == contract == set(ALL_REGISTERED_COMMANDS), (
+        f"只在注册表：{sorted(registered - contract)}；"
+        f"只在契约：{sorted(contract - registered)}")
 
 
 def test_declared_commands_are_registered() -> None:
-    """文档声明的每个命令都必须在 CLI 中注册（声明 ⊆ 注册）。"""
-    missing = _declared_commands() - _registered_commands()
+    """文档声明的每个命令都必须在 CLI 中注册（声明 ⊆ 注册），且声明面非空。"""
+    declared = _declared_commands()
+    assert declared, (
+        "SKILL.md 解析出 0 条 ⇒ 「声明 ⊆ 注册」是空转断言，先修解析器再谈一致")
+    missing = declared - _registered_commands()
     assert not missing, f"文档声明但未注册的命令：{sorted(missing)}"
 
 
-def test_registered_is_superset_of_declared() -> None:
-    """注册集合必须是声明集合的超集（注册 ≥ 声明）。"""
-    assert _registered_commands() >= _declared_commands()
+def test_declared_set_equals_public_contract() -> None:
+    """SKILL.md 的声明集合必须与契约的 public 面相等（不多不少、不靠人记）。"""
+    declared, public = _declared_commands(), set(PUBLIC_COMMANDS)
+    assert declared == public, (
+        f"文档多出的命令：{sorted(declared - public)}；"
+        f"文档漏声明的 public 命令：{sorted(public - declared)}")
+
+
+def test_skill_parser_can_fire() -> None:
+    """注入反证：解析器必须既能读出真清单、也能对坏句式读出 0（恒 0 要判红）。"""
+    good = "## 0. 一键命令\n\n- 组：`alpha` / `beta two`\n\n## 1. 别的\n- `gamma`\n"
+    assert skill_audit.declared_from_skill(good) == {"alpha", "beta two"}
+    # 小节外的反引号词不算声明（SECURITY.md 这类文件名就在正文里出现）
+    assert "gamma" not in skill_audit.declared_from_skill(good)
+    # 旧解析器正是栽在这个形状上：标题行下一行是空行
+    assert skill_audit.declared_from_skill("## 0. 一键命令\n\n- 组：`alpha`\n") == {"alpha"}
+    assert skill_audit.declared_from_skill("# 没有零号小节\n`alpha`\n") == set()
 
 
 def test_tested_commands_are_registered() -> None:
-    """测试中引用/覆盖的命令必须都是真实注册的命令（测试 ⊆ 注册）。"""
+    """真调过的命令必须都是真实注册的命令（测试 ⊆ 注册）。"""
     assert _tested_commands() <= _registered_commands()
 
 
 def test_command_coverage_report() -> None:
-    """三向一致性总览（信息性报告；注册但未测试/未声明的缺口不失败）。"""
+    """三向一致性总览。缺口判定在 `test_command_surface_census.py` 的棘轮里。"""
     declared = _declared_commands()
     registered = _registered_commands()
     tested = _tested_commands()
@@ -94,12 +116,14 @@ def test_command_coverage_report() -> None:
     declared_untested = sorted(declared - tested)
     registered_undeclared = sorted(registered - declared)
 
-    print(f"声明命令数：{len(declared)}")
+    print(f"契约 public 声明命令数：{len(declared)}")
     print(f"注册命令数：{len(registered)}")
-    print(f"测试覆盖命令数：{len(tested)}")
-    print(f"已声明但未测试（{len(declared_untested)}）：{declared_untested}")
-    print(f"已注册但未测试（{len(registered_untested)}）：{registered_untested}")
+    print(f"走过 CLI 入口的命令数：{len(tested)}")
+    print(f"已声明但未真调（{len(declared_untested)}）：{declared_untested}")
+    print(f"已注册但未真调（{len(registered_untested)}）：{registered_untested}")
     print(f"已注册但未声明（{len(registered_undeclared)}）：{registered_undeclared}")
+    assert registered_untested, (
+        "探针认为每条注册命令都真调过 ⇒ 要么登记基线被抹平，要么 argv 位判据失效")
 
 
 # --------------------------------------------------------------------------

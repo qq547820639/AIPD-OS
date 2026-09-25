@@ -7,9 +7,10 @@
 1. 命令一致性：SKILL.md「## 0.」命令清单中声明的每个 public 命令都必须在
    ``aipd_os.cli.commands.COMMAND_FUNCS`` 中注册（声明 ⊆ 注册），
    并且声明集合必须恰好等于 ``command_contract.PUBLIC_COMMANDS``。
-2. 注册-测试覆盖：每个已注册 public 命令要么被声明，要么被 tests/ 中的测试文件
-   引用/覆盖（注册 public ⊆ 声明 ∪ 测试）。对"注册但未声明且未测试"的遗留命令
-   只上报为警告，不作为失败。
+2. 注册-测试覆盖：每个已注册 public 命令要么被声明，要么被**走过 CLI 入口**
+   （注册 public ⊆ 声明 ∪ cli 档真调）。对"注册但未声明且未真调"的遗留命令
+   只上报为警告，不作为失败。真调读数来自 `command_surface_census`，
+   本脚本不再自备一份"文件名里出现过就算测过"的探针。
 3. 渐进式披露：SKILL.md 含「## 0.」命令清单；``references/`` 目录存在且非空；
    SKILL.md 正文长度合理（专业细节应集中放在 references/）。
 
@@ -29,7 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # 确保仓库根目录与 src/ 布局在 sys.path 上，以便 import aipd_os（脚本从 scripts/ 运行时）
-for _p in (ROOT, ROOT / "src"):
+for _p in (ROOT, ROOT / "src", ROOT / "scripts"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
@@ -55,13 +56,18 @@ def _registered_commands() -> set[str]:
 
 
 def _tested_commands(registered: set[str]) -> set[str]:
-    """返回在 tests/ 中被至少一个测试文件引用/覆盖的已注册命令。"""
-    blob = ""
-    for p in sorted((ROOT / "tests").glob("test_*.py")):
-        if p.name == "test_command_coverage.py":
-            continue  # 排除覆盖自检自身，避免文档字符串自引用造成误判
-        blob += p.read_text(encoding="utf-8") + "\n"
-    return {cmd for cmd in registered if cmd in blob}
+    """返回在 tests/ 里被**走过 CLI 入口**（argv 位/转发器）的已注册命令。
+
+    判据不在本脚本里重抄一遍：`scripts/command_surface_census.py` 是唯一实现，
+    两处各写一份"同名子串即算测过"的探针时，读数会各自漂。
+    """
+    import command_surface_census as census
+
+    _, shapes, alias_of, handler_of, siblings = census._repo_shapes()
+    scan = census.scan_corpus(ROOT / "tests", registered, shapes,
+                              alias_of=alias_of, handler_of=handler_of,
+                              handler_siblings=siblings)
+    return {c for c, t in scan["tiers"].items() if t == census.TIER_CLI}
 
 
 def _extract_from_section(section: str) -> set[str]:
@@ -75,19 +81,24 @@ def _extract_from_section(section: str) -> set[str]:
     return cmds
 
 
-def _declared_commands() -> set[str]:
-    """从 SKILL.md「## 0.」清单提取声明命令；为空则回退 README.md。"""
-    text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+def declared_from_skill(text: str) -> set[str]:
+    """从 SKILL.md 正文提取「## 0.」命令清单里声明的命令（纯函数，便于注入反证）。"""
     lines = text.splitlines()
     for i, ln in enumerate(lines):
         if ln.lstrip().startswith("## 0."):
             section = lines[i + 1:]
             stop = next((j for j, s in enumerate(section) if s.startswith("## ")),
                         len(section))
-            declared = _extract_from_section("\n".join(section[:stop]))
-            if declared:
-                return declared
-            break
+            return _extract_from_section("\n".join(section[:stop]))
+    return set()
+
+
+def _declared_commands() -> set[str]:
+    """从 SKILL.md「## 0.」清单提取声明命令；为空则回退 README.md。"""
+    text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    declared = declared_from_skill(text)
+    if declared:
+        return declared
 
     # 回退：README.md 中所有含「一键命令」的行
     declared = set()
@@ -157,7 +168,7 @@ def main() -> int:
     if uncovered_public:
         # public 命令无测试 → FAIL（关键命令必须有测试）
         failures.append(
-            f"以下 public 命令既未在 SKILL.md 声明、也无测试文件引用："
+            f"以下 public 命令既未在 SKILL.md 声明、也没有走过 CLI 入口："
             f"{sorted(uncovered_public)}")
         print(f"  ✗ {failures[-1]}")
     else:

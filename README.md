@@ -528,6 +528,17 @@ AIPD 的**一键命令**（`aipd <cmd>`；权威清单是 `src/aipd_os/cli/comma
 - 审计与发布：`audit` / `interfaces` / `release check` / `test` / `eval` / `package`
 - 运维体检：`doctor` / `version --verbose`
 
+> **这份清单被谁核**：声明面（写没写进 `SKILL.md`）由 `scripts/skill_quality_audit.py`
+> 与 `tests/test_skill_command_surface.py` 按契约逐名与总数核对；**真调面**（常驻测试里
+> 有没有走过这条命令的 CLI 入口）由 `scripts/command_surface_census.py` 用 AST 读调用形态
+> 分五档记账（`cli` / `alias` / `handler` / `handler_ambiguous` / `none`），
+> 再由 `tests/test_command_surface_census.py` 钉成双向棘轮。今天的读数：66 条注册命令里
+> 49 条走过 argv 位，17 条没有——其中 10 条一次都没真调过
+> （`cad preflight` `dashboard` `onboard` `operate` `product show` `product gate`
+> `recover` `reset` `ui` `version`）。旧的那把尺子把「测试文件里出现过这个名字」当成
+> 「命令被测过」，于是同时给出 15 条假未测与 13 条假已测；`main(["drawing", "dfm", ...])`
+> 这种两个相邻字符串的写法它读不见，而 `from ezdxf import recover` 它算成测过 `recover`。
+
 ---
 
 *AIPD-OS v5.6.0 —— 让你的每个产品想法，都有条不紊地走向现实。*

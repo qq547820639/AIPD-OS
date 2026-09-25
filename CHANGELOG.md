@@ -951,6 +951,47 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-CLI-COV 第 39 片：命令覆盖率那把尺子两头都在错（19 条假未测 + 13 条假已测）**：
+  轴换到「常驻测试到底有没有走过这条命令的 CLI 入口」。`tests/test_command_coverage.py`
+  把 `tests/` 拼成一个大字符串再用 `cmd in blob` 判「被测」，同一个命令名在测试里有
+  毫不相干的出现方式，于是读数两头错：`main(["drawing", "dfm", ...])` 是两个相邻字符串
+  常量，子串 `"drawing dfm"` 匹配不上（假未测 **15** 条，含 `bom release`/`issue list`/
+  `readiness check`/`validation plan` 等）；`eco` 四条走 `main(["eco", *argv, ...])`
+  这种转发器，更是完全看不见。反过来 `from ezdxf import recover` 顶了 `recover`、
+  dict 键 `"version"` 顶了 `version`、`cmd_doctor` 这个 import 顶了 `doctor`、
+  `test_new_commands_registered` 里那张名字清单顶了 `cad preflight`/`test`/`package`
+  （假已测 **13** 条）。旧读数 66 注册 / 47 已测 / 19 未测，真读数是 **49 条走过 argv 位**、
+  4 条只被 deprecated 别名走过、1 条只被直接调处理函数走过、2 条处理函数被两条命令共用
+  分不清 verb、**10 条一次都没走过**——两个方向的错互相抵掉，总数看着还挺合理。
+
+  同一个文件里的声明面更静：`_declared_commands()` 从**含「一键命令」的那一行**往后收集，
+  而 SKILL.md 里那一行是标题 `## 0. 一键命令`、下一行是空行 ⇒ 循环第一次就 break，
+  **解析结果恒为 0**；`0 ⊆ 注册` 恒真，于是「声明 ⊆ 注册」与「注册 ⊇ 声明」两条断言
+  一直绿着，报告却同时印出「声明 0 / 已注册但未声明 66」。CI 侧那份
+  `scripts/skill_quality_audit.py` 早就是按小节边界取段、能真读出 56 条——
+  一份坏副本与一份好副本并存，而读者信的是常驻用例那份。
+
+  修法是把判据收成一处 + 让它自己可证伪：新增 `scripts/command_surface_census.py`
+  （AST 读调用形态，五档 `cli`/`alias`/`handler`/`handler_ambiguous`/`none`，
+  别名↔真名由契约的 `replacement` 现派生不手抄，量具自身文件一律排除，
+  空语料与解析失败判「读数不可信」而非绿），`--self-test` **10 条合成语料注入**
+  正反两向全立住；`skill_quality_audit.py` 的真调探针与 SKILL.md 解析改为共用这一份
+  （并抽出纯函数 `declared_from_skill` 才谈得上注入反证）。常驻侧新增
+  `tests/test_command_surface_census.py`（9 条）把「低于 cli 档」钉成**双向棘轮**：
+  新注册命令没有 argv 位用例 ⇒ 红，登记里的命令补上了真调用 ⇒ 也红（记录只减不增），
+  档位自己漂移同样红，外加 Σ 档位 == 分母 66、写盘 JSON 与内存读数同源、
+  证据里不许出现量具自身。`test_command_coverage.py` 删掉那份恒 0 的解析器，
+  声明面改按契约双向核（`registered == PUBLIC ∪ DEPRECATED ∪ INTERNAL`）、
+  并补上「解析器能红」的注入反证——原来 6 条现 8 条。
+  读数：全量 **2252 → 2263**（+11）；电池 `/tmp/s39/battery.py`
+  **7 条：杀 7 / 存活 0 / 注入无效 0 / 崩溃式红 0**（第一条注入把「丢掉 argv 位置要求」
+  写成了「取第一个字符串元素」，与未注入形态等价 ⇒ 是注入无效不是判据弱，改成逐元素记账后
+  才真开火），逐条点名见 `docs/audit/COMMAND_SURFACE_CENSUS_F-CLI-COV_2026-09-26.md`。
+  下一步（未做，本轮只修量具）：登记在册的 10 条 `none` 与 4 条 `alias`-only 命令
+  要补真 argv 位用例，按棘轮规则只能"补了才删格"。
+  调研豁免：本片不改技术选型——AST 判据用标准库 `ast`，与同仓
+  `ts_interface_shape.py`(tree-sitter) 属不同语言面，无新依赖引入。
+
 - **v5.12 F-C6 第 38 片：服务写面与库层的形参对账（CTQ 的公差与条件从前录不进去）**：
   普查量具换成一根新的轴——`inspect.signature` 逐对比较 `AIPDStateDB` 与 `StateService`
   **两层同名**的 `add_*`（不截断，实测共享写入口共 4 个）。三处真缺口：
