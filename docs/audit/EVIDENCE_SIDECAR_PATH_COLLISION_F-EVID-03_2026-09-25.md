@@ -78,5 +78,26 @@
 
 ## 六、收尾读数（落盘后由量具复算，不是计划）
 
+提交：`754a6d4`（代码 + 文档）→ `f69cf67`（发布工件重锚）。
+
 | 量具 | 读数 |
 |---|---|
+| 全量 pytest（`docs/audit/pytest-report-v5.6.0.json`） | **1899 passed / 0 failed / 3 skipped**（共 1902；上一片收尾 1890/0/3=1893，本片 +9 条用例） |
+| `PROVENANCE.json` | `test_report.{passed:1899, failed:0, total:1902, source_commit:a66040520139…}` |
+| `SOURCE_MANIFEST.json` | 被哈希面 **604 → 605**（与上一轮逐项求差，新增就是 `tests/test_evidence_sidecar_paths.py`；**没有一个 `.evidence.json` 在哈希面内**，这是选根治方案的依据） |
+| `production_release_gate --release-ready --tag v5.6.0` | rc=0，`release_ready: true`，8 项检查、未通过列表为空 |
+| `ruff check src tests state_service` / `mypy` | 均 rc=0（406 files no issues） |
+| `scripts/c6_coverage.py --self-test` | 7/7；档位仍 **13 / 1 / 1** |
+| 变异电池 `/tmp/slice23-mutations.py` | 8 条：杀掉 8 / 存活 0 / 注入无效 0 |
+| `audit_repo.py --strict` | rc=1，唯一 ✗ 是 Provenance 锚点与 HEAD 之差——真发版前按设计为红 |
+
+一处流程读数：重锚要跑**两遍**报告才对。第一遍在 `regenerate_release_manifest` 之后、
+`release_evidence` 之前跑，读到 1 条红（`SOURCE_MANIFEST` 还没刷新）；
+把两份清单都落定后再跑才是 0 失败。顺序记在这里，免得下轮把「1 failed」当成回归。
+
+## 七、还欠的
+
+- 老产物的兼容分支：**刻意没做**（哈希面内一个侧车文件都没有，没有需要迁就的存量）。
+  要是哪天发现别人手里有旧式侧车，那是一次有意的破坏性变更，得单独立项说明。
+- `docs/`、`releases/golden-projects/` 里若有按旧名留下的证据文件，本轮不在哈希面也不在用例面内；
+  属主重新生成时会自然拿到新名。
