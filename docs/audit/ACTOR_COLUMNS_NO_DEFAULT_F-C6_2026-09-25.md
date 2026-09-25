@@ -33,9 +33,12 @@ migration **v22 `actor_columns_no_default`**：拷贝重建这三张表。
   这三列的语义是「必须有归属，只是不许编一个」。摘掉 NOT NULL 会把
   fail-closed 一起丢掉，所以漏传必须撞 `IntegrityError`（有常驻用例钉这条报错）。
 - 决定 B：**DDL 模板照 `sqlite_master` 的 HEAD 实形抄，不照当初声明它的那句迁移文本抄**。
-  实测到一处既存漂移：`claim_evidence_relations.strength` 在 v6 的重建里掉了
-  `NOT NULL DEFAULT 0.5`（HEAD 实形是裸 `strength REAL`）。照声明抄等于顺手把这条
-  漂移往另一个方向改，那是另一件事，该单独测、单独登记。
+  实例：`claim_evidence_relations.strength` 在 v4 的声明里是
+  `strength REAL NOT NULL DEFAULT 0.5`，HEAD 实形是裸 `strength REAL`——
+  这是 **v9 `nullable_scores_and_legacy_sequences`（`_make_relation_strength_nullable`）有意改的**
+  （模型侧 `evidence_relations.py:59` 写明「只有显式评分才填，None=未评分」，
+  旧的 0.5 读作 legacy 哨兵），参考 SCHEMA `state/db.py:294` 也已经跟着写成 `strength REAL`。
+  照 v4 的声明抄进 v22 等于把这条**有意的**形状改动倒回去。
 - up/down 只差 `{actor_ddl}` 这一格，列清单两边共用一份常量 `_V22_ACTOR_TABLES`；
   两个方向都不改写历史值。
 - 三张表实测**都没有具名索引**（只有 PK/UNIQUE 的隐式索引，随建表语句一起带走）
@@ -43,7 +46,7 @@ migration **v22 `actor_columns_no_default`**：拷贝重建这三张表。
 - 同步改代码侧两处编造点：数据类字段 → `created_by: str | None = None`，
   `from_dict` → `data.get("created_by")`，出参保持原样 ⇒ 没归属就发 `None`。
 
-## 三、动手与测试中被推翻/自抓的三条
+## 三、动手与测试中被推翻/自抓的四条
 
 1. **夹具自己先红了一次**：`claim_evidence_relations` 的 UNIQUE 不含 `relation_id`，
    造多行时只换主键当场撞 `UNIQUE constraint failed` ⇒ 加了 `_UNIQUE_BEARERS`
@@ -61,6 +64,20 @@ migration **v22 `actor_columns_no_default`**：拷贝重建这三张表。
 调研豁免声明：本片沿用同族前三片（v20/v21）已确立的重建配方，无新技术选型空间，
 按「影响范围明确的局部改动」豁免外部检索。
 
+4. **我自己的量具造了一条假缺陷，并被写进了两处登记**：为了找「剩下的同族位点」，
+   写了 `/tmp/s36/census.py` 把 HEAD 实形与**建表那句声明**逐列对账，
+   报出 `claim_evidence_relations.strength`「在重建里掉了 `NOT NULL DEFAULT 0.5`」。
+   顺着这句话我把它写进了 §二 与 CHANGELOG。实际复核（`definitions.py:190`）：
+   那一列是 **v9 `nullable_scores_and_legacy_sequences` 有意**改成可空 REAL 的，
+   模型侧写明「None=未评分」（`idea/evidence_relations.py:59`）、
+   参考 SCHEMA 早已跟着改成 `strength REAL`（`state/db.py:294`）
+   ⇒ 不是漂移，是**后一格的有意改动被前一格的声明文本掩盖**。
+   量具的轴选错了（拿首次声明当真值，而链上后面的迁移有权改形状），
+   结论就从「发现缺陷」变成「制造缺陷」。换成对**单格迁移**做隔离重放
+   （`/tmp/s36/isolate.py`：只跑这一格的 up，比较全表形状与行数）后实测：
+   v20/v21/v22 各自只动了宣称要改的那几列，行数不变。
+   教训：**「声明 ≠ 实形」只构成待查线索；写成缺陷之前必须先问「哪一格迁移有权这么改」。**
+
 ## 四、端到端实测
 
 - 建库后三根列：`notnull=1`、`dflt=None`；`risks.owner`/`gates.approved_by` 仍是可空无默认（前两片的形状没被动）。
@@ -73,9 +90,12 @@ migration **v22 `actor_columns_no_default`**：拷贝重建这三张表。
 
 ## 五、这一片没做的事
 
-1. **`strength` 那条既存漂移没修**（v6 重建掉了 `NOT NULL DEFAULT 0.5`）：
-   它是「声明文本与实形不一致」的另一族问题，需要单独测「谁在依赖那个默认值」再动，
-   已记入 §二 决定 B。
+1. ~~**`strength` 那条既存漂移没修**~~ —— **已作废**：`strength REAL` 是 v9
+   `nullable_scores_and_legacy_sequences` 有意的形状改动，不是漂移，没东西要修。
+   见 §三 第 4 条：这一条是我自己的量具造出来的假缺陷。
+   真正留下来的问题是**另一个轴**：「某格的 up 除了它宣称要改的那一列，还顺手动了没有」
+   ——本片的隔离重放（`/tmp/s36/isolate.py`）实测 v20/v21/v22 三格各自只改了
+   宣称的那一两列、行数不变，但这条判据今天没有常驻尺子盯着，下一片可以接。
 2. **没把 `created_by`/`actor` 接进任何门禁或读侧视图**：今天没有读者拿它判定，
    接进门禁等于凭空造一条判据（与第 32 片「只报不判」同一立场）。
 3. **`scripts/aipd_store.py` 那份废弃旧库 DDL 未动**（同前两片）。

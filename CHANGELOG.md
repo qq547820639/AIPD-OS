@@ -971,10 +971,15 @@
   （`idea/evidence_relations.py`、`product_intelligence/snapshot.py`）。
   三张表实测都没有具名索引（只有 PK/UNIQUE 的隐式索引，随建表语句一起带走），
   重建不降级任何热查询。
-  一处顺手钉住的漂移：`claim_evidence_relations.strength` 在 v6 的重建里掉了
-  `NOT NULL DEFAULT 0.5`（HEAD 实形是裸 `strength REAL`），
-  所以 v22 的 DDL 模板照 **sqlite_master 的实形**抄，不照当初声明它的那句迁移文本抄——
-  照声明抄等于把这条漂移往另一个方向改。
+  一处顺手钉住的方法：v22 的 DDL 模板照 **sqlite_master 的 HEAD 实形**抄，
+  不照当初声明它的那句迁移文本抄——`claim_evidence_relations.strength` 从
+  `REAL NOT NULL DEFAULT 0.5` 变成裸 `strength REAL` 是 **v9
+  `nullable_scores_and_legacy_sequences` 有意的改动**（模型侧「None=未评分」，
+  参考 SCHEMA `state/db.py:294` 早已跟着改），照 v4 的声明抄等于把一条有意的
+  形状改动倒回去。第一版登记里这句话被写成「v6 的重建掉了默认值的既存漂移」，
+  那是我自己的对账量具拿「首次声明」当真值造出来的**假缺陷**，已复核更正并记入
+  审计文档 §三.4；换成对单格迁移做隔离重放之后实测：
+  v20/v21/v22 各自只动了宣称要改的那几列，行数不变。
 
   常驻用例 **22 条**（`tests/test_actor_columns_no_default.py`）：形状两半分开钉
   （默认值没了 *并且* NOT NULL 还在）、三张表逐张参数化、
