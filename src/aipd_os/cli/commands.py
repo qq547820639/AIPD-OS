@@ -52,6 +52,7 @@ from .commands_doctor import cmd_doctor
 from .commands_drawing import (
     cmd_drawing,
     cmd_drawing_assembly,
+    cmd_drawing_assembly_step,
     cmd_drawing_assembly_steps,
     cmd_drawing_dfm,
     cmd_drawing_spec,
@@ -516,6 +517,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "drawing generate": cmd_drawing,
     "drawing spec": cmd_drawing_spec,
     "drawing assembly": cmd_drawing_assembly,
+    "drawing assembly-step": cmd_drawing_assembly_step,
     "drawing assembly-steps": cmd_drawing_assembly_steps,
     "drawing dfm": cmd_drawing_dfm,
     "truth propagate": cmd_truth_propagate,

@@ -43,9 +43,13 @@ MAPPING: dict[str, dict[str, Any]] = {
     "总装/单件STEP": {
         "verdict": "producer", "capabilities": ["cad.local_native_brep", "cad.2d_drawings"],
         "producers": ["src/aipd_os/cad/backends.py", "src/aipd_os/cad/assembly.py"],
-        "tests": ["tests/test_cad_golden_loop.py", "tests/test_cad_assembly_balloons.py"],
-        "note": "单件 STEP 有导出点（backends.py exportType='STEP'）；**装配级 STEP 未导出**——"
-                "assembly.py 只按 manifest 逐件 importStep 再投影，不产总装 STEP 文件。"},
+        "tests": ["tests/test_cad_golden_loop.py", "tests/test_cad_assembly_balloons.py",
+                  "tests/test_cad_assembly_step_export.py"],
+        "note": "单件 STEP 有导出点（backends.py exportType='STEP'）；总装那一半由 "
+                "assembly.export_assembly_step 产出（摆放只用 manifest 声明的 offset，"
+                "写完逐件回读中心与体积，对不上就删文件并报错）。剩下的边界："
+                "**非 ASCII 零件名被 OCCT 写成 mojibake**（件号↔几何只由 sidecar 承载）、"
+                "子装配层级与约束不建模。"},
     "总装图": {
         "verdict": "producer", "capabilities": ["cad.2d_drawings"],
         "producers": ["src/aipd_os/cad/assembly.py", "src/aipd_os/cad/drawings2d.py"],

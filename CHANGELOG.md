@@ -806,6 +806,38 @@
   证据见 `docs/audit/DFM_DFA_PRODUCER_F-DFM-01_2026-09-25.md`（§二 六维对比与阈值来处、
   §五 变异表、§六 端到端读数）。
 
+- **v5.10 F-DRAW-01 第 20 片：装配级 STEP 的导出（闭掉普查映射里明写的「装配级 STEP 未导出」）**：
+  C6 的「总装/单件STEP」此前只有单件那一半（`backends.py exportType='STEP'`），
+  装配那一半的 note 直接写着「assembly.py 只按 manifest 逐件 importStep 再投影，不产总装 STEP 文件」。
+  现在 `export_assembly_step` 按清单逐件导入、用**声明的 offset** 摆放（与出图、爆炸视图同一个位置事实，
+  不引入第二套），经 `cadquery.occ_impl.exporters.assembly.exportAssembly` 写出带产品层级的 STEP。
+  **关键不是能写出来，是写完不许直接算完**：立刻重新导入，逐件把「源 STEP 自己量出的中心 + 偏移」与体积
+  对回去（中心管位置、体积管大小，两个都对才算同一件——只比中心会把同位不同形的两件认成一件，
+  只比体积会把摆错的放过去），**对不上就删掉刚写的文件并抛错**。
+  多实体零件按件聚合体积与加权中心，不按「一零件=一实体」猜；两件同位照样合法但报 `coincident_placements`。
+  **两条实测出来的边界**照实写进证据与能力行，不粉饰：① OCCT 把非 ASCII 零件名按单字节写进
+  `PRODUCT('æ¯æ',…)` 成 mojibake ⇒ 件号↔几何的对应只由 `.evidence.json` 承载，
+  `step_product_names_readable` 恒 False 并带原因（这是本机读出来的，不是推断）；
+  ② XCAF 侧只稳定读到根产品名（`IsAssembly=True`、根名 `ASSY-1`），子件标签名在这版 OCP 上
+  方法名对不上（`GetLabelName` 不存在、`GetComponents` 只回一个标签），我另写的一版 TDF 递归
+  直接把解释器 segfault 掉 ⇒ **判据改用回读几何的多重集比对**，不假装会读 XCAF 子标签。
+  选型检索（本机真实读取）：`cq.Assembly.save` 在本版本已标 deprecated（FutureWarning），
+  故直接调 `exportAssembly`；`Assembly.add()` 无 `label` 参数、只有 `name`（实测 TypeError），
+  非 ASCII 名正是走 `TDataStd_Name` 落盘的；`Workplane.center()` 只收 (x, y) 两个参数
+  （第 12 片量过的那颗坑，夹具里再踩一次，改用 `translate()`）。
+  守卫：`tests/test_cad_assembly_step_export.py` 18 条 + 变异电池 **16/16 killed**；
+  电池又量到三件事——E3 的「偏 0.5mm」用例正好压在放宽后的容差边界上（相等判不过、也不报错），
+  改成偏 0.2mm 才真正区分开 1e-6 与 0.5 两档；E2 的锚点第一次凭记忆写、命中 0 次，
+  按「命中必须恰好 1 次」判为注入无效而不是通过；E16 最早那条「把聚合出来的最大体积偏差硬编码成 0」
+  **活了下来**——成功路径上偏差本来就是 0，硬编码 0 与量出来 0 在证据里长得一样，
+  于是把那个聚合值和 `volume_match` 布尔**一起从证据里删掉**（只留每件「源体积 / 回读体积」两个数，
+  读者自己减），换上「校验拿期望值当实测值」这条真会开火的循环自证注入。
+  写后校验这道新判据是**先补三条故障注入用例
+  （少一个实体 / 体积被换 / 位置偏 0.2mm）再跑电池**的，吸取第 19 片 D9 的教训。
+  能力行 `cad.local_native_brep` 的机器列与散文同批改（新增 assembly.py 与新用例、limitation 写明
+  mojibake 与不做约束/子层级），普查映射该项 note 同步、档位仍 13/1/1。
+  证据见 `docs/audit/CAD_ASSEMBLY_STEP_EXPORT_F-DRAW-01_2026-09-25.md`。
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

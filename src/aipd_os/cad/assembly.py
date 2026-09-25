@@ -590,3 +590,159 @@ def generate_assembly_drawing(out_path: Path | str, *, manifest: str, part_name:
     evidence["assembly_issues"] = sorted(set(evidence["assembly_issues"])
                                          | set(binding_issues))
     return _finish_evidence(path, evidence, part_name, revision, provenance)
+
+
+
+_MATCH_TOL_MM = 1e-6
+_MATCH_TOL_VOL = 1e-6
+
+
+def _solid_readings(obj: Any) -> list[dict[str, Any]]:
+    """按实体量出「体积 + 包围盒中心」；读不出实体就是空表。"""
+    out: list[dict[str, Any]] = []
+    for solid in obj.solids().vals():
+        box = solid.BoundingBox()
+        out.append({"volume_mm3": float(solid.Volume()),
+                    "center": [box.xmin + box.xlen / 2.0,
+                               box.ymin + box.ylen / 2.0,
+                               box.zmin + box.zlen / 2.0]})
+    return out
+
+
+def read_back_solids(path: str | Path) -> list[dict[str, Any]]:
+    """重新导入写出去的 STEP，量回每个实体的体积与中心（写后校验的唯一手段）。"""
+    import cadquery as cq
+
+    return _solid_readings(cq.importers.importStep(str(path)))
+
+
+def _placement_trsf(offset: Sequence[float]) -> Any:
+    from OCP.gp import gp_Trsf, gp_Vec
+
+    trsf = gp_Trsf()
+    trsf.SetTranslation(gp_Vec(offset[0], offset[1], offset[2]))
+    return trsf
+
+
+def _weighted_center(readings: Sequence[dict[str, Any]]) -> list[float] | None:
+    """体积加权的中心；一个都没量到就返回 ``None``，不返回 [0,0,0]。"""
+    total = sum(float(r["volume_mm3"]) for r in readings)
+    if not readings or total <= 0.0:
+        return None
+    return [round(sum(r["volume_mm3"] * r["center"][axis] for r in readings) / total, 6)
+            for axis in range(3)]
+
+
+def export_assembly_step(out_path: Path | str, *, manifest: str, part_name: str,
+                         revision: str = "A",
+                         provenance: dict[str, Any] | None = None) -> dict[str, Any]:
+    """按装配清单产出**装配级 STEP**（带产品层级与每件摆放），写完立刻回读校验。
+
+    C6 要「总装/单件 STEP」两样。单件那一半一直有（每个零件自己的 .step），
+    总装这一半此前没人产（普查映射里就是照这句话说它是 producer 但带缺口的）。
+    摆放只用 manifest 声明的 ``offset``——与出图、爆炸视图同一个位置事实。
+
+    **写完不算完**：回读的每个实体要逐条对上「源 STEP 自己量出的中心 + 声明偏移」
+    与体积（中心管位置、体积管大小，两个都对才算同一件：只比中心会把同位不同形的两件
+    认成一件，只比体积会把摆错的放过去）。对不上就删掉刚写的文件并抛错——
+    一份声称装了 N 件、实际少一件的 STEP 比不出货危险，下游（CAM/PLM/报价）读到什么就是什么。
+    """
+    import cadquery as cq
+    from cadquery.occ_impl.exporters.assembly import exportAssembly
+
+    from aipd_os.cad.evidence import sha256_file, utc_now_iso, write_evidence_sidecar
+
+    path = Path(out_path)
+    man = Path(manifest)
+    parts = parse_assembly_manifest(man)
+
+    assembly = cq.Assembly(name=part_name)
+    sources: list[dict[str, Any]] = []
+    expected: list[list[dict[str, Any]]] = []
+    for part in parts:
+        step = Path(part["step"])
+        try:
+            imported = cq.importers.importStep(str(step))
+            readings = _solid_readings(imported)
+        except Exception as exc:
+            raise ValueError(f"零件 {part['name']} 的 STEP 读不出来："
+                             f"{type(exc).__name__}: {exc}") from exc
+        if not readings:
+            raise ValueError(f"零件 {part['name']} 的 {step.name} 里读不出任何实体："
+                             "不产一个把空件装进去的总装 STEP")
+        offset = [float(v) for v in part["offset"]]
+        expected.append([{"volume_mm3": r["volume_mm3"],
+                          "center": [r["center"][i] + offset[i] for i in range(3)]}
+                         for r in readings])
+        sources.append({"name": part["name"], "balloon": int(part["balloon"]),
+                        "placement": offset,
+                        "source_step_sha256": sha256_file(step),
+                        "source_solid_count": len(readings),
+                        "volume_mm3": round(sum(r["volume_mm3"] for r in readings), 6)})
+        assembly.add(imported, name=part["name"], loc=cq.Location(_placement_trsf(offset)))
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not exportAssembly(assembly, str(path), "default"):
+        path.unlink(missing_ok=True)
+        raise ValueError("总装 STEP 写出失败（exportAssembly 返回假）：不留半成品")
+
+    actual = read_back_solids(path)
+    pool = list(actual)
+    matched: list[dict[str, Any]] = []
+    problems: list[str] = []
+    for row, wants in zip(sources, expected):
+        got: list[dict[str, Any]] = []
+        for want in wants:
+            slot = next((i for i, cand in enumerate(pool)
+                         if math.dist(cand["center"], want["center"]) < _MATCH_TOL_MM
+                         and abs(cand["volume_mm3"] - want["volume_mm3"]) < _MATCH_TOL_VOL),
+                        None)
+            if slot is None:
+                problems.append(f"零件 {row['name']}（球标 {row['balloon']}）的一个实体"
+                                f"回读里没有：期望中心 ({want['center'][0]:g}, "
+                                f"{want['center'][1]:g}, {want['center'][2]:g})、"
+                                f"体积 {want['volume_mm3']:g}mm³")
+            else:
+                got.append(pool.pop(slot))
+        matched.append({"expected_center": _weighted_center(wants),
+                        "actual_center": _weighted_center(got),
+                        "read_back_solid_count": len(got),
+                        "read_back_volume_mm3": round(sum(
+                            float(g["volume_mm3"]) for g in got), 6)})
+    if pool:
+        problems.append(f"回读多出 {len(pool)} 个实体：总装里出现了清单没声明的零件")
+
+    if problems:
+        path.unlink(missing_ok=True)
+        raise ValueError("总装 STEP 写完回读对不上，已删除该文件：" + "；".join(problems))
+
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    readable = all(str(row["name"]) in text for row in sources)
+    evidence: dict[str, Any] = {
+        "document": "assembly_step",
+        "part": part_name, "revision": revision,
+        "manifest": str(man), "manifest_sha256": sha256_file(man),
+        "document_sha256": sha256_file(path), "generated_at": utc_now_iso(),
+        "declared_part_count": len(parts), "solid_count": len(actual),
+        "verification": "read_back_matched_multiset",
+        "coincident_placements": [
+            f"零件 {one['name']} 与 {other['name']} 声明在同一个位置 {one['placement']}"
+            "（同位两件是合法的叠料，但读模型的人会以为只有一件）"
+            for i, one in enumerate(sources) for other in sources[i + 1:]
+            if one["placement"] == other["placement"]],
+        "step_product_names_readable": readable,
+        "step_product_names_reason": (
+            "零件名以 ASCII 声明，STEP 文本里可原样读到" if readable else
+            "本机实测：OCCT 把非 ASCII 零件名按单字节写进 PRODUCT(\"\u00e6\u00af\u00e6\",\u2026) "
+            "这类 mojibake，回读文本里看不到原名；"
+            "所以件号↔几何的对应只由本侧车承载，不宣称 STEP 里的名字可读"),
+        "parts": [{**row, **check,
+                   "placement": [round(v, 6) for v in row["placement"]]}
+                  for row, check in zip(sources, matched)],
+        "not_covered": ["总装 STEP 里的装配约束/配合（本仓不建约束对象）",
+                        "零件名在 STEP 内的可读性（非 ASCII 被写坏，见 reason）",
+                        "颜色/材质属性（manifest 里没有材料字段，材料在 BOM 行上）",
+                        "子装配层级（manifest 是平表，没有父子件，产出一层装配）"]}
+    evidence.update(provenance or {})
+    write_evidence_sidecar(path, evidence)
+    return evidence

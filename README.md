@@ -274,6 +274,16 @@ aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part AS
 #     数量/单位/材料/工艺仍只来自绑上的 BOM 行（与装配图同一个 bind_bom、同一条「两格不许互相顶」）；
 #     没接 --db/--bom 时零件清单只有 ITEM/PART 两列，一个猜测值都不印。
 #     证据侧车 not_covered 逐条写明不含维护指引/工时/扭矩/PDF 版式，读者不会把骨架当全文。
+aipd drawing assembly-step --manifest assembly.json --out assy.step --part ASSY-1
+#   ↑ 总装 STEP（C6「总装/单件STEP」里的总装那一半；单件一直是零件自己的 .step）：
+#     按 manifest 逐件导入再摆放，**摆放只用清单里声明的 offset**——与出图、爆炸视图同一个位置事实。
+#     写完立刻**重新导入逐件核对**：每个实体的中心要等于「源 STEP 自己量出的中心 + 偏移」、
+#     体积逐件相等（中心管位置、体积管大小，两个都对才算同一件）。对不上就
+#     **删掉刚写的文件并报错**——一份声称装了 N 件、实际少一件的 STEP 比不出货危险，
+#     下游 CAM/PLM/报价读到什么就是什么。多实体零件按件聚合体积，不按「一个零件=一个实体」猜。
+#     两件声明在同一位置是合法的叠料，但会在证据里报 coincident_placements，不静默合并。
+#     已知边界（本机实测，不是猜）：OCCT 把非 ASCII 零件名按单字节写进 PRODUCT(...) 变成
+#     mojibake，所以「哪个球标对应哪块几何」只由 .evidence.json 承载，不宣称 STEP 里名字可读。
 aipd drawing dfm --step bracket.step --out dfm.md --part BR-1 --material 6061-T6 [--spec spec.json]
 #   ↑ DFM/DFA 分析：几何事实全部**内核实测**——最小壁厚（三轴网格射线，进→出配对）、
 #     整孔直径/深度/深径比、最小内圆角半径、同轴孔系、包络与体积。

@@ -300,6 +300,19 @@ def build_parser() -> argparse.ArgumentParser:
     das.add_argument("--json", action="store_true")
     das.set_defaults(func=COMMAND_FUNCS["drawing assembly-steps"])
 
+    dash = drawing_sub.add_parser(
+        "assembly-step", help="按装配清单出总装 STEP：带产品层级与每件摆放，写完回读逐件核对。"
+                              " Example: aipd drawing assembly-step --manifest assembly.json "
+                              "--out assy.step --part ASSY-1")
+    dash.add_argument("--manifest", required=True,
+                      help='装配清单 JSON：{"parts":[{"name":"支架","step":"a.step",'
+                           '"balloon":1,"offset":[0,0,0]}]}；offset 就是摆放，与出图同一份声明')
+    dash.add_argument("--out", required=True, help="总装 STEP 输出路径（同时写 .evidence.json）")
+    dash.add_argument("--part", required=True, help="总装产品名（STEP 里的根产品）")
+    dash.add_argument("--revision", default="A", help="版本号")
+    dash.add_argument("--json", action="store_true")
+    dash.set_defaults(func=COMMAND_FUNCS["drawing assembly-step"])
+
     dd = drawing_sub.add_parser(
         "dfm", help="DFM/DFA 分析报告：内核实测几何 + 带来源的阈值判定。"
                     " Example: aipd drawing dfm --step bracket.step --out dfm.md --part BR-1")

@@ -16,6 +16,22 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def write_evidence_sidecar(path: Path, evidence: dict[str, Any]) -> Path:
+    """把证据字典写到产物旁边的 ``.evidence.json``，并把侧车路径回填进字典。
+
+    装配图/步骤文档各自有一段同形的收尾（各 3~4 行），但它们盖的字段不一样
+    （图纸带隐藏线求法、步骤文档带 not_covered），所以那两个**没**改过来——
+    这里只收「写侧车」这一件真正公共的事。
+    """
+    import json
+
+    sidecar = path.with_suffix(".evidence.json")
+    sidecar.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n",
+                       encoding="utf-8")
+    evidence["evidence_file"] = str(sidecar)
+    return sidecar
+
+
 def artifact_hash(path: Path) -> str:
     """产物哈希（等价于 sha256_file，语义命名）。"""
     return sha256_file(path)

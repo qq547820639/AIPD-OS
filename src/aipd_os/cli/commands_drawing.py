@@ -409,6 +409,57 @@ def cmd_drawing_assembly(args):
     return 4 if issues else 0
 
 
+def cmd_drawing_assembly_step(args):
+    """``aipd drawing assembly-step`` —— 按装配清单出总装 STEP（写完回读校验）。
+
+    需要 CadQuery/OCP：这里不做投影，但要把每个零件的实体真读出来再摆放，
+    写完还要重新导入逐件比对，所以内核不在就是外部任务包，不假产文件。
+    """
+    out = Path(args.out)
+    if not args.part:
+        print("--part 必填（总装 STEP 的产品名）")
+        return 2
+    manifest = Path(args.manifest)
+    if not manifest.is_file():
+        print(f"--manifest 指向的文件不存在：{manifest}")
+        return 2
+    try:
+        import cadquery  # noqa: F401
+    except ImportError as exc:
+        return _external_task_pack(args, f"CAD 内核缺失（{exc}）",
+                                   command="drawing assembly-step")
+
+    from aipd_os.cad.assembly import export_assembly_step
+    from aipd_os.cad.backends import CadQueryBackend
+
+    provenance = {"tool": f"cadquery {CadQueryBackend().tool_version()}",
+                  "model_source": str(manifest), "command": "drawing assembly-step",
+                  "ok": True, "status": "DONE"}
+    try:
+        evidence = export_assembly_step(out, manifest=str(manifest), part_name=args.part,
+                                        revision=args.revision, provenance=provenance)
+    except ValueError as exc:
+        print(f"总装 STEP 产不出来：{exc}")
+        return 2
+
+    def prose():
+        print(f"已出总装 STEP：{out}（声明 {evidence['declared_part_count']} 件、"
+              f"回读 {evidence['solid_count']} 个实体，逐件位置与体积已核对）")
+        for one in evidence["parts"]:
+            print(f"  {one['balloon']:>3d} {one['name']:12s} 摆放 "
+                  f"({'、'.join(f'{v:g}' for v in one['placement'])}) "
+                  f"体积 {one['volume_mm3']:g}mm³ 源实体 {one['source_solid_count']} 个")
+        for msg in evidence["coincident_placements"]:
+            print(f"  告警：{msg}")
+        if not evidence["step_product_names_readable"]:
+            print(f"  名字：{evidence['step_product_names_reason']}")
+        print("  没做的事：" + "；".join(evidence["not_covered"]))
+        print(f"证据文件：{evidence['evidence_file']}  "
+              f"sha256={evidence['document_sha256'][:16]}…")
+    _emit(args, evidence, prose)
+    return 0
+
+
 def cmd_drawing_dfm(args):
     """``aipd drawing dfm`` —— DFM/DFA 分析报告（实测几何 + 带来源的阈值判定）。
 

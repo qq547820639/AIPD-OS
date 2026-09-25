@@ -112,6 +112,10 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                  requires_args=frozenset({"--manifest", "--out", "--part"}),
                  description="装配步骤文档：步骤号与引用球标都由 manifest 声明，"
                              "断档/引用未声明的号/写了不承载的字段一律拒绝（C6 装配那一半）"),
+    CommandEntry("drawing assembly-step", CommandStatus.PUBLIC, CommandCategory.CAD, "5.11",
+                 requires_args=frozenset({"--manifest", "--out", "--part"}),
+                 description="按装配清单出总装 STEP：摆放只用 manifest 声明的 offset，"
+                             "写完逐件回读中心与体积，对不上就删文件并报错"),
     CommandEntry("drawing dfm", CommandStatus.PUBLIC, CommandCategory.CAD, "5.11",
                  requires_args=frozenset({"--step", "--out", "--part"}),
                  description="DFM/DFA 分析：壁厚/深径比/内圆角/同轴孔系由内核实测，"
