@@ -294,3 +294,32 @@ $ aipd validate --manifest $EV --target C6
   把「缺 `coverage` 键」的分支短路。两条都**行为等价**（能走到那一支的 `coverage` 只有
   `complete`；短路后仍由 `else` 判红），换了也是化妆，故按第 26 片 G19 的教训丢掉，
   换成四条真会翻转读数的（不点名 / 盲区读成通过 / 缺格读成通过 / 键名接错）。
+
+### 重锚补记（收口时实测）
+
+提交序列：`be665e7`（代码 + 用例 + 文档）→ `217ed03`（三份产物 + 能力矩阵 + 本轮报告 + snapshot）
+→ `723639d`（`PROVENANCE` 换成本轮的锚定报告）。
+
+| 读数 | 值 |
+| --- | --- |
+| 被哈希面 | 611 → **612**（新增 `tests/test_release_manifest_eco_coverage.py` 一份用例文件），`hash_matches` 612、`mismatch` 0 |
+| 全量（不带锚那次，作轮次记录） | 2025 passed / 0 failed / 3 skipped |
+| 全量（带 `AIPD_SOURCE_COMMIT=tag`，进 `PROVENANCE`） | 同一份数字 2025/0/2028，`source_commit` = `a66040520139…` |
+| `production_release_gate --release-ready --tag` | **8/8 绿**，`release_ready: true`，rc=0 |
+| `audit_repo --strict` | rc=1，唯一 ✗ = `Provenance source commit mismatch: manifest=a66040520139… vs HEAD=723639d236bb…` |
+
+三条要留着的读法：
+
+1. **`audit_repo --strict` 这条红是既有裁决，不是本片回归**：锚点按裁决停在 v5.6.0 的 tag 提交，
+   而该工具按「锚点 == HEAD」判，自 v5.6.0 发布以来对**任意**后续提交都必红。
+   要闭合它得走一次真正的发布（重建 bundle、重签、移动 tag），不在收口迭代里顺手做。
+2. **门第一次跑报了个假红**：`no_unacknowledged_cve` 说 `pip-audit not available`，
+   实际 `.venv/bin/pip-audit` 在、模块也 import 得动——`shutil.which()` 查的是 `PATH`，
+   而外层 shell 没激活 venv。正确修法是 `PATH="$PWD/.venv/bin:$PATH" .venv/bin/python scripts/…`
+   重跑，**不是**把这条 fail-closed 判据放宽。重跑后 8/8 绿。
+   同一轮另一处同族读数坑：`… | tail -12; echo "rc=$?"` 记的是 `tail` 的退出码
+   （所以第一次读 `audit_repo` 拿到过假的 `rc=0`，改为落盘后再取 `$?` 才看到真的 1）。
+3. **`PROVENANCE` 的用例数从 2000/0/2003 变成 2025/0/2028**：门要求报告的 `source_commit`
+   **严格等于** tag 提交，而用例数每轮都在涨 ⇒ 报告天然是「tag 之后的树跑的、按 tag 声明锚定」。
+   这是那条既有判据与持续交付之间的已知张力，本轮**原样记下、不改判据**：
+   `conftest` 的 `AIPD_SOURCE_COMMIT` 是一层操作者声明，机器无法证明被测树 == tag 树。

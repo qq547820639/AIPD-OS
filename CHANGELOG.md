@@ -990,6 +990,9 @@
   只改了这些」；`undetermined` 不区分「新文件」与「老文件动了没提单」；门只信生产者写进文档的
   读数、不重算哈希；署名仍无身份源（第 26 片记着）；ECO 不联动失效传播。
   全量用例数 2003 → 2028。证据见 `docs/audit/ECO_RELEASE_COVERAGE_F-C6-ECO_2026-09-25.md`。
+  收口读数：被哈希面 611 → 612；`production_release_gate --release-ready --tag` 8/8 绿
+  （第一次因外层 shell 没把 `.venv/bin` 放进 `PATH`、`shutil.which('pip-audit')` 查不到而报过一条假红，
+  修法是补 `PATH` 不是放宽判据）；`audit_repo --strict` 仍只有那条「锚点停在 tag」的既有裁决红。
 
 - **v5.12 F-C6-ECO 第 26 片：ECR/ECO 工程变更单有了生产者（C6 档位 13/1/1 → 14/0/1）**：
   普查里「版本与ECR/ECO」长期停在 checker_only，note 写着原因：版本那一半有生产者，
