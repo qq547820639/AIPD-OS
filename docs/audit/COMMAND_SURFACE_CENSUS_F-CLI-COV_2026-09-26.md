@@ -65,9 +65,15 @@ CI 侧的 `scripts/skill_quality_audit.py` 一直是按小节边界取段（找 
 故未检索官方文档/GitHub 生态；下表是对**本机可跑的既有工具**按性质比较，
 不是文献结论。
 
+> 更正（第 40 片收尾自查）：本表 A 行原来写「与同仓 `ts_interface_shape.py` 同形」，
+> 该文件**不在本仓**（`import ast` 的真实同仓先例是 `src/aipd_os/interface_contract.py` 与
+> `src/aipd_os/schema_binding.py`；tree-sitter 全仓未使用）。第 39 片 CHANGELOG 条目里同一处
+> 误引也已更正。这是"登记/声称 vs 代码事实"这条轴咬到我自己的记述上——
+> 判据是第 41 片正在建的文档引用普查（`scripts/` 里那份），不是人工碰上的。
+
 | 候选 | 功能匹配度 | License | 维护活跃度 | 安全风险 | 代码质量 | 适配成本 |
 | --- | --- | --- | --- | --- | --- | --- |
-| A 标准库 `ast` 读调用形态（**选它**） | 正好回答"源码里有没有 argv 位调用"，且能分档 | Python PSF | 语言内置 | 无新增面 | 与同仓 `ts_interface_shape.py` 同形 | 低（一个文件） |
+| A 标准库 `ast` 读调用形态（**选它**） | 正好回答"源码里有没有 argv 位调用"，且能分档 | Python PSF | 语言内置 | 无新增面 | 与 src 侧既有 AST 解析同形（`src/aipd_os/interface_contract.py`、`src/aipd_os/schema_binding.py`） | 低（一个文件） |
 | B `coverage.py`/`pytest-cov` 运行时轨迹 | 答的是"哪些行被执行"，与"命令面是否被走过"不同一层；`cmd_outbox` 一次执行两条命令都算过 ⇒ 歧义档反而丢失 | Apache-2.0 | 高 | 无 | 成熟 | 需全量单跑+产物排序，单跑一文件即假 0 |
 | C 多模式正则（补两种写法） | 只能覆盖已知写法，转发器/别名/共用处理函数三档都表达不了 | MIT 级 | — | 判据不可证伪 | 旧病根 | 低但会再漂 |
 | D tree-sitter AST | 与 A 同层，但给 Python 判据引入外部语法库 | MIT | 高 | 新依赖 | 好 | 中（无收益） |

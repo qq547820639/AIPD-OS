@@ -1020,8 +1020,10 @@
   才真开火），逐条点名见 `docs/audit/COMMAND_SURFACE_CENSUS_F-CLI-COV_2026-09-26.md`。
   下一步（未做，本轮只修量具）：登记在册的 10 条 `none` 与 4 条 `alias`-only 命令
   要补真 argv 位用例，按棘轮规则只能"补了才删格"。
-  调研豁免：本片不改技术选型——AST 判据用标准库 `ast`，与同仓
-  `ts_interface_shape.py`(tree-sitter) 属不同语言面，无新依赖引入。
+  调研豁免：本片不改技术选型——AST 判据用标准库 `ast`，与 `src/aipd_os/interface_contract.py`、
+  `src/aipd_os/schema_binding.py` 用同一套语言内置能力，无新依赖引入。
+  **该处原文误引了一个不在本仓的文件名 `ts_interface_shape.py`，由第 41 片的文档引用普查查后
+  当场更正**（同一条误引在第 39 片审计文档里也已更正并留痕）。
 
 - **v5.12 F-C6 第 38 片：服务写面与库层的形参对账（CTQ 的公差与条件从前录不进去）**：
   普查量具换成一根新的轴——`inspect.signature` 逐对比较 `AIPDStateDB` 与 `StateService`
