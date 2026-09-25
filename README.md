@@ -314,10 +314,19 @@ aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom 
 #     没交文档就**不写这一格**（而不是写一个空的），侧车不在 ⇒ steps_evidence_missing，
 #     球标没人装 ⇒ steps_balloons_uncovered，都阻断；同时带 assembly_steps 汇总
 #     （step_count / declared_balloons / unreferenced / not_covered / 侧车哈希）。
-python scripts/c6_coverage.py          # C6 那 15 项交付物各自做到哪一步了（诊断档）
 #     --dfm-doc dfm.md 才写 dfm_dfa 那一格（{path, sha256} + dfm_summary：
 #     hold/advisory/blind/measured、材料分类、not_covered、侧车哈希）；
 #     dfm_hold_findings 阻断，dfm_advisory_findings 与 dfm_unmeasured 只提示。
+#     --assembly-step assy.step 才写 C6「总装/单件STEP」里总装那一半：文件引用进
+#     step_assemblies（门禁当 FILE_KEYS 逐条核存在与哈希），事实进 assembly_model。
+#     **不止核「文件在」**（契约明写「STEP 存在不能单独证明生产可用」）：侧车自己声明的
+#     每件两个体积要能相减对上、每件源实体数相加要等于它报的 solid_count、侧车写的
+#     document_sha256 要等于眼前这份文件——任一条自相矛盾即 assembly_model_disagrees_with_itself
+#     / assembly_step_hash_mismatch（阻断，不替它盖章）；核对方法不是「写完回读逐件对上」
+#     ⇒ assembly_step_unverified。还跟装配图的球标↔件号对账：只对一张装配图配一份总装 STEP，
+#     多张记 ambiguous_pairing（按名字猜配对不判），没图记 no_assembly_drawing（盲区，不判成失败）。
+#     非 ASCII 件名在 STEP 里不可读这条边界原样带进 name_readability，不粉饰成「已随模型交付」。
+python scripts/c6_coverage.py          # C6 那 15 项交付物各自做到哪一步了（诊断档）
 #   ↑ 分母逐字取自 references/production-cad-deliverables.md 那一行：改契约不改映射会当场红。
 #     三档读数：有生产者且有常驻用例 / 只有校验方（门会判声明，但产品侧没有落点）/ 零实现。
 #     2026-09-25 第 19 片后实测 13 / 1 / 1：零实现只剩 ICD 一项，只有校验方只剩

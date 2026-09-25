@@ -400,6 +400,10 @@ def build_parser() -> argparse.ArgumentParser:
     mp.add_argument("--dfm-doc", dest="dfm_doc", default=None,
                     help="DFM/DFA 分析报告（.md）路径：给了才写 C5/C6 的 dfm_dfa 那一格"
                          "（读其 .evidence.json；hold 结论阻断就绪，告警与盲区只提示）")
+    mp.add_argument("--assembly-step", dest="assembly_step", default=None,
+                    help="总装 STEP（.step）路径：给了才写 C6「总装/单件STEP」里总装那一格"
+                         "（读其 .evidence.json，逐件把侧车自己的两个数重算一遍；"
+                         "只核文件在不在、哈希对不对不足以证明它装的是什么）")
     mp.add_argument("--units", default="mm")
     mp.add_argument("--datum_scheme", default="unspecified")
     mp.add_argument("--approval-status", dest="approval_status", default="unapproved",

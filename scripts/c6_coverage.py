@@ -47,8 +47,10 @@ MAPPING: dict[str, dict[str, Any]] = {
                   "tests/test_cad_assembly_step_export.py"],
         "note": "单件 STEP 有导出点（backends.py exportType='STEP'）；总装那一半由 "
                 "assembly.export_assembly_step 产出（摆放只用 manifest 声明的 offset，"
-                "写完逐件回读中心与体积，对不上就删文件并报错）。剩下的边界："
-                "**非 ASCII 零件名被 OCCT 写成 mojibake**（件号↔几何只由 sidecar 承载）、"
+                "写完逐件回读中心与体积，对不上就删文件并报错），"
+                "`aipd release manifest --assembly-step` 把它接进发布就绪证据"
+                "（逐件把侧车自己的两个数重算一遍，并与装配图的球标集合对账）。"
+                "剩下的边界：**非 ASCII 零件名被 OCCT 写成 mojibake**（件号↔几何只由 sidecar 承载）、"
                 "子装配层级与约束不建模。"},
     "总装图": {
         "verdict": "producer", "capabilities": ["cad.2d_drawings"],

@@ -436,12 +436,165 @@ def _collect_dfm(dfm_doc: Path | str | None, root: Path,
                              "sha256": _sha256(sidecar)}}}
 
 
+_ASSEMBLY_MODEL_VOL_TOL = 1e-6
+
+
+def _assembly_drawings(drawings: Sequence[Path | str]) -> list[tuple[str, dict[int, str]]]:
+    """每张**装配图**侧车里声明的球标↔件号（缺侧车的跳过：那边已经报过了，不重复记）。"""
+    out: list[tuple[str, dict[int, str]]] = []
+    for raw in drawings:
+        path = Path(raw)
+        sidecar = _evidence_path(path)
+        if not sidecar.is_file():
+            continue
+        evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+        assy = evidence.get("assembly") or {}
+        if not assy:
+            continue
+        pairs = {int(one["balloon"]): str(one.get("name", ""))
+                 for one in assy.get("parts") or [] if one.get("balloon") is not None}
+        out.append((path.name, pairs))
+    return out
+
+
+def _collect_assembly_step(assembly_step: Path | str | None, root: Path,
+                           issues: list[dict[str, Any]],
+                           drawings: Sequence[Path | str] = ()) -> dict[str, Any]:
+    """读总装 STEP 的 sidecar，产出「总装/单件STEP」里总装那一格（C6 交付物）。
+
+    契约那一行就是这一格存在的理由：`references/production-cad-deliverables.md:4`
+    「STEP 存在、网格闭合或快照好看均不能单独证明生产可用」。所以这里不满足于
+    「文件在、哈希对得上」：逐条把 sidecar 自己声明的事实**重算一遍**——
+    侧车说它核对过，那就拿侧车里每件的两个体积数相减、把每件的回读实体数加出来
+    和它报的 `solid_count` 对，对不上就是这份侧车在说假话，阻断。
+
+    文件引用写在 `step_assemblies` 下（门禁早就把这个键当 FILE_KEYS 核存在与哈希，
+    第 21 片刚把数组形状修得有牙）；事实单独一格 `assembly_model`，
+    名字不叫 `assembly_steps`——那一格是装配**步骤**文档，两回事。
+    """
+    if assembly_step is None:
+        return {}
+    path = Path(assembly_step)
+    if not path.is_file():
+        _issue(issues, "assembly_step_missing", f"总装 STEP 不存在：{path}", blocking=True)
+        return {}
+    rel = path.relative_to(root).as_posix() if path.parent == root else str(path)
+    ref = {"path": rel, "sha256": _sha256(path), "kind": "assembly"}
+    sidecar = _evidence_path(path)
+    if not sidecar.is_file():
+        _issue(issues, "assembly_step_evidence_missing",
+               f"{path.name} 没有 {sidecar.name}：总装 STEP 只是「一个文件在」，"
+               "没有回读核对就证明不了它装的是什么", blocking=True)
+        return {"step_assemblies": [ref]}
+    evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+    parts = evidence.get("parts")
+    if "declared_part_count" not in evidence or not isinstance(parts, list):
+        _issue(issues, "assembly_step_evidence_incomplete",
+               f"{sidecar.name} 里没有 declared_part_count / parts："
+               "这一格读不出内容，不折成 0 件的装配", blocking=True)
+        return {"step_assemblies": [ref]}
+
+    sidcar_hash = str(evidence.get("document_sha256") or "")
+    if sidcar_hash != ref["sha256"]:
+        _issue(issues, "assembly_step_hash_mismatch",
+               f"{rel} 与 {sidecar.name} 不是同一份文件：侧车写 "
+               f"{sidcar_hash[:12] or '（空）'}…，眼前这份是 {ref['sha256'][:12]}…"
+               "（核对的是别的产物，不替它盖章）", blocking=True)
+    if evidence.get("verification") != "read_back_matched_multiset":
+        _issue(issues, "assembly_step_unverified",
+               f"{rel}：verification={evidence.get('verification')!r}，"
+               "不是「写完回读逐件对上」那一法，不就它下生产可用的结论", blocking=True)
+
+    problems: list[str] = []
+    counted = 0
+    for one in parts:
+        counted += int(one.get("source_solid_count") or 0)
+        if int(one.get("read_back_solid_count") or 0) < 1:
+            problems.append(f"零件 {one.get('name')}（球标 {one.get('balloon')}）"
+                            "在回读里一个实体都没有")
+        want = float(one.get("volume_mm3") or 0.0)
+        got = one.get("read_back_volume_mm3")
+        if got is None or abs(want - float(got)) > _ASSEMBLY_MODEL_VOL_TOL:
+            problems.append(f"零件 {one.get('name')} 的体积源件 {want:g}mm³ 与回读 "
+                            f"{'（没记）' if got is None else format(float(got), 'g')}mm³ 对不上")
+    if problems:
+        for msg in problems:
+            _issue(issues, "assembly_model_disagrees_with_itself",
+                   f"{rel}：{msg}——侧车自己的两个数就不一致，不采信其核对结论",
+                   blocking=True)
+    if int(evidence["declared_part_count"]) != len(parts):
+        _issue(issues, "assembly_model_count_disagrees",
+               f"{rel}：声明 {evidence['declared_part_count']} 件，"
+               f"parts 里只有 {len(parts)} 条", blocking=True)
+    if counted != int(evidence.get("solid_count") or 0):
+        _issue(issues, "assembly_model_solid_count_disagrees",
+               f"{rel}：每件源实体数相加是 {counted}，侧车报的 solid_count 是 "
+               f"{evidence.get('solid_count')}（不折算、不取其中一个当准）", blocking=True)
+
+    assy_drawings = _assembly_drawings(drawings)
+    model_pairs = {int(one["balloon"]): str(one.get("name", ""))
+                   for one in parts if one.get("balloon") is not None}
+    if not assy_drawings:
+        drawing_check: dict[str, Any] = {
+            "status": "no_assembly_drawing",
+            "note": "没给装配图：图与模型对不对，这一轮无从判"}
+    elif len(assy_drawings) > 1:
+        drawing_check = {
+            "status": "ambiguous_pairing",
+            "drawings": [name for name, _ in assy_drawings],
+            "note": "多张装配图对一份总装 STEP：按名字配对是猜，不猜；要核就逐份各自出证据"}
+    else:
+        name, drawn = assy_drawings[0]
+        only_model = sorted(set(model_pairs) - set(drawn))
+        only_drawing = sorted(set(drawn) - set(model_pairs))
+        renamed = sorted(f"球标 {b}：图上「{drawn[b]}」vs 模型里「{model_pairs[b]}」"
+                         for b in set(drawn) & set(model_pairs) if drawn[b] != model_pairs[b])
+        if only_model or only_drawing or renamed:
+            bits = []
+            if only_model:
+                bits.append(f"只在模型里 {only_model}")
+            if only_drawing:
+                bits.append(f"只在图上 {only_drawing}")
+            if renamed:
+                bits.append("；".join(renamed))
+            _issue(issues, "assembly_model_drawing_disagree",
+                   f"总装 STEP 与装配图 {name} 的件号集合不一致：{'、'.join(bits)}"
+                   "（同一份清单出的两样东西对不上，说明其中一样不是当前版本）",
+                   blocking=True)
+        drawing_check = {"status": "compared", "drawing": name,
+                         "agree": not (only_model or only_drawing or renamed),
+                         "balloons": sorted(model_pairs)}
+
+    return {
+        "step_assemblies": [ref],
+        "assembly_model": {
+            "verification": evidence.get("verification"),
+            "declared_part_count": int(evidence["declared_part_count"]),
+            "solid_count": int(evidence.get("solid_count") or 0),
+            "manifest_sha256": evidence.get("manifest_sha256"),
+            "parts": [{"balloon": int(one["balloon"]), "name": one.get("name"),
+                       "placement": [float(v) for v in one.get("placement") or []],
+                       "volume_mm3": one.get("volume_mm3"),
+                       "read_back_volume_mm3": one.get("read_back_volume_mm3")}
+                      for one in parts],
+            "coincident_placements": list(evidence.get("coincident_placements") or []),
+            "name_readability": {
+                "readable": bool(evidence.get("step_product_names_readable")),
+                "reason": evidence.get("step_product_names_reason")},
+            "drawing_check": drawing_check,
+            "not_covered": list(evidence.get("not_covered") or []),
+            "evidence": {"path": (sidecar.relative_to(root).as_posix()
+                                  if sidecar.parent == root else str(sidecar)),
+                         "sha256": _sha256(sidecar)}}}
+
+
 def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENANT,
                            project_id: str = DEFAULT_TENANT,
                            drawings: Sequence[Path | str] = (),
                            bom_id: str | None = None, model: Path | str | None = None,
                            steps_doc: Path | str | None = None,
                            dfm_doc: Path | str | None = None,
+                           assembly_step: Path | str | None = None,
                            units: str = "mm", datum_scheme: str = "unspecified",
                            approval_status: str = "unapproved",
                            out_path: Path | str | None = None,
@@ -492,6 +645,7 @@ def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENA
         }
     doc.update(_collect_steps(steps_doc, root, issues))
     doc.update(_collect_dfm(dfm_doc, root, issues))
+    doc.update(_collect_assembly_step(assembly_step, root, issues, drawings))
     model_fields = _model_fields(model, issues)
     if "model_part_count" in model_fields:
         doc["model_part_count"] = model_fields["model_part_count"]

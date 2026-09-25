@@ -858,6 +858,33 @@
   「哈希核对按级触发、missing 只列到第一个没满足的层级」。
   证据见 `docs/audit/RELEASE_GATE_FILE_LISTS_F-EVID-02_2026-09-25.md`。
 
+- **v5.10 F-EVID-02 第 22 片：总装 STEP 接进发布就绪证据（`aipd release manifest --assembly-step`）**：
+  第 20 片有了生产者、第 21 片把接它进门的那道核对修得有牙，这片补最后一截——发布就绪证据里
+  此前**没有总装 STEP 这一格**，C6「总装/单件STEP」只停在普查表的 note 上。契约的理由逐字取自
+  `references/production-cad-deliverables.md:4`「STEP 存在、网格闭合或快照好看均不能单独证明生产可用」，
+  所以这一格不能只写「文件在、哈希对得上」。**做法是重算侧车自己的话**：每件两个体积数相减、
+  每件源实体数相加对 `solid_count`、`declared_part_count` 对 `parts` 行数、侧车写的
+  `document_sha256` 对眼前这份文件（**字段缺失也算不等**），任一条自相矛盾即点名阻断；
+  核对方法不是「写完回读逐件对上」⇒ `assembly_step_unverified`。
+  还跟装配图的球标↔件号对账：**只在一张装配图对一份总装 STEP 时才配**，
+  多张记 `ambiguous_pairing` 不猜、没图记 `no_assembly_drawing` 当盲区而不是当通过
+  （按名字在多图里猜配对就是 F-REG-01 那条装饰性接线的老路）。
+  键名不新造：文件引用进门里早就当 FILE_KEYS 核的 `step_assemblies`，事实进 `assembly_model`
+  ——不叫 `assembly_step`，因为 `assembly_steps` 那一格已经是**装配步骤文档**的汇总。
+  没交参数两键都不出现（写个空数组会让门把「没做」读成「做了但是空的」）。
+  23 条常驻用例（图与模型都走真生产者，不手写夹具几何；CLI 两条把基线做到真能就绪才比「0 变 4」）
+  + 变异电池 **16/16 killed**；H12 第一次跑是**锚点命中 3 次**判注入无效（`"not_covered": list(...)`
+  这句在步骤文档/DFM/总装三处都有）——同一个坑第三次踩，锚点必须落在判据读的那一段。
+  端到端用金样品两件跑通：`compared/agree`、`47833.457334 → 47833.457334` 逐件对上，
+  且这趟零件名是 ASCII ⇒ `name_readability.readable=true`，与第 20 片那趟中文的 `false` 对照，
+  证明那条边界跟着文件事实走、不是一行永远为假的字。
+  **同一次端到端撞出一个缺陷并另立一条**：`assy.step` 与 `assy.dxf` 的侧车都拼成
+  `assy.evidence.json`（`with_suffix` 把后缀丢了）⇒ 出图把总装 STEP 的证据顶掉。
+  本片改用不同干名绕开，**绕开不是修掉**，见
+  `docs/audit/EVIDENCE_SIDECAR_PATH_COLLISION_F-EVID-03_2026-09-25.md`（含修法选项与消费方普查要求）。
+  顺手把 README 里第 19 片落错位置的 `--dfm-doc` 注释挪回 `aipd release manifest` 名下。
+  证据见 `docs/audit/RELEASE_EVIDENCE_ASSEMBLY_STEP_F-EVID-02_2026-09-25.md`。
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与
