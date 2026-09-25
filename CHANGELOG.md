@@ -951,6 +951,46 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6 第 34 片：`risks.owner` 不再硬写 `'AI'`，并给这根列补上第一个真读者**：
+  同第 32 片那一族的另一半，但更糟一层。列形状是 `owner TEXT NOT NULL DEFAULT 'AI'`
+  （`state/migrations/schema.py:148` 冻结文本、`state/db.py:197` 参考 SCHEMA、
+  `scripts/aipd_store.py:114` 废弃旧库），而写入口 `AIPDStateDB.add_risk`
+  （`state/db.py:975`）**连 `owner` 形参都没有**、INSERT 里直接硬写 `"AI"` ⇒
+  「这条风险谁负责」在创建时无法表达，库里每一条都是 AI 负责；偏偏
+  `update_risk` 的可改白名单里**有** `owner`（`state/db.py:1001`）：创建时不许说、
+  创建后允许改。第 32 片的读侧普查在这里给出更空的结论——`list_risks` 的四个调用点
+  （`experience/owner_dashboard.py`、`project_summary.py`、`views.py`、`state/checkpoint.py`）
+  **一个都不碰这一列**：一直在写、从来没人读、而且写的是假话。
+
+  改法三件：migration **v21** `risks_owner_no_default` 重建 `risks`（列可空、无默认值、
+  历史值原样保留，V1 冻结文本改不得所以只能以重建落地，与 v20 同一处置；
+  down 方向 NULL 落**空串**而不落 `'AI'`，降级不许凭空指派负责人）；
+  写入口加 `owner: str | None = None`（空白串 `ValueError`、给了值 trim）；
+  读侧把 `actors.py` 那份机器身份词表通用化成 `summarize_actor_column`，
+  并给这根列补上第一个真读者——Owner Dashboard 的「风险责任」块：正文（完整档与紧凑档）
+  只给人话与计数，风险编号留在 `<details>` 折叠区与 `--json` 里，
+  与既有契约 `test_owner_ux.py::test_dashboard_default_hides_internals` 同一口径。
+
+  三处被实测/电池教的地方：①「老库升到 HEAD 后与新建库同形」是**相对**断言，
+  把 v21 的 up 撤掉时两边一起变、永远不红——每处相对断言都得配一条对着权威事实的
+  绝对断言（新库里这一列没有默认值），否则等于没闸；②电池 J15 第一轮被记成「杀掉」，
+  实际 rc=4：用例挂错了类、node id 根本没被收集 ⇒ 电池从此加**未注入对照臂**，
+  并把退出码分档（rc=1 才算断言红，rc≥2 记「崩溃式红/挂错目标」且脚本非零退出）；
+  ③新加的 Dashboard 块一开始只进了 `--json`，两档文本渲染都没落地——
+  是「在视图 dict 里加了个键」被当成了「有读者」。补的两条常驻判据：
+  逐列值往返保真（少一列时 `INSERT INTO new(cols) SELECT` 照样成功、值静默变 NULL）、
+  空账本不许写成「都有真人认领」（对空集下断言）。
+
+  读数：全量用例 **2182 → 2205**（+23，全在 `tests/test_risk_ownership.py`）；
+  本轮唯一的红是那两条清单哈希锚点（`test_release_manifest_hashes_match_disk`、
+  `test_source_manifest_hashes_match_disk`），按既有配方重锚后归零；
+  `mypy src` 0 error、CI 口径 ruff（`src tests state_service`）rc=0。
+  变异电池 `/tmp/slice34-mutations.py` **15 条：杀 15 / 存活 0 / 注入无效 0 / 崩溃式红 0 /
+  已知无撤回案例 2**；同树复跑第 32 片 **14/14**（其 I4 锚点因本片给 `add_risk` 加了同形守卫
+  而命中 2 次，重锚到 `approved_by` 那句报错文案）、第 30 片 **21/21**、
+  第 31 片 **8/8**、第 33 片 **9 杀 / 0 存活 / 2 已知无撤回**。证据见
+  `docs/audit/RISK_OWNER_READERS_F-C6_2026-09-25.md`。
+
 - **v5.12 F-C6 第 33 片：把「门没人跑」这一族闭掉，并给自检补合规侧**：
   `references/end-to-end-closure-model.md:10` 把 `scripts/e2e_acceptance.py` 写成
   「数字全链路已打通」的**唯一**判据（`references/local-cad-fallback.md:25` 第 8 步要求跑它，

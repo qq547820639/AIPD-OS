@@ -348,6 +348,13 @@ aipd interfaces --repo . --out interface-contract.json
 #     **没有合规侧的自检，分不清「门在拦」和「门永远红」**。
 #     同一批把 `missing` 的文案归位：校验器只说「文件不在盘上」，
 #     「该交付物已标 complete」由拿着交付清单的 `quality_gate` 自己补。
+#   ↑ 风险责任的归属（第 34 片）：`risks.owner` 原来是 `NOT NULL DEFAULT 'AI'`，
+#     而写入口 `AIPDStateDB.add_risk` 连 `owner` 形参都没有、INSERT 里硬写 `"AI"` ⇒
+#     「这条风险谁负责」在创建时压根无法表达；且 `list_risks` 的四个调用点一个都不读它。
+#     migration v21 把这一列重建为可空、无默认值（历史值原样保留，降级时 NULL 只落空串、
+#     不落 `'AI'`），写入口改为 `owner: str | None = None`（空白串直接拒），
+#     并给这根列补上第一个真读者：Owner Dashboard 的「风险责任」——正文（完整档与紧凑档）
+#     只说「几条风险里有几条还没有真人负责（含机器代签）」，风险编号只进折叠区与 `--json`。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。

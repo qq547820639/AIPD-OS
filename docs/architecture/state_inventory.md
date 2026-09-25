@@ -1,6 +1,6 @@
 # State Inventory — AIPD-OS P2
 
-> Updated: 2026-09-25 (F-C6-ECO 第 26 片；schema HEAD = v19)
+> Updated: 2026-09-25 (F-C6 第 34 片；schema HEAD = v21)
 > Purpose: P2 State Ownership Convergence — complete persistence point audit
 
 ## Physical Stores
@@ -51,10 +51,13 @@
 | 报告 | `docs/audit/state_perf_report.json` | 最近一次完整测量输出 |
 | 确定性门禁 | `tests/test_state_perf_gates.py` | EXPLAIN QUERY PLAN、连接复用计数、claim 互斥、语句数线性度 |
 
-Schema 版本：HEAD = **v20**。真值是 `state/migrations/definitions.py` 的
+Schema 版本：HEAD = **v21**。真值是 `state/migrations/definitions.py` 的
 `MIGRATIONS` 末项（不是本表）；`tests/test_migration.py` 与
 `tests/test_state_perf_gates.py` 分别钉住 v18/v19 与 v17 的 up/down，
-v20 的 up/down 由 `tests/test_gate_attribution.py` 钉住。
+v20 的 up/down 由 `tests/test_gate_attribution.py` 钉住，
+v21 的 up/down 由 `tests/test_risk_ownership.py` 钉住。
+本节的两处 HEAD 声明与下面的版本清单表由
+`tests/test_risk_ownership.py::TestTheDocMirrorMatchesTheChain` 与 `MIGRATIONS` 对账。
 v17 = 两条热读路径索引 `idx_changes_scope_time`、`idx_outbox_due`
 （见 `state_infrastructure.md` §6.1）；v18 = `db_meta`（字段加密的每库盐）；
 v19 = `eco_records` / `eco_affected` / `eco_transitions`（ECR/ECO 变更单，
@@ -63,7 +66,13 @@ v19 = `eco_records` / `eco_affected` / `eco_transitions`（ECR/ECO 变更单，
 v20 = `gates_approved_by_no_default`（重建 `gates`，把 `approved_by` 从
 `NOT NULL DEFAULT 'AI-internal'` 改成可空、无默认值；V1 冻结文本改不得，
 所以这一格只能以重建落地。读侧分类落点 `gate_attribution.py`，
-机器身份词表落点 `actors.py`）。
+机器身份词表落点 `actors.py`）；
+v21 = `risks_owner_no_default`（重建 `risks`，把 `owner` 从
+`NOT NULL DEFAULT 'AI'` 改成可空、无默认值，同 v20 的理由）。
+`add_risk` 原先连 `owner` 形参都没有、INSERT 里硬写 `"AI"`，
+且全仓没有一个读者碰这一列；这一片同时补上第一个真读者：
+Owner Dashboard 的「风险责任」块（`experience/owner_dashboard.py`，
+正文两档渲染都出这句人话，风险编号只进 `<details>` 折叠区与 `--json`）。
 
 ## Migration 版本清单
 
@@ -76,6 +85,7 @@ v20 = `gates_approved_by_no_default`（重建 `gates`，把 `approved_by` 从
 | v18 | db_meta_table |
 | v19 | eco_change_orders |
 | v20 | gates_approved_by_no_default |
+| v21 | risks_owner_no_default |
 
 ## Direct sqlite3.connect Classification
 
