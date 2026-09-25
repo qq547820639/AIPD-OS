@@ -50,7 +50,8 @@ MAPPING: dict[str, dict[str, Any]] = {
                 "写完逐件回读中心与体积，对不上就删文件并报错），"
                 "`aipd release manifest --assembly-step` 把它接进发布就绪证据"
                 "（逐件把侧车自己的两个数重算一遍，并与装配图的球标集合对账）。"
-                "剩下的边界：**非 ASCII 零件名被 OCCT 写成 mojibake**（件号↔几何只由 sidecar 承载）、"
+                "剩下的边界：**非 ASCII 零件名被 OCCT 写成 mojibake**"
+                "（件号↔几何只由 sidecar 承载）、"
                 "子装配层级与约束不建模。"},
     "总装图": {
         "verdict": "producer", "capabilities": ["cad.2d_drawings"],
@@ -81,8 +82,15 @@ MAPPING: dict[str, dict[str, Any]] = {
         "note": "独立库 bom.db；乐观锁 + 审计 + 成本 + 发布检查清单。"},
     "ICD": {
         "verdict": "absent", "capabilities": [], "producers": [], "tests": [],
-        "note": "接口控制文档：src/tests/scripts 三处按词边界查 `ICD` 全为 0 命中，"
-                "能力表里也没有任何一行提到它。"},
+        "note": "接口控制文档：**按形状就不该由本仓单方产**。NASA《SE Handbook》附录 L 的接口大纲"
+                "（免费全文，访问 2026-09-25；注意该页把自己叫 **IRD** 不叫 ICD）里 "
+                "§1.3「Responsibility and Change Authority」与 §3.1.2「Interface Responsibilities」"
+                "两节的内容只能由**对侧**给；本地生成器最多填 §1 的子集，"
+                "把它叫 ICD 就是伪造签署。可自查的那半（接口清单、数据形状、"
+                "每个接口的定义件版本 + sha256、逐接口用例证据）另出一份《接口清单与契约证据》，"
+                "**不叫 ICD**（该片尚未做）。命中数由判据现算：`src/` 0 处，"
+                "`tests/` 3 + `scripts/` 3 全是本普查自己点名（含 test_c6_coverage 的 "
+                "`assert absent == {\"ICD\"}`）——即「除普查自身点名外 0 命中」。"},
     "尺寸链": {
         "verdict": "producer", "capabilities": ["cad.tolerance_chain"],
         "producers": ["src/aipd_os/cad/stackup.py", "src/aipd_os/cad/drawings2d.py"],
