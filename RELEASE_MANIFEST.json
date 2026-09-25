@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 139687,
-      "sha256": "95c9800300fada41f6069814c290562f86afc103c39a33241041f5470b8cf2f8"
+      "size": 144688,
+      "sha256": "4e2cacb4f11a84a14bda74ee77d535f0220900c2059586a5de709e15ede5cf9c"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 38529,
-      "sha256": "393da3d8098226aff833f89f1303664f9adf8707d43b2939e0c1f4e1647f3966"
+      "size": 39338,
+      "sha256": "3de0cf5b86b9e2e54cc6f0b24a4ef79b0bae3205adf3e090b65269c203d08e80"
     },
     {
       "path": "RELEASE_SIGNING.md",
