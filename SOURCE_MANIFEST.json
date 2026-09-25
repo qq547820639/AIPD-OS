@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-25T18:07:17+00:00",
+  "generated_at": "2026-09-25T18:41:43+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 175682,
-      "sha256": "d93a7601902c914cdd942f318cb9e05196c3fdcc9c000a7cf6c5835604770db6"
+      "size": 178087,
+      "sha256": "2753b82d7957b1e76edab9795a64ff88ccfcfb7223bab01c73e5beaadab0a214"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 44596,
-      "sha256": "ce615928fafa4e3ffebd09178ed5ead9b0e1396a0f0bfe1eba2d611632df9712"
+      "size": 44683,
+      "sha256": "1fd658df0f2714b989797b041934948e9c7e6a3f8fd1ca9847f73ba74d865a51"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -742,8 +742,8 @@
     },
     {
       "path": "scripts/command_surface_census.py",
-      "size": 20255,
-      "sha256": "9cbb56bc801ff77628bfb63a61f73b9b8b13ea9648723cecc4ae6d86d3e1d10f"
+      "size": 20553,
+      "sha256": "514be5248d7bc8a5cbe1012b62a72491dfb8f2a53d0709c60042a2bc83218b73"
     },
     {
       "path": "scripts/decision_policy.py",
@@ -2436,6 +2436,11 @@
       "sha256": "64185f76346c98d3b51a37106f6cfe1cec642fec5ec2cf79d961debfa2a32aa4"
     },
     {
+      "path": "tests/test_cli_public_surface.py",
+      "size": 11374,
+      "sha256": "c76ae071860ec1fb4f2629f4a61c7a75bab6d7fa09bf708dc74dbfd801a5a0e5"
+    },
+    {
       "path": "tests/test_cli_repo_root_decoupling.py",
       "size": 3062,
       "sha256": "d488e744e611e63fb3e360072f7882e40ede6c2a9bae1b49efd0062ff5e4b35b"
@@ -2452,13 +2457,13 @@
     },
     {
       "path": "tests/test_command_coverage.py",
-      "size": 8751,
-      "sha256": "003ccf37b98708a3b31c8fe652229ce465ee969c83cab3214f7f3d884bc5c570"
+      "size": 8827,
+      "sha256": "53c844d84279e4fa2418462bc35a75ae473589d6e511eb209e677bf1c04d9985"
     },
     {
       "path": "tests/test_command_surface_census.py",
-      "size": 7391,
-      "sha256": "67c44a0349ae23b2044e4dbc1139ed8cbf0e7b501bd5b6099c0b5800081c9c04"
+      "size": 8514,
+      "sha256": "59413518fb4113d992b03630467895d8d9cced34b6b5f9afceb9511c05e29414"
     },
     {
       "path": "tests/test_completion_endpoint.py",
