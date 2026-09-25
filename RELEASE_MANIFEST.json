@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 109220,
-      "sha256": "8945aa8bd526268c56d006fffd74d80143a61f3872f63e58e3a04671c1e7c244"
+      "size": 112068,
+      "sha256": "545d89813bc0af0db921ebbaa5b1c051abaaa33125c29d0a8bc4c72eb9f8c367"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 31381,
-      "sha256": "b2e4fc54541f50eb9486487cf5c9d611772b79e735bf75498911752f71d2b752"
+      "size": 32437,
+      "sha256": "592a2692af144af220bdac63244136f28c08160bcd2c31f883b748a789b26a75"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -697,8 +697,8 @@
     },
     {
       "path": "scripts/c6_coverage.py",
-      "size": 21275,
-      "sha256": "ede684aff1d60c9984fa618697f3807a3ae455b172bc102d0f14b10ccea9e89d"
+      "size": 21476,
+      "sha256": "7843011da85c6cedf97d33c41e02ade7afc715e43522188c8afe91cb3e65d3dc"
     },
     {
       "path": "scripts/cad_convergence.py",
@@ -1082,8 +1082,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_release.py",
-      "size": 5480,
-      "sha256": "f31fb6da9726491145ba55881f925388ce4c5940b2e444fb8941604557fe0c41"
+      "size": 5579,
+      "sha256": "762f765b92dea64a6dbd6c1405932052a945fc9a30942266cdcfdc43dd73136a"
     },
     {
       "path": "src/aipd_os/cli/commands_supply.py",
@@ -1102,8 +1102,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 45476,
-      "sha256": "6672082043c211729b062d6a4b9f5ffe81f2e9984af01d3c6e9e6e96fe6f5fed"
+      "size": 45873,
+      "sha256": "61ce409486b4cb90f8e4e0d4fec33f3e2926e90ff8ac8010416e69c09100b46b"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1577,13 +1577,13 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 72707,
-      "sha256": "3f37a1e48636e200d1ac25072e2cc89eda5d9019c7515a7bc56d48d87b5c5988"
+      "size": 73535,
+      "sha256": "b62509958b2a2cac1ecb99d62e9894b4ded6a1411185c347a536338fe6a71618"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
-      "size": 29395,
-      "sha256": "38428c24e1d8d47097dafb3bf9e59747f11e23debf92e2a1bc9178439bdbe2a4"
+      "size": 38034,
+      "sha256": "dc77e799ddd933930aa21e9758721757f942cac124c998d87cd800732e623410"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -2834,6 +2834,11 @@
       "path": "tests/test_release_manifest.py",
       "size": 41572,
       "sha256": "8eef42ae651c1dd271a81db317c5a109e6655ef89df7b631ca263ac40aad4a42"
+    },
+    {
+      "path": "tests/test_release_manifest_assembly_step.py",
+      "size": 16199,
+      "sha256": "f61e798f35ddf351544c169e5112b23f9da595cf8bcb817e295f01cdf9ffe2c2"
     },
     {
       "path": "tests/test_release_signing.py",
