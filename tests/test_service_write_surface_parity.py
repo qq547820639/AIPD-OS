@@ -169,6 +169,35 @@ class TestSignaturesStayAligned:
         assert (a["tolerance"], a["conditions"]) == (b["tolerance"], b["conditions"])
 
 
+
+def _shared_readers() -> list[str]:
+    """两层同名、且服务面以关键字参数收着的读接口（实测 5 个）。"""
+    return sorted(n for n in dir(StateService)
+                  if (n.startswith("list_") or n.startswith("get_"))
+                  and callable(getattr(StateService, n)) and hasattr(AIPDStateDB, n))
+
+
+class TestReadSideIsEquallyWide:
+    """写面这关过了，读侧对称面在第 38 片收尾时实测过一遍：**5 个两层同名读接口，
+    库层能按的筛选项服务面全都能按**（零缺口）。这条不是修出来的，是把「零」钉住，
+    免得下次给库层 `list_*` 加一个筛选参数而服务面没跟上。
+    """
+
+    def test_there_really_are_shared_readers_to_compare(self):
+        """分母非零：没有可比对象的循环永远绿，那是假绿不是通过。"""
+        assert len(_shared_readers()) == 5, _shared_readers()
+
+    def test_service_covers_every_db_read_filter(self):
+        offenders = {}
+        for method in _shared_readers():
+            db_p = {p for p in inspect.signature(getattr(AIPDStateDB, method)).parameters
+                    if p not in ("self", "tenant_id", "project_id", "actor")}
+            svc_p = {p for p in inspect.signature(getattr(StateService, method)).parameters
+                     if p not in ("self", "tenant_id", "project_id", "actor")}
+            if db_p - svc_p:
+                offenders[method] = sorted(db_p - svc_p)
+        assert not offenders, f"这些读接口只能从库层筛、服务面筛不了：{offenders}"
+
 def test_metadata_json_is_the_serialised_mapping_not_a_replacement(tmp_path):
     """`metadata` 这格是 JSON 列：读回来要能 `json.loads`，且与原字典相等。"""
     row = _write(_svc(tmp_path), "add_evidence")
