@@ -966,7 +966,7 @@
 
   改法：`scripts/selftest_quality.py` 重写成**四支两两对照**
   （A1 只有产物 ⇒ communication 不放行，且断言落在 `communication_accepted=false` 这一格；
-  A2 全链路 + 验收字段达标 ⇒ 放行，这是 A1 的开火前提；B1 `faceted_brep` 到不了 C7；
+  A2 全链路 + 验收字段达标 ⇒ 放行，这是 A1 的开火前提；B1 `faceted_brep` 达不到 C7；
   B2 `native_brep` 填满 C0..C7 要求项 ⇒ C7 放行，这是 B1 的开火前提），
   少跑到任何一支都退 7（不是退 0），证据字典改为 `importlib` 取 `REQUIREMENTS` 而不是
   `runpy.run_path` 执行脚本顶页；新增 `tests/test_gate_runners.py` 把三件事变成常驻断言：
