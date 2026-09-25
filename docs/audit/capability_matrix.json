@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-25T11:02:57",
+  "generated_at": "2026-09-25T12:40:31",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
   "latest_commit_sha": "a66040520139405095648461f7144d4f00629924",
@@ -996,11 +996,11 @@
           "implementation_file": "src/aipd_os/cad/dfm.py; src/aipd_os/release_manifest.py",
           "entry_point": "aipd_os.cli.commands_drawing.cmd_drawing_dfm",
           "run_command": "aipd drawing dfm",
-          "input_output": "STEP 实体（+ 可选 --material 材料牌号、--spec 公差声明）-> Markdown DFM/DFA 报告 + .evidence.json：内核实测最小壁厚（**两法各量各的，min 取较薄者**：三轴网格射线 + 沿面法向并用实体分类器验材料段）、整孔直径/深度/深径比（圆柱面角向张角满一周才算孔）、最小内圆角半径、同轴孔系、包络与体积；每条阈值带 source（URL + 访问日期 + 是厂商能力还是转述标准），前提不成立记 blind 不折算合格；`aipd release manifest --dfm-doc` 才写 dfm_dfa 那一格（hold 阻断、告警与盲区提示）",
-          "unit_test": "tests/test_cad_dfm.py; tests/test_cad_dfm_wall_normal.py",
-          "integration_test": "tests/test_cad_dfm.py::TestCliSurface; tests/test_cad_dfm_wall_normal.py::TestAVoidIsNotAWall",
-          "e2e_evidence": "命令行出报告与侧车（tests/test_cad_dfm.py::TestCliSurface，0.6mm 板量出 0.6、Ø6 孔在 20 宽板里量出 7mm 孔壁）；发布证据带 dfm_dfa 哈希与 dfm_summary（同文件 TestReleaseManifestSeesTheAnalysis）",
-          "current_limitation": "判据只覆盖**量得出且有来处**的几项：壁厚两法都是**采样**，读数带着间距/命中数/可用段数一起交。旧话「斜置只测厚不测薄」已被实测推翻：同一块 3mm 斜板三轴法给出 1.00 / 2.02 / 3.00（随网格间距跳），会**读薄**因而误报薄壁告警；沿面法向那一条在同样几档间距下恒为 3.00，但它每面最多 12×12 点、还刻意只采参数域中间 60%，会漏掉三轴抓到的薄特征（金样品 bracket：三轴 2.00 < 法向 3.73）⇒ 聚合取较薄者，两个数都留在读数里让人自己比；DFA 只报同轴孔系数量这一件事实，装配力/紧固顺序、模具侧抽芯与脱模方向、铸造圆角与收缩率、热变形/振动的 CAE、工序工时与成本都不建模（本仓不建 operations 表）。内圆角那条厂商给的是「≥ 腔深 1/3」的比值、本仓没有可比的腔深定义，所以只报实测半径不设阈值。阈值来处是两家厂商工艺能力页（HLH Rapid 与 Xometry 独立给出同量级）+ 3ERP 转述的 ISO 2768-1 表，**都不是**本仓自定；页面无 License 声明，故只引用数字不复制正文。需装 cad extra。",
+          "input_output": "STEP 实体（+ 可选 --material 材料牌号、--spec 公差声明）-> Markdown DFM/DFA 报告 + .evidence.json：内核实测最小壁厚（**两法各量各的，min 取较薄者**：三轴网格射线 + 沿面法向并用实体分类器验材料段）、整孔直径/深度/深径比（张角满一周**且**径向外移落进材料里才算孔——外圆也满一周，另计 `outer_cylinder_count` 交出去）、孔周留肉（孔口圆到最近自由边的精确极值距离，逐口给读数、行取最薄口、聚合取最薄孔）、最小内圆角半径、同轴孔系、包络与体积；每条阈值带 source（URL + 访问日期 + 来处类别 + 一句限定），前提不成立记 blind 不折算合格；`aipd release manifest --dfm-doc` 才写 dfm_dfa 那一格（hold 阻断、告警与盲区提示）",
+          "unit_test": "tests/test_cad_dfm.py; tests/test_cad_dfm_wall_normal.py; tests/test_cad_dfm_hole_land.py",
+          "integration_test": "tests/test_cad_dfm.py::TestCliSurface; tests/test_cad_dfm_wall_normal.py::TestAVoidIsNotAWall; tests/test_cad_dfm_hole_land.py::TestTheBorrowedThresholdJudgesThreeWays",
+          "e2e_evidence": "命令行出报告与侧车（tests/test_cad_dfm.py::TestCliSurface，0.6mm 板量出 0.6、Ø6 孔在 20 宽板里量出 7mm 孔壁）；金样品 BRK-1 实跑 `aipd drawing dfm --material 6061-T6`：三孔各量到留肉、最小 2mm，报告里借数那条印出「页内原述是给「金属最小壁厚」的」；发布证据带 dfm_dfa 哈希与 dfm_summary（同文件 TestReleaseManifestSeesTheAnalysis）",
+          "current_limitation": "判据只覆盖**量得出且有来处**的几项：壁厚两法都是**采样**，读数带着间距/命中数/可用段数一起交。旧话「斜置只测厚不测薄」已被实测推翻：同一块 3mm 斜板三轴法给出 1.00 / 2.02 / 3.00（随网格间距跳），会**读薄**因而误报薄壁告警；沿面法向那一条在同样几档间距下恒为 3.00，但它每面最多 12×12 点、还刻意只采参数域中间 60%，会漏掉三轴抓到的薄特征（金样品 bracket：三轴 2.00 < 法向 2.24，且这条读数随**每面上限**变：6×6 时读 3.73）⇒ 聚合取较薄者，上限与两个数都留在读数里让人自己比；DFA 只报同轴孔系数量这一件事实，装配力/紧固顺序、模具侧抽芯与脱模方向、铸造圆角与收缩率、热变形/振动的 CAE、工序工时与成本都不建模（本仓不建 operations 表）。内圆角那条厂商给的是「≥ 腔深 1/3」的比值、本仓没有可比的腔深定义，所以只报实测半径不设阈值。孔周留肉的两档阈值是**从「最小壁厚」外推来的**（`basis=borrowed_out_of_scope`，`source.stated_for` 指回壁厚那条；2026-09-25 检索 HLH Rapid / Xometry / 3ERP 转述的 ISO 2768 均无机加件孔边距规则），只判 advisory、由制造方核，本仓不自证为标准；孔口开在曲面上的件（径向孔）只给盲区原因，不做曲线边近似；沉孔/锪孔按两根孔各量，读数正确但没有「沉孔底厚」这类特征语义。阈值来处是两家厂商工艺能力页（HLH Rapid 与 Xometry 独立给出同量级）+ 3ERP 转述的 ISO 2768-1 表，**都不是**本仓自定；页面无 License 声明，故只引用数字不复制正文。需装 cad extra。",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,

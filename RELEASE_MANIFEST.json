@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 117506,
-      "sha256": "b02edef83093e12d329c8564216eff7a2effa973f96bbc6143b7ad0ee9121cbd"
+      "size": 121558,
+      "sha256": "ca3b6c629dc8be19ab751b6dc2a0e556650f222161c274b58e99f9045f9d30c3"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 33244,
-      "sha256": "48395e4054be9400fe0c9386642a441c5bcec7f6d7625d06e5cb86d833456044"
+      "size": 34203,
+      "sha256": "13b93c8784a3f9b77d27b29a2ab819301a9658e66532feab5efcca48139f39d0"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -697,8 +697,8 @@
     },
     {
       "path": "scripts/c6_coverage.py",
-      "size": 21476,
-      "sha256": "7843011da85c6cedf97d33c41e02ade7afc715e43522188c8afe91cb3e65d3dc"
+      "size": 21843,
+      "sha256": "95e1c979066ec57befd93c1e590a51239466782d59589e9881c36d6f5aee8db9"
     },
     {
       "path": "scripts/cad_convergence.py",
@@ -982,8 +982,8 @@
     },
     {
       "path": "src/aipd_os/cad/dfm.py",
-      "size": 38259,
-      "sha256": "8ef5c048da269f1ad37b906c02f738d42a76f9cfe8b7b876d905fa1f5a7fba19"
+      "size": 56701,
+      "sha256": "6eeedde700314022929ddcc32ffff498e5867a082b47cc5b5399d2e4ec55adff"
     },
     {
       "path": "src/aipd_os/cad/drawings2d.py",
@@ -1577,8 +1577,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 74555,
-      "sha256": "38dc26edd55f686f0205880e37c9e603a173cf772bfaf338ed93c7256837c87c"
+      "size": 75603,
+      "sha256": "b436f3a26ea7b2ddf14346eedfb7984f188e3af2d33afa9ffad1fae84c41b4b7"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2267,13 +2267,18 @@
     },
     {
       "path": "tests/test_cad_dfm.py",
-      "size": 19528,
-      "sha256": "9377639db5fd7366790006da2cb084e076f73f6b10c3057c36d9b1f32c749c03"
+      "size": 23375,
+      "sha256": "403a42069b5e42bc07959b4f8405accf964ef6f536e7801856dc40bf3d1c8bfd"
+    },
+    {
+      "path": "tests/test_cad_dfm_hole_land.py",
+      "size": 22410,
+      "sha256": "f6cdb69085bd42d1ab3f7ded3fa0517839a6ad002b1959a7507e7dcf7a06d1fc"
     },
     {
       "path": "tests/test_cad_dfm_wall_normal.py",
-      "size": 11662,
-      "sha256": "6d948bba1639b1d8e84e73fd426c343df08c266884fc6b2b43634f501823ea10"
+      "size": 14105,
+      "sha256": "9bcbc48c47bb6d360ac255c261da8f62342f9b3a6fb9a1069c07eb58b7cfd63a"
     },
     {
       "path": "tests/test_cad_drawings2d.py",
