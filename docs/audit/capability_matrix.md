@@ -1,10 +1,10 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-25T12:40:31`
+- 生成时间：`2026-09-25T13:34:24`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
 - 默认分支：`main`；HEAD：`a66040520139405095648461f7144d4f00629924`
 - 版本：`5.6.0`
-- 能力总数：`82`
+- 能力总数：`83`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
 
 ## 分类统计
@@ -12,7 +12,7 @@
 | 分类 | 数量 | 说明 |
 | --- | --- | --- |
 | `fully_implemented` | 33 | 完整实现（有真实运行工件与测试证据） |
-| `partially_implemented` | 36 | 部分实现（核心路径可用，边界/证据不全） |
+| `partially_implemented` | 37 | 部分实现（核心路径可用，边界/证据不全） |
 | `protocol_only` | 0 | 仅协议/接口（无真实执行） |
 | `template_only` | 0 | 仅模板/示例（无真实执行） |
 | `external_dependency` | 13 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
@@ -95,6 +95,12 @@
 | BOM一致性 | `fully_implemented` | references/manual-to-cad-digital-thread.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 检验计划 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 生产发布门 | `partially_implemented` | references/gate-model.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m> --target <level>` | tests/test_production_release_gate.py; tests/test_production_release_gate_file_lists.py | 哈希核对按级触发：某键只有在该目标级被 REQ 要求时才核哈希，低一级的引用只过 file_openable（存在且可打开）。门逐级止步于第一个没满足的层级，故 missing 只列到那一级为止。 |
+
+## 工业化与供应链
+
+| 能力 | 分类 | 声明文件 | 实现文件 | 入口 | 运行命令 | 单元测试 | 当前限制 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| ECR/ECO 工程变更单 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/change_orders/eco.py; src/aipd_os/cli/commands_eco.py | aipd_os.cli.commands_eco.cmd_eco_create | `aipd eco create` | tests/test_change_order_eco.py; tests/test_migration.py | **本仓只产单与守状态机，不代替人批**：DECISION 类转移（APPROVED/REJECTED）要求 actor 是与创建人不同的真人，机器身份（含本仓 gates 用的 'AI-internal'）一律拒；但「这个 actor 真是某个人」无法机器验证——没有身份源，署名是声明不是证据。变更单也**尚未接进发布门**：「自上次锚定发布以来 manifest 哈希有差却没有闭合 ECO」这条 fail-closed 判据未做（下一片）。ECR 与 ECO 共用一张表与一台状态机（只靠 kind 区分），没有独立的评审会议记录/签名页。 |
 
 ## 工业化与验证
 

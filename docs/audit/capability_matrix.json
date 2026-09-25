@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-25T12:40:31",
+  "generated_at": "2026-09-25T13:34:24",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
   "latest_commit_sha": "a66040520139405095648461f7144d4f00629924",
@@ -27,10 +27,10 @@
     "not_verifiable": "无法验证（缺证据/缺环境）"
   },
   "summary": {
-    "total_capabilities": 82,
+    "total_capabilities": 83,
     "by_classification": {
       "fully_implemented": 33,
-      "partially_implemented": 36,
+      "partially_implemented": 37,
       "protocol_only": 0,
       "template_only": 0,
       "external_dependency": 13,
@@ -1148,6 +1148,32 @@
           "integration_test": "tests/test_release_manifest.py::TestNumbersAreMeasured",
           "e2e_evidence": "证据门全项（存在/schema/hash/图号/BOM/单位/GD&T/审批/证据时效）；FILE_KEYS 的引用**逐条**核存在与哈希，含模板与生产者写出的数组形状（tests/test_production_release_gate_file_lists.py；真产物反向对照：删掉图/改掉内容都判红，见 tests/test_release_manifest.py 末两条）",
           "current_limitation": "哈希核对按级触发：某键只有在该目标级被 REQ 要求时才核哈希，低一级的引用只过 file_openable（存在且可打开）。门逐级止步于第一个没满足的层级，故 missing 只列到那一级为止。",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": false
+          }
+        }
+      ]
+    },
+    {
+      "domain": "工业化与供应链",
+      "capabilities": [
+        {
+          "id": "industrialize.change_control",
+          "name": "ECR/ECO 工程变更单",
+          "domain": "工业化与供应链",
+          "classification": "partially_implemented",
+          "external_dependency": false,
+          "declaration_file": "references/production-cad-deliverables.md",
+          "implementation_file": "src/aipd_os/change_orders/eco.py; src/aipd_os/cli/commands_eco.py",
+          "entry_point": "aipd_os.cli.commands_eco.cmd_eco_create",
+          "run_command": "aipd eco create",
+          "input_output": "state.db（migration v19 的 eco_records / eco_affected / eco_transitions 三张表）-> 一张带影响清单与转移流水的变更单：create 开 DRAFT 单（作者必须是真人）、affected 加影响对象（UPDATE 必须同时交改前/改后 sha256，送审即冻结）、transition 走状态机（DRAFT→PENDING_REVIEW→APPROVED→IMPLEMENTED→VERIFIED，分支 REJECTED/SUPERSEDED）、show 读回单据与流水",
+          "unit_test": "tests/test_change_order_eco.py; tests/test_migration.py",
+          "integration_test": "tests/test_change_order_eco.py::TestNobodyApprovesTheirOwnOrder; tests/test_command_coverage.py",
+          "e2e_evidence": "命令行四步走通并拒得住假批准：ECO-001 由 zhang 开单、写带 sha256 的影响行、送审后 zhang 自己批被拒（rc=4）、li 批过后 approver 列才落下名字；无凭据进 IMPLEMENTED 被拒（tests/test_change_order_eco.py::TestCliSurface）",
+          "current_limitation": "**本仓只产单与守状态机，不代替人批**：DECISION 类转移（APPROVED/REJECTED）要求 actor 是与创建人不同的真人，机器身份（含本仓 gates 用的 'AI-internal'）一律拒；但「这个 actor 真是某个人」无法机器验证——没有身份源，署名是声明不是证据。变更单也**尚未接进发布门**：「自上次锚定发布以来 manifest 哈希有差却没有闭合 ECO」这条 fail-closed 判据未做（下一片）。ECR 与 ECO 共用一张表与一台状态机（只靠 kind 区分），没有独立的评审会议记录/签名页。",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
