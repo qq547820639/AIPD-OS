@@ -951,6 +951,30 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-CLI-COV 第 40 片：把在册 17 条命令补成走过 CLI 入口的真调用（读数和成 66/66）**：
+  第 39 片修好量具后登记在册的 17 条——10 条零证据（`cad preflight` `dashboard` `onboard`
+  `operate` `product show` `product gate` `recover` `reset` `ui` `version`）、4 条只被
+  deprecated 别名走过（`cad build` `package` `resume` `test`）、1 条只被直调处理函数走过
+  （`doctor`）、2 条调的是 `cmd_outbox` 这种共用处理函数（`outbox drain` / `outbox review`）——
+  全部补成 `tests/test_cli_public_surface.py`（14 条）里的 `main([...])`：**走 argparse、走分发**，
+  断言落在读数上而不是「rc 不为 0 就算跑过」。三处判定值得单记：
+  ① `cad build` 在 faceted_brep 封顶 C1 时目标 C1 仍 rc=4 且 `reached_level is None`——
+  这是门禁在拦，不是没接线，与 `cad preflight`（同一份 manifest 判「上限允许」⇒ rc=0）
+  正好两问分开；② `outbox drain` 与 `outbox review` 各走一次并断言**两份读数不同**，
+  否则共用处理函数那条歧义档永远关不掉；③ `ui` 只 mock `aipd_os.web.serve` 那一层，
+  断言 db/host/port 三个参数原样交到位（起真服务会挂住套件，直接调 `cmd_ui` 又看不见接线）。
+  棘轮随即按设计判红「已补真调用却没删格」17 条：`BASELINE` 清空、
+  `cli` 档非空转前提从 49 改 66，并新增 `CLOSED` 闭合账（17 条 × 证据文件名 needle，
+  断掉即红）——空基线本身是个空循环，这一面必须有东西接着。
+  顺带修掉一处我自己上一轮写的**把现状当应然**的断言：`test_command_coverage.py` 的报告用例
+  原先硬要求「必有未测缺口」，补满 66 条后它自己成了假红；缺口存在性归棘轮与闭合账管，
+  报告只报。读数：全量 **2263 → 2278**（+15：新用例 14 条 + 闭合账 1 条；收集数 2266 → 2281）；
+  电池 `/tmp/s40/battery.py`
+  **5 条：杀 5 / 存活 0 / 注入无效 0 / 崩溃式红 0**（两条注入纪律现学：撤改要逐文件核还原，
+  别拿全仓 sha 判本臂；注入用的 import 若落在被测文件里，必须让夹具自己带上，否则电池结束时
+  留下一处"看着像用户改动"的泄漏）。
+  调研豁免：本片只补测试与账，不改判据实现、不引新技术。
+
 - **v5.12 F-CLI-COV 第 39 片：命令覆盖率那把尺子两头都在错（15 条假未测 + 7 条零证据假已测）**：
   轴换到「常驻测试到底有没有走过这条命令的 CLI 入口」。`tests/test_command_coverage.py`
   把 `tests/` 拼成一个大字符串再用 `cmd in blob` 判「被测」，同一个命令名在测试里有

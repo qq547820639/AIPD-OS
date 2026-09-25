@@ -20,6 +20,12 @@
 - 登记里的命令补上了真调用 ⇒ 也红，必须把那一格从登记里删掉（记录只减不增）；
 - 档位自己变了（`none` → `handler` 这种"看着像进步"的漂移）同样红。
 
+**第 40 片把登记清空了**：当时在册的 17 条全部补成了
+`tests/test_cli_public_surface.py` 里的 `main([...])` 真调用，读数变成 cli 66 / 其余 0。
+空登记不等于没有牙齿——新命令一注册就落进「未登记的缺口」那一侧；而"闭掉的那 17 条
+现在还闭着"改由 `CLOSED` 这张账钉住：每条都要能指回新用例文件里的 argv 证据，
+把那个文件删了或改回直接调处理函数，这里就红。
+
 `outbox drain` / `outbox review` 停在 `handler_ambiguous`：测试直接调的是
 `cmd_outbox`，而这一条处理函数被两条命令共用，分不清是哪个 verb 被走过——
 按「看不见不等于通过，也不等于违规」单列一档，而不是折算进任一侧。
@@ -38,27 +44,17 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import command_surface_census as census  # noqa: E402
 
-# 命令 → 档位。这份登记是"当前事实"的快照，不是许可名单：
-# 只有把真调用补进 tests/ 才允许删格，加命令不许进这张表。
-BASELINE: dict[str, str] = {
-    "cad build": census.TIER_ALIAS,
-    "cad preflight": census.TIER_NONE,
-    "dashboard": census.TIER_NONE,
-    "doctor": census.TIER_HANDLER,
-    "onboard": census.TIER_NONE,
-    "operate": census.TIER_NONE,
-    "outbox drain": census.TIER_HANDLER_AMBIGUOUS,
-    "outbox review": census.TIER_HANDLER_AMBIGUOUS,
-    "package": census.TIER_ALIAS,
-    "product gate": census.TIER_NONE,
-    "product show": census.TIER_NONE,
-    "recover": census.TIER_NONE,
-    "reset": census.TIER_NONE,
-    "resume": census.TIER_ALIAS,
-    "test": census.TIER_ALIAS,
-    "ui": census.TIER_NONE,
-    "version": census.TIER_NONE,
-}
+# 低于 cli 档的登记：第 40 片起为空。加命令不许进这张表，只能补真调用。
+BASELINE: dict[str, str] = {}
+
+# 第 40 片闭合的账：命令 → 必须出现在其证据里的用例文件名。
+# 空 BASELINE 会留下"没有东西可断言"的空转面，这张账就是那侧的替代牙齿。
+CLOSED = (
+    "cad build", "cad preflight", "dashboard", "doctor", "onboard", "operate",
+    "outbox drain", "outbox review", "package", "product gate", "product show",
+    "recover", "reset", "resume", "test", "ui", "version",
+)
+CLOSURE_EVIDENCE = "test_cli_public_surface"
 
 
 @pytest.fixture(scope="module")
@@ -75,14 +71,29 @@ def test_below_cli_set_matches_the_record_exactly(report) -> None:
     assert actual == recorded, (
         f"未登记的缺口（新注册命令没有 argv 位用例）：{sorted(actual - recorded)}；"
         f"已补真调用却没删格：{sorted(recorded - actual)}")
-    assert len(recorded) == 17, "登记条数本身也被钉住：改动必须带说明进 CHANGELOG"
+    assert len(recorded) == 0, (
+        f"登记在册的缺口已在第 40 片清零，重新往基线里加格子等于放行新缺口：{sorted(recorded)}")
 
 
 def test_each_recorded_tier_is_the_measured_one(report) -> None:
-    """档位漂移（none→handler、handler→alias 之类）逐条点名。"""
+    """登记非空时逐条核档位（当前为空 ⇒ 由下一条接住这一面，别留空循环）。"""
     drifted = {c: (t, BASELINE[c]) for c, t in report["tiers"].items()
                if c in BASELINE and t != BASELINE[c]}
     assert not drifted, f"这些命令的档位与登记不符（左＝实测，右＝登记）：{drifted}"
+
+
+def test_closed_register_still_points_at_real_argv_evidence(report) -> None:
+    """第 40 片闭掉的 17 条必须仍指得回那批 argv 位用例。
+
+    登记清空后，"档位漂移"这一面在 BASELINE 上是空循环；这条把它接到实据上：
+    用例文件被删、或改成直接调处理函数，这里就红。
+    """
+    assert len(CLOSED) == 17, "闭合账本身就是分母，不许悄悄增删"
+    weak = [c for c in CLOSED
+            if report["tiers"].get(c) != census.TIER_CLI
+            or not any(CLOSURE_EVIDENCE in e for e in report["evidence"].get(c, []))]
+    assert not weak, (
+        f"这些命令的 CLI 面证据又断了（应能在 {CLOSURE_EVIDENCE} 里找到 argv 位调用）：{weak}")
 
 
 def test_tiers_partition_the_denominator(report) -> None:
@@ -100,8 +111,8 @@ def test_tiers_partition_the_denominator(report) -> None:
 def test_reading_is_not_vacuous(report) -> None:
     """探针得真读到位语料，且 cli 档非空——空读数不能算绿。"""
     assert report["files_read"] > 100, f"只读了 {report['files_read']} 个测试文件"
-    assert len(report["buckets"][census.TIER_CLI]) == 49, (
-        f"cli 档读数漂到 {len(report['buckets'][census.TIER_CLI])}")
+    assert len(report["buckets"][census.TIER_CLI]) == 66, (
+        f"cli 档读数漂到 {len(report['buckets'][census.TIER_CLI])}（第 40 片起为满覆盖）")
     assert report["parse_failures"] == []
 
 

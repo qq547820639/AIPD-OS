@@ -122,8 +122,8 @@ def test_command_coverage_report() -> None:
     print(f"已声明但未真调（{len(declared_untested)}）：{declared_untested}")
     print(f"已注册但未真调（{len(registered_untested)}）：{registered_untested}")
     print(f"已注册但未声明（{len(registered_undeclared)}）：{registered_undeclared}")
-    assert registered_untested, (
-        "探针认为每条注册命令都真调过 ⇒ 要么登记基线被抹平，要么 argv 位判据失效")
+    # 这里原先断言"必有未测缺口"——那是把第 39 片当时的现状当成了应然，
+    # 第 40 片补满 66 条后它自己就成了假红。缺口的存在性由棘轮与闭合账管，报告只管报。
 
 
 # --------------------------------------------------------------------------
