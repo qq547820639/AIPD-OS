@@ -128,3 +128,28 @@ assembly_model.verification        = read_back_matched_multiset
   吃的是 `--model` 的实体数，换成总装的**声明件数**是口径变更，得先定
   「一行 BOM 对一件零件还是一个实体」，本仓不猜。
 - 侧车路径同干名相顶（§六 末）**没修**，另立 F-EVID-03。
+
+## 八、收尾读数（落盘后由量具复算，不是计划）
+
+提交：`be67189`（代码 + 文档）→ 本文件所在那次文档提交 → 发布工件重锚在其间。
+
+| 量具 | 读数 |
+|---|---|
+| 全量 pytest（`docs/audit/pytest-report-v5.6.0.json`） | **1890 passed / 0 failed / 3 skipped**（共 1893；上一片收尾 1867/0/3=1870，本片 +23 条用例） |
+| `PROVENANCE.json` | `test_report.{passed:1890, failed:0, total:1893, source_commit:a66040520139…}` |
+| `SOURCE_MANIFEST.json` | 被哈希面 **603 → 604**（与上一轮逐项求差，新增就是 `tests/test_release_manifest_assembly_step.py`） |
+| `production_release_gate --release-ready --tag v5.6.0` | rc=0，`release_ready: true`，8 项检查、未通过列表为空 |
+| `ruff check src tests state_service` | rc=0（与 CI 同口径，`scripts/` 不在本仓 lint 面内） |
+| `mypy` | rc=0，405 files no issues |
+| `scripts/c6_coverage.py --self-test` | 7/7；档位仍 **13 / 1 / 1**（这一格是「已 producer 的那项接进证据」，不升档） |
+| 变异电池 `/tmp/slice22-mutations.py` | 16 条：杀掉 16 / 存活 0 / 注入无效 0 |
+| `audit_repo.py --strict` | rc=1，1 个 ✗（Provenance 锚点与 HEAD 之差，真发版前按设计为红） |
+
+## 九、下一片候选（供排序，不代表已决定）
+
+1. **F-EVID-03 侧车同干名相顶**（本片端到端撞出来的，已立案带修法选项）：
+   先做「写入方拒绝顶掉别人的 `document`」那条止血，再数消费方决定要不要改成带后缀的侧书名；
+2. `assembly_model` 与 BOM 的行数对账（要先定「一行 BOM 对一件零件还是一个实体」）；
+3. **ICD**：普查里唯一仍 `absent` 的一项，卡在「接口清单的事实来源」要属主给；
+4. **版本与ECR/ECO**：唯一仍 `checker_only` 的一项，变更单是流程与审批事实；
+5. DFM 侧两件可继续做深的：沿面法向射线与插入方向计数（数据源已是 manifest 的 `explode`）。
