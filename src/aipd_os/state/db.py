@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS claim_evidence_relations (
   reasoning_summary TEXT NOT NULL DEFAULT '',
   limitations TEXT NOT NULL DEFAULT '',
   review_status TEXT NOT NULL DEFAULT 'pending',
-  created_by TEXT NOT NULL DEFAULT 'system',
+  created_by TEXT NOT NULL,
   version_no INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,

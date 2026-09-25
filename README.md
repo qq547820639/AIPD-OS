@@ -355,6 +355,13 @@ aipd interfaces --repo . --out interface-contract.json
 #     不落 `'AI'`），写入口改为 `owner: str | None = None`（空白串直接拒），
 #     并给这根列补上第一个真读者：Owner Dashboard 的「风险责任」——正文（完整档与紧凑档）
 #     只说「几条风险里有几条还没有真人负责（含机器代签）」，风险编号只进折叠区与 `--json`。
+#   ↑ 其余自带 'system' 的 actor 列（第 35 片）：`claim_evidence_relations.created_by`、
+#     `product_definition_snapshots.created_by`、`product_definition_commits.actor` 三根列
+#     原本 `NOT NULL DEFAULT 'system'`。实测产品写入口都显式传 actor，所以这一族今天
+#     没有假读数在跑——危害是**下一个**漏传的写入口会静默写出一个看起来像归属的戳，
+#     再被 `to_dict` 对外发出去。migration v22 保留 NOT NULL、只摘掉 DEFAULT
+#     （漏传 ⇒ `IntegrityError`，fail-closed），数据类字段与 `from_dict`/`to_dict`
+#     同步改成 `None`；历史值两个方向都不改写。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。

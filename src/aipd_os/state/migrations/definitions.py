@@ -48,6 +48,8 @@ from .helpers import (
     _v20_restore_gates_approved_by_default,
     _v21_restore_risks_owner_default,
     _v21_risks_owner_no_default,
+    _v22_actor_columns_no_default,
+    _v22_restore_actor_column_defaults,
 )
 from .schema import V1_INITIAL_SCHEMA
 
@@ -596,6 +598,22 @@ MIGRATIONS: list[dict[str, Any]] = [
         ],
         "down": [
             _v21_restore_risks_owner_default,
+        ],
+    },
+    # v22: F-C6 第 35 片。三张表的 actor 列自带 `DEFAULT 'system'`
+    # （`claim_evidence_relations.created_by`、`product_definition_snapshots.created_by`、
+    # `product_definition_commits.actor`）。实测：产品写入口都显式传 actor，
+    # 所以这不是「库里在跑一条假读数」，而是「将来漏传的那一个写入口会静默写出 system」。
+    # 处置：保留 NOT NULL、摘掉默认值 ⇒ 漏传退化成 IntegrityError（fail-closed），
+    # 而不是一个看起来像归属的字符串。值两个方向都不改写。
+    {
+        "version": 22,
+        "name": "actor_columns_no_default",
+        "up": [
+            _v22_actor_columns_no_default,
+        ],
+        "down": [
+            _v22_restore_actor_column_defaults,
         ],
     },
 ]

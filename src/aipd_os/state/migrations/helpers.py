@@ -755,3 +755,107 @@ def _v21_restore_risks_owner_default(conn: sqlite3.Connection) -> None:
     """
     _v21_rebuild_risks(conn, "owner TEXT NOT NULL DEFAULT 'AI'",
                        "COALESCE(owner, '')")
+
+
+# ---------------------------------------------------------------------------
+# v22 helpers
+# ---------------------------------------------------------------------------
+#: 三张 actor 列自带 `'system'` 的表。列清单与 DDL 正文一律照 **HEAD 上 sqlite_master
+#: 的实形**抄，不照当初声明它的那句迁移文本抄：`claim_evidence_relations.strength`
+#: 在 v6 的重建里掉了 `DEFAULT 0.5`，照声明抄等于顺手把一条漂移改到另一个方向。
+#: `{actor_ddl}` 是那一列的占位，up/down 只差这一格。
+_V22_ACTOR_TABLES: dict[str, tuple[str, tuple[str, ...], str]] = {
+    "claim_evidence_relations": (
+        "created_by",
+        ("relation_id", "project_id", "tenant_id", "claim_id", "evidence_id",
+         "relation_type", "strength", "applicability", "reasoning_summary",
+         "limitations", "review_status", "created_by", "version_no",
+         "created_at", "updated_at"),
+        """(
+      relation_id TEXT NOT NULL, project_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      claim_id TEXT NOT NULL, evidence_id TEXT NOT NULL,
+      relation_type TEXT NOT NULL, strength REAL,
+      applicability TEXT NOT NULL DEFAULT '',
+      reasoning_summary TEXT NOT NULL DEFAULT '',
+      limitations TEXT NOT NULL DEFAULT '',
+      review_status TEXT NOT NULL DEFAULT 'pending',
+      {actor_ddl},
+      version_no INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      PRIMARY KEY (relation_id, project_id, tenant_id),
+      UNIQUE (claim_id, evidence_id, relation_type, project_id, tenant_id))"""),
+    "product_definition_snapshots": (
+        "created_by",
+        ("snapshot_id", "project_id", "tenant_id", "idea_id", "opportunity_id",
+         "opportunity_version", "principle_refs_json", "requirement_refs_json",
+         "feature_refs_json", "critical_unknown_refs_json", "conflict_refs_json",
+         "source_projection_version", "content_hash", "lifecycle_status",
+         "created_at", "created_by", "upstream_basis_hash"),
+        """( snapshot_id TEXT NOT NULL, project_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      idea_id TEXT NOT NULL DEFAULT '',
+      opportunity_id TEXT NOT NULL DEFAULT '',
+      opportunity_version INTEGER,
+      principle_refs_json TEXT NOT NULL DEFAULT '[]',
+      requirement_refs_json TEXT NOT NULL DEFAULT '[]',
+      feature_refs_json TEXT NOT NULL DEFAULT '[]',
+      critical_unknown_refs_json TEXT NOT NULL DEFAULT '[]',
+      conflict_refs_json TEXT NOT NULL DEFAULT '[]',
+      source_projection_version TEXT NOT NULL DEFAULT '',
+      content_hash TEXT NOT NULL,
+      lifecycle_status TEXT NOT NULL DEFAULT 'frozen',
+      created_at TEXT NOT NULL,
+      {actor_ddl},
+      upstream_basis_hash TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (snapshot_id, project_id, tenant_id))"""),
+    "product_definition_commits": (
+        "actor",
+        ("commit_id", "project_id", "tenant_id", "snapshot_id", "snapshot_hash",
+         "gate_evaluation_id", "owner_decision_id", "committed_truth_refs_json",
+         "committed_at", "actor"),
+        """( commit_id TEXT NOT NULL, project_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL DEFAULT 'default',
+      snapshot_id TEXT NOT NULL,
+      snapshot_hash TEXT NOT NULL,
+      gate_evaluation_id TEXT NOT NULL DEFAULT '',
+      owner_decision_id TEXT NOT NULL DEFAULT '',
+      committed_truth_refs_json TEXT NOT NULL DEFAULT '[]',
+      committed_at TEXT NOT NULL,
+      {actor_ddl},
+      PRIMARY KEY (commit_id, project_id, tenant_id),
+      UNIQUE (tenant_id, project_id, snapshot_id))"""),
+}
+
+
+def _v22_rebuild_actor_column(conn: sqlite3.Connection, table: str,
+                              with_default: bool) -> None:
+    """把一张表的 actor 列重建为「NOT NULL、无默认值」（或还原带默认值）。
+
+    与 v20/v21 不同：这里**不放开 NOT NULL**。这一族的列不是「没法表达」，
+    而是「表达不出来时有个兜底戳」——所有产品写入口实测都显式传 actor，
+    所以摘掉默认值之后，将来漏传的写入口会撞 `IntegrityError`（fail-closed），
+    而不是静默写进 `'system'`。值本身两个方向都不改写。
+    """
+    from .sqlsplit import exec_script
+
+    actor_column, columns, body = _V22_ACTOR_TABLES[table]
+    ddl = (f"{actor_column} TEXT NOT NULL DEFAULT 'system'" if with_default
+           else f"{actor_column} TEXT NOT NULL")
+    cols = ", ".join(columns)
+    exec_script(conn, f"""
+    CREATE TABLE {table}_new {body.format(actor_ddl=ddl)};
+    INSERT INTO {table}_new({cols}) SELECT {cols} FROM {table};
+    DROP TABLE {table};
+    ALTER TABLE {table}_new RENAME TO {table};
+    """)
+
+
+def _v22_actor_columns_no_default(conn: sqlite3.Connection) -> None:
+    for table in _V22_ACTOR_TABLES:
+        _v22_rebuild_actor_column(conn, table, with_default=False)
+
+
+def _v22_restore_actor_column_defaults(conn: sqlite3.Connection) -> None:
+    for table in _V22_ACTOR_TABLES:
+        _v22_rebuild_actor_column(conn, table, with_default=True)

@@ -1,6 +1,6 @@
 # State Inventory — AIPD-OS P2
 
-> Updated: 2026-09-25 (F-C6 第 34 片；schema HEAD = v21)
+> Updated: 2026-09-25 (F-C6 第 35 片；schema HEAD = v22)
 > Purpose: P2 State Ownership Convergence — complete persistence point audit
 
 ## Physical Stores
@@ -51,11 +51,12 @@
 | 报告 | `docs/audit/state_perf_report.json` | 最近一次完整测量输出 |
 | 确定性门禁 | `tests/test_state_perf_gates.py` | EXPLAIN QUERY PLAN、连接复用计数、claim 互斥、语句数线性度 |
 
-Schema 版本：HEAD = **v21**。真值是 `state/migrations/definitions.py` 的
+Schema 版本：HEAD = **v22**。真值是 `state/migrations/definitions.py` 的
 `MIGRATIONS` 末项（不是本表）；`tests/test_migration.py` 与
 `tests/test_state_perf_gates.py` 分别钉住 v18/v19 与 v17 的 up/down，
 v20 的 up/down 由 `tests/test_gate_attribution.py` 钉住，
-v21 的 up/down 由 `tests/test_risk_ownership.py` 钉住。
+v21 的 up/down 由 `tests/test_risk_ownership.py` 钉住，
+v22 的 up/down 由 `tests/test_actor_columns_no_default.py` 钉住。
 本节的两处 HEAD 声明与下面的版本清单表由
 `tests/test_risk_ownership.py::TestTheDocMirrorMatchesTheChain` 与 `MIGRATIONS` 对账。
 v17 = 两条热读路径索引 `idx_changes_scope_time`、`idx_outbox_due`
@@ -72,7 +73,14 @@ v21 = `risks_owner_no_default`（重建 `risks`，把 `owner` 从
 `add_risk` 原先连 `owner` 形参都没有、INSERT 里硬写 `"AI"`，
 且全仓没有一个读者碰这一列；这一片同时补上第一个真读者：
 Owner Dashboard 的「风险责任」块（`experience/owner_dashboard.py`，
-正文两档渲染都出这句人话，风险编号只进 `<details>` 折叠区与 `--json`）。
+正文两档渲染都出这句人话，风险编号只进 `<details>` 折叠区与 `--json`）；
+v22 = `actor_columns_no_default`（重建三张表的 actor 列：
+`claim_evidence_relations.created_by`、`product_definition_snapshots.created_by`、
+`product_definition_commits.actor`，**保留 NOT NULL、摘掉 `DEFAULT 'system'`**）。
+这一族与 v20/v21 不同：产品写入口实测都显式传 actor，所以摘默认值不是在救一条
+正在跑的假读数，而是把「将来漏传的那个写入口」从静默写戳改成 `IntegrityError`；
+`to_dict` 的出参与 `from_dict` 的兜底同步改成 `None`（`idea/evidence_relations.py`、
+`product_intelligence/snapshot.py`）。历史值两个方向都不改写。
 
 ## Migration 版本清单
 
@@ -86,6 +94,7 @@ Owner Dashboard 的「风险责任」块（`experience/owner_dashboard.py`，
 | v19 | eco_change_orders |
 | v20 | gates_approved_by_no_default |
 | v21 | risks_owner_no_default |
+| v22 | actor_columns_no_default |
 
 ## Direct sqlite3.connect Classification
 

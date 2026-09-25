@@ -185,7 +185,8 @@ class ProductDefinitionSnapshot:
     upstream_basis_hash: str = ""
     lifecycle_status: str = SNAPSHOT_FROZEN
     created_at: str | None = None
-    created_by: str = "system"
+    # 同上（migration v22）：归属缺失落 None，不落一个兜底戳。
+    created_by: str | None = None
 
     def __post_init__(self) -> None:
         if self.lifecycle_status not in SNAPSHOT_STATUSES:
@@ -272,7 +273,7 @@ class ProductDefinitionSnapshot:
             upstream_basis_hash=d.get("upstream_basis_hash", ""),
             lifecycle_status=d.get("lifecycle_status", SNAPSHOT_FROZEN),
             created_at=d.get("created_at"),
-            created_by=d.get("created_by", "system"),
+            created_by=d.get("created_by"),
         )
 
 

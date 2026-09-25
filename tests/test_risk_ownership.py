@@ -284,13 +284,25 @@ class TestTheDocMirrorMatchesTheChain:
     def _head_claims(text: str) -> list[str]:
         return re.findall(r"HEAD\s*=\s*(?:\*\*)?v(\d+)", text)
 
+    @staticmethod
+    def _tail() -> tuple[int, str]:
+        """链尾那一格的 (版本号, 名字)：注入对照一律由它现算，
+        免得写死 v21 —— 第 35 片加进 v22 时这两条对照就差点变成假绿。"""
+        last = MIGRATIONS[-1]
+        return int(last["version"]), str(last["name"])
+
     def test_the_table_matches_the_chain_row_for_row(self):
         assert self._table_rows(self._text()) == self._chain_window()
 
     def test_dropping_a_row_makes_the_reconciliation_fire(self):
         """反向对照：这条对账真会红，不是永远绿。"""
-        mutated = self._text().replace("| v21 | risks_owner_no_default |\n", "")
-        assert self._table_rows(mutated) == [v for v in self._chain_window() if v != 21]
+        version, name = self._tail()
+        row = f"| v{version} | {name} |\n"
+        text = self._text()
+        assert text.count(row) == 1, f"链尾那一行在表里要恰好一处：{row!r}"
+        mutated = text.replace(row, "", 1)
+        assert self._table_rows(mutated) == [v for v in self._chain_window()
+                                             if v != version]
         assert self._table_rows(mutated) != self._chain_window()
 
     def test_both_head_claims_read_the_chain_tail(self):
@@ -299,8 +311,11 @@ class TestTheDocMirrorMatchesTheChain:
         assert set(claims) == {str(MIGRATIONS[-1]["version"])}, claims
 
     def test_a_stale_head_claim_makes_that_reconciliation_fire(self):
-        mutated = self._text().replace("HEAD = **v21**", "HEAD = **v20**")
-        claims = self._head_claims(mutated)
+        version, _ = self._tail()
+        text = self._text()
+        fresh, stale = f"HEAD = **v{version}**", f"HEAD = **v{version - 1}**"
+        assert fresh in text, "正文那一处 HEAD 声明的形状变了，对照要跟着改"
+        claims = self._head_claims(text.replace(fresh, stale, 1))
         assert len(claims) == 2 and set(claims) != {str(MIGRATIONS[-1]["version"])}
 
 

@@ -951,6 +951,51 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6 第 35 片：三张表的 actor 列不再自带 `'system'`（把「漏传」从静默写戳改成报错）**：
+  接着第 34 片 §五.1 留下的那一族。实测前提（去截断重跑 `grep -rn created_by`）：
+  `claim_evidence_relations.created_by`、`product_definition_snapshots.created_by`、
+  `product_definition_commits.actor` 三根列都是 `TEXT NOT NULL DEFAULT 'system'`，
+  声明文本各两份（`migrations/definitions.py` 与重建用的 `migrations/helpers.py`），
+  参考 SCHEMA 另有一处（`state/db.py`）。
+  **但这一族与前两片不一样：没有一条正在跑的假读数**——产品写入口实测都显式传 actor
+  （`idea/evidence_relations.py:217,247`、`product_intelligence/snapshot.py:345`、
+  `product_intelligence/gate.py:491`、`execution/research_integration.py:265`），
+  四个 `from_dict` 调用点喂的都是数据库行（列必然带着键）⇒ 默认值今天够不到。
+  所以本片按「防将来」定性：危害是**下一个**漏传 actor 的写入口会静默写出 `'system'`，
+  而 `to_dict`/`to_public_dict` 把这个戳当归属对外发。
+
+  改法：migration **v22** `actor_columns_no_default` 重建这三张表——
+  **保留 NOT NULL、只摘掉 DEFAULT**（不放开可空，否则连 fail-closed 一起丢）；
+  漏传退化为 `IntegrityError` 而不是一个看起来像归属的字符串；
+  两个方向都不改写历史值；数据类字段与 `from_dict` 兜底同步改为 `None`
+  （`idea/evidence_relations.py`、`product_intelligence/snapshot.py`）。
+  三张表实测都没有具名索引（只有 PK/UNIQUE 的隐式索引，随建表语句一起带走），
+  重建不降级任何热查询。
+  一处顺手钉住的漂移：`claim_evidence_relations.strength` 在 v6 的重建里掉了
+  `NOT NULL DEFAULT 0.5`（HEAD 实形是裸 `strength REAL`），
+  所以 v22 的 DDL 模板照 **sqlite_master 的实形**抄，不照当初声明它的那句迁移文本抄——
+  照声明抄等于把这条漂移往另一个方向改。
+
+  常驻用例 **22 条**（`tests/test_actor_columns_no_default.py`）：形状两半分开钉
+  （默认值没了 *并且* NOT NULL 还在）、三张表逐张参数化、
+  漏传必须 `IntegrityError` / 带 actor 必须照常往返（合规侧）、
+  up 保历史值、down 还原默认值、逐列值往返保真、
+  数据类默认值与 `from_dict`/`to_dict` 三处都不许再编造 `'system'`、
+  参考 SCHEMA 与 V1/声明文本各钉一侧。
+  顺带把第 34 片那条文档镜像对照改成由链尾现算（写死 v21 的对照在加进 v22 后当场假红）。
+  读侧普查留档：全仓没有任何一处按 `created_by`/`actor` 做过滤或判定，
+  读者只有「序列化往外发」这一类。
+
+  读数：全量 **2205 → 2227**（+22）；签出 attestation（HEAD 干净签出 +
+  `AIPD_SOURCE_COMMIT=<tag SHA>`）**0 failed**；`production_release_gate --release-ready
+  --tag v5.6.0` 带 venv PATH 后 **8/8 rc=0**；`audit_repo --strict` 仍只剩那一条
+  按既有裁决永远红的 tag 锚点判定；`mypy src` 0 error、CI 口径 ruff rc=0。
+  变异电池 `/tmp/slice35-mutations.py` **12 条：杀 12 / 存活 0 / 注入无效 0 / 崩溃式红 0 /
+  已知无撤回案例 3**；同树复跑第 34 片 **15/15**、第 32 片 **14/14**、第 30/31/33 片
+  **21/21、8/8、9 杀+2 已知**。调研按「影响范围明确的局部改动」豁免：
+  沿用本片前三片已确立的重建配方，无新技术选型空间。证据见
+  `docs/audit/ACTOR_COLUMNS_NO_DEFAULT_F-C6_2026-09-25.md`。
+
 - **v5.12 F-C6 第 34 片：`risks.owner` 不再硬写 `'AI'`，并给这根列补上第一个真读者**：
   同第 32 片那一族的另一半，但更糟一层。列形状是 `owner TEXT NOT NULL DEFAULT 'AI'`
   （`state/migrations/schema.py:148` 冻结文本、`state/db.py:197` 参考 SCHEMA、

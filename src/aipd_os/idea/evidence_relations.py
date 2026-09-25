@@ -72,7 +72,9 @@ class EvidenceRelation:
     reasoning_summary: str = ""
     limitations: str = ""
     review_status: str = "pending"
-    created_by: str = "system"
+    # 没人说得出是谁建的，就是 None：列上已摘掉 `DEFAULT 'system'`（migration v22），
+    # 缺归属要在落盘时撞 NOT NULL，而不是被写成一个看起来像归属的戳。
+    created_by: str | None = None
     version_no: int = 1
     created_at: str | None = None
     updated_at: str | None = None
@@ -128,7 +130,7 @@ class EvidenceRelation:
             reasoning_summary=data.get("reasoning_summary", ""),
             limitations=data.get("limitations", ""),
             review_status=data.get("review_status", "pending"),
-            created_by=data.get("created_by", "system"),
+            created_by=data.get("created_by"),
             version_no=data.get("version_no", 1),
             created_at=data.get("created_at"),
             updated_at=data.get("updated_at"),
