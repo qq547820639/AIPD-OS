@@ -16,7 +16,7 @@ A faceted fallback does not establish native feature history, analytic surfaces,
 ## Execution order
 
 1. Build CAD Brief and CAD Contract from facts, not from marketing images.
-2. Generate project-local `cad/model.py` with named parameters.
+2. Generate project-local `<项目目录>/cad/model.py` with named parameters.
 3. Run `scripts/local_cad_adapter.py`.
 4. Validate every body is closed/winding-consistent and the STEP references are complete.
 5. Check key poses, interfaces and forbidden envelopes.

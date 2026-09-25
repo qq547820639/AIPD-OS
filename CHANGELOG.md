@@ -951,6 +951,39 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-DOC-REF 第 41 片：给「文档写出的 path:line 还指得回代码吗」装一把常驻尺子**：
+  这根轴是被上一片自己喂出来的——收尾普查抓到我在第 39/40 片写进 CHANGELOG 的一句
+  「与同仓 `ts_interface_shape.py`(tree-sitter) 同形」，**那个文件不在本仓**（真先例是
+  `src/aipd_os/interface_contract.py` 与 `schema_binding.py`，全仓没用 tree-sitter）。
+  新增 `scripts/doc_reference_census.py`：读 144 份文档、切出 3519 处代码引用，
+  分六档（`resolved` 2829 / `multi` 429 / `missing` 126 / `line_beyond_eof` 10 /
+  `elided` 56 / `external` 69），**现状面**（README/SKILL/docs 架构面/references）判红、
+  **历史面**（CHANGELOG 与 docs/audit，记的是当时的事实）只报不判——这条取舍借自同类工具
+  dsh-doc-guard 的「现状核对时忽略历史 changelog 行」。今天现状面 **0 条**。
+  判据本身被合成语料钉住 20 条（正反两向），三个退化匹配当场被抓并被这条轴自己咬到：
+  ① 扩展名表里有 `dxf`，`ezdxf/…` 会被切成 `ezdxf` + `/entities/polygon.py` 两段
+  （修法：整段必须以扩展名结尾 + 左边界）；② 表里有 `sql`，`aipd_state.sqlite`
+  被读成一条 `aipd_state.sql` 引用；③ 点号前不限词，`.py`/`.manual.json` 这类**裸后缀提法**
+  与 `<db>.manual.json` 这类**占位写法**都被当成路径。修完还造出两条假缺陷才看清：
+  判据第一版更糟——它把 CLI 示例操作数、第三方内部路径、省略写法全算成缺陷，
+  报「514 条 missing / 活文档 97 条」，那是尺子造的数，不是文档的数。
+  文档侧一处真形改：`references/local-cad-fallback.md` 的 `cad/model.py` 是
+  **用户项目里生成的文件**，改写成 `<项目目录>/cad/model.py`，让写法与含义一致。
+  常驻 `tests/test_doc_reference_census.py`（7 条）钉四件事：现状面为 0、分母非空转
+  （Σ 分类 == 引用总数、resolved > 2000）、**豁免名单不许把现状面文档划进历史**
+  （注入 D3 专打这一格——把 README 加进 HISTORY 会让判红形同关闭）、
+  历史面读数不许被静默清零；量具 `--self-test` 由本文件子进程真 spawn。
+  性能一条教训：首版逐条引用去 `rglob` 找同名，常驻用例跑到 **99.6s**；
+  换成整仓文件清单读一次缓存后 audit 1.8s、整个用例 2.5s（顺带把 `__pycache__`/`.pytest_cache`
+  移出可解析集，历史面读数因此从 114 变 116，是收紧不是漂移）。
+  读数：全量 **2278 → 2285**（+7）；电池 `/tmp/s41/battery.py`
+  **5 条：杀 5 / 存活 0 / 注入无效 0 / 崩溃式红 0**（D5 第一次打在了 fence 的开块 continue 上、
+  没打真正的 `if fence: continue`，于是"存活"其实是注入无效；给 fence 那一支补一条
+  自己的最小对照——不以 `aipd ` 开头的代码块内容——重瞄后才真开火）。
+  调研：已检索同类工具（dsh-doc-guard 核版本标记/目录树/指标但不核散文 `file:line`；
+  GitLab 文档流水线用 lychee 只核链接与锚点、markdownlint 核结构、Vale 核文风；
+  反向的「代码里指向文档的链接」另有作业）。没有现成件覆盖本轴，故自研薄判据并借鉴其取舍。
+
 - **v5.12 F-CLI-COV 第 40 片：把在册 17 条命令补成走过 CLI 入口的真调用（读数和成 66/66）**：
   第 39 片修好量具后登记在册的 17 条——10 条零证据（`cad preflight` `dashboard` `onboard`
   `operate` `product show` `product gate` `recover` `reset` `ui` `version`）、4 条只被
