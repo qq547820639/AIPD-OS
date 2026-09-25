@@ -951,6 +951,36 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-LINEAGE-PROD 第 43 片：给「CTQ → 图纸声明」补血缘边生产者，`truth propagate` 的第二跳今天到得了**：
+  前几轮登记里写着「血缘边只有 `product_intelligence/gate.commit_snapshot` 会写，
+  CTQ/图纸/BOM 之间没有生产者，所以链条更长的那一段传播不到」——本轮先把这句**核实**了：
+  `INTO truth_lineage` 全仓只有一个 SQL 写入口（`LineageGraph.add_edge`），
+  而它的产品侧调用点确实只有 PI 那一处；`idea/decomposer.py`、`idea/evidence_relations.py`、
+  `product_intelligence/service.py` 那三处 `add_edge` 写的是**另一张** canonical lineage 表
+  （同名方法、不同存储），以前把它们算进"血缘生产者"就会高估传播面。
+  新生产者：`aipd drawing spec` 成功落盘时，由 `src/aipd_os/cad/spec_lineage.py` 写一条
+  `artifact_version` 记录（content 带声明正文的 sha256，所以"内容没变"重跑命中同一行、
+  "CTQ 改了"自然另起一版）+ 给声明正文**实际引用到**的每条 `ctq_ref` 连一条 `affects` 边。
+  三条刻意的取舍：**只连引用到的**（给没参与的 CTQ 连边＝让传播去打扰无关要求，
+  而这一点在 CLI 面上打不出差别——未引用的 active CTQ 会先造成 gap 让整条命令 HOLD，
+  所以选择性只能在函数级钉）；**HOLD 时文件与血缘都不写**（一份不存在的声明没有版本可言）；
+  **信任上限 high**（正文哈希自证，生成过程没被独立复核，与第 42 片同一取舍）。
+  自己写出来的失败面：血缘写不进去时原判 `rc=4` 却仍在 `--json` 里报 `"ok": true`——
+  是那条红用例把这台"机器面与终端面各说一套"的裂缝抓出来的，现已同向改判。
+  常驻 `tests/test_drawing_spec_lineage.py`（10 条，含一条"第二跳真的通"的传播用例——
+  没有它其余各条只是在测自己写的表）+ 生产者集合按 AST **两向棘轮**；
+  电池 `/tmp/s43/battery.py` **6 条：杀 6 / 存活 0 / 注入无效 0**
+  （C1 撤调用→半径 5、C2 不改 ok→1、C3 改成连全部 active→1、C4 去幂等→1、
+  C5 信任写 verified→1、C6 删 add_edge 循环→5 含棘轮）。
+  `docs/architecture/truth_architecture.md` 与登记同步改判：第二跳通；
+  **DXF/BOM/成本那一支仍没有血缘生产者**，返工的执行（`run_rework`）仍是 0 调用点。
+  调研（真实检索）：写侧发边借 Apache Airflow 的 OpenLineage provider 形状
+  （作业完成即由 emitter 发事件，事件带 job/run 与 inputs/outputs）；
+  读侧重建是 dbt 的路子（解析 `run_results.json` / manifest 与上一份 state 比对再选目标）。
+  选写侧：传播要在库里查图，而 spec JSON 会被改名搬走，靠解析文件重建等于把血缘
+  挂在文件系统路径上。两者都不引依赖（OpenLineage 要额外服务与 HTTP 出口）。
+  读数：全量 **2292 → 2302**（+10）。
+
 - **v5.12 F-FACT-WB 第 42 片：主管的步骤标签 `update_facts_evidence` 从此对应一次真写回**：
   `run_supervisor` 的成功分支把这个名字追加进 `steps_log`，而那段代码实际只做
   `complete → _register_outputs → _quality_gate → _mark_stale`，**没有任何一句把事实/证据

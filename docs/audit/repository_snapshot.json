@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-26T07:16:30",
-  "source_commit": "b72ac5265686228b18752d5d87dc41c9221303fc",
+  "generated_at": "2026-09-26T07:35:56",
+  "source_commit": "cd3ae726b7c525bd99d410a0274ce4e0e43f9fa6",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "b72ac5265686228b18752d5d87dc41c9221303fc",
-  "latest_commit_time": "2026-09-26 07:05:03 +0800",
+  "latest_commit_sha": "cd3ae726b7c525bd99d410a0274ce4e0e43f9fa6",
+  "latest_commit_time": "2026-09-26 07:26:29 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 191
+      "tests": 192
     }
   },
   "tags": [
@@ -116,28 +116,29 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 634,
-    "hash_matches": 632,
+    "total_files": 635,
+    "hash_matches": 633,
     "hash_mismatch_count": 2,
     "mismatches": [
       {
-        "path": "src/aipd_os/registry_data.py",
+        "path": "src/aipd_os/cli/commands_drawing.py",
         "reason": "hash_mismatch",
-        "expected": "90b4d3ea29b0931bc335f5357ad923b1f02bbb93aad33a3134f51d3a44468a61",
-        "actual": "66d74b361bb02c92fabf0d81e84597cb5f33cc471849efae81d36b29814cdaa0"
+        "expected": "5807bb7d1918ea15e6c7b3eb2fa202a03594466c822e17f02f73a0bca171680e",
+        "actual": "364fee037066c5e13b753fc2ce75adeaceb87c9e266f93e82e64f144d6cca1ca"
       },
       {
-        "path": "src/aipd_os/supervisor/supervisor.py",
+        "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "871b515e5ef18d0a9fc84a1406861aa5b341cc948606afd012f77e6c8ea54810",
-        "actual": "d4c07e9396fe0aaf917ced41e4398a3ac791fb662bfb8b52313d567460423b71"
+        "expected": "66d74b361bb02c92fabf0d81e84597cb5f33cc471849efae81d36b29814cdaa0",
+        "actual": "eacf34eee8ed35b3b4737e4666371cd55ad3678ae90b1f92b0439c9bf344e6e6"
       }
     ]
   },
   "untracked_or_generated": [
+    " M src/aipd_os/cli/commands_drawing.py",
     " M src/aipd_os/registry_data.py",
-    " M src/aipd_os/supervisor/supervisor.py",
-    "?? tests/test_supervisor_fact_writeback.py",
+    "?? src/aipd_os/cad/spec_lineage.py",
+    "?? tests/test_drawing_spec_lineage.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

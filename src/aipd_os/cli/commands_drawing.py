@@ -93,6 +93,9 @@ def cmd_drawing_spec(args):
               "declared": len(spec["features"]), "gaps": gaps,
               "spec": None if held else spec, "out": None if held else str(out)}
 
+    lineage = None
+    lineage_error = None
+
     def prose():
         datum_count = len(spec.get("datums") or [])
         print(f"CTQ 记录 {len(records)} 条 → 尺寸/形位声明 {len(spec['features'])} 条"
@@ -114,17 +117,42 @@ def cmd_drawing_spec(args):
             print(f"  {entry['feature']}: {'；'.join(bits)} ← CTQ {'、'.join(refs)}")
         for gap in gaps:
             print(f"  未收口：{gap['kind']} — {gap['detail']}")
-        if held:
+        if gaps:
             print(f"未写 {out}：{len(gaps)} 条 CTQ 还挂不上图纸，补齐后重跑。")
         else:
             print(f"已写 {out}：可直接 aipd drawing generate --spec {out}")
+            if lineage is not None:
+                print(f"  血缘：{lineage['record_id']} + "
+                      f"{lineage['edges']} 条 CTQ→声明边"
+                      f"（{'、'.join(lineage['ctq_refs']) or '无引用'}）")
+            elif lineage_error:
+                print(f"  血缘未落库：{lineage_error}"
+                      "（声明已写出，但传播到不了它 ⇒ 判未收口）")
 
-    _emit(args, result, prose)
     if held:
+        _emit(args, result, prose)
         return 4
+
+    # 先落盘、再落血缘，最后统一输出：血缘写不进去时**不能**报成功——
+    # 一份没有出处的声明正是这一族命令要防的东西（第 43 片）。
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(spec, ensure_ascii=False, indent=2), encoding="utf-8")
-    return 0
+    from aipd_os.cad.spec_lineage import record_spec_lineage
+
+    try:
+        lineage = record_spec_lineage(store, spec, path=out,
+                                      tenant_id=args.tenant,
+                                      project_id=args.project)
+    except Exception as exc:      # noqa: BLE001 - 报错但不静默：下面判 4
+        lineage_error = f"{type(exc).__name__}: {exc}"
+    result["lineage"] = lineage
+    result["lineage_error"] = lineage_error
+    if lineage_error:
+        # --json 的 ok 必须与退码同向：否则机器读到的是一份"成功"的判决，
+        # 而终端退出码说没收口。
+        result["ok"] = False
+    _emit(args, result, prose)
+    return 4 if lineage_error else 0
 
 
 def cmd_drawing(args):

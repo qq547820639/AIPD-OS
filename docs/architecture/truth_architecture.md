@@ -55,8 +55,16 @@ trust_level / effective_at / expires_at / version / status / metadata），
 唯一可能输出的就是 `blocked` 的命令，比没有命令更容易被读成「返工跑过了」。该缺口由
 `tests/test_truth_propagate_cli.py::TestUnwiredHalfStaysVisible` 以 AST 扫描钉住
 （接上执行器那一轮它必须变红，并连同本节与登记里的 `current_limitation` 一起改判）。
-另一处现状：血缘边目前只有 `product_intelligence/gate.commit_snapshot` 会写，所以
-CTQ/图纸/BOM 之间那一段今天传播不到。
+另一处现状（2026-09-26 更新，F-LINEAGE-PROD 第 43 片）：血缘边有**两个**生产者——
+`product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）与
+`aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的
+`ctq_ref` 写一条 `artifact_version` 记录，并给每条参与 CTQ 连一条 `affects` 边；
+有 gap 时文件与血缘都不写）。于是链条的**第二跳 CTQ → 图纸声明**今天传播得到：
+改一条 CTQ 再跑 `aipd truth propagate`，那份声明会被标 stale 并生成返工任务。
+仍未接上的两段：**图纸 DXF / BOM / 成本那一支没有血缘生产者**（只有声明这一条边），
+以及上面说到的返工**执行**。生产者集合由
+`tests/test_drawing_spec_lineage.py::TestProducerRatchet` 按 AST 两向钉住——
+多一个未登记的 `add_edge` 调用点要红，把本轮这个删掉也要红。
 
 ## 2.1 Idea Truth 是 projection，不是第二 Store（v5.8 Commit 14）
 

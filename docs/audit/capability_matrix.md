@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-26T07:16:32`
+- 生成时间：`2026-09-26T07:36:00`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`b72ac5265686228b18752d5d87dc41c9221303fc`
+- 默认分支：`main`；HEAD：`cd3ae726b7c525bd99d410a0274ce4e0e43f9fa6`
 - 版本：`5.6.0`
 - 能力总数：`83`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -39,7 +39,7 @@
 
 | 能力 | 分类 | 声明文件 | 实现文件 | 入口 | 运行命令 | 单元测试 | 当前限制 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 事实失效传播与有界返工 | `partially_implemented` | docs/architecture/truth_architecture.md | src/aipd_os/cli/commands_truth.py | aipd_os.cli.commands_truth.cmd_truth_propagate | `aipd truth propagate --db <state.db> --project <p> --upstream <id>` | tests/test_truth_propagate_cli.py; tests/test_product_truth_propagation.py; tests/test_product_truth_scoping.py | 只接了「传播」这半条链：返工的执行 PropagationEngine.run_rework 在 src/ 里仍是 0 调用点，因为没有真实返工执行器——引擎自身在无执行器时只判 blocked（其 refusing fake success 分支），本仓刻意不提供一条永远不会成功的命令，该缺口由 tests/test_truth_propagate_cli.py::TestUnwiredHalfStaysVisible 钉成断言，接上执行器那一轮必须连同该断言极性一起改判；血缘边目前也只有 product_intelligence/gate.commit_snapshot 会写（PI 需求 -> truth 记录），CTQ/图纸/BOM 之间没有生产者，所以链条更长的那一段今天传播不到；任务号按整表分配（task_id 是全局主键，按 tenant/project 作用域取 max 会让两个项目各自算出同一个 RW-001 并撞唯一约束，本轮跨项目实跑撞到），但读-算-插之间没加锁，多进程并发仍可能撞号，本仓按单写者假设运行；与主管侧 supervisor.auto_rework 是两套机制：那边复用工作项重试且无上限，这边是 truth 侧带 attempts/max_attempts/backoff 的有界返工 |
+| 事实失效传播与有界返工 | `partially_implemented` | docs/architecture/truth_architecture.md | src/aipd_os/cli/commands_truth.py | aipd_os.cli.commands_truth.cmd_truth_propagate | `aipd truth propagate --db <state.db> --project <p> --upstream <id>` | tests/test_truth_propagate_cli.py; tests/test_product_truth_propagation.py; tests/test_product_truth_scoping.py; tests/test_drawing_spec_lineage.py | 只接了「传播」这半条链：返工的执行 PropagationEngine.run_rework 在 src/ 里仍是 0 调用点，因为没有真实返工执行器——引擎自身在无执行器时只判 blocked（其 refusing fake success 分支），本仓刻意不提供一条永远不会成功的命令，该缺口由 tests/test_truth_propagate_cli.py::TestUnwiredHalfStaysVisible 钉成断言，接上执行器那一轮必须连同该断言极性一起改判；血缘边的生产者今天有两个：product_intelligence/gate.commit_snapshot（PI 需求/Feature -> truth 记录）与 `aipd drawing spec`（src/aipd_os/cad/spec_lineage.py 按声明正文**实际引用到**的 ctq_ref 写一条 artifact_version 记录 + CTQ -> 该记录的 affects 边，HOLD 时两者都不写），所以链条的第二跳（CTQ -> 图纸声明）今天传播得到；**图纸 DXF/BOM/成本那一支仍没有血缘生产者**，只有声明这一条边，且 BOM/成本变动要反向影响 CTQ 结论也还没有路；任务号按整表分配（task_id 是全局主键，按 tenant/project 作用域取 max 会让两个项目各自算出同一个 RW-001 并撞唯一约束，本轮跨项目实跑撞到），但读-算-插之间没加锁，多进程并发仍可能撞号，本仓按单写者假设运行；与主管侧 supervisor.auto_rework 是两套机制：那边复用工作项重试且无上限，这边是 truth 侧带 attempts/max_attempts/backoff 的有界返工 |
 
 ## 理论研究
 
