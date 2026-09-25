@@ -92,3 +92,39 @@ G4 是特意放的**反向**注入：收紧判据时容易顺手把「没给哈�
 - 没做「多条 FILE_KEYS 一次报全」之外的表现层改动（`missing` 仍是扁平字符串清单）。
 - 递归只摊一层（元素是数组的数组不处理）：模板与生产者都不产生那种形状，
   不为没见到的形状加代码。
+
+## 八、收尾读数（落盘后由量具复算，不是计划）
+
+提交：`496b7e4`（代码 + 文档）→ `4915596`（发布工件重锚）。
+
+| 量具 | 读数 |
+|---|---|
+| 全量 pytest（`docs/audit/pytest-report-v5.6.0.json`） | **1867 passed / 0 failed / 3 skipped**（共 1870；上一片收尾 1854/0/3=1857，本片 +13 条用例） |
+| `PROVENANCE.json` | `test_report.{passed:1867, failed:0, total:1870, source_commit:a66040520139…}` |
+| `SOURCE_MANIFEST.json` | 被哈希面 **602 → 603**（与上一轮逐项求差，新增就是 `tests/test_production_release_gate_file_lists.py`） |
+| `production_release_gate --release-ready --tag v5.6.0` | rc=0，`release_ready: true`，8 项检查、未通过列表为空 |
+| `ruff check src tests state_service` | rc=0（**scope 与 CI 一致**：`scripts/` 不在本仓 lint 口径内，那里有 641 条既有告警，不顺手 `--fix`） |
+| `mypy`（读 `pyproject` 的 `files = ["src","tests"]`） | rc=0，404 files no issues |
+| `skill_quality_audit.py` | rc=0，0 警告 0 失败 |
+| `state_perf_gate.py` | PASS，rc=0 |
+| `audit_repo.py --strict` | rc=1，唯一 ✗ 是 Provenance 锚点与 HEAD 之差（`a66040520139…` vs `4915596…`）——真发版前按设计为红 |
+| `scripts/c6_coverage.py --self-test` | 7/7；档位仍 **13 / 1 / 1**（本片是门的一侧，不动普查档位） |
+| 变异电池 `/tmp/slice21-mutations.py` | 8 条：杀掉 8 / 存活 0 / 注入无效 0 |
+
+一处操作性读数：`--release-ready` 第一遍跑的时候 `no_unacknowledged_cve` 报「pip-audit
+不可用」，原因是我用 `.venv/bin/python` 直接跑而没把 venv 的 `bin` 放进 PATH——那条检查
+按可执行文件名找工具。挂上 `PATH="$PWD/.venv/bin:$PATH"` 后同一条命令判绿。
+判据没错，是**跑法**让 fail-closed 提前开火了；记下来免得下轮把这条真当成缺依赖。
+
+## 九、下一片候选（供排序，不代表已决定）
+
+1. **总装 STEP 接进发布证据**（原第 21 片想做的事，现在接的是刚修好、真有牙的那道核对）：
+   `aipd release manifest --assembly-step`，逐条核「侧车说的哈希 == 眼前这份文件」、
+   两件体积各自对上、`verification` 是不是回读法；再把件号集合与装配图上的球标集合比对
+   （**只在一张装配图对一个总装 STEP 时**才配，多张不猜——名字配对是猜，与 `drawing spec`
+   同一条纪律）。契约那一行正好是它的理由：`references/production-cad-deliverables.md:4`
+   「STEP存在、网格闭合或快照好看均不能单独证明生产可用」。
+2. **ICD**：`absent` 只剩这一项——需要接口清单这一事实来源，本仓没有接口实体，要属主给内容。
+3. **版本与ECR/ECO**：`checker_only`——变更单是流程与审批事实，涉及「AI 不自批」边界。
+4. DFM 侧两件可继续做深的：沿面法向射线（把斜置薄壁测准）与插入方向计数
+   （数据源是 manifest 已声明的 `explode`，不需要新事实）。
