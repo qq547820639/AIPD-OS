@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-25T11:27:55+00:00",
+  "generated_at": "2026-09-25T12:39:02+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 147825,
-      "sha256": "157b55278d0ff5327b1e542be1beac85ab5717ad934163f6b710e769731d45f9"
+      "size": 151661,
+      "sha256": "6da1892c3147512bc8304c46da032a449414112174bfc1bee29c4af54351ca37"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 40072,
-      "sha256": "5e19ab4ab3e3a7be3f7e3f84e98a6fe850b89dac8df743b1cd56f77f1621ed81"
+      "size": 40917,
+      "sha256": "a42f92066e42924e0765906cfd606e22ec7b7d1e24cd2662c7df4b6d47c4e933"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -387,8 +387,8 @@
     },
     {
       "path": "docs/architecture/state_inventory.md",
-      "size": 5115,
-      "sha256": "f1719c94a1d6b2df25b14f0b6cb87a0994ed972604c3a5f15d4daede49f3ae8e"
+      "size": 5512,
+      "sha256": "f4dd9a55404f8540e547e60461079ad9ce5743eaa8c9a428bb03f7e9c3ea7a1d"
     },
     {
       "path": "docs/architecture/state_ownership.md",
@@ -802,8 +802,8 @@
     },
     {
       "path": "scripts/quality_gate.py",
-      "size": 6115,
-      "sha256": "a387d95bfd9a989eba3d4a0ff5fb85b941bb5f8e0fa0dc070a2a9571a22eea1c"
+      "size": 6499,
+      "sha256": "a40f8e9fc3a6dfa376391ab6caeab66721587cde116ea284b3f1da1fbc25a5b1"
     },
     {
       "path": "scripts/regenerate_release_manifest.py",
@@ -936,6 +936,11 @@
       "sha256": "e81f08e147c90129902f9b10811738ca947a6e5423346eaff75d942470a0363c"
     },
     {
+      "path": "src/aipd_os/actors.py",
+      "size": 1691,
+      "sha256": "a63f0582502a68904e6a17a46ab5c4b09b0691d204db6cfd8929af76b33f32e5"
+    },
+    {
       "path": "src/aipd_os/bom/__init__.py",
       "size": 906,
       "sha256": "8559da031c8aa85ec9890bf220a7a9dd5cbad15eb2fc448d05236f6ec7ed1c0f"
@@ -1032,8 +1037,8 @@
     },
     {
       "path": "src/aipd_os/change_orders/eco.py",
-      "size": 21743,
-      "sha256": "be7fc9962a3f3e469da673c955715041b9376a35c708a8adcf1d9ef711e7aa19"
+      "size": 21564,
+      "sha256": "25eac75b72b58c330166bcefb6990aaf8dfcd61008b5abdc5f84f9b307518918"
     },
     {
       "path": "src/aipd_os/cli/__init__.py",
@@ -1324,6 +1329,11 @@
       "path": "src/aipd_os/experience/views.py",
       "size": 9019,
       "sha256": "fa70f0c38bffa5334b547c77d7fc796f078767e19e135a0d744d54229f1e3573"
+    },
+    {
+      "path": "src/aipd_os/gate_attribution.py",
+      "size": 3607,
+      "sha256": "7eccf7b3c6f4b2fc53f132d52db95f4ab4798b90765adf831984f6ce6071791e"
     },
     {
       "path": "src/aipd_os/gate_requirements.py",
@@ -1757,8 +1767,8 @@
     },
     {
       "path": "src/aipd_os/state/db.py",
-      "size": 55456,
-      "sha256": "956cb2ab82c3315e6e86bb399da38419a272998bbdd4a711a04a88e7fbff64f5"
+      "size": 56059,
+      "sha256": "7f5255054386e6b7fd2eccbfd3aeedf5642964f33deef017e72bdb16b231ba34"
     },
     {
       "path": "src/aipd_os/state/dispatcher.py",
@@ -1792,13 +1802,13 @@
     },
     {
       "path": "src/aipd_os/state/migrations/definitions.py",
-      "size": 25396,
-      "sha256": "1bf419c9f446d18d22e0c492187af478e63084fc7a9f73214e7401134f045ae3"
+      "size": 26065,
+      "sha256": "9289ba087689a5c66084da37dc42bbdaa88ee87a6000e765bc04ef2d18fffc6b"
     },
     {
       "path": "src/aipd_os/state/migrations/helpers.py",
-      "size": 28636,
-      "sha256": "1d49621c0f96c42cf8221e61befe9c0cae8309f2ffdf9c68f8a6f21891d3031f"
+      "size": 31068,
+      "sha256": "54f07eb808b03f3d73d32d7e93dbc848ed69fdc90a614520fa0d8172d11fbd23"
     },
     {
       "path": "src/aipd_os/state/migrations/runner.py",
@@ -2392,8 +2402,8 @@
     },
     {
       "path": "tests/test_change_order_eco.py",
-      "size": 32442,
-      "sha256": "8a2534b8470066fc3517e035697d2e8ee5a60640ab8bf57d175ccaadb5e5d4a6"
+      "size": 32357,
+      "sha256": "01dda3ec462ba5db2e2ae01fb2bdf55dd750c38a956e62625b879355b920d364"
     },
     {
       "path": "tests/test_claim_assessment.py",
@@ -2559,6 +2569,11 @@
       "path": "tests/test_external_wait.py",
       "size": 2371,
       "sha256": "7d6e16a0ae286250b1aed5a6cda91fc762ef4d72a5288ab5dc7e780dd51aac2d"
+    },
+    {
+      "path": "tests/test_gate_attribution.py",
+      "size": 15388,
+      "sha256": "063886441ef711a9c6d268411cad59868c77c77e2933a21e2bf10bcff6240fed"
     },
     {
       "path": "tests/test_gate_requirements.py",
@@ -2732,8 +2747,8 @@
     },
     {
       "path": "tests/test_migration.py",
-      "size": 6493,
-      "sha256": "875fd4da9799d47263466be12104143a33cad82463692ba178328244d2d85e3f"
+      "size": 7114,
+      "sha256": "3a3fc45b0a3be6f99b90728e507afc8a7a604748deaef6d800b2108f3a0cedcc"
     },
     {
       "path": "tests/test_migration_backup.py",
