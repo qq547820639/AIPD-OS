@@ -117,5 +117,16 @@
 2. **`commit -m` 里的反引号会被 shell 执行**：那次提交的正文里 `` `import ast` `` 被命令替换吃掉，
    留下「（ 在同仓的真实持有者是」这样的空位——提交内容与仓库文件都不受影响，
    但记号丢了。后续一律改用 `-F <文件>` 写提交说明。
+3. **重锚漏暂存 RELEASE_MANIFEST.json，被 `workspace_clean` 当场拦住**：更正误引那一轮我
+   重刷了两份清单，但 `git add` 的 pathspec 只列了 `CHANGELOG.md docs/audit PROVENANCE.json
+   SOURCE_MANIFEST.json` ⇒ 磁盘已新、HEAD 仍旧，工作树一路带着 ` M RELEASE_MANIFEST.json`。
+   `production_release_gate` 报 **7/8，红项 workspace_clean**、`release_ready: false`；
+   补提交 `38ff731` 后回到 **8/8、rc=0、`release_ready: true`**。
+   要记的是判据的**层级差**：`test_packaging` 那两条比的是"磁盘 ↔ 磁盘"，
+   所以它对这种漂移全绿（17 passed），只有按 HEAD 记账的门禁看得见"未提交"这一半——
+   一份一致性测试绿，不等于那份一致性已经进历史。
+   终读数因此以 `38ff731` 为准：`audit_repo --strict` rc=1，唯一红项仍是
+   `Provenance source commit mismatch: manifest=a66040520139… vs HEAD=38ff73172bf5…`。
+
 
 
