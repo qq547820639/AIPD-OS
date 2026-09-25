@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 170808,
-      "sha256": "8945c1bf287a4021a01c73eb364dbad229413e82666fe594d26b5f9f4c14856d"
+      "size": 171072,
+      "sha256": "65bd103398d34d12134af9b11a67d3125c0669f56e34e9095ec5909675f3a103"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -3032,8 +3032,8 @@
     },
     {
       "path": "tests/test_service_write_surface_parity.py",
-      "size": 9045,
-      "sha256": "2c1dbbf390ef00b4762f844f9608a68cc071754d67653a408b27fb157a5ff9fd"
+      "size": 10610,
+      "sha256": "24c0dca17bbfeadf48efa0946ea917becda668ff3cc7913fa60f02696cf455b1"
     },
     {
       "path": "tests/test_skill_command_surface.py",
