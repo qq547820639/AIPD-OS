@@ -53,6 +53,7 @@ from .commands_drawing import (
     cmd_drawing,
     cmd_drawing_assembly,
     cmd_drawing_assembly_steps,
+    cmd_drawing_dfm,
     cmd_drawing_spec,
 )
 from .commands_legacy import (
@@ -516,6 +517,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "drawing spec": cmd_drawing_spec,
     "drawing assembly": cmd_drawing_assembly,
     "drawing assembly-steps": cmd_drawing_assembly_steps,
+    "drawing dfm": cmd_drawing_dfm,
     "truth propagate": cmd_truth_propagate,
     "truth tasks": cmd_truth_tasks,
     "outbox drain": cmd_outbox,

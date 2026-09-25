@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-25T07:30:03`
+- 生成时间：`2026-09-25T08:11:11`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`d3ee9f2ca41f98752c388bcf48e482d0f4ecbb40`
+- 默认分支：`main`；HEAD：`08b3bb663dfb654a06fff8357b898282d8c0d64b`
 - 版本：`5.6.0`
 - 能力总数：`82`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -11,8 +11,8 @@
 
 | 分类 | 数量 | 说明 |
 | --- | --- | --- |
-| `fully_implemented` | 35 | 完整实现（有真实运行工件与测试证据） |
-| `partially_implemented` | 34 | 部分实现（核心路径可用，边界/证据不全） |
+| `fully_implemented` | 34 | 完整实现（有真实运行工件与测试证据） |
+| `partially_implemented` | 35 | 部分实现（核心路径可用，边界/证据不全） |
 | `protocol_only` | 0 | 仅协议/接口（无真实执行） |
 | `template_only` | 0 | 仅模板/示例（无真实执行） |
 | `external_dependency` | 13 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
@@ -87,7 +87,7 @@
 | 连续运动学 | `external_dependency` | references/cad-engineering-readiness.md |  |  | `` |  | 依赖外部仿真/运动学工具 |
 | 人体尺寸族 | `partially_implemented` | references/cad-engineering-readiness.md | src/aipd_os/cad/anthropometry.py | aipd_os.cad.anthropometry.get_dimension | `aipd cad build` | tests/test_anthropometry.py | 内置族为常用成年男女/儿童百分位示例，未覆盖全部人群数据库 |
 | CAE和疲劳 | `external_dependency` | references/cad-engineering-readiness.md |  |  | `` |  | 依赖外部 CAE/有限元工具 |
-| DFM/DFA | `fully_implemented` | references/cad-engineering-readiness.md | templates/cad_engineering_manifest.json; scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
+| DFM/DFA | `partially_implemented` | references/cad-engineering-readiness.md | src/aipd_os/cad/dfm.py; src/aipd_os/release_manifest.py | aipd_os.cli.commands_drawing.cmd_drawing_dfm | `aipd drawing dfm` | tests/test_cad_dfm.py | 判据只覆盖**量得出且有来处**的几项：壁厚是网格射线**采样**（斜置薄壁会测厚不测薄，读数带着间距与奇数命中数一起交）；DFA 只报同轴孔系数量这一件事实，装配力/紧固顺序、模具侧抽芯与脱模方向、铸造圆角与收缩率、热变形/振动的 CAE、工序工时与成本都不建模（本仓不建 operations 表）。内圆角那条厂商给的是「≥ 腔深 1/3」的比值、本仓没有可比的腔深定义，所以只报实测半径不设阈值。阈值来处是两家厂商工艺能力页（HLH Rapid 与 Xometry 独立给出同量级）+ 3ERP 转述的 ISO 2768-1 表，**都不是**本仓自定；页面无 License 声明，故只引用数字不复制正文。需装 cad extra。 |
 | 公差链 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | GD&T | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 二维图纸 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/cad/drawings2d.py; src/aipd_os/cad/assembly.py | aipd_os.cli.commands_drawing.cmd_drawing | `aipd drawing generate` | tests/test_cad_drawings2d.py; tests/test_cad_drawings_chain_tolerance.py; tests/test_cad_stackup.py; tests/test_cad_gdt_frames.py; tests/test_cad_section_views.py; tests/test_cad_spec_from_truth.py; tests/test_cad_gdt_deviation.py; tests/test_cad_section_symbols.py; tests/test_cad_detail_views.py; tests/test_cad_assembly_balloons.py; tests/test_cad_assembly_bom_link.py | 出图为 DXF 三视图 + 投影测量的总体尺寸/孔径 + 由实测孔心排出的尺寸链（闭合差写进 dimension_chain_check）；公差只能来自 --spec 声明，未声明则不写任何公差，声明落空会判未收口（退出码 4）。隐藏线用逐点射线遮挡判定，相切轮廓（如孔筒壁正视图）只判出一侧（tests/test_cad_drawings2d.py::TestTangencyLimit 钉住现状并写明翻转条件）。一维公差叠加已给出「各段公差带之和 vs 封闭环公差带」的自相矛盾判定（缺任何一环声明即判不可判定，不按 0 折算，也不猜功能限值），但三维/角度叠加与统计分布（Cpk）未做。GD&T 特征控制框（FCF）可按声明绘制并回读：分格框线 + 每格 TEXT + 引线，挂点取实测特征圆心，基准解析不了/特征不存在/类型不认识一律判未收口而不是画半截框；位置度类框已能**数值核对**：声明带 basic（理论精确位置）时拿投影实测圆心算偏差，超带判 position_deviation_exceeded 并退出码 4，没给 basic 则点名 position_basic_missing 而不拿实测当理论；形状/方向类（平面度/垂直度等）需要整面采样，本仓不做，一律标 verified=presence_only 不假称核过。但用的是 drawn 几何而非 DXF TOLERANCE 语义实体——其 content 转义码本轮未找到权威来源核实，故不宣称在各查看器里渲染一致。剖视已能真做（半空间布尔切割 + 剖面材料区量积 + DXF HATCH 填充，切不到材料/边界接不成闭合环/含内环都如实报且不静默填错多边形，切不到材料还判未收口（退出码 4））；剖切符号（母视图上的剖切线 + 指向保留侧的短划 + 两端字母 + 剖面标题 A-A）已按「剖切平面在母视图投影面上的交线」算出并真画，空剖视不编号也不画符号；局部放大图已能出（--detail TOP@(-30,0)/12=2：放大圆与母视图**已判定可见/隐藏**的折线做解析式二维裁剪，母视图上画裁剪圈 + 编号，放大图按「全局比例 × 倍数」画并带 DETAIL n 与比例标题；尺寸只从母视图继承测点落在圆内的那些且保留原名（inherited_from），总尺寸与以零件边缘为锚的链段一律不带入；圆内没有图线即判未收口（退出码 4）且不编号不画圈；它是母视图几何的放大而非重新投影，故母视图的可见/隐藏判定与相切边界原样带过去，母视图允许是剖视但材料区不参与裁剪（从剖视放大的图有线无剖面线），形位框仍只贴在母视图上（框按视图前缀名解析），同一处公差在母视图与放大图各印一次只算一条覆盖凭据）；未做阶梯剖/旋转剖；仍未实现：装配约束/配合与爆炸位移的自动求解；尺寸公差声明已有生产者：`aipd drawing spec` 把 Product Truth 里 status=active 的 CTQ 转成 --spec 那份 JSON（必须显式写 metadata.drawing_feature 与 nominal，缺则点名不产出、且缺口未收口时不写文件），出图时还会拿投影实测值反查 CTQ 的绝对合格域（落在域外判 ctq_window_violation 并退出码 4）；GD&T 形位框与基准方案也已能从同一条记录长出（metadata.gdt / metadata.datum_id，同一个特征上「一条给尺寸、一条给形位」合并成一条声明、同类重复则两条都撤回）；仍只吃手写 JSON 的是尺寸链各段与 global_tolerance（CTQ 上一般没有分段要求），且全程不按名字自动映射；装配图已能出（`aipd drawing assembly` 吃装配清单：**逐件投影**而非合并投影，故每条折线天然知道自己属于哪个零件；球标编号只认 manifest 里作者声明的 balloon，缺号/重号/写 0/零件重名/STEP 读不到一律 rc=2，不按遍历顺序发号；引线挂在实测投影质心上，零件沿投影方向叠着时点名列出「球标落在视图上同一个位置」的告警；爆炸视图已能出（--explode 按 manifest 里每件声明的 ``explode`` 位移摆开，每件一条装配位→爆炸位连线画在 EXPLODE 层，编号仍只认作者声明的 balloon；有一个零件没声明就 rc=2 拒画——摆开一半的爆炸图会让读者把「没动」当成「就该在那儿」；**不自动求拆卸方向**：文献那套要装配约束与无碰撞路径两样前提，本仓都没有；位移与视线平行时明说这个视图上看不出分离（告警不是错误）；明细表由 ezdxf TablePainter 画，没接 BOM 时只有 ITEM/PART 两列，一个猜测值都不印；包络投影重叠只作告警，不是干涉判定，本轮不做实体求交；装配视图上拒绝 --section/--detail，因为裁剪会打散按零件归属的折线）；球标↔BOM 已能交叉核对：对应关系**只认 manifest 里作者声明的 bom_item**，不给零件名字自动映射（名字相似不等于同一个东西，与 drawing spec 同一条纪律）；标识归一走 bom.models.norm_item（strip+lower 全等，不做子串猜），与 supply_chain/impact 同一处定义；两头都闭合：声明的行找不到 / 一行的 item 在 BOM 里有多行（歧义）/ 零件没声明 bom_item / BOM 有行而图上没球标指它 —— 一律判未收口（退出码 4），绑不上的数量/材料/工艺一律**留空**（不折算成 0，也不写「-」这类占位符——占位符会被读成图上真有这么个材料）；数量、单位与材料一律取自 BOM 行，材料走**同一个**绑定结果（没绑上/歧义/那行没填都是空）；manifest 里写 quantity / material / process 都不会进到零件数据（解析器三个都不读，明细表每一格只有一个来源）；材料与工艺各填各的格子，**不许互相顶**（拿工艺顶材料会把真正缺的那一半盖住）；供应商**刻意不上图**（裁决：明细表随图纸版本冻结，供应商是商务事实，本仓契约里它只叫「候选供应商」且归在供应链开发清单）；--db 与 --bom 必须一起给、且那张 BOM 得真在（库路径写错当场拒绝，不在错路径上凭空建库）。仍未做：多工序工艺路线——工艺那一格只装一道主工艺，工序顺序/工时/工序成本不建模（成熟实现把多工序建成独立对象：Dynamics 365 BC 的 Routing + BOM 行上的 Routing Link Code，ERPNext v15 的 BOM Operation 子表；本仓要做得先建 operations 表）、装配约束/配合；剖视的阶梯剖/旋转剖未做，放大图不做重新投影与局部剖，故 C6 生产图纸包整体仍不成立。需安装 cad extra（cadquery/OCP + ezdxf）；未安装时 CLI 返回 HOLD 外部任务包，不外推出图。 |

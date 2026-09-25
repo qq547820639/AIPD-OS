@@ -409,6 +409,91 @@ def cmd_drawing_assembly(args):
     return 4 if issues else 0
 
 
+def cmd_drawing_dfm(args):
+    """``aipd drawing dfm`` —— DFM/DFA 分析报告（实测几何 + 带来源的阈值判定）。
+
+    需要 CadQuery/OCP：这里量的是实体（圆柱面参数、射线求交），不是读图纸注记。
+    ``--spec`` 走的是出图那条同一个公差声明文件：有声明才判「公差超出常规可达」，
+    没声明就记盲区，**不拿无声明当宽松合格**。
+    """
+    out = Path(args.out)
+    if not args.part:
+        print("--part 必填（报告标题里的零件代号）")
+        return 2
+    if not args.step:
+        print("--step 必填（要分析的 STEP 文件；DFM 判的是实体几何，不是图纸）")
+        return 2
+    step = Path(args.step)
+    if not step.is_file():
+        print(f"--step 指向的文件不存在：{step}")
+        return 2
+    try:
+        import cadquery  # noqa: F401
+    except ImportError as exc:
+        return _external_task_pack(args, f"CAD 内核缺失（{exc}）", command="drawing dfm")
+
+    from aipd_os.cad.backends import CadQueryBackend
+    from aipd_os.cad.dfm import generate_dfm_report
+
+    spec, spec_error = _load_spec(args.spec)
+    if spec_error:
+        print(spec_error)
+        return 2
+    try:
+        import cadquery as cq
+
+        model = cq.importers.importStep(str(step))
+    except Exception as exc:
+        print(f"STEP 读不出来：{type(exc).__name__}: {exc}（读不出实体就没有几何可量，"
+              "不交一份空分析）")
+        return 2
+
+    provenance = {"tool": f"cadquery {CadQueryBackend().tool_version()}",
+                  "model_source": str(step), "command": "drawing dfm",
+                  "ok": True, "status": "DONE"}
+    try:
+        evidence = generate_dfm_report(
+            out, model=model, part_name=args.part, revision=args.revision,
+            material=args.material, spec=spec, spacing_mm=args.spacing,
+            provenance=provenance)
+    except ValueError as exc:
+        print(f"DFM 分析做不了：{exc}")
+        return 2
+
+    holds = [f for f in evidence["findings"] if f["verdict"] == "hold"]
+    advisories = [f for f in evidence["findings"] if f["verdict"] == "flag"]
+
+    def prose():
+        facts = evidence["facts"]
+        wall = facts["wall_measurement"]
+        counts = evidence["counts"]
+        print(f"已出 DFM/DFA 分析报告：{out}（判了 {counts['measured']} 条、"
+              f"盲区 {counts['blind']} 条）")
+        envelope = "x".join(f"{v:g}" for v in facts["envelope_mm"])
+        print(f"  包络 {envelope}mm "
+              f"体积 {facts['volume_mm3']:g}mm³ 面 {facts['face_count']} 个 "
+              f"整孔 {len(facts['holes'])} 个")
+        print(f"  最小壁厚 {wall['min_mm'] if wall['min_mm'] is not None else '没量出来'}mm"
+              f"（网格间距 {wall['spacing_mm']:g}mm，有命中射线 {wall['rays_with_hits']} 条，"
+              f"奇数命中 {wall['odd_hit_rays']} 条——斜置薄壁会测厚不测薄）")
+        print(f"  材料 {evidence['material'] or '未给'} ⇒ 按 {evidence['material_class']} 类判")
+        for item in evidence["findings"]:
+            limit = f"{item['limit']:g}{item['unit']}" if item["limit"] is not None else "不设阈值"
+            print(f"    [{item['verdict']}] {item['name']}："
+                  f"实测 {item['value']:g}{item['unit']} vs {limit}（{item['measured']}）")
+        for item in evidence["blind"]:
+            print(f"    [盲区] {item['name']}：{item['reason']}")
+        for item in holds:
+            print(f"  需制造方确认：{item['rule']}（{item['measured']}）")
+        if advisories:
+            print("  告警（不阻断）：" + "、".join(i["rule"] for i in advisories))
+        print("  本次没看：" + "、".join(evidence["not_covered"]))
+        print(f"证据文件：{evidence['evidence_file']}  "
+              f"sha256={evidence['document_sha256'][:16]}…")
+    _emit(args, evidence, prose)
+    return 4 if holds else 0
+
+
 def cmd_drawing_assembly_steps(args):
     """``aipd drawing assembly-steps`` —— 装配步骤文档（Markdown + 证据 sidecar）。
 

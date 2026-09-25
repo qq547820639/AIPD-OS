@@ -300,6 +300,22 @@ def build_parser() -> argparse.ArgumentParser:
     das.add_argument("--json", action="store_true")
     das.set_defaults(func=COMMAND_FUNCS["drawing assembly-steps"])
 
+    dd = drawing_sub.add_parser(
+        "dfm", help="DFM/DFA 分析报告：内核实测几何 + 带来源的阈值判定。"
+                    " Example: aipd drawing dfm --step bracket.step --out dfm.md --part BR-1")
+    dd.add_argument("--step", required=True, help="要分析的 STEP 文件（判的是实体几何）")
+    dd.add_argument("--out", required=True, help="Markdown 报告路径（同时写 .evidence.json）")
+    dd.add_argument("--part", required=True, help="零件代号（报告标题）")
+    dd.add_argument("--revision", default="A", help="版本号")
+    dd.add_argument("--material", default=None,
+                    help="材料牌号：认得出塑料/金属才用对应壁厚线判；认不出来记盲区不猜")
+    dd.add_argument("--spec", default=None,
+                    help="公差声明 JSON（与出图同一个文件）：给了才判「公差超出常规可达」")
+    dd.add_argument("--spacing", type=float, default=0.5,
+                    help="壁厚射线的网格间距 mm（分辨率，不是阈值）")
+    dd.add_argument("--json", action="store_true")
+    dd.set_defaults(func=COMMAND_FUNCS["drawing dfm"])
+
     p_outbox = sub.add_parser("outbox", help="消费对外副作用事件（RFQ 邮件等）。"
                                             " Example: aipd outbox drain --db state.db")
     outbox_sub = p_outbox.add_subparsers(dest="outbox_cmd", required=True)
@@ -368,6 +384,9 @@ def build_parser() -> argparse.ArgumentParser:
     mp.add_argument("--steps-doc", dest="steps_doc", default=None,
                     help="装配步骤文档（.md）路径：给了才写 C6 的 assembly_instructions 那一格"
                          "（读其 .evidence.json 侧车，没交就不编这一格）")
+    mp.add_argument("--dfm-doc", dest="dfm_doc", default=None,
+                    help="DFM/DFA 分析报告（.md）路径：给了才写 C5/C6 的 dfm_dfa 那一格"
+                         "（读其 .evidence.json；hold 结论阻断就绪，告警与盲区只提示）")
     mp.add_argument("--units", default="mm")
     mp.add_argument("--datum_scheme", default="unspecified")
     mp.add_argument("--approval-status", dest="approval_status", default="unapproved",

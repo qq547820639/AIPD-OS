@@ -74,7 +74,8 @@ def cmd_release_manifest(args):
     doc = build_release_manifest(
         db_path=db, tenant_id=args.tenant, project_id=args.project,
         drawings=[Path(p) for p in (args.drawing or [])], bom_id=args.bom,
-        model=args.model, steps_doc=args.steps_doc, units=args.units,
+        model=args.model, steps_doc=args.steps_doc, dfm_doc=args.dfm_doc,
+        units=args.units,
         datum_scheme=args.datum_scheme, approval_status=args.approval_status,
         out_path=out)
 
@@ -85,7 +86,8 @@ def cmd_release_manifest(args):
         for key in ("model_version", "bom_version", "drawings_version",
                     "model_part_count", "bom_line_count", "drawing_count",
                     "assembly_drawing_count", "part_drawing_count",
-                    "assembly_instructions", "assembly_steps"):
+                    "assembly_instructions", "assembly_steps",
+                    "dfm_dfa", "dfm_summary"):
             if key in doc:
                 print(f"  {key} = {doc[key]}")
             else:

@@ -274,6 +274,18 @@ aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part AS
 #     数量/单位/材料/工艺仍只来自绑上的 BOM 行（与装配图同一个 bind_bom、同一条「两格不许互相顶」）；
 #     没接 --db/--bom 时零件清单只有 ITEM/PART 两列，一个猜测值都不印。
 #     证据侧车 not_covered 逐条写明不含维护指引/工时/扭矩/PDF 版式，读者不会把骨架当全文。
+aipd drawing dfm --step bracket.step --out dfm.md --part BR-1 --material 6061-T6 [--spec spec.json]
+#   ↑ DFM/DFA 分析：几何事实全部**内核实测**——最小壁厚（三轴网格射线，进→出配对）、
+#     整孔直径/深度/深径比、最小内圆角半径、同轴孔系、包络与体积。
+#     孔与圆角靠**拓扑**区分：圆柱面角向张角满一周才算孔（实测 Ø6×10 孔 1.0000、R2 圆角 0.2500），
+#     不读名字也不按半径猜。
+#     阈值每条带来源（URL + 访问日期 + 是厂商能力还是转述标准）：金属壁厚 0.8mm 与塑料 1.5mm
+#     出自 HLH Rapid 与 Xometry 两页**各自独立**的同量级读数，深径比 4×（保守）/10×（上限）来自 Xometry，
+#     公差 0.025mm 是厂商标称可达；本仓**不发明阈值**，也拿不到 ISO 正文（3ERP 那份是转述）。
+#     内圆角那条厂商给的是「≥ 腔深 1/3」的比值，本仓没有可比的腔深定义 ⇒ 只报实测半径不设阈值。
+#     测不出来就记盲区（材料认不出类别、没有整孔、没有 --spec、单个平面量不出厚度），
+#     **不折算成合格**；斜置薄壁会测厚不测薄，这条印在报告的 caveat 里。
+#     hold 类结论（深孔 >10×、公差严于 0.025）让命令退 4；advisory 与盲区只提示不阻断。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。
@@ -293,11 +305,15 @@ aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom 
 #     球标没人装 ⇒ steps_balloons_uncovered，都阻断；同时带 assembly_steps 汇总
 #     （step_count / declared_balloons / unreferenced / not_covered / 侧车哈希）。
 python scripts/c6_coverage.py          # C6 那 15 项交付物各自做到哪一步了（诊断档）
+#     --dfm-doc dfm.md 才写 dfm_dfa 那一格（{path, sha256} + dfm_summary：
+#     hold/advisory/blind/measured、材料分类、not_covered、侧车哈希）；
+#     dfm_hold_findings 阻断，dfm_advisory_findings 与 dfm_unmeasured 只提示。
 #   ↑ 分母逐字取自 references/production-cad-deliverables.md 那一行：改契约不改映射会当场红。
 #     三档读数：有生产者且有常驻用例 / 只有校验方（门会判声明，但产品侧没有落点）/ 零实现。
-#     2026-09-25 第 18 片后实测 12 / 2 / 1：零实现只剩 ICD 一项。「装配/维护」升
-#     producer 指的是**装配那一半**（维护指引仍无生产者，这句话写在映射的 note 里、
-#     不在档位里）；爆炸图是第 17 片升的。
+#     2026-09-25 第 19 片后实测 13 / 1 / 1：零实现只剩 ICD 一项，只有校验方只剩
+#     版本与ECR/ECO 一项。「装配/维护」升 producer 指的是**装配那一半**（维护指引仍无
+#     生产者），「DFM/DFA」是第 19 片从 checker_only 升上来的；这两句写在映射 note 里、
+#     不在档位里，动档位之前先读 note。
 #     这张表的作用就是决定下一片做什么，而不是继续在已交付的项上精雕。
 #     它刻意**没接进** `production_release_gate`：普查里今天就有零实现项，挂成阻断等于没人看。
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"

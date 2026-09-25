@@ -383,11 +383,65 @@ def _collect_steps(steps_doc: Path | str | None, root: Path,
                              "sha256": _sha256(sidecar)}}}
 
 
+def _collect_dfm(dfm_doc: Path | str | None, root: Path,
+                 issues: list[dict[str, Any]]) -> dict[str, Any]:
+    """读 DFM/DFA 分析报告的 sidecar，产出 C5/C6 的 ``dfm_dfa`` 那一格。
+
+    分三档处置，**不合成一个数**：``hold``（深孔超上限、公差超出常规可达）阻断就绪——
+    这些不是「图纸写紧一点」能自己解决的，要制造方确认；``flag``（薄壁告警）只提示；
+    一条都没判成（全是盲区）也提示，但字段里带着 `measured_rule_count: 0`，
+    读者不会把空分析读成「没有 DFM 问题」。
+    """
+    if dfm_doc is None:
+        return {}
+    path = Path(dfm_doc)
+    if not path.is_file():
+        _issue(issues, "dfm_missing", f"DFM/DFA 分析报告不存在：{path}", blocking=True)
+        return {}
+    rel = path.relative_to(root).as_posix() if path.parent == root else str(path)
+    ref = {"path": rel, "sha256": _sha256(path)}
+    sidecar = path.with_suffix(".evidence.json")
+    if not sidecar.is_file():
+        _issue(issues, "dfm_evidence_missing",
+               f"{path.name} 没有 {sidecar.name}，分析结论无法核验", blocking=True)
+        return {"dfm_dfa": ref}
+    evidence = json.loads(sidecar.read_text(encoding="utf-8"))
+    counts = evidence.get("counts") or {}
+    holds = [f for f in evidence.get("findings") or [] if f.get("verdict") == "hold"]
+    advisories = [f for f in evidence.get("findings") or [] if f.get("verdict") == "flag"]
+    measured = int(counts.get("measured") or 0)
+    if holds:
+        _issue(issues, "dfm_hold_findings",
+               f"{rel}：{len(holds)} 条需制造方确认（"
+               + "、".join(sorted(str(h.get("rule")) for h in holds))
+               + "）——这类问题不由发布文档代为点头", blocking=True)
+    if advisories:
+        _issue(issues, "dfm_advisory_findings",
+               f"{rel}：{len(advisories)} 条告警（"
+               + "、".join(sorted(str(a.get("rule")) for a in advisories))
+               + "）；告警不阻断就绪，但也不会被抹掉", blocking=False)
+    if measured == 0:
+        _issue(issues, "dfm_unmeasured",
+               f"{rel}：一条规则都没判成（全在盲区）。这份分析不能读成「没有 DFM 问题」",
+               blocking=False)
+    return {"dfm_dfa": ref,
+            "dfm_summary": {
+                "hold_count": len(holds), "advisory_count": len(advisories),
+                "blind_rule_count": int(counts.get("blind") or 0),
+                "measured_rule_count": measured,
+                "material_class": evidence.get("material_class"),
+                "not_covered": list(evidence.get("not_covered") or []),
+                "evidence": {"path": (sidecar.relative_to(root).as_posix()
+                                      if sidecar.parent == root else str(sidecar)),
+                             "sha256": _sha256(sidecar)}}}
+
+
 def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENANT,
                            project_id: str = DEFAULT_TENANT,
                            drawings: Sequence[Path | str] = (),
                            bom_id: str | None = None, model: Path | str | None = None,
                            steps_doc: Path | str | None = None,
+                           dfm_doc: Path | str | None = None,
                            units: str = "mm", datum_scheme: str = "unspecified",
                            approval_status: str = "unapproved",
                            out_path: Path | str | None = None,
@@ -437,6 +491,7 @@ def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENA
                               ".missing_material / .missing_process",
         }
     doc.update(_collect_steps(steps_doc, root, issues))
+    doc.update(_collect_dfm(dfm_doc, root, issues))
     model_fields = _model_fields(model, issues)
     if "model_part_count" in model_fields:
         doc["model_part_count"] = model_fields["model_part_count"]

@@ -18,12 +18,12 @@ description: "[已废弃-勿作为入口加载] 本技能的 agent 入口地位�
   影响、证据、不确定性、未回复时继续项、明确回复格式），等待所有者选择。
 - **所有者的自然语言视图**：Owner Experience 层以自然语言卡片呈现项目状态、
   门禁进度、待处理决策与风险，无需阅读底层仓库。
-- **一键命令**（`aipd <cmd>`，主线共 49 个，按工作流分组；另有 10 个 deprecated
+- **一键命令**（`aipd <cmd>`，主线共 50 个，按工作流分组；另有 10 个 deprecated
   旧别名保留兼容）：
   - 核心流程：`init` / `intake` / `resume` / `status` / `run` / `decide`
   - 所有者体验：`onboard` / `dashboard` / `operate` / `ui` / `reset` / `recover`
   - 手册链：`manual plan` / `manual generate`
-  - CAD：`cad preflight` / `cad build` / `drawing generate` / `drawing spec` / `drawing assembly` / `drawing assembly-steps`
+  - CAD：`cad preflight` / `cad build` / `drawing generate` / `drawing spec` / `drawing assembly` / `drawing assembly-steps` / `drawing dfm`
   - 产品定义：`product show` / `product gate`
   - 产品事实：`truth propagate`（沿血缘标 stale + 建返工任务） / `truth tasks`（列待办）
   - 工业化：`industrialize` / `validate`

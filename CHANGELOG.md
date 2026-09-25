@@ -769,6 +769,43 @@
   `docs/audit/CAD_ASSEMBLY_STEPS_F-DRAW-01_2026-09-25.md`；
   该文档 §二 有六维对比表、§五 有变异表、§六 有端到端读数。
 
+- **v5.10 F-DFM-01 第 19 片：DFM/DFA 分析的生产者（普查档位 12/2/1 → **13/1/1**，
+  `DFM/DFA` 从 checker_only 升 producer，只有校验方只剩「版本与ECR/ECO」）**：
+  `cad.dfm_dfa` 这行的 `implementation_file` 此前只写模板 + `scripts/production_release_gate.py`
+  ——门判「声明了什么」，产品侧没量过零件。新增 `src/aipd_os/cad/dfm.py`：几何事实全部内核实测
+  （三轴网格射线进→出配对的最小壁厚、整孔直径/深度/深径比、最小内圆角半径、同轴孔系、包络与体积），
+  **孔与圆角靠拓扑区分**（圆柱面角向张角满一周才算孔：实测 Ø6×10 通孔 1.0000、R2 圆角 0.2500），
+  同轴分组用**轴线位置**（`cyl.Axis().Location()`）而不是曲面上的点——一开始拿错点，
+  两个同轴盲孔被判成两根轴，是 `test_coaxial_holes_group_by_axis_not_by_name` 当场抓的。
+  **阈值一律带来源、本仓不发明数**：金属 0.8mm / 塑料 1.5mm 取自 HLH Rapid 与 Xometry 两页
+  **各自独立**的同量级读数（后者 0.794mm = 1/32 英寸换算），深径比 4×（保守）与 10×（上限）、
+  公差可达 0.025mm 取自 Xometry，ISO 2768-1 的 f/m/c/v 表来自 3ERP 页且来源里写明是**转述**；
+  Fictiv 那篇抓到了正文但**一个数字都没有**，所以不能当来处；厂商给「内圆角 ≥ 腔深 1/3」这个比值，
+  本仓没有可比的腔深定义 ⇒ 那条 `limit=None` 只报实测半径，不编一个毫米数冒充标准。
+  **测不出来记盲区不折算合格**：材料认不出类别 ⇒ 两条壁厚都 `material_class_unknown`；
+  没有整孔 / 没给 `--spec` / 单个平面量不出厚度各有原因代码，`min_mm` 是 `None` 而不是 0.0
+  （用例专门钉住：一个平面的壳每条射线只命中一次，配对失败就是没量到）。
+  `hold` 只给「超出厂商标称能力」的两条（深孔 >10×、公差严于 0.025），CLI 退 4；
+  `advisory`（薄壁、深径比 >4）与 `dfm_unmeasured`（一条都没判成）都只提示不阻断——
+  告警≠阻断这条纪律原样带过来。`aipd release manifest --dfm-doc` 才写 `dfm_dfa = {path, sha256}`
+  与 `dfm_summary`（hold/advisory/blind/measured + 材料分类 + not_covered + 侧车哈希），
+  没交就**不写这一格**；`dfm_evidence_missing`/`dfm_hold_findings` 阻断。
+  选型是实检后的取舍：`ncc-uk/SmartDFM`（26 个根条目里**无 LICENSE**，实现是 GNN+CATIA 研究脚本）
+  与 `ishaannsaini-sudo/DFMedusa`（README 取不到=读不到）都不可引入，只借它
+  `fact_base` + `rule_base` 的「先抽事实、再判规则」分层；PCB 类 DFM 检查器领域不符；
+  射线原语不新增依赖（`IntCurvesFace_ShapeIntersector` 本仓 `drawings2d.py:240` 已在用）。
+  守卫：`tests/test_cad_dfm.py` 35 条（六组，条数由 `--collect-only` 现算）+ 变异电池
+  **18/18 killed**。电池本身抓到两件事：D9（basis 与 source.kind 一致性检查）原本**没有用例覆盖**，
+  不补 `test_a_rule_whose_basis_disagrees_with_its_source_is_refused` 就会像上片 M8 一样存活；
+  D16/D18 两次锚点**凭记忆写错**（漏了行首 `+ `），被「命中必须恰好 1 次」判为注入无效而不是误报通过。
+  端到端（真模型 5 个、全走 `aipd`、mktemp 目录）读数物理正确：Ø6 孔在 20 宽板里量出孔壁
+  **7.0mm**（不是板厚 10）、Ø2×24 盲孔在 25 厚件里量出孔底留肉 **1.0mm** 且比值 12 ⇒ `hold` rc=4、
+  塑料 1.0mm 件按 1.5 那条线判而金属那条进盲区、`sha256` 与文档逐位一致、删侧车 ⇒ `dfm_evidence_missing`。
+  仍未做：DFA 装配力与紧固顺序、插入方向计数、模具侧抽芯与脱模、铸造圆角与收缩率、
+  CAE 热变形/振动、工序工时与成本；斜置薄壁的壁厚要改成沿面法向射线才测得准（报告 caveat 里写明）。
+  证据见 `docs/audit/DFM_DFA_PRODUCER_F-DFM-01_2026-09-25.md`（§二 六维对比与阈值来处、
+  §五 变异表、§六 端到端读数）。
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与
