@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 144688,
-      "sha256": "4e2cacb4f11a84a14bda74ee77d535f0220900c2059586a5de709e15ede5cf9c"
+      "size": 147825,
+      "sha256": "157b55278d0ff5327b1e542be1beac85ab5717ad934163f6b710e769731d45f9"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 39338,
-      "sha256": "3de0cf5b86b9e2e54cc6f0b24a4ef79b0bae3205adf3e090b65269c203d08e80"
+      "size": 40072,
+      "sha256": "5e19ab4ab3e3a7be3f7e3f84e98a6fe850b89dac8df743b1cd56f77f1621ed81"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -702,8 +702,8 @@
     },
     {
       "path": "scripts/c6_coverage.py",
-      "size": 26024,
-      "sha256": "843450fa789e99bc47c797dd90ca0bf72d74af639364a2d85dc9088761fa97fc"
+      "size": 26483,
+      "sha256": "029ad6d72fb667e000a6999addac3d2d5b02c23b79b374ca187b57f6f166e220"
     },
     {
       "path": "scripts/cad_convergence.py",
@@ -802,8 +802,8 @@
     },
     {
       "path": "scripts/quality_gate.py",
-      "size": 5449,
-      "sha256": "59729cad83623920ce64add1e9bcf10bb663631e3bcef15c943d78e89c210562"
+      "size": 6115,
+      "sha256": "a387d95bfd9a989eba3d4a0ff5fb85b941bb5f8e0fa0dc070a2a9571a22eea1c"
     },
     {
       "path": "scripts/regenerate_release_manifest.py",
@@ -1326,6 +1326,11 @@
       "sha256": "fa70f0c38bffa5334b547c77d7fc796f078767e19e135a0d744d54229f1e3573"
     },
     {
+      "path": "src/aipd_os/gate_requirements.py",
+      "size": 7638,
+      "sha256": "2aad0427139e0a90138b514809047e2efea050269f11d3ca63235722f9b69aec"
+    },
+    {
       "path": "src/aipd_os/idea/__init__.py",
       "size": 5192,
       "sha256": "7a01305687f2d4832f5a4277d96d8f86d1d3b758dd40ed96c88d5953ab43f950"
@@ -1607,8 +1612,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 86673,
-      "sha256": "28f60eb7aa0d7bccbfcef789d3ad2119ddf91603159bf2bbda30b8e700c39259"
+      "size": 88012,
+      "sha256": "90b4d3ea29b0931bc335f5357ad923b1f02bbb93aad33a3134f51d3a44468a61"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2556,6 +2561,11 @@
       "sha256": "7d6e16a0ae286250b1aed5a6cda91fc762ef4d72a5288ab5dc7e780dd51aac2d"
     },
     {
+      "path": "tests/test_gate_requirements.py",
+      "size": 11061,
+      "sha256": "92462025b7010c55c146782bf46a352fa4b3c163f29e708c622f9f3346f5a919"
+    },
+    {
       "path": "tests/test_generic_lineage.py",
       "size": 11506,
       "sha256": "88c4774dbf44af2d4634fb3065631daed528fd2187c51e793c251e8d2c4a189e"
@@ -2862,8 +2872,8 @@
     },
     {
       "path": "tests/test_quality_gate_shape.py",
-      "size": 9388,
-      "sha256": "40e837abf7ccc90436a0f4c1dfc8d49f1aed6d52719452c5b156d2f41b3b3598"
+      "size": 9420,
+      "sha256": "f9431d3791c0ec98d1c9c36fd9f8fc023869e473253c9785d7ce03a27cd407d2"
     },
     {
       "path": "tests/test_quote_to_cost_chain.py",
