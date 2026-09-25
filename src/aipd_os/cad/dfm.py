@@ -316,16 +316,114 @@ def geometry_facts(shape: Any) -> dict[str, Any]:
     }
 
 
+def _face_normal_thickness(shape: Any, spacing_mm: float,
+                           max_samples_per_face: int = 12) -> dict[str, Any]:
+    """沿**面法向**量局部壁厚：从面上每一点向两侧走，取第一段「确实在材料里、
+    出射点确实在材料外」的距离。
+
+    为什么要有这一法：三轴射线与面的夹角未知，量到的永远是**弦**而不是**垂直厚度**，
+    而弦可以比垂直厚度**长**（斜穿）也可以比它**短**（在棱角附近擦过）。
+    本机实测：3mm 厚、绕 Y 转 45° 的板，三轴法给 1.00mm（不是「只会测厚不测薄」）。
+    所以这一法不是「更保守」，是**方向正确**：CATIA 的壁厚分析同样有沿法向的 Ray 模式
+    （其文档明说 Ray 在尖边处误差可超容差，故默认用球），本仓的处理是
+    ①只采参数域**中间 60%**（躲开棱边与角点）、②法向退化（极点/奇异）直接跳过、
+    ③用 `BRepClass3d_SolidClassifier` 逐条验「中点在材料内、出射点在材料外」才计数。
+
+    逐**实体**分类而不是对整个 shape 分类：壁厚是一个实体本身的属性，
+    两个互不相连的实体不应互相把对方的内部当成「材料内」。
+    """
+    from OCP.BRepAdaptor import BRepAdaptor_Surface
+    from OCP.BRepBndLib import BRepBndLib
+    from OCP.BRepClass3d import BRepClass3d_SolidClassifier
+    from OCP.BRepGProp import BRepGProp_Face
+    from OCP.Bnd import Bnd_Box
+    from OCP.gp import gp_Dir, gp_Lin, gp_Pnt, gp_Vec
+    from OCP.IntCurvesFace import IntCurvesFace_ShapeIntersector
+    from OCP.TopAbs import TopAbs_ShapeEnum, TopAbs_State
+    from OCP.TopExp import TopExp_Explorer
+    from OCP.TopoDS import TopoDS
+
+    eps = 1e-4
+    bbox = Bnd_Box()
+    BRepBndLib.Add_s(shape, bbox, False)
+    cmin, cmax = bbox.CornerMin(), bbox.CornerMax()
+    diag = _len([cmax.X() - cmin.X(), cmax.Y() - cmin.Y(), cmax.Z() - cmin.Z()]) + 1.0
+
+    best: float | None = None
+    probed = usable = skipped = faces_seen = 0
+    exp = TopExp_Explorer(shape, TopAbs_ShapeEnum.TopAbs_SOLID)
+    while exp.More():
+        solid = TopoDS.Solid_s(exp.Current())
+        exp.Next()
+        inter = IntCurvesFace_ShapeIntersector()
+        inter.Load(solid, 1e-7)
+        clf = BRepClass3d_SolidClassifier(solid)
+        fexp = TopExp_Explorer(solid, TopAbs_ShapeEnum.TopAbs_FACE)
+        while fexp.More():
+            face = TopoDS.Face_s(fexp.Current())
+            fexp.Next()
+            faces_seen += 1
+            adaptor = BRepAdaptor_Surface(face)
+            u0, u1 = adaptor.FirstUParameter(), adaptor.LastUParameter()
+            v0, v1 = adaptor.FirstVParameter(), adaptor.LastVParameter()
+            prop = BRepGProp_Face(face)
+            nu = max(2, min(max_samples_per_face, int(abs(u1 - u0) / spacing_mm) + 1))
+            nv = max(2, min(max_samples_per_face, int(abs(v1 - v0) / spacing_mm) + 1))
+            for i in range(nu):
+                for j in range(nv):
+                    # 只采参数域中间 60%：面边界与角点附近法向本身就不可靠
+                    u = u0 + (u1 - u0) * (0.2 + 0.6 * (i / max(nu - 1, 1)))
+                    v = v0 + (v1 - v0) * (0.2 + 0.6 * (j / max(nv - 1, 1)))
+                    point, normal = gp_Pnt(), gp_Vec()
+                    prop.Normal(u, v, point, normal)
+                    if normal.Magnitude() < 1e-9:
+                        skipped += 1       # 极点/奇异：法向没定义，不猜
+                        continue
+                    normal.Normalize()
+                    probed += 1
+                    for sign in (1.0, -1.0):
+                        dirv = gp_Vec(normal.X() * sign, normal.Y() * sign,
+                                      normal.Z() * sign)
+                        inter.Perform(gp_Lin(point, gp_Dir(dirv)), eps, diag)
+                        n = inter.NbPnt()
+                        if n < 1:
+                            continue
+                        run = min(inter.WParameter(k + 1) for k in range(n))
+                        # Perform 的参数域就从 eps 起，不必再挡一次「零长命中」
+                        mid = gp_Pnt(point.X() + dirv.X() * run / 2.0,
+                                     point.Y() + dirv.Y() * run / 2.0,
+                                     point.Z() + dirv.Z() * run / 2.0)
+                        beyond = gp_Pnt(point.X() + dirv.X() * (run + 1e-3),
+                                        point.Y() + dirv.Y() * (run + 1e-3),
+                                        point.Z() + dirv.Z() * (run + 1e-3))
+                        clf.Perform(mid, 1e-7)
+                        if clf.State() != TopAbs_State.TopAbs_IN:
+                            continue       # 中点不在材料里：这一段不是壁厚
+                        clf.Perform(beyond, 1e-7)
+                        if clf.State() != TopAbs_State.TopAbs_OUT:
+                            continue       # 出射点还在材料里：第一段命中不是边界
+                        usable += 1
+                        if best is None or run < best:
+                            best = run
+    return {"min_mm": round(best, 6) if best is not None else None,
+            "faces_probed": faces_seen, "samples": probed,
+            "samples_usable": usable, "samples_degenerate_normal": skipped,
+            "sample_domain": "参数域中间 60%（躲棱边与角点）"}
+
+
 def measure_min_wall_thickness(shape: Any,
                                spacing_mm: float = DEFAULT_SPACING_MM) -> dict[str, Any]:
-    """三轴网格射线穿透实体，取**材质段**长度的最小值。
+    """两条法各量一遍，取**最薄**那条交出去：三轴网格射线 + 沿面法向。
 
-    做法：沿 X/Y/Z 各铺一张网格，从包络外一侧发射线，与实体所有面求交，把命中参数
-    排序后两两配对（进→出）；一个射线若命中奇数个（相切/非流形）只计数不改判。
-    这是**采样**：`min_mm` 是「采到的最薄」，不是「几何上最薄」——所以读数带着
-    `spacing_mm`/`rays_with_hits`/`odd_hit_rays` 一起交出去，让人能判断分辨率够不够。
-    配对得到的壁厚是沿轴方向的最薄，斜置薄壁（如 45° 筋）会**测厚不测薄**，
-    这条写在报告里而不是悄悄不提。
+    三轴那条：沿 X/Y/Z 各铺一张网格，从包络外发射线，与实体所有面求交，把命中参数
+    排序后两两配对（进→出）；奇数命中（相切/非流形）只计数不改判。
+    这是**采样**，且量到的永远是**斜弦**——本机实测 3mm 斜板被它读成 1.00mm，
+    所以「斜置只测厚不测薄」这句旧话是错的，误差两个方向都有。
+    沿面法向那条补的是**方向**，但它每面最多采 12×12 个点，比三轴网格稀，
+    所以它可能**漏掉**三轴抓到的薄特征（金样品 bracket 上：三轴 2.00、法向 3.73）。
+
+    两个数都留在读数里（`axis_min_mm` / `normal_min_mm`），`min_mm` 取两者较小：
+    判阈值宁可多问一次制造方，也不把墙说厚。谁和谁不一致，报告里看得见。
     """
     from OCP.Bnd import Bnd_Box
     from OCP.BRepBndLib import BRepBndLib
@@ -369,11 +467,21 @@ def measure_min_wall_thickness(shape: Any,
                     run = params[pair + 1] - params[pair]
                     if run > 1e-6 and (best is None or run < best):
                         best = run
-    return {"min_mm": round(best, 6) if best is not None else None,
+    axis_min = round(best, 6) if best is not None else None
+    normal = _face_normal_thickness(shape, spacing_mm)
+    candidates = [v for v in (axis_min, normal["min_mm"]) if v is not None]
+    return {"min_mm": min(candidates) if candidates else None,
+            "axis_min_mm": axis_min, "normal_min_mm": normal["min_mm"],
+            "normal_measurement": normal,
             "spacing_mm": spacing_mm, "rays_with_hits": rays,
             "hits": hits, "odd_hit_rays": odd,
-            "method": "grid_ray_pairwise（三轴网格射线，进→出配对取最薄）",
-            "caveat": "斜置薄壁会测厚不测薄；奇数命中的射线（相切/非流形）只计数不猜"}
+            "method": "grid_ray_pairwise（三轴网格射线，进→出配对）"
+                      " + face_normal_ray（沿面法向，分类器验材料段）",
+            "caveat": "两法各量各的，min_mm 取两者较小：三轴法量的是斜弦（实测 3mm 斜板读成 "
+                      "1.00mm，误差两个方向都有）；法向法方向正确但采样比网格稀，"
+                      "会漏掉三轴抓到的薄特征。两个数都在读数里，不一致就看得见。"
+                      "奇数命中的射线（相切/非流形）只计数不猜；"
+                      "法向退化（极点/奇异）与参数域边缘的样本不采。"}
 
 
 _SEVERITY_LABEL = {"hold": "需制造方确认", "advisory": "建议", "info": "事实"}
@@ -383,14 +491,22 @@ _VERDICT_LABEL = {"hold": "阻断", "flag": "告警", "pass": "合格", "info": 
 def _markdown(part_name: str, revision: str, report: dict[str, Any]) -> str:
     facts = report["facts"]
     wall = facts["wall_measurement"]
+    # 量不出来的写「没量出来」，不写 0（0 会被读成「薄到快没了」而不是「不知道」）
+    axis_txt = (f"{wall['axis_min_mm']:g}" if wall["axis_min_mm"] is not None else "没量出来")
+    normal_txt = (f"{wall['normal_min_mm']:g}"
+                  if wall["normal_min_mm"] is not None else "没量出来")
     lines = [f"# DFM/DFA 分析：{part_name}（Rev {revision}）", "",
              "判据的阈值都带来源（见每条后面的「来处」）；**测不出来的记盲区，不折算成合格**。",
              "", "## 实测几何", "",
              f"- 包络：{facts['envelope_mm'][0]:g} × {facts['envelope_mm'][1]:g} × "
              f"{facts['envelope_mm'][2]:g} mm，体积 {facts['volume_mm3']:g} mm³，"
              f"面 {facts['face_count']} 个",
-             f"- 最小壁厚（网格射线，间距 {wall['spacing_mm']:g}mm，"
-             f"有命中的射线 {wall['rays_with_hits']} 条，奇数命中 {wall['odd_hit_rays']} 条）："
+             f"- 最小壁厚（取两法较小者；三轴网格射线间距 {wall['spacing_mm']:g}mm、"
+             f"有命中的射线 {wall['rays_with_hits']} 条、奇数命中 {wall['odd_hit_rays']} 条；"
+             f"沿面法向探 {wall['normal_measurement']['samples']} 点、"
+             f"可用 {wall['normal_measurement']['samples_usable']} 段、"
+             f"法向退化跳过 {wall['normal_measurement']['samples_degenerate_normal']} 点。"
+             f"三轴 {axis_txt} mm、法向 {normal_txt} mm）："
              + (f"{wall['min_mm']:g} mm" if wall["min_mm"] is not None else "没量出来"),
              f"- {wall['caveat']}",
              f"- 整孔 {len(facts['holes'])} 个；部分回转圆柱面 "
