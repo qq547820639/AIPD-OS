@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 182025,
-      "sha256": "d97d9b26bb7a3d05693664201471d5a4118c82f9bc44259fff4163d8f824f7e4"
+      "size": 184615,
+      "sha256": "e6278962b4ace7993066767bab6e14622f75179a1f373bec4e5f1b09d82bc7b5"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1632,8 +1632,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 88012,
-      "sha256": "90b4d3ea29b0931bc335f5357ad923b1f02bbb93aad33a3134f51d3a44468a61"
+      "size": 88839,
+      "sha256": "66d74b361bb02c92fabf0d81e84597cb5f33cc471849efae81d36b29814cdaa0"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -1882,8 +1882,8 @@
     },
     {
       "path": "src/aipd_os/supervisor/supervisor.py",
-      "size": 34910,
-      "sha256": "871b515e5ef18d0a9fc84a1406861aa5b341cc948606afd012f77e6c8ea54810"
+      "size": 38077,
+      "sha256": "d4c07e9396fe0aaf917ced41e4398a3ac791fb662bfb8b52313d567460423b71"
     },
     {
       "path": "src/aipd_os/supply_chain/__init__.py",
@@ -3094,6 +3094,11 @@
       "path": "tests/test_supervisor_execution.py",
       "size": 3241,
       "sha256": "c6cf232455af5ee623661104280a6cc3f463542a144e9fe1106067d8327732dc"
+    },
+    {
+      "path": "tests/test_supervisor_fact_writeback.py",
+      "size": 8427,
+      "sha256": "6f0f1cd16a8ba75354780df38592d9c597792152ba4e4fda1c3a18cfa64ed518"
     },
     {
       "path": "tests/test_supervisor_idea_runtime.py",
