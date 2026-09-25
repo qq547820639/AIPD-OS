@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-25T19:25:24",
-  "source_commit": "a66040520139405095648461f7144d4f00629924",
+  "generated_at": "2026-09-26T07:16:30",
+  "source_commit": "b72ac5265686228b18752d5d87dc41c9221303fc",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "a66040520139405095648461f7144d4f00629924",
-  "latest_commit_time": "2026-08-14 14:59:15 +0800",
+  "latest_commit_sha": "b72ac5265686228b18752d5d87dc41c9221303fc",
+  "latest_commit_time": "2026-09-26 07:05:03 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -81,11 +81,11 @@
       "migrations": 2,
       "references": 36,
       "releases": 4,
-      "scripts": 37,
+      "scripts": 39,
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 181
+      "tests": 191
     }
   },
   "tags": [
@@ -116,13 +116,28 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 621,
-    "hash_matches": 621,
-    "hash_mismatch_count": 0,
-    "mismatches": []
+    "total_files": 634,
+    "hash_matches": 632,
+    "hash_mismatch_count": 2,
+    "mismatches": [
+      {
+        "path": "src/aipd_os/registry_data.py",
+        "reason": "hash_mismatch",
+        "expected": "90b4d3ea29b0931bc335f5357ad923b1f02bbb93aad33a3134f51d3a44468a61",
+        "actual": "66d74b361bb02c92fabf0d81e84597cb5f33cc471849efae81d36b29814cdaa0"
+      },
+      {
+        "path": "src/aipd_os/supervisor/supervisor.py",
+        "reason": "hash_mismatch",
+        "expected": "871b515e5ef18d0a9fc84a1406861aa5b341cc948606afd012f77e6c8ea54810",
+        "actual": "d4c07e9396fe0aaf917ced41e4398a3ac791fb662bfb8b52313d567460423b71"
+      }
+    ]
   },
   "untracked_or_generated": [
-    " M RELEASE_MANIFEST.json",
+    " M src/aipd_os/registry_data.py",
+    " M src/aipd_os/supervisor/supervisor.py",
+    "?? tests/test_supervisor_fact_writeback.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

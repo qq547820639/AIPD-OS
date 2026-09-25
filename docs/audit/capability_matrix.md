@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-25T19:25:26`
+- 生成时间：`2026-09-26T07:16:32`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`a66040520139405095648461f7144d4f00629924`
+- 默认分支：`main`；HEAD：`b72ac5265686228b18752d5d87dc41c9221303fc`
 - 版本：`5.6.0`
 - 能力总数：`83`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -30,7 +30,7 @@
 | 重试 | `partially_implemented` | references/supervisor-operating-model.md | src/aipd_os/execution/execution_router.py | aipd_os.execution.execution_router.ExecutionRouter.run | `aipd run --project <id>` | tests/test_execution_router.py | 重试次数为固定有界值 |
 | 工具回退 | `fully_implemented` | references/capability-floor-policy.md | src/aipd_os/execution/execution_router.py | aipd_os.execution.execution_router.ExecutionRouter._try_fallback | `aipd run --project <id>` | tests/test_execution_router.py |  |
 | 工件登记 | `fully_implemented` | references/deliverable-contracts.md | src/aipd_os/execution/runs.py | aipd_os.execution.runs.RunStore | `aipd run --project <id>` | tests/test_execution_router.py |  |
-| 事实写回 | `partially_implemented` | references/state-model.md | scripts/aipd_supervisor.py | aipd_supervisor.Supervisor._register_outputs | `aipd run --project <id>` | tests/test_supervisor_execution.py | 全库无独立 product_truth/facts 表；主管的 update_facts 仅写 steps_log 字符串标签，未回写结构化事实表 |
+| 事实写回 | `partially_implemented` | references/state-model.md | src/aipd_os/supervisor/supervisor.py | aipd_os.supervisor.supervisor.Supervisor._write_back_facts | `aipd run --project <id>` | tests/test_supervisor_execution.py; tests/test_supervisor_fact_writeback.py | 写回的是「本次执行产出了什么」这条自述证据，不是对内容的外部核验，所以信任上限是 high 而不是 verified（质量门只核证据引用与输出哈希在不在）；不写 truth_lineage 边——工作项与上游 truth 之间还没有映射，因此这一步产出的 evidence 今天不会被 aipd truth propagate 传播到；一条工作项一行 evidence，多产物时 source.file 只取首条证据引用；写回失败不中断执行，但步骤标签会改判为 fact_writeback_failed（不许静默留着 update_facts_evidence） |
 | stale传播 | `partially_implemented` | references/supervisor-operating-model.md | scripts/aipd_supervisor.py | aipd_supervisor.Supervisor._mark_stale | `aipd run --project <id>` | tests/test_supervisor_execution.py | 仅写 invalidates 血缘标记，不重建/不重排下游工件 |
 | 自动返工 | `partially_implemented` | references/supervisor-operating-model.md | scripts/aipd_supervisor.py | aipd_supervisor.Supervisor.run_supervisor | `aipd run --project <id>` | tests/test_supervisor_execution.py | 复用旧工作项重试，不新建独立返工项，且无返工次数上限 |
 | 只在必要决策时暂停 | `fully_implemented` | references/decision-policy.md | scripts/aipd_supervisor.py | aipd_supervisor.Supervisor.run_supervisor | `aipd run --project <id> --until-decision` | tests/test_execution_router.py; tests/test_decision_policy.py |  |

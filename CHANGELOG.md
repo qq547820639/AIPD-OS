@@ -951,6 +951,31 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-FACT-WB 第 42 片：主管的步骤标签 `update_facts_evidence` 从此对应一次真写回**：
+  `run_supervisor` 的成功分支把这个名字追加进 `steps_log`，而那段代码实际只做
+  `complete → _register_outputs → _quality_gate → _mark_stale`，**没有任何一句把事实/证据
+  写回结构化表**——`steps_log` 是一串自述标签，读的人和能力登记都据此以为"事实写回已做"。
+  同时登记里那句「全库无独立 product_truth/facts 表」**早就不成立**（`product_truth` 表
+  自 v5.9 就在 store 的 SCHEMA 里），错话在登记里躺了几轮没人复核。
+  现在 `_write_back_facts()` 真写一条 `record_type="evidence"` 的 `product_truth` 记录：
+  作用域跟着工作项走（不写死 default）、content 由 run 标识 + 输出哈希决定因此同一 run
+  重放不重复建行、`source.file` 取执行留下的首条证据引用（不新造字符串）；
+  **信任分级由独立质量门推导且上限 high**——那道门只核"证据引用与输出哈希在不在"，
+  把它读成 `verified` 就是第 32/34 片"机器默认值被读成权威"的同一族病；
+  写回失败**不静默**：步骤标签改判 `fact_writeback_failed`（注入 B5 只被这一条用例抓住）。
+  常驻 `tests/test_supervisor_fact_writeback.py`（7 条）+ 电池 `/tmp/s42/battery.py`
+  **6 条：杀 6 / 存活 0 / 注入无效 0**（B1 伪造成功摘要→半径 5、B2 信任写成常量 verified→2、
+  B3 去掉幂等预检→1、B4 作用域写死 default→4、B5 失败静默→1、B6 把旧错话抄回登记→1）。
+  `registry_data` 该行与 `docs/audit/capability_matrix` 同步改判，能力分类**仍留**
+  `partially_implemented`：本轮**没写 `truth_lineage` 边**（工作项与上游 truth 之间还没有映射），
+  所以这条证据今天不会被 `aipd truth propagate` 传播到——那是下一片的入口。
+  调研（真实检索，非杜撰）：Apache Airflow 的 OpenLineage provider 文档给出"执行完成即由
+  emitter 发 COMPLETE 事件、事件带 job/run 标识与 inputs/outputs"的形状；dbt 用
+  `run_results.json` 里的 `invocation_id` 做同一次运行的幂等键。两者都不接进依赖——前者要额外
+  服务与 HTTP 出口，后者是文件工件而不是库内可查询的事实。本仓已有带 tenant/project 作用域、
+  且与主管共用同一张连接登记表的 truth store，故**借它的事件形状、落自己的表**，零新依赖。
+  读数：全量 **2285 → 2292**（+7）。
+
 - **v5.12 F-DOC-REF 第 41 片：给「文档写出的 path:line 还指得回代码吗」装一把常驻尺子**：
   这根轴是被上一片自己喂出来的——收尾普查抓到我在第 39/40 片写进 CHANGELOG 的一句
   「与同仓 `ts_interface_shape.py`(tree-sitter) 同形」，**那个文件不在本仓**（真先例是

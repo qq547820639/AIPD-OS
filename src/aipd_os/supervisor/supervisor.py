@@ -469,6 +469,57 @@ class Supervisor:
                 wid, record.run_id, exc)
         return {"gate": result, "findings": findings}
 
+    def _write_back_facts(self, wid, capability_floor, out, gate):
+        """把一次执行的产出写成结构化 evidence 事实（`product_truth` 表）。
+
+        信任分级由**独立质量门的结果**推导，且最高只到 ``high``：
+        ``_quality_gate`` 核的是"证据引用与输出哈希在不在"，那不是对内容做过
+        外部核验，所以 ``verified`` 留给 ``ProductTruthStore.assess_trust`` 那条
+        真有依据的路径（把 high 写成 verified 就是本仓第 32/34 片那一族机器默认值）。
+
+        幂等键是 (record_type, content, tenant, project)：同一 run 重放不新增行；
+        换了 run 就是新证据，本来就该另起一行。
+        """
+        from aipd_os.product_truth import ProductTruthStore, TruthRecord
+        from aipd_os.product_truth.models import SourceRef
+
+        record = out["record"]
+        refs = list(getattr(record, "evidence_references", []) or [])
+        output_hash = getattr(record, "output_hash", None)
+        content = (f"{capability_floor} 执行产出：run={record.run_id} "
+                   f"output_hash={output_hash or '-'}")
+        try:
+            with self.connect() as c:
+                row = c.execute(
+                    "SELECT project_id,tenant_id FROM supervisor_work_items "
+                    "WHERE work_id=?", (wid,)).fetchone()
+            pid = row["project_id"] if row else self.project_id()
+            tenant = row["tenant_id"] if row else self._tenant_id
+            store = ProductTruthStore(str(self.path), tenant_id=tenant,
+                                      project_id=pid)
+            found = store.find_id_by_type_and_content("evidence", content)
+            if found is not None:
+                return {"record_id": found, "created": False,
+                        "project_id": pid, "tenant_id": tenant}
+            trust = "high" if (gate or {}).get("gate") == "pass" else "low"
+            rid = store.add(TruthRecord(
+                record_type="evidence",
+                content=content,
+                source=SourceRef(file=refs[0] if refs else None,
+                                 note=f"run_id={record.run_id}"),
+                trust_level=trust,
+                metadata={"work_id": wid, "run_id": record.run_id,
+                          "capability": capability_floor,
+                          "output_hash": output_hash,
+                          "evidence_references": refs,
+                          "gate": (gate or {}).get("gate")}))
+            return {"record_id": rid, "created": True, "trust_level": trust,
+                    "project_id": pid, "tenant_id": tenant}
+        except Exception as exc:  # noqa: BLE001 - 写回失败不中断执行，但标签必须改判
+            logger.warning("supervisor_fact_writeback_failed work_id=%s error=%s",
+                           wid, exc)
+            return {"record_id": None, "created": False, "error": str(exc)}
+
     def _mark_stale(self, wid):
         """标记依赖本工作项的既有工件为 stale（记录到 lineage）。"""
         stale = []
@@ -583,10 +634,12 @@ class Supervisor:
                     self.complete(wid, outputs=out["result"])
                     self._register_outputs(wid, capability_floor, out)
                     qg = self._quality_gate(wid, record)
+                    fb = self._write_back_facts(wid, capability_floor, out, qg)
                     stale = self._mark_stale(wid)
                     steps_log += ["register_artifact",
-                                  "update_facts_evidence",
                                   "run_independent_quality_gate",
+                                  "update_facts_evidence" if fb["record_id"]
+                                  else "fact_writeback_failed",
                                   "mark_stale",
                                   "create_rework_or_advance"]
                     log_event(logger, "supervisor_work_complete",
@@ -596,7 +649,8 @@ class Supervisor:
                         "work_id": wid, "action": "complete",
                         "status": record.status,
                         "record": record.to_dict(), "steps": steps_log,
-                        "quality_gate": qg, "stale": stale,
+                        "quality_gate": qg, "fact_writeback": fb,
+                        "stale": stale,
                     })
                 elif record.status == "blocked_external":
                     self.fail(wid, record.error_message
