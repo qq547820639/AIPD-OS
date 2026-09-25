@@ -116,6 +116,7 @@ ECO 那三张表照这条教训建了（`creator` / `approver` 分两列、`appr
 | 镜像 | 本片**没有**新增公开命令、也没有新增能力行 ⇒ `registry_data` / `scripts/c6_coverage.py` 的行未动；判据不是「我觉得不用改」，而是全量 2170 条里`test_capability_matrix`、`test_registry_export`、`test_command_coverage` 等镜像用例全绿（tag 那一跑 0 红）。动的镜像只有 `docs/architecture/state_inventory.md`（HEAD schema 段 + 迁移清单表行）、`README.md` 门那一段、`CHANGELOG.md` 条目|
 | ruff / mypy | ruff（CI 范围 `src tests state_service`）`All checks passed!`；mypy `Success: no issues found in 424 source files`（+3）|
 | 变异电池 | 本片 `/tmp/slice32-mutations.py` **14 条：杀 14 / 活 0 / 注入无效 0**。同树复跑第 31 片 **8/8**、第 30 片 **21/21**（两片都含 `quality_gate.py` 的锚点，本片在该文件里加了 5 行——不改形也要复跑才算数）|
+  更正一处记账：收口那条提交（`c8469d0`）的 message 写「四片电池同树复跑」，**实为三片**（本片 14/14、第 31 片 8/8、第 30 片 21/21，三条 rc=0，读数在 `/tmp/s32-bat{32,31,30}.txt`）；历史不改写，以本表为准。
 
 ## 七、三处自己抓自己的读数
 
