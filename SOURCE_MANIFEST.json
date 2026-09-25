@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-25T14:30:34+00:00",
+  "generated_at": "2026-09-25T15:00:06+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 159283,
-      "sha256": "af76c1837b88057184f273ce549f040ed517a330037c1a76aa2a0c3bd40c2e28"
+      "size": 162904,
+      "sha256": "220d5a7d6eb7bdd1771679ac1aeabe5f078d68094366dc5dd5aa131851046f8d"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 42559,
-      "sha256": "52eee248e1b40ee4a4d76fe5f139d96e32c99c54336cb49e4bd7e752c72394e4"
+      "size": 43239,
+      "sha256": "938ab1468f8467ff07cbadea778af38654b17655bf20379555c6f7d2ce7a69a0"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -387,8 +387,8 @@
     },
     {
       "path": "docs/architecture/state_inventory.md",
-      "size": 6230,
-      "sha256": "24ba1ce8def96fe225066473824e65728ced824915826fc9d653e30eda7720c2"
+      "size": 6974,
+      "sha256": "0700fead4949d8afbf65e3b7acbb3adaf8313cb596107f44024edbd4a77f5556"
     },
     {
       "path": "docs/architecture/state_ownership.md",
@@ -1372,8 +1372,8 @@
     },
     {
       "path": "src/aipd_os/idea/evidence_relations.py",
-      "size": 21026,
-      "sha256": "60b5c1145ca7e9eee90e6d778cc0ff282aec3f4c2337ff848df05c1f8de93cad"
+      "size": 21223,
+      "sha256": "f78db5f06e8d04855d032887adf466a28535c48684ca655a43cbfef7748b80ac"
     },
     {
       "path": "src/aipd_os/idea/maturity.py",
@@ -1567,8 +1567,8 @@
     },
     {
       "path": "src/aipd_os/product_intelligence/snapshot.py",
-      "size": 27535,
-      "sha256": "89acaa44d8b5bf51ca435e9c4f45282ffe960248b5c66ce4bf353a458dfa0eb1"
+      "size": 27610,
+      "sha256": "5fd7c7f066bb87e81cca6f495fad980d15015d07ebe76a4523f4c383ee1a779e"
     },
     {
       "path": "src/aipd_os/product_truth/__init__.py",
@@ -1767,8 +1767,8 @@
     },
     {
       "path": "src/aipd_os/state/db.py",
-      "size": 56607,
-      "sha256": "06bc401240e63351c93c4d7dca427320aa90a47e8794dc6c12bdb994adea1243"
+      "size": 56590,
+      "sha256": "3b356cfa057c55f744579d1da1e8cbd9b2b59ef4e0b51267142df2baf1909977"
     },
     {
       "path": "src/aipd_os/state/dispatcher.py",
@@ -1802,13 +1802,13 @@
     },
     {
       "path": "src/aipd_os/state/migrations/definitions.py",
-      "size": 26745,
-      "sha256": "172189dcc55ca8d729ceffcdcd2979c1c8826837c87badcc2daf01862f389999"
+      "size": 27627,
+      "sha256": "31ce9d3a2c932027e4d01bc93c16aa87cac48d1878eb8d0932bf4d2de182fc2e"
     },
     {
       "path": "src/aipd_os/state/migrations/helpers.py",
-      "size": 33758,
-      "sha256": "0894634a430ea17fab2b11ea3f3b6d535429e1caea2233cec3b9a74e7e8eb518"
+      "size": 38852,
+      "sha256": "44ee99ec7d9fc06e6adb627fd9bbd31f066b3a114025ea9f06a0f87faed571a6"
     },
     {
       "path": "src/aipd_os/state/migrations/runner.py",
@@ -2229,6 +2229,11 @@
       "path": "tests/maturity_consistency_test.py",
       "size": 7063,
       "sha256": "ecbbaa49095eeaec3f086b9bbf9794e2301278aa09355bd850e693845a0a0aef"
+    },
+    {
+      "path": "tests/test_actor_columns_no_default.py",
+      "size": 11946,
+      "sha256": "a3ffad53aa0afa10ee5794f8cdfbdb9a6760b5cb6334fc91a03f9c5f36cadc53"
     },
     {
       "path": "tests/test_adapters.py",
@@ -2982,8 +2987,8 @@
     },
     {
       "path": "tests/test_risk_ownership.py",
-      "size": 15257,
-      "sha256": "25daa8c4956a8cbda3cbb1276f77ec18273b3c750417392d4574a2ebec8ccef6"
+      "size": 15975,
+      "sha256": "309842ae88054a249d54c44d7984224685b1adc701d62007b92e9a0fdd2332b0"
     },
     {
       "path": "tests/test_runtime.py",
