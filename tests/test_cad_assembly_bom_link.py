@@ -24,6 +24,8 @@ from pathlib import Path
 
 import pytest
 
+from aipd_os.cad.evidence import sidecar_path
+
 cadquery = pytest.importorskip("cadquery", reason="cad 为可选 extra")
 pytest.importorskip("ezdxf", reason="DXF 输出依赖 ezdxf")
 
@@ -498,8 +500,8 @@ class TestCliSurface:
                 "--out", str(out), "--part", "ASSY-1", "--views", "TOP", *extra]
         rc = main(argv)
         ev = None
-        if out.with_suffix(".evidence.json").exists():
-            ev = json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        if sidecar_path(out).exists():
+            ev = json.loads(sidecar_path(out).read_text("utf-8"))
         return rc, ev, out
 
     def test_bom_and_db_come_as_a_pair_otherwise_rc2(self, tmp_path):
@@ -683,7 +685,7 @@ class TestBomLibraryResolution:
         assert rc == 0, f"BOM 在同目录 bom.db 里，命令却读不到：rc={rc}"
         assert self._tables(db) == before, (
             f"权威状态库被加了表：{sorted(self._tables(db) - before)}")
-        evidence = json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        evidence = json.loads(sidecar_path(out).read_text("utf-8"))
         assert [r["qty"] for r in evidence["parts_list"]["rows"]] == [7.0], \
             "数量必须来自同目录 bom.db 里那行"
 

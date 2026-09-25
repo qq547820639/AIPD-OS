@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pytest
 
+from aipd_os.cad.evidence import sidecar_path
 from aipd_os.cli import main as cli_main
 from aipd_os.release_manifest import build_release_manifest
 
@@ -95,7 +96,7 @@ def assy(tmp_path: Path):
 
 
 def _sidecar(step: Path) -> Path:
-    return step.with_suffix(".evidence.json")
+    return sidecar_path(step)
 
 
 def _rewrite(step: Path, **changes) -> None:

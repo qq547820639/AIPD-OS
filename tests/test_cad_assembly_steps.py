@@ -257,7 +257,7 @@ class TestEvidenceSidecar:
         man = _manifest(tmp_path, _two_part_parts(), steps=_clean_steps())
         ev = generate_assembly_steps(md, manifest=str(man), part_name="ASSY-1")
         side = Path(ev["evidence_file"])
-        assert side == tmp_path / "s.evidence.json" and side.is_file()
+        assert side == tmp_path / "s.md.evidence.json" and side.is_file()
         disk = json.loads(side.read_text(encoding="utf-8"))
         assert disk["manifest_sha256"] == hashlib.sha256(man.read_bytes()).hexdigest()
         assert disk["document_sha256"] == hashlib.sha256(md.read_bytes()).hexdigest()
@@ -357,7 +357,7 @@ class TestReleaseManifestSeesTheDocument:
 
     def test_missing_sidecar_is_blocking(self, tmp_path):
         md = self._steps(tmp_path)
-        (tmp_path / "assy.evidence.json").unlink()
+        (tmp_path / "assy.md.evidence.json").unlink()
         doc = self._doc(tmp_path, md, self._db(tmp_path))
         kinds = [i["kind"] for i in doc["issues"]]
         assert "steps_evidence_missing" in kinds, kinds

@@ -326,6 +326,10 @@ aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom 
 #     ⇒ assembly_step_unverified。还跟装配图的球标↔件号对账：只对一张装配图配一份总装 STEP，
 #     多张记 ambiguous_pairing（按名字猜配对不判），没图记 no_assembly_drawing（盲区，不判成失败）。
 #     非 ASCII 件名在 STEP 里不可读这条边界原样带进 name_readability，不粉饰成「已随模型交付」。
+#     侧车名一律 = **产物全名** + `.evidence.json`（`assy.step` ⇒ `assy.step.evidence.json`）：
+#     早先各写入点各自「换个后缀」，`assy.step` 与 `assy.dxf` 会拼成同一个 `assy.evidence.json`
+#     并互相顶掉——出完图再读模型，读到的是图的凭据（F-EVID-03，已修；拼法收进
+#     `cad/evidence.sidecar_path` 一处，写侧读侧都走它，留一处旧写法就有常驻用例判红）。
 python scripts/c6_coverage.py          # C6 那 15 项交付物各自做到哪一步了（诊断档）
 #   ↑ 分母逐字取自 references/production-cad-deliverables.md 那一行：改契约不改映射会当场红。
 #     三档读数：有生产者且有常驻用例 / 只有校验方（门会判声明，但产品侧没有落点）/ 零实现。

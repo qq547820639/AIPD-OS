@@ -23,6 +23,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from aipd_os.cad.evidence import sidecar_path
 from aipd_os.cad.spec_from_truth import spec_from_ctq
 from aipd_os.product_truth.models import TruthRecord
 from aipd_os.product_truth.store import ProductTruthStore
@@ -441,7 +442,7 @@ class TestOneRequirementCountsOnce:
         assert main(["drawing", "spec", "--db", str(db), "--project", P,
                      "--out", str(spec_file)]) == 0
         _, dxf = _generate(tmp_path, json.loads(spec_file.read_text("utf-8")), name="both")
-        ev = json.loads(dxf.with_suffix(".evidence.json").read_text("utf-8"))
+        ev = json.loads(sidecar_path(dxf).read_text("utf-8"))
         assert ev["gdt_frames"], "前提：框真画上去了"
         path = tmp_path / "both-evidence.json"
         build_release_manifest(db_path=db, tenant_id=T, project_id=P, drawings=[dxf],

@@ -24,6 +24,8 @@ from pathlib import Path
 
 import pytest
 
+from aipd_os.cad.evidence import sidecar_path
+
 cadquery = pytest.importorskip("cadquery", reason="cad 为可选 extra（cadquery>=2.4）")
 pytest.importorskip("ezdxf", reason="DXF 写出依赖 ezdxf")
 
@@ -331,8 +333,8 @@ class TestCliSpecSurface:
             args.spec = str(self._write_spec(tmp_path, spec_obj))
         rc = cmd_drawing(args)
         evidence = None
-        if out.with_suffix(".evidence.json").exists():
-            evidence = _json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        if sidecar_path(out).exists():
+            evidence = _json.loads(sidecar_path(out).read_text("utf-8"))
         return rc, evidence, out
 
     def test_declared_tolerance_reaches_the_drawing_via_cli(self, tmp_path, capsys):
@@ -360,7 +362,7 @@ class TestCliSpecSurface:
 
         out2 = Path(tmp_path) / "cli_nospec.dxf"
         assert cmd_drawing(self._ns(out2, spec=str(Path(tmp_path) / "nope.json"))) == 2
-        assert not out2.exists() and not out2.with_suffix(".evidence.json").exists()
+        assert not out2.exists() and not sidecar_path(out2).exists()
 
     def test_invalid_declaration_is_reported_without_a_drawing(self, tmp_path):
         spec = {"features": [{"feature": f"{VIEW}.hole_1", "tolerance": {"upper": 0.02}}]}

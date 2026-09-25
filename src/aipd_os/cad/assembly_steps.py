@@ -284,7 +284,9 @@ def generate_assembly_steps(out_path: Path | str, *, manifest: str, part_name: s
     evidence.update(provenance or {})
     # 不复用 drawings2d._finish_evidence：那条收尾会盖 hidden_line_method——
     # 隐藏线求法是图纸的事实，写进步骤文档的证据里就是给读者一个不相干的字段
-    sidecar = path.with_suffix(".evidence.json")
+    from aipd_os.cad.evidence import sidecar_path
+
+    sidecar = sidecar_path(path)
     sidecar.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n",
                        encoding="utf-8")
     evidence["evidence_file"] = str(sidecar)

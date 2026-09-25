@@ -220,7 +220,7 @@ class TestEvidenceSidecar:
         out = tmp_path / "assy.step"
         evidence = export_assembly_step(out, manifest=str(man), part_name="ASSY-1")
         side = Path(evidence["evidence_file"])
-        assert side == tmp_path / "assy.evidence.json" and side.is_file()
+        assert side == tmp_path / "assy.step.evidence.json" and side.is_file()
         disk = json.loads(side.read_text(encoding="utf-8"))
         assert disk["document"] == "assembly_step"
         assert disk["document_sha256"] == hashlib.sha256(out.read_bytes()).hexdigest()

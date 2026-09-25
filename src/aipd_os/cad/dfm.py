@@ -471,7 +471,9 @@ def generate_dfm_report(out_path: Path | str, *, model: Any, part_name: str,
                            "blind": len(report["blind"])},
                 "not_covered": report["not_covered"]}
     evidence.update(provenance or {})
-    sidecar = path.with_suffix(".evidence.json")
+    from aipd_os.cad.evidence import sidecar_path
+
+    sidecar = sidecar_path(path)
     sidecar.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n",
                        encoding="utf-8")
     evidence["evidence_file"] = str(sidecar)

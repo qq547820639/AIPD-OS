@@ -293,7 +293,7 @@ class TestCliSurface:
                    "--out", str(out), "--material", "6061-T6"])
         assert rc == 0, rc
         assert out.is_file()
-        side = json.loads((tmp_path / "dfm.evidence.json").read_text(encoding="utf-8"))
+        side = json.loads((tmp_path / "dfm.md.evidence.json").read_text(encoding="utf-8"))
         assert side["document"] == "dfm_report"
         assert side["facts"]["min_wall_thickness_mm"] == pytest.approx(7.0, abs=1e-3)
 
@@ -360,7 +360,7 @@ class TestReleaseManifestSeesTheAnalysis:
 
     def test_missing_sidecar_is_blocking(self, tmp_path):
         report = self._report(tmp_path)
-        (tmp_path / "dfm.evidence.json").unlink()
+        (tmp_path / "dfm.md.evidence.json").unlink()
         doc = self._doc(tmp_path, Path(report["document_path"]), self._db(tmp_path))
         assert "dfm_evidence_missing" in [i["kind"] for i in doc["issues"]]
 

@@ -20,6 +20,8 @@ from pathlib import Path
 
 import pytest
 
+from aipd_os.cad.evidence import sidecar_path
+
 cadquery = pytest.importorskip("cadquery", reason="cad 为可选 extra")
 pytest.importorskip("ezdxf", reason="DXF 输出依赖 ezdxf")
 
@@ -267,8 +269,8 @@ class TestCliSurface:
         rc = main(["drawing", "assembly", "--manifest", str(manifest), "--out", str(out),
                    "--part", "ASSY-1", "--views", "TOP", *extra])
         ev = None
-        if out.with_suffix(".evidence.json").exists():
-            ev = json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        if sidecar_path(out).exists():
+            ev = json.loads(sidecar_path(out).read_text("utf-8"))
         return rc, ev, out
 
     def test_explode_flag_switches_the_view(self, tmp_path, capsys):

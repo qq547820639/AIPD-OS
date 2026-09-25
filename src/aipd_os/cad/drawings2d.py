@@ -1427,7 +1427,9 @@ def _finish_evidence(path: Path, evidence: dict[str, Any], part_name: str, revis
     evidence.update({"part": part_name, "revision": revision,
                      "generated_at": datetime.now(timezone.utc).isoformat(),
                      "hidden_line_method": HIDDEN_LINE_METHOD})
-    sidecar = path.with_suffix(".evidence.json")
+    from aipd_os.cad.evidence import sidecar_path
+
+    sidecar = sidecar_path(path)
     sidecar.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n",
                        encoding="utf-8")
     evidence["evidence_file"] = str(sidecar)

@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from aipd_os.cad.evidence import sidecar_path
+
 cadquery = pytest.importorskip("cadquery", reason="cad 为可选 extra（cadquery>=2.4）")
 pytest.importorskip("ezdxf", reason="DXF 写出依赖 ezdxf")
 
@@ -268,7 +270,7 @@ class TestCliInputPaths:
         rc = cmd_drawing(self._ns(out, native=str(GOLDEN_BRACKET_SOURCE)))
         assert rc == 0
         assert out.stat().st_size > 1000
-        ev = json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        ev = json.loads(sidecar_path(out).read_text("utf-8"))
         holes = [d for v in ev["views"] for d in v["dimensions"]
                  if d["kind"] == "hole_diameter"]
         assert sorted(round(h["center"][0], 3) for h in holes) == \
@@ -295,7 +297,7 @@ class TestCliInputPaths:
 
         out = tmp_path / "default.dxf"
         assert cmd_drawing(self._ns(out)) == 0
-        ev = json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        ev = json.loads(sidecar_path(out).read_text("utf-8"))
         assert ev["model_source"] == "golden_default"
         # 溯源必须落在磁盘证据里，而不是只存在于本次 stdout
         assert ev["ok"] is True and ev["status"] == "DONE"
@@ -370,4 +372,4 @@ class TestGracefulDegradation:
         rc = cmd_drawing(ns)
         assert rc == 4
         assert not out.exists()
-        assert not out.with_suffix(".evidence.json").exists()
+        assert not sidecar_path(out).exists()

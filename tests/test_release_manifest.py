@@ -38,6 +38,7 @@ import pytest
 
 from aipd_os.bom.models import BomLine
 from aipd_os.bom.store import BomStore
+from aipd_os.cad.evidence import sidecar_path
 from aipd_os.product_truth.models import TruthRecord
 from aipd_os.product_truth.store import ProductTruthStore
 from aipd_os.release_manifest import build_release_manifest
@@ -266,7 +267,7 @@ class TestGdtGrowsOnlyFromTheDrawing:
         rec = _seed_ctq(db, "hole_Ø6", limits=(5.95, 6.05))
         dxf = _drawing(tmp_path, spec=_spec_with(rec), name="detail_cover",
                        details=("TOP@(-30,0)/12=2", "TOP@(30,0)/12=2"))
-        evidence = json.loads(Path(dxf).with_suffix(".evidence.json").read_text("utf-8"))
+        evidence = json.loads(sidecar_path(dxf).read_text("utf-8"))
         printed = [v["view"] for v in evidence["views"]
                    for d in v["dimensions"] if d.get("tolerance")]
         assert printed == ["TOP", "DETAIL_1"], "两处印刷是前提，没有它这条判据不打火"
@@ -751,7 +752,7 @@ class TestExplodedViewIsJudged:
         """手改/旧 sidecar 会留下「说了爆炸却没有连线」的证据——这条判据就是为它建的。"""
         _seed_ctq(db)
         dxf, bom_id = self._exploded(tmp_path, name="stripped")
-        sidecar = dxf.with_suffix(".evidence.json")
+        sidecar = sidecar_path(dxf)
         ev = json.loads(sidecar.read_text("utf-8"))
         assert ev["views"][0]["connectors"], "前提：真出的图每条连接都在"
         ev["views"][0]["connectors"] = []

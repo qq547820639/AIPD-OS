@@ -37,6 +37,8 @@ from pathlib import Path
 
 import pytest
 
+from aipd_os.cad.evidence import sidecar_path
+
 cadquery = pytest.importorskip("cadquery", reason="cad 为可选 extra")
 pytest.importorskip("ezdxf", reason="DXF 输出依赖 ezdxf")
 
@@ -453,8 +455,8 @@ class TestCliAssemblySurface:
         rc = main(["drawing", "assembly", "--manifest", str(manifest),
                    "--out", str(out), "--part", "ASSY-1", *extra])
         evidence = None
-        if out.with_suffix(".evidence.json").exists():
-            evidence = json.loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        if sidecar_path(out).exists():
+            evidence = json.loads(sidecar_path(out).read_text("utf-8"))
         return rc, evidence, out
 
     def test_cli_writes_the_assembly_drawing_and_its_evidence(self, tmp_path, capsys):

@@ -16,16 +16,26 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def sidecar_path(artifact: Path) -> Path:
+    """产物旁边的证据侧车：``assy.step`` -> ``assy.step.evidence.json``。
+
+    拼法只允许存在这一处。历史上四个写入点各自「换个后缀」，把 `.step` / `.dxf` 换掉了 ⇒
+    `assy.step` 与 `assy.dxf` 抢同一个侧车名，
+    后写的产物把前一份的证据**静默顶掉**，读的一方拿 A 的凭据给 B 盖章（F-EVID-03）。
+    """
+    return artifact.parent / f"{artifact.name}.evidence.json"
+
+
 def write_evidence_sidecar(path: Path, evidence: dict[str, Any]) -> Path:
-    """把证据字典写到产物旁边的 ``.evidence.json``，并把侧车路径回填进字典。
+    """把证据字典写到产物旁边的侧车，并把侧车路径回填进字典。
 
     装配图/步骤文档各自有一段同形的收尾（各 3~4 行），但它们盖的字段不一样
-    （图纸带隐藏线求法、步骤文档带 not_covered），所以那两个**没**改过来——
-    这里只收「写侧车」这一件真正公共的事。
+    （图纸带隐藏线求法、步骤文档带 not_covered），所以那两个**没**合并到这里——
+    这里只收「侧车名的拼法」与「写侧车」这两件真正公共的事。
     """
     import json
 
-    sidecar = path.with_suffix(".evidence.json")
+    sidecar = sidecar_path(path)
     sidecar.write_text(json.dumps(evidence, indent=2, ensure_ascii=False) + "\n",
                        encoding="utf-8")
     evidence["evidence_file"] = str(sidecar)

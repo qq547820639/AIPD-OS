@@ -24,6 +24,8 @@ from pathlib import Path
 
 import pytest
 
+from aipd_os.cad.evidence import sidecar_path
+
 cadquery = pytest.importorskip("cadquery", reason="cad 为可选 extra")
 pytest.importorskip("ezdxf", reason="DXF 写出依赖 ezdxf")
 
@@ -162,7 +164,7 @@ class TestCliSurface:
         rc = main(["drawing", "generate", "--out", str(out), "--part", "plate",
                    "--views", "TOP", "--section", "Y=0", "--json"])
         assert rc == 0
-        ev = __import__("json").loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        ev = __import__("json").loads(sidecar_path(out).read_text("utf-8"))
         assert [v["view"] for v in ev["views"]] == ["TOP", "SECTION_Y"]
         assert _view(ev, "TOP").get("section_of") is None
 
@@ -206,7 +208,7 @@ class TestSeverityIsNotCollapsed:
         text = capsys.readouterr().out
         assert "内环" in text and "剖视告警" in text
         assert "未收口" not in text
-        ev = __import__("json").loads(out.with_suffix(".evidence.json").read_text("utf-8"))
+        ev = __import__("json").loads(sidecar_path(out).read_text("utf-8"))
         assert any("内环" in w for w in ev["section_warnings"]), ev["section_warnings"]
         assert ev["section_issues"] == []
         assert _view(ev, "SECTION_Z")["cut_regions"] == 1

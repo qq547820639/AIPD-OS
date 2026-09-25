@@ -46,8 +46,10 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _evidence_path(dxf: Path) -> Path:
-    return dxf.with_suffix(".evidence.json")
+def _evidence_path(artifact: Path) -> Path:
+    from aipd_os.cad.evidence import sidecar_path
+
+    return sidecar_path(artifact)
 
 
 def _collect_ctq(truth: Any, issues: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -349,7 +351,7 @@ def _collect_steps(steps_doc: Path | str | None, root: Path,
         return {}
     rel = path.relative_to(root).as_posix() if path.parent == root else str(path)
     ref = {"path": rel, "sha256": _sha256(path)}
-    sidecar = path.with_suffix(".evidence.json")
+    sidecar = _evidence_path(path)
     if not sidecar.is_file():
         _issue(issues, "steps_evidence_missing",
                f"{path.name} 没有 {sidecar.name}，装配步骤内容无法核验", blocking=True)
@@ -400,7 +402,7 @@ def _collect_dfm(dfm_doc: Path | str | None, root: Path,
         return {}
     rel = path.relative_to(root).as_posix() if path.parent == root else str(path)
     ref = {"path": rel, "sha256": _sha256(path)}
-    sidecar = path.with_suffix(".evidence.json")
+    sidecar = _evidence_path(path)
     if not sidecar.is_file():
         _issue(issues, "dfm_evidence_missing",
                f"{path.name} 没有 {sidecar.name}，分析结论无法核验", blocking=True)
