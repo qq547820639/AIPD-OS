@@ -955,11 +955,12 @@
   这根轴是被上一片自己喂出来的——收尾普查抓到我在第 39/40 片写进 CHANGELOG 的一句
   「与同仓 `ts_interface_shape.py`(tree-sitter) 同形」，**那个文件不在本仓**（真先例是
   `src/aipd_os/interface_contract.py` 与 `schema_binding.py`，全仓没用 tree-sitter）。
-  新增 `scripts/doc_reference_census.py`：在干净 HEAD 签出里读 144 份文档、切出 3553 处
-  代码引用，分六档（`resolved` 3156 / `missing` 149 / `multi` 99 / `external` 75 /
-  `elided` 61 / `line_beyond_eof` 13；同一份代码在开发树里读成 multi 429 / missing 126，
-  差在未跟踪的副本文件——**两棵树的现状面都是 0**，所以门禁只钉"现状面为 0"这格树无关
-  的事实，档位绝对数只出报表），**现状面**（README/SKILL/docs 架构面/references）判红、
+  新增 `scripts/doc_reference_census.py`：把全部文档里的代码引用切成六档
+  （`resolved` / `missing` / `multi` / `external` / `elided` / `line_beyond_eof`，
+  Σ 分类 == 分母是硬断言；**档位绝对数不进本文件**——这把尺子的语料包含记录它读数的文档本身，
+  每编辑一次历史面文档绝对数就漂一次，快照只留在
+  `docs/audit/DOC_REFERENCE_CENSUS_F-DOC-REF_2026-09-26.md`（不参与发布哈希），
+  这里只钉树无关的那格：**两棵树的现状面都是 0**），**现状面**（README/SKILL/docs 架构面/references）判红、
   **历史面**（CHANGELOG 与 docs/audit，记的是当时的事实）只报不判——这条取舍借自同类工具
   dsh-doc-guard 的「现状核对时忽略历史 changelog 行」。今天现状面 **0 条**。
   判据本身被合成语料钉住 20 条（正反两向），三个退化匹配当场被抓并被这条轴自己咬到：
