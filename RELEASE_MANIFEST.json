@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 107127,
-      "sha256": "2f574d0e2d00635f08bcf85d840e66a675ec858a7491f9b9571ff67d5a998ea6"
+      "size": 109220,
+      "sha256": "8945aa8bd526268c56d006fffd74d80143a61f3872f63e58e3a04671c1e7c244"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 30723,
-      "sha256": "2937cbe57926ab8baf350167b2e36a20000928a95dc34d72c6ce2c9d6fa32430"
+      "size": 31381,
+      "sha256": "b2e4fc54541f50eb9486487cf5c9d611772b79e735bf75498911752f71d2b752"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -792,8 +792,8 @@
     },
     {
       "path": "scripts/production_release_gate.py",
-      "size": 30840,
-      "sha256": "cded26db072e804dd9ca951446e9c8530e54c60522339924bcedd0331cefe55e"
+      "size": 31609,
+      "sha256": "1006ec683f8fa208f84132f904b3d4b39a2faf5709b6b15dfff611901b68d5ea"
     },
     {
       "path": "scripts/quality_gate.py",
@@ -1577,8 +1577,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 72115,
-      "sha256": "de75c9e5fd36570949e22186b44c9150b3e713729fe0bd3d07ff40033bff6373"
+      "size": 72707,
+      "sha256": "3f37a1e48636e200d1ac25072e2cc89eda5d9019c7515a7bc56d48d87b5c5988"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2781,6 +2781,11 @@
       "sha256": "cbf9294038471d904138583baf5f391c45067f178383f3fb77ed18bf05bdb159"
     },
     {
+      "path": "tests/test_production_release_gate_file_lists.py",
+      "size": 7048,
+      "sha256": "e736b5e01c0c0d8b90bf314aad5bb94399a816f9a1cbd0b4b46aa30baa51c76d"
+    },
+    {
       "path": "tests/test_prompt_injection.py",
       "size": 5088,
       "sha256": "73fc3ca14142180b02e5b13815e2702a63e0b5dd5b04d6e039898278012bd880"
@@ -2827,8 +2832,8 @@
     },
     {
       "path": "tests/test_release_manifest.py",
-      "size": 38725,
-      "sha256": "a502f2e2a72ddb9b3823dceae87c1cb0d79dcd345ef94770b79a52f41be216df"
+      "size": 41572,
+      "sha256": "8eef42ae651c1dd271a81db317c5a109e6655ef89df7b631ca263ac40aad4a42"
     },
     {
       "path": "tests/test_release_signing.py",

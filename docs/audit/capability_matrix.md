@@ -1,6 +1,6 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-25T09:07:19`
+- 生成时间：`2026-09-25T09:25:44`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
 - 默认分支：`main`；HEAD：`a66040520139405095648461f7144d4f00629924`
 - 版本：`5.6.0`
@@ -11,8 +11,8 @@
 
 | 分类 | 数量 | 说明 |
 | --- | --- | --- |
-| `fully_implemented` | 34 | 完整实现（有真实运行工件与测试证据） |
-| `partially_implemented` | 35 | 部分实现（核心路径可用，边界/证据不全） |
+| `fully_implemented` | 33 | 完整实现（有真实运行工件与测试证据） |
+| `partially_implemented` | 36 | 部分实现（核心路径可用，边界/证据不全） |
 | `protocol_only` | 0 | 仅协议/接口（无真实执行） |
 | `template_only` | 0 | 仅模板/示例（无真实执行） |
 | `external_dependency` | 13 | 依赖外部服务/工具（未配置时诚实等待，不伪造） |
@@ -94,7 +94,7 @@
 | 装配步骤文档 | `partially_implemented` | references/production-cad-deliverables.md | src/aipd_os/cad/assembly_steps.py; src/aipd_os/release_manifest.py | aipd_os.cli.commands_drawing.cmd_drawing_assembly_steps | `aipd drawing assembly-steps` | tests/test_cad_assembly_steps.py | **只交装配那一半**：C6 的「装配/维护」里维护指引没有生产者（内容要属主给），证据的 not_covered 里逐条写明本文档不承载什么，读者不会把骨架当成完整作业指导书。步骤只承载「这一步动哪些球标 + 作者原话」：工时、工序成本、扭矩/拧紧值一律不建模——清单里写 torque 这类字段是 rc=2 拒绝而不是静默丢（丢掉等于交一份少了一格还自称完整的文档）；多工序工艺路线仍未建 operations 表（与 cad.2d_drawings 同一裁决）。序号要求 1..N 连续：断档当场拒绝并点名缺哪个号，不补号也不按遍历顺序代发（顺序是作者的声明）。不做逐步骤的检验项接线（步骤里没有点检项，检验事实仍走 CTQ/图纸那条线）；版式只有 Markdown，PDF/图框未做（reportlab 5.0.0 出中文本机实测可用，是本轮不排而非排不出）。 |
 | BOM一致性 | `fully_implemented` | references/manual-to-cad-digital-thread.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
 | 检验计划 | `fully_implemented` | references/cad-engineering-readiness.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m>` | tests/test_production_release_gate.py |  |
-| 生产发布门 | `fully_implemented` | references/gate-model.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m> --target <level>` | tests/test_production_release_gate.py |  |
+| 生产发布门 | `partially_implemented` | references/gate-model.md | scripts/production_release_gate.py | production_release_gate.main | `aipd validate --manifest <m> --target <level>` | tests/test_production_release_gate.py; tests/test_production_release_gate_file_lists.py | 哈希核对按级触发：某键只有在该目标级被 REQ 要求时才核哈希，低一级的引用只过 file_openable（存在且可打开）。门逐级止步于第一个没满足的层级，故 missing 只列到那一级为止。 |
 
 ## 工业化与验证
 
