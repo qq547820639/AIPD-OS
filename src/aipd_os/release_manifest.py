@@ -614,7 +614,9 @@ def _hashed_artifacts(node: Any, found: dict[str, str] | None = None) -> dict[st
 
 def _collect_eco(db_path: Path | str, tenant_id: str, project_id: str,
                  artifacts: dict[str, str],
-                 issues: list[dict[str, Any]]) -> dict[str, Any]:
+                 issues: list[dict[str, Any]], *,
+                 root: Path | str,
+                 baseline_path: Path | str | None = None) -> dict[str, Any]:
     """交付物哈希必须有**闭合的**工程变更单覆盖；没有单可查就记盲区，不判合格。
 
     三种处置（刻意不合成一个百分比）：
@@ -623,12 +625,20 @@ def _collect_eco(db_path: Path | str, tenant_id: str, project_id: str,
       且那行的 `after_sha256` 与本次发布里的实际哈希一致 ⇒ 这次内容有单、已实施、已复验；
     - **uncovered / unverified（都阻断）**：内容有单但哈希对不上（改了却没提单），
       或对得上但那单还没 `VERIFIED`（变更进了发布却没复验）；
-    - **undetermined（不阻断，只记账）**：这张交付物**从来没有**单提到它 ⇒
-      本仓没有「上一版基线」可比，**不知道**它有没有被改过；判成合格是假绿，
+    - **undetermined（不阻断，只记账）**：这张交付物**从来没有**单提到它，而手里又
+      **没有上一版基线**可比 ⇒ **不知道**它有没有被改过。判成合格是假绿，
       判成违规是把「没登记」当成「改了没提单」。所以交出去的是一个数 + 清单。
 
-    一句话边界：这一格证明的是「内容哈希与某张闭合的单一致」，
-    不证明「自上次发布以来只改了这些」——那需要上一版产物清单作基线（未做）。
+    给了 `baseline_path`（第 28 片：上一版交付物清单）之后，那一栏的「不知道」被拆开：
+    语义摘要与基线逐字相等的记 **unchanged**（证明没改 ⇒ 不需要单），
+    基线里没有的记 **added**、摘要变了的记 **modified**（这两种没单就是**阻断**），
+    基线里有而这次没交的记 **removed**（必须由一张 `VERIFIED` 的 `REMOVE` 单认领）。
+    比对用**语义摘要**（剔掉生产者声明的易变字段，见 `delivery_baseline`），
+    否则「只是重新生成了一次侧车」会被读成工程变更。
+
+    两句话边界：没有基线时这一格只证明「内容哈希与某张闭合的单一致」，
+    **不证明**「自上次发布以来只改了这些」；基线文件读坏了不静默退回「没有基线」，
+    而是阻断 `eco_baseline_unreadable`——否则删掉基线就能让差集消失。
     """
     import sqlite3
 
@@ -636,6 +646,11 @@ def _collect_eco(db_path: Path | str, tenant_id: str, project_id: str,
         TERMINAL_STATUSES,
         VERIFICATION_PENDING,
         VERIFIED,
+    )
+    from aipd_os.delivery_baseline import (
+        artefact_index,
+        diff_since_baseline,
+        load_baseline_semantics,
     )
 
     empty: dict[str, Any] = {}
@@ -647,6 +662,16 @@ def _collect_eco(db_path: Path | str, tenant_id: str, project_id: str,
     except sqlite3.Error as exc:
         _issue(issues, "eco_unreadable", f"读不了变更单库（{db_path}）：{exc}", blocking=True)
         return {"eco": {**empty, "coverage": "unreadable"}}
+
+    baseline: dict[str, str] = {}
+    if baseline_path:
+        try:
+            baseline = load_baseline_semantics(baseline_path)
+        except (OSError, ValueError) as exc:
+            # 读坏 ≠ 没有。静默按「没有基线」处理，等于让「删掉基线文件」成为关掉差集的手段。
+            _issue(issues, "eco_baseline_unreadable",
+                   f"上一版交付物基线 {baseline_path} 读不了或不合法：{exc}；"
+                   "这一轮不能声称知道「相对上一版改了什么」", blocking=True)
 
     orders = store.list_orders(tenant_id=tenant_id, project_id=project_id)
     by_status: dict[str, int] = {}
@@ -661,22 +686,33 @@ def _collect_eco(db_path: Path | str, tenant_id: str, project_id: str,
                                                 "status": order["status"],
                                                 "change_type": row["change_type"],
                                                 "after_sha256": row["after_sha256"]})
-    if not orders:
-        return {"eco": {"orders": 0, "by_status": {}, "artifacts": len(artifacts),
-                        "covered": 0, "uncovered": [], "unverified": [],
-                        "undetermined": sorted(artifacts),
-                        "coverage": "undetermined",
-                        "why": "no_change_orders_in_scope",
-                        "not_covered": "本作用域内一张变更单都没有 ⇒ 无法判断这些交付物"
-                                       "是否被改过；这一格不是「已覆盖」"}}
+    since: dict[str, list[str]] = {}
+    if baseline:
+        current_sem = {p: e["semantic_sha256"]
+                       for p, e in artefact_index(artifacts, root).items()}
+        since = diff_since_baseline(current_sem, baseline)
+    changed_paths = set(since.get("added", [])) | set(since.get("modified", []))
 
     covered: list[str] = []
     uncovered: list[str] = []
     unverified: list[str] = []
     undetermined: list[str] = []
+    unchanged: list[str] = []
     for path, digest in sorted(artifacts.items()):
+        if since and path in set(since["unchanged"]):
+            # 基线证明这一条一个字节都没换（易变字段除外）⇒ 要单反而是错的：
+            # 没有变更可背书。哪怕单里有一条哈希对不上的声明，也按「没改」判。
+            unchanged.append(path)
+            continue
         rows = claims.get(path, [])
         if not rows:
+            if since and path in changed_paths:
+                reason = "新增" if path in since["added"] else "相对基线变了"
+                uncovered.append(path)
+                _issue(issues, "eco_change_uncovered",
+                       f"{path} 相对上一版基线是**{reason}**，却没有任何变更单提到它："
+                       "基线能证明它改了，改了就得有闭合的单", blocking=True)
+                continue
             undetermined.append(path)
             continue
         matching = [r for r in rows if r["after_sha256"] and r["after_sha256"] == digest]
@@ -701,10 +737,26 @@ def _collect_eco(db_path: Path | str, tenant_id: str, project_id: str,
                            f"{(r['after_sha256'] or '—')[:12]}…" for r in rows)
                + "。改了内容却没有对应的闭合变更单", blocking=True)
 
+    removed_unclaimed: list[str] = []
+    for path in since.get("removed", []):
+        rows = claims.get(path, [])
+        if any(r["status"] == VERIFIED and r["change_type"] == "REMOVE" for r in rows):
+            continue
+        removed_unclaimed.append(path)
+        here = sorted({f"{r['eco_id']}({r['status']}/{r['change_type']})" for r in rows})
+        _issue(issues, "eco_deliverable_removed_uncovered",
+               f"{path} 在上一版基线里有、这一版没交，"
+               + (f"且单里只有 {here}，没有一张是 VERIFIED 的 REMOVE 行" if here
+                  else "且没有任何一张单提到它")
+               + "：悄悄少交一份交付物，比多改一份更难发现", blocking=True)
+
     open_orders = [{"eco_id": o["eco_id"], "status": o["status"], "title": o["title"]}
                    for o in orders if o["status"] not in TERMINAL_STATUSES]
     not_shipped = sorted(set(claims) - set(artifacts))
-    return {"eco": {
+    coverage = ("complete" if not (uncovered or unverified or undetermined)
+                else "partial" if not (uncovered or unverified)
+                else "incomplete")
+    section: dict[str, Any] = {
         "orders": len(orders), "by_status": by_status,
         "artifacts": len(artifacts), "covered": len(covered),
         "covered_paths": covered, "uncovered": uncovered, "unverified": unverified,
@@ -713,12 +765,29 @@ def _collect_eco(db_path: Path | str, tenant_id: str, project_id: str,
         "open_orders": open_orders,
         # 有单却没全覆盖 ⇒ 只能说 partial：路径写法不一致、或漏了侧车，
         # 都可能让「全部交付物都有闭合单」这句话悄悄变成假话。
-        "coverage": ("complete" if not (uncovered or unverified or undetermined)
-                     else "partial" if not (uncovered or unverified)
-                     else "incomplete"),
+        "coverage": coverage,
+        # 有基线时「没单提到」会被拆开：证明没改的进 unchanged，改了没提单的进 uncovered。
+        "unchanged_since_baseline": unchanged,
+        "since_baseline": {k: since[k] for k in since} or None,
+        "baseline": str(baseline_path) if baseline_path else None,
+        "baseline_coverage": ("absent" if not baseline
+                              else "incomplete"
+                              if (removed_unclaimed or uncovered or unverified)
+                              else "complete"),
+        "removed_unclaimed": removed_unclaimed,
         "basis": "交付物 path+sha256 ← eco_affected.object_id + after_sha256，"
-                 "闭合口径是 VERIFIED（已复验）",
-    }}
+                 "闭合口径是 VERIFIED（已复验）；基线差集用剔掉声明易变字段后的语义摘要",
+    }
+    if not orders and not baseline:
+        section["coverage"] = "undetermined"
+        section["why"] = "no_change_orders_in_scope"
+        section["not_covered"] = ("本作用域内一张变更单都没有 ⇒ 无法判断这些交付物"
+                                 "是否被改过；这一格不是「已覆盖」")
+    elif not orders:
+        section["why"] = "no_change_orders_in_scope"
+        section["not_covered"] = ("一张单都没有：基线能证明「相对上一版改了的」都已判红，"
+                                 "剩下的 unchanged 是**证明没改**，不是没核")
+    return {"eco": section}
 
 
 def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENANT,
@@ -731,6 +800,7 @@ def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENA
                            units: str = "mm", datum_scheme: str = "unspecified",
                            approval_status: str = "unapproved",
                            out_path: Path | str | None = None,
+                           baseline_path: Path | str | None = None,
                            now: datetime | None = None) -> dict[str, Any]:
     """装配门禁可消费的发布就绪证据文档；返回同一份文档并附生产者判定。
 
@@ -809,7 +879,8 @@ def build_release_manifest(*, db_path: Path | str, tenant_id: str = DEFAULT_TENA
                        "ctq_source": "product_truth",
                        "gdt_source": "drawing_evidence"}
     # 变更单覆盖：只对「这份证据里带哈希的条目」判，且在一张单都没有时记盲区。
-    doc.update(_collect_eco(db, tenant_id, project_id, _hashed_artifacts(doc), issues))
+    doc.update(_collect_eco(db, tenant_id, project_id, _hashed_artifacts(doc), issues,
+                            root=root, baseline_path=baseline_path))
     blocking = any(i["blocking"] for i in issues)
     doc["issues"] = issues
     doc["blocking"] = blocking

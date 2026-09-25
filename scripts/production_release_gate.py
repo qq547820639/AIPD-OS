@@ -312,10 +312,18 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
         coverage = eco.get('coverage')
         bad = sorted(set(eco.get('uncovered') or []) | set(eco.get('unverified') or []))
         blind = sorted(eco.get('undetermined') or [])
+        removed = sorted(eco.get('removed_unclaimed') or [])
+        base_cov = eco.get('baseline_coverage', 'absent')
+        steady = len(eco.get('unchanged_since_baseline') or [])
         if bad or coverage in ('incomplete', 'unreadable'):
             add('change_control_closes_deliverables', 'C6', False,
                 f"coverage={coverage}; 缺闭合单或未复验: {bad}"
                 + (f"; eco 库读不到: {eco.get('why')}" if coverage == 'unreadable' else ''))
+        elif removed or base_cov == 'incomplete':
+            # 只有给了上一版基线才会走到这一支：改了的已经由上一支判红，
+            # 这一支管的是「基线里有、这次没交，也没人认领下线」。
+            add('change_control_closes_deliverables', 'C6', False,
+                f"baseline_coverage={base_cov}; 相对上一版基线少了没人认领的交付物: {removed}")
         elif blind or coverage in ('undetermined', 'partial'):
             # 盲区**不**折算成违规（生产者那一侧已经不阻断），但也**不**折算成通过：
             # 「这次发出去的内容都提过单」这句话在没有单可查时没有证据支撑。
@@ -326,7 +334,10 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
         else:
             add('change_control_closes_deliverables', 'C6', coverage == 'complete',
                 f"coverage={coverage}; {eco.get('covered')}/{eco.get('artifacts')} 条带哈希"
-                f"交付物由 VERIFIED 单逐条对上 after_sha256")
+                f"交付物由 VERIFIED 单逐条对上 after_sha256"
+                + (f"；另有 {steady} 条由上一版基线证明语义未变（不需要单）" if steady else '')
+                + ('' if base_cov != 'absent' else
+                   '；无基线 ⇒ 本份证据**不**声称「自上次发布以来只改了这些」'))
 
     # tool_capability_supports_level: runtime ceiling must allow the claimed level.
     cap_ok = ceiling_idx >= target_idx

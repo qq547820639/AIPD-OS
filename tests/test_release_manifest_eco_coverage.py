@@ -47,6 +47,7 @@ from aipd_os.change_orders.eco import (
     VERIFIED,
     EcoStore,
 )
+from aipd_os.delivery_baseline import write_baseline
 from aipd_os.release_manifest import _hashed_artifacts, build_release_manifest
 from aipd_os.state.db import AIPDStateDB
 
@@ -67,13 +68,14 @@ def world(tmp_path):
     doc = tmp_path / "dfm.md"
     generate_dfm_report(doc, model=shape, part_name="BRK-1", revision="A",
                         material="6061-T6")
-    return {"db": db_path, "doc": doc, "tmp": tmp_path}
+    return {"db": db_path, "doc": doc, "tmp": tmp_path, "shape": shape}
 
 
-def _build(world):
+def _build(world, baseline=None):
     doc = build_release_manifest(db_path=world["db"], project_id="default",
                                  dfm_doc=world["doc"],
-                                 out_path=world["tmp"] / "evidence.json")
+                                 out_path=world["tmp"] / "evidence.json",
+                                 baseline_path=baseline)
     # 交付物集合自己另算一遍：判据读的东西不能由判据自己写出来（那是循环论证）
     doc["_artifacts"] = _hashed_artifacts(
         {k: v for k, v in doc.items() if k not in ("issues", "eco")})
@@ -114,16 +116,23 @@ def _reject(store, eco_id):
                      to_status=REJECTED, actor="li", reason="风险大，不批")
 
 
-def _order(world, claims, *, status="VERIFIED", reject=False, title="改交付物"):
-    """开一张单，`claims` 是 {object_id: after_sha256}，再推到 `status`。"""
+def _order(world, claims, *, status="VERIFIED", reject=False, title="改交付物",
+           change="UPDATE"):
+    """开一张单，`claims` 是 {object_id: 目标哈希}，再推到 `status`。
+
+    `change="REMOVE"` 那一支交的是**改前**哈希（下线没有 after 可言），
+    与仓储层的必填规则同形。
+    """
     store = _store(world)
     record = store.create(tenant_id=TENANT, project_id="default", title=title,
                           creator="zhang")
     for object_id, digest in claims.items():
         store.add_affected(eco_id=record["eco_id"], tenant_id=TENANT,
                            project_id="default", object_type="doc", object_id=object_id,
-                           change_type="UPDATE", before_sha256="c" * 64,
-                           after_sha256=digest, actor="zhang")
+                           change_type=change,
+                           before_sha256=digest if change == "REMOVE" else "c" * 64,
+                           after_sha256="" if change == "REMOVE" else digest,
+                           actor="zhang")
     if reject:
         _reject(store, record["eco_id"])
     elif status != "DRAFT":
@@ -314,6 +323,8 @@ def test_hashed_artifact_walker_is_stable_across_shapes():
 
 
 GATE = Path(__file__).resolve().parents[1] / "scripts" / "production_release_gate.py"
+def _baseline_path(world):
+    return world["tmp"] / "baseline.json"
 ECO_CHECK = "change_control_closes_deliverables"
 
 
@@ -357,3 +368,198 @@ class TestTheGateReadsIt:
         _build(world)
         chk = _gate_verdict(world)
         assert chk["passed"] is False and DOC in chk["detail"], chk
+
+
+def _snapshot(world, *, extra=(), drop=()):
+    """把当前交付物集合落成「上一版基线」。
+
+    `extra` 造「上一版交了、这一版没交」；`drop` 造「这一版新加」。
+    返回基线路径，直接喂给 `--baseline`。
+    """
+    raw = dict(_build(world)["_artifacts"])
+    for path in drop:
+        raw.pop(path, None)
+    for path in extra:
+        raw[path] = "f" * 64
+    write_baseline(_baseline_path(world), raw, world["tmp"], release="v1")
+    return _baseline_path(world)
+
+
+def _baseline_with_ghost(world, ghost):
+    """基线里多一条这次没交的路径（不改生产者，只改基线文件）。"""
+    _snapshot(world)
+    doc = json.loads(_baseline_path(world).read_text(encoding="utf-8"))
+    doc["artifacts"][ghost] = {"sha256": "f" * 64, "semantic_sha256": "e" * 64,
+                               "volatile_dropped": []}
+    _baseline_path(world).write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+    return _baseline_path(world)
+
+
+class TestAgainstPreviousRelease:
+    """第 28 片：有了上一版清单，「没单提到」才拆得出「证明没改」与「改了没提单」。"""
+
+    def test_an_unchanged_delivery_needs_no_order_at_all(self, world):
+        _snapshot(world)
+        doc = _build(world, baseline=_baseline_path(world))
+        eco = doc["eco"]
+        assert eco["baseline_coverage"] == "complete"
+        assert eco["unchanged_since_baseline"] == [DOC, SIDECAR]
+        assert eco["undetermined"] == [] and eco["coverage"] == "complete"
+        assert not [i for i in doc["issues"] if str(i["kind"]).startswith("eco_")], \
+            "两份交付物一个字节都没变，要单反而是错的——没有变更可背书"
+        assert "证明没改" in eco["not_covered"]
+
+    def test_re_running_the_generator_is_not_an_engineering_change(self, world):
+        """整条链重跑一遍（侧车的 generated_at 必变）⇒ 仍判「没改」，不需要单。
+
+        这一条是这片的全部风险所在：判据若按原始字节比，每次重新出证据都会凭空要一张单。
+        """
+        _snapshot(world)
+        generate_dfm_report(world["doc"], model=world["shape"], part_name="BRK-1",
+                            revision="A", material="6061-T6")
+        doc = _build(world, baseline=_baseline_path(world))
+        eco = doc["eco"]
+        assert eco["unchanged_since_baseline"] == [DOC, SIDECAR], eco["since_baseline"]
+        assert eco["baseline_coverage"] == "complete"
+
+    def test_a_real_edit_without_an_order_now_blocks(self, world):
+        _snapshot(world)
+        world["doc"].write_text(world["doc"].read_text(encoding="utf-8") + "\n改一行结论\n",
+                                encoding="utf-8")
+        doc = _build(world, baseline=_baseline_path(world))
+        eco = doc["eco"]
+        assert eco["since_baseline"]["modified"] == [DOC]
+        assert eco["baseline_coverage"] == "incomplete"
+        issue = _issue(doc, "eco_change_uncovered")
+        assert issue["blocking"] is True
+        assert "相对上一版基线是**相对基线变了**" in issue["detail"] \
+            and "没有任何变更单提到它" in issue["detail"]
+
+    def test_a_closed_order_clears_the_baseline_violation(self, world):
+        _snapshot(world)
+        world["doc"].write_text(world["doc"].read_text(encoding="utf-8") + "\n改一行结论\n",
+                                encoding="utf-8")
+        _cover_all(world)
+        eco = _build(world, baseline=_baseline_path(world))["eco"]
+        assert eco["baseline_coverage"] == "complete"
+        # 侧车**没改** ⇒ 走「基线证明没改」那一支，不需要单；报告改了 ⇒ 必须由单覆盖。
+        # 两个桶不能同时收同一条：unchanged 的优先级在判据里排第一。
+        assert eco["covered_paths"] == [DOC] and eco["unchanged_since_baseline"] == [SIDECAR]
+        assert eco["since_baseline"]["modified"] == [DOC]
+
+    def test_a_deliverable_the_baseline_never_had_counts_as_added(self, world):
+        """上一版没有 ⇒ 这一版它是**新增** ⇒ 没单就阻断（不再是 undetermined）。"""
+        _snapshot(world, drop=(SIDECAR,))
+        doc = _build(world, baseline=_baseline_path(world))
+        eco = doc["eco"]
+        assert eco["since_baseline"]["added"] == [SIDECAR]
+        assert eco["uncovered"] == [SIDECAR] and eco["undetermined"] == []
+        assert "新增" in _issue(doc, "eco_change_uncovered")["detail"]
+
+    def test_a_delivery_that_vanished_must_be_claimed_by_a_verified_remove_row(self, world):
+        ghost = "assy.step.evidence.json"
+        _baseline_with_ghost(world, ghost)
+        doc = _build(world, baseline=_baseline_path(world))
+        issue = _issue(doc, "eco_deliverable_removed_uncovered")
+        assert issue["blocking"] is True and ghost in issue["detail"]
+        assert doc["eco"]["baseline_coverage"] == "incomplete"
+
+        _order(world, {ghost: "f" * 64}, change="REMOVE")
+        again = _build(world, baseline=_baseline_path(world))
+        assert again["eco"]["removed_unclaimed"] == []
+        assert "eco_deliverable_removed_uncovered" not in _kinds(again)
+
+    def test_only_a_verified_removal_endorses_a_vanished_delivery(self, world):
+        """认领下线这件事，两样都不能少：**行是 REMOVE** 且 **单是 VERIFIED**。
+
+        第 28 片电池的第一轮这条没被测到：把判据放宽成「单里提到过就行」照样全绿
+        ——那等于任何一张草稿、任何一条 UPDATE 声明都能替一次下线签字。
+        """
+        ghost = "assy.step.evidence.json"
+        for change, status in (("UPDATE", "VERIFIED"), ("REMOVE", "APPROVED")):
+            _baseline_with_ghost(world, ghost)
+            _order(world, {ghost: "f" * 64}, change=change, status=status)
+            eco = _build(world, baseline=_baseline_path(world))["eco"]
+            assert eco["removed_unclaimed"] == [ghost], \
+                f"{change}/{status} 不该算认领下线"
+            assert eco["baseline_coverage"] == "incomplete"
+
+    def test_a_corrupt_baseline_blocks_instead_of_falling_back_to_absent(self, world):
+        """读坏了就退回「没有基线」= 删掉基线文件即可关掉差集判据。所以必须阻断。"""
+        _snapshot(world)
+        _baseline_path(world).write_text("{这不是 JSON", encoding="utf-8")
+        doc = _build(world, baseline=_baseline_path(world))
+        assert _issue(doc, "eco_baseline_unreadable")["blocking"] is True
+        assert doc["eco"]["baseline_coverage"] == "absent"
+
+    def test_without_a_baseline_the_section_reads_exactly_as_last_slice(self, world):
+        doc = _build(world)["eco"]
+        assert doc["baseline_coverage"] == "absent"
+        assert doc["since_baseline"] is None
+        assert doc["unchanged_since_baseline"] == [] and doc["removed_unclaimed"] == []
+
+
+class TestTheGateReadsTheBaseline:
+    def test_an_unclaimed_removal_fails_the_gate(self, world):
+        _baseline_with_ghost(world, "assy.step.evidence.json")
+        _build(world, baseline=_baseline_path(world))
+        chk = _gate_verdict(world)
+        assert chk["passed"] is False
+        assert "没人认领" in chk["detail"] and "assy.step.evidence.json" in chk["detail"]
+
+    def test_absent_baseline_does_not_newly_fail_the_gate_and_says_so(self, world):
+        """没有基线不新增要求（否则只能事后补一百多张单来凑绿），但也不许声称「只改了这些」。"""
+        _cover_all(world)
+        _build(world)
+        chk = _gate_verdict(world)
+        assert chk["passed"] is True, chk
+        assert "无基线" in chk["detail"] and "**不**声称" in chk["detail"]
+
+    def test_an_unchanged_release_passes_with_zero_orders(self, world):
+        """门这一侧也认「基线证明没改」：零张单 + 全部 unchanged ⇒ 过。"""
+        _snapshot(world)
+        _build(world, baseline=_baseline_path(world))
+        chk = _gate_verdict(world)
+        assert chk["passed"] is True, chk
+        assert "另有 2 条由上一版基线证明语义未变" in chk["detail"]
+
+
+class TestCliBaselineSurface:
+    """命令行这一层：落基线之前要先过「没人放行过的一次运行不许当基准」这道闸。"""
+
+    def _run(self, world, *extra):
+        from aipd_os.cli.main import main
+
+        return main(["release", "manifest", "--db", str(world["db"]),
+                     "--project", "default", "--dfm-doc", str(world["doc"]),
+                     "--out", str(world["tmp"] / "evidence.json")] + list(extra))
+
+    def _base(self, world):
+        return world["tmp"] / "baseline.json"
+
+    def test_write_is_refused_while_the_evidence_is_red(self, world, capsys):
+        rc = self._run(world, "--write-baseline", str(self._base(world)))
+        out = capsys.readouterr().out
+        assert rc == 2 and "不落成基线" in out
+        assert not self._base(world).exists(), "嘴上拒绝、手上落盘 = 这道闸没生效"
+
+    def test_acknowledged_write_records_that_it_was_not_ready(self, world, capsys):
+        rc = self._run(world, "--write-baseline", str(self._base(world)),
+                       "--acknowledge-not-ready", "先建基准，缺的 CTQ 下一版补")
+        capsys.readouterr()
+        assert rc == 4, "承认了也不代替放行：这份证据照旧不 ok"
+        doc = json.loads(self._base(world).read_text(encoding="utf-8"))
+        assert doc["release_ready"] is False
+        assert doc["acknowledgement"].startswith("先建基准")
+        assert sorted(doc["artifacts"]) == [DOC, SIDECAR]
+
+    def test_reading_the_baseline_back_reports_everything_unchanged(self, world, capsys):
+        self._run(world, "--write-baseline", str(self._base(world)),
+                  "--acknowledge-not-ready", "r")
+        capsys.readouterr()
+        rc = self._run(world, "--baseline", str(self._base(world)))
+        out = capsys.readouterr().out
+        assert rc == 4 and "证明没改 2" in out, out
+        eco = json.loads((world["tmp"] / "evidence.json")
+                         .read_text(encoding="utf-8"))["eco"]
+        assert eco["baseline_coverage"] == "complete"

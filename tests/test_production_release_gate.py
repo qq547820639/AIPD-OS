@@ -213,6 +213,36 @@ def test_change_control_partial_blind_does_not_read_as_complete(tmp_path):
     assert chk["passed"] is False and "assy.step" in chk["detail"]
 
 
+def test_change_control_unclaimed_removal_fails_with_otherwise_clean_coverage(tmp_path):
+    """第 28 片：基线里有、这次没交，也没一张 VERIFIED 的 REMOVE 认领 ⇒ 拦。
+
+    这一支单独存在是因为**它不会出现在 uncovered 里**：文件已经不交了，
+    按「交付物逐条核」的思路看不见它，只有跟上一版比才看得见。
+    """
+    p = write_complete_manifest(
+        tmp_path,
+        eco={"coverage": "complete", "artifacts": 1, "covered": 1,
+             "uncovered": [], "unverified": [], "undetermined": [],
+             "baseline_coverage": "incomplete",
+             "removed_unclaimed": ["assy.step.evidence.json"]})
+    chk = get_check(json.loads(run_gate(p, "C6").stdout), ECO_CHECK)
+    assert chk["passed"] is False
+    assert "没人认领" in chk["detail"] and "assy.step.evidence.json" in chk["detail"]
+
+
+def test_change_control_passes_on_zero_orders_when_the_baseline_says_unchanged(tmp_path):
+    """零张单 + 基线证明两条都没改 ⇒ 通过，并把「不需要单」的理由写在 detail 里。"""
+    p = write_complete_manifest(
+        tmp_path,
+        eco={"coverage": "complete", "artifacts": 2, "covered": 0,
+             "uncovered": [], "unverified": [], "undetermined": [],
+             "baseline_coverage": "complete",
+             "unchanged_since_baseline": ["dfm.md", "dfm.md.evidence.json"]})
+    chk = get_check(json.loads(run_gate(p, "C6").stdout), ECO_CHECK)
+    assert chk["passed"] is True, chk
+    assert "另有 2 条由上一版基线证明语义未变" in chk["detail"]
+
+
 def test_missing_revision_data_fails_closed(tmp_path):
     """fail-closed：drawings_version 缺失不得空真通过。"""
     m = json.loads(write_complete_manifest(tmp_path).read_text(encoding="utf-8"))

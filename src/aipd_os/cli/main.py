@@ -405,6 +405,18 @@ def build_parser() -> argparse.ArgumentParser:
                          "（读其 .evidence.json，逐件把侧车自己的两个数重算一遍；"
                          "只核文件在不在、哈希对不对不足以证明它装的是什么）")
     mp.add_argument("--units", default="mm")
+    mp.add_argument("--baseline", default=None,
+                    help="上一版交付物基线（aipd release manifest --write-baseline 的产物）："
+                         "给了才能把「没有单提到」拆成「基线证明没改」与「改了却没提单」；"
+                         "不给则那一栏只说「不知道」，不折算成任何一种结论")
+    mp.add_argument("--write-baseline", dest="write_baseline", default=None,
+                    help="把**本次**交出去的带哈希交付物集合落成下一版的基线")
+    mp.add_argument("--release-label", dest="release_label", default="",
+                    help="写基线时记一句这是哪一版（只作标注，配合 --write-baseline）")
+    mp.add_argument("--acknowledge-not-ready", dest="acknowledge_not_ready", default="",
+                    help="证据仍有阻断项时确认要落基线（必须写明理由）；"
+                         "不加这个开关，--write-baseline 会拒绝把「没人放行过的一次运行」"
+                         "登记成下一版的比对基准")
     mp.add_argument("--datum_scheme", default="unspecified")
     mp.add_argument("--approval-status", dest="approval_status", default="unapproved",
                     help="审批状态由属主填；缺省 unapproved，不代为置 approved")

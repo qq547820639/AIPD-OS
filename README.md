@@ -350,7 +350,20 @@ aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom 
 #     `coverage` 三档 `complete`/`partial`/`incomplete`：有单却没全覆盖只敢说 partial。
 #     门读同一格但口径更严：`production_release_gate` 的 `change_control_closes_deliverables`
 #     把「一张单都没有」也读成**不通过**——生产者管「这份证据有没有说错话」，门管「够不够格签字」。
-#     **不证明**「自上次发布以来只改了这些」（缺上一版产物清单当基线，未做）。
+#     **不证明**「自上次发布以来只改了这些」——第 28 片把这一半补上了：
+#     --write-baseline 把本次交出去的带哈希交付物落成下一版的基线
+#     （aipd.delivery_baseline.v1；**证据还有阻断项时被拒（退 2）且不写文件**，
+#     确实要先立基准就加 --acknowledge-not-ready 写明理由，落下来的文件里留着
+#     release_ready:false 与那句承认）；下一版 --baseline 指回它，于是「没单提到」一分为三：
+#     unchanged_since_baseline（基线证明语义未变 ⇒ **不需要单**，零张单也能 complete）、
+#     added / modified（没闭合单即阻断）、removed（基线有而这版没交 ⇒ 必须有一张 VERIFIED 的
+#     REMOVE 行认领，否则 eco_deliverable_removed_uncovered 阻断）。比对用**语义摘要**：
+#     VOLATILE_FIELDS 按整名声明四个时间类键、递归剔除并把剔掉的位置写进 volatile_dropped
+#     （真侧车每次重跑 generated_at 必变，按原始字节比会把「又跑一遍」读成工程变更）；
+#     非 JSON 的交付物不省任何东西，语义摘要就是原始哈希。基线文件读坏 ⇒ eco_baseline_unreadable
+#     阻断，**不**静默退回「没有基线」（否则删掉基线就是关掉判据的开关）。
+#     整仓范围的差集仍未做：tag 清单与今天的实测差 101 增 / 9 删 / 82 改而一张单都没有，
+#     接成硬门只能靠补写事后变更单凑绿——那是造证据。
 python scripts/c6_coverage.py          # C6 那 15 项交付物各自做到哪一步了（诊断档）
 #   ↑ 分母逐字取自 references/production-cad-deliverables.md 那一行：改契约不改映射会当场红。
 #     三档读数：有生产者且有常驻用例 / 只有校验方（门会判声明，但产品侧没有落点）/ 零实现。

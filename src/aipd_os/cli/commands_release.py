@@ -78,7 +78,31 @@ def cmd_release_manifest(args):
         assembly_step=args.assembly_step,
         units=args.units,
         datum_scheme=args.datum_scheme, approval_status=args.approval_status,
-        out_path=out)
+        out_path=out, baseline_path=getattr(args, "baseline", None))
+
+    baseline_note = ""
+    if getattr(args, "write_baseline", None):
+        from aipd_os.delivery_baseline import artefact_index, write_baseline
+        from aipd_os.release_manifest import _hashed_artifacts
+
+        ack = getattr(args, "acknowledge_not_ready", "") or ""
+        blocking = sorted(i["kind"] for i in doc["issues"] if i["blocking"])
+        if blocking and not ack:
+            print(f"这份证据还有阻断项（{blocking}），不落成基线：下一版会把「没人放行过的"
+                  "一次运行」当成上一版交付来比对。确实要先落盘就加 "
+                  "--acknowledge-not-ready 写明理由")
+            return 2
+        raw = _hashed_artifacts({k: v for k, v in doc.items()
+                                 if k not in ("issues", "eco")})
+        artifacts = {path: entry["sha256"] for path, entry
+                     in artefact_index(raw, out.parent).items()}
+        written = write_baseline(Path(args.write_baseline), artifacts, out.parent,
+                                 release=getattr(args, "release_label", ""),
+                                 release_ready=bool(doc["ok"]), acknowledgement=ack)
+        baseline_note = (f"基线已落盘：{args.write_baseline}"
+                         f"（{len(written['artifacts'])} 条，就绪={doc['ok']}"
+                         + (f"，已承认未就绪：{ack}" if ack else "")
+                         + "，下一版用 --baseline 指回它）")
 
     def prose():
         print(f"发布就绪证据文档：{out}")
@@ -102,6 +126,14 @@ def cmd_release_manifest(args):
                   f"、无有效单 {len(eco.get('uncovered', []))}"
                   f"、待复验 {len(eco.get('unverified', []))}"
                   f"、无单可判 {len(eco.get('undetermined', []))}")
+            since = eco.get("since_baseline") or {}
+            print(f"  基线={eco.get('baseline') or '（未给 ⇒ 不声称「只改了这些」）'} "
+                  f"判定={eco.get('baseline_coverage')}"
+                  f"：新增 {len(since.get('added', []))}、变了 {len(since.get('modified', []))}"
+                  f"、下线未认领 {len(eco.get('removed_unclaimed', []))}"
+                  f"、证明没改 {len(eco.get('unchanged_since_baseline', []))}")
+            if baseline_note:
+                print(f"  {baseline_note}")
         else:
             print("  eco 覆盖 = （未取到，不编造）")
         for issue in doc["issues"]:

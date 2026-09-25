@@ -269,6 +269,17 @@ $ aipd validate --manifest $EV --target C6
    （与 `file_openable` 那类自己重算的判据不同）。要防的是「侧车/文档被手改」——
    那一层由 `SOURCE_MANIFEST` 哈希与 `audit_repo --strict` 管，不在这一格。
 6. **ECO 不联动失效传播**：一张 `VERIFIED` 的单不会让尺寸链/成本/Product Truth 快照失效。
+7. **收口后实测到一条会影响下一片的新事实（原样记下，不在本片改）**：同一份金样品连跑两次
+   `aipd drawing dfm`，报告体（`dfm.md`）字节确定（两次都是 `5f26d020eb8d…`），
+   但**侧车不确定**（`cdbcbd35…` vs `29f2de34…`）——侧车带一个 `generated_at` 字段。
+   后果直接落在这一格上：`after_sha256` 用的是**原始文件哈希**，所以「只是重新生成了一次」
+   也会被判成 `uncovered`。这不是判据写错，而是它诚实地说「这份字节变了」；
+   但它意味着第 28 片要做「上一版基线差集」之前，必须先决定**哪些字段算易变**：
+   Apache Maven 的 `artifact:compare` 把 `<ignore>` 做成一等参数（同一动机——每次构建都会变的东西
+   不该被当成内容差异，实读其页面，访问 2026-09-25），SLSA provenance 则把「构建期需要的既有制品」
+   与「产物」分成两份声明（`resolvedDependencies` vs `subject`，同为该页实读）。
+   本仓的口径应该是：**易变字段由生产者显式声明、且必须能证明语义变化仍会推动摘要**——
+   否则一个自由 ignore 列表会把真改动一起吞掉（那正是本片反复在防的假绿方向）。
 
 ## 八、收口读数
 
