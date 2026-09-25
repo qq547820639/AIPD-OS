@@ -553,3 +553,87 @@ def _v18_db_meta(conn: sqlite3.Connection) -> None:
 
 def _v18_drop_db_meta(conn: sqlite3.Connection) -> None:
     conn.execute("DROP TABLE IF EXISTS db_meta")
+
+
+def _v19_eco_tables(conn: sqlite3.Connection) -> None:
+    """v19 up：工程变更单（ECR/ECO）三张表。
+
+    为什么要有这一片：C6 交付物普查里「版本与ECR/ECO」长期停在 checker_only ——
+    版本那一半有生产者，变更单这一半**零实现**（本仓只有 `changes` 审计流水，
+    那是「谁改了什么」的记录，不是「谁批准了什么变更、影响哪些件、生效了没有」）。
+
+    三张表各管一件事，形状就是这张表要守的规矩：
+    - `eco_records`：单据本身。`creator` 与 `approver` 是**两列**，
+      不是 `gates.approved_by` 那种带 `DEFAULT 'AI-internal'` 的一列 ——
+      默认值会让任何写入点不写审批人也算「已批准」，那正是这片要防的事。
+    - `eco_affected`：影响清单。**before/after 两个 sha256 必须落在行上**，
+      没有哈希的变更单只是便签。
+    - `eco_transitions`：追加式流水。这张表**只 INSERT**（仓储层不给 UPDATE/DELETE 入口），
+      审计形状与 `audit_log` 同构。
+    """
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS eco_records ("
+        " eco_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL,"
+        " project_id TEXT NOT NULL,"
+        " kind TEXT NOT NULL DEFAULT 'ECO',"
+        " title TEXT NOT NULL,"
+        " reason TEXT NOT NULL DEFAULT '',"
+        " status TEXT NOT NULL DEFAULT 'DRAFT',"
+        " creator TEXT NOT NULL,"
+        " approver TEXT NOT NULL DEFAULT '',"
+        " approved_at TEXT,"
+        " applied_evidence_ref TEXT NOT NULL DEFAULT '',"
+        " effective_at TEXT,"
+        " verified_evidence_ref TEXT NOT NULL DEFAULT '',"
+        " verified_at TEXT,"
+        " closed_at TEXT,"
+        " source_commit TEXT NOT NULL DEFAULT '',"
+        " version INTEGER NOT NULL DEFAULT 1,"
+        " created_at TEXT NOT NULL,"
+        " updated_at TEXT NOT NULL,"
+        " PRIMARY KEY (eco_id, tenant_id, project_id))")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS eco_affected ("
+        " eco_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL,"
+        " project_id TEXT NOT NULL,"
+        " seq INTEGER NOT NULL,"
+        " object_type TEXT NOT NULL,"
+        " object_id TEXT NOT NULL,"
+        " change_type TEXT NOT NULL,"
+        " before_sha256 TEXT NOT NULL DEFAULT '',"
+        " after_sha256 TEXT NOT NULL DEFAULT '',"
+        " note TEXT NOT NULL DEFAULT '',"
+        " created_at TEXT NOT NULL,"
+        " PRIMARY KEY (eco_id, tenant_id, project_id, seq))")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS eco_transitions ("
+        " transition_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " eco_id TEXT NOT NULL,"
+        " tenant_id TEXT NOT NULL,"
+        " project_id TEXT NOT NULL,"
+        " from_status TEXT NOT NULL,"
+        " to_status TEXT NOT NULL,"
+        " actor TEXT NOT NULL,"
+        " reason TEXT NOT NULL DEFAULT '',"
+        " evidence_ref TEXT NOT NULL DEFAULT '',"
+        " occurred_at TEXT NOT NULL)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_eco_scope_status"
+        " ON eco_records(tenant_id, project_id, status)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_eco_affected_object"
+        " ON eco_affected(tenant_id, project_id, object_type, object_id)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_eco_transition_order"
+        " ON eco_transitions(tenant_id, project_id, eco_id, transition_id)")
+
+
+def _v19_drop_eco_tables(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP INDEX IF EXISTS idx_eco_transition_order")
+    conn.execute("DROP INDEX IF EXISTS idx_eco_affected_object")
+    conn.execute("DROP INDEX IF EXISTS idx_eco_scope_status")
+    conn.execute("DROP TABLE IF EXISTS eco_transitions")
+    conn.execute("DROP TABLE IF EXISTS eco_affected")
+    conn.execute("DROP TABLE IF EXISTS eco_records")

@@ -136,6 +136,8 @@ def test_v18_db_meta_up_and_down(tmp_path):
 
     path = str(tmp_path / "v18.db")
     migrate(path)
+    # v19（ECO 三张表）进链后，HEAD 不再是 18：先退到 v18，才测得到 v18 自己的 up/down。
+    assert rollback(path, 18) == [19]
     assert current_version(path) == 18
     with sqlite3.connect(path) as c:
         assert c.execute("SELECT name FROM sqlite_master WHERE type='table' "

@@ -711,6 +711,65 @@ def build_parser() -> argparse.ArgumentParser:
     ip.add_argument("--json", action="store_true")
     ip.set_defaults(func=COMMAND_FUNCS["issue resolve"])
 
+    p_eco = sub.add_parser(
+        "eco", help="ECR/ECO 工程变更单：影响清单带 sha256，批准人必须与创建人不同。"
+                    " Example: aipd eco create --db state.db --project p1"
+                    " --title 改孔位 --creator 张三")
+    eco_sub = p_eco.add_subparsers(dest="eco_cmd", required=True)
+    ep = eco_sub.add_parser("create", help="开一张 DRAFT 单（作者必须是人）。")
+    ep.add_argument("--db", required=True)
+    ep.add_argument("--project", required=True)
+    ep.add_argument("--tenant", default="default")
+    ep.add_argument("--title", required=True)
+    ep.add_argument("--creator", required=True, help="创建人（真人身份；机器身份直接拒）")
+    ep.add_argument("--kind", choices=["ECR", "ECO"], default="ECO")
+    ep.add_argument("--reason", default="")
+    ep.add_argument("--source-commit", default="", help="开单时的基线提交（可空）")
+    ep.add_argument("--json", action="store_true")
+    ep.set_defaults(func=COMMAND_FUNCS["eco create"])
+
+    ep = eco_sub.add_parser("affected", help="加一行影响对象（送审后清单冻结）。")
+    ep.add_argument("--db", required=True)
+    ep.add_argument("--project", required=True)
+    ep.add_argument("--tenant", default="default")
+    ep.add_argument("--id", required=True, help="ECO- 编号")
+    ep.add_argument("--object-type", required=True, help="受影响对象类型，如 drawing/bom/step")
+    ep.add_argument("--object-id", required=True)
+    ep.add_argument("--change", required=True, choices=["ADD", "REMOVE", "UPDATE"])
+    ep.add_argument("--before-sha256", default="", help="改前内容哈希（REMOVE/UPDATE 必填）")
+    ep.add_argument("--after-sha256", default="", help="改后内容哈希（ADD/UPDATE 必填）")
+    ep.add_argument("--note", default="")
+    ep.add_argument("--actor", default="", help="谁加的这行（缺省记为创建人）")
+    ep.add_argument("--json", action="store_true")
+    ep.set_defaults(func=COMMAND_FUNCS["eco affected"])
+
+    ep = eco_sub.add_parser("transition", help="走一步状态；被拒退 4。")
+    ep.add_argument("--db", required=True)
+    ep.add_argument("--project", required=True)
+    ep.add_argument("--tenant", default="default")
+    ep.add_argument("--id", required=True)
+    ep.add_argument("--to", required=True,
+                    choices=["DRAFT", "PENDING_REVIEW", "APPROVED", "IMPLEMENTED",
+                             "VERIFIED", "REJECTED", "SUPERSEDED"])
+    ep.add_argument("--actor", required=True, help="做这步的人；批准/否决时须≠创建人")
+    ep.add_argument("--reason", default="")
+    ep.add_argument("--evidence-ref", default="",
+                    help="凭据：IMPLEMENTED=落地凭据，VERIFIED=复验凭据，"
+                         "SUPERSEDED=替代它的那张单号")
+    ep.add_argument("--effective-at", default="", help="生效时间（ISO-8601），IMPLEMENTED 必填")
+    ep.add_argument("--json", action="store_true")
+    ep.set_defaults(func=COMMAND_FUNCS["eco transition"])
+
+    ep = eco_sub.add_parser("show", help="看一张单（含影响清单与流水），或列未闭合的单。")
+    ep.add_argument("--db", required=True)
+    ep.add_argument("--project", required=True)
+    ep.add_argument("--tenant", default="default")
+    ep.add_argument("--id", default="", help="ECO- 编号；不给则按 --status/--open 列")
+    ep.add_argument("--status", default=None, help="只列这个状态的单（配合不带 --id）")
+    ep.add_argument("--open", action="store_true", help="只列未闭合的单（配合不带 --id）")
+    ep.add_argument("--json", action="store_true")
+    ep.set_defaults(func=COMMAND_FUNCS["eco show"])
+
     p_ready = sub.add_parser(
         "readiness", help="制造就绪度评估。"
                           " Example: aipd readiness check --db state.db --project p1")

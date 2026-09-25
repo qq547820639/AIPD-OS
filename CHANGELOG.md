@@ -951,6 +951,38 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6-ECO 第 26 片：ECR/ECO 工程变更单有了生产者（C6 档位 13/1/1 → 14/0/1）**：
+  普查里「版本与ECR/ECO」长期停在 checker_only，note 写着原因：版本那一半有生产者，
+  **变更单这一半零实现**。本仓 `changes` 表是审计流水（谁在什么时候改了什么），
+  答不了「谁批准了这项变更、影响哪些件、生效复验了没有」这三件事。
+  选型（2026-09-25；OSS 仓库侧由派出的研究子代理实读，frappe 审批判据与 NASA 接口大纲
+  两条我已自行复核；MIL-STD/ISO/ECSS 正文**没读到，因此不引用**）：
+  ERPNext 全树按 `change_note`/`eco`/`engineering` 检索 **0 命中**（只有 BOM Update Log 与
+  Quality Action），Odoo 的 `mrp_eco` 在**企业版**（公开仓库 16/17/18 树里没有该模块），
+  唯一活跃的开源 PLM（odooplm，plm LGPL-3 / 相邻模块 AGPL-3）自己把 ECO 代理回 `mrp.eco`，
+  Aras Community 免费使用但不开源，若干 ECOFlow 克隆**没有 LICENSE** ⇒ 不可合法引入。
+  ⇒ **可依赖形态的 ECO 实现在开源世界不存在**，只能本地实现借模型：
+  借 Dynamics 365 ECM 的 Approve→Process→Complete、odooplm 的 released 冻结写、
+  frappe `has_approval_access()` 的 `user != doc.get("owner")`（原文判据已核到）。
+  落点：migration **v19** 建 `eco_records` / `eco_affected` / `eco_transitions` 三张表
+  （+3 条索引），`change_orders/eco.py` 一台查表的状态机，CLI 四个公开命令（51 → 55）：
+  `eco create` / `eco affected` / `eco transition` / `eco show`。三条不打折的形状规矩：
+  ①**不许自批**——`APPROVED`/`REJECTED` 的 actor 必须是真人且 ≠ 创建人，机器身份表
+  `NON_HUMAN_ACTORS` 连空串都算；`creator` 与 `approver` 分两列且 `approver` **无默认值**，
+  因为本仓 `gates.approved_by DEFAULT 'AI-internal'` 那个形状等于「不写审批人也算 AI 批过」
+  （那个既有缺陷只记录、不在本片改，属主裁）；②**影响清单必须带 sha256**——UPDATE 要前后两头，
+  ADD/REMOVE 要各自那一头，给了值的第三头也必须像哈希，送审即冻结；
+  ③**「已实施/已复验」不是给自己盖章**——要交落地凭据 + 可解析的生效时间 / 复验凭据，
+  `SUPERSEDED` 必须指向另一张真存在的单；转移流水只追加，仓储层不提供任何 update/delete 入口。
+  被状态机拒 ⇒ **退 4**（不是 0 也不是 2）：否则脚本会把「张三批了自己的单」读成成功。
+  42 条常驻用例 + 变异电池 **19 条：杀 19 / 活 0**。两条电池教自己的：G19 第一轮只**改索引名**
+  （列序不变 ⇒ 查询计划不变）那是行为等价的化妆注入，「存活」不等于没闸——换成**删掉**热查询
+  那条索引后，新加的「索引列序 + EXPLAIN QUERY PLAN 必须走它」两条立刻开火；
+  G5 第一轮真存活是缺口：可选那一格（`ADD` 的 `before_sha256`）没人查，补一条用例才杀得动。
+  没做：**发布门还不读 ECO**（「manifest 哈希有差却没有一笔闭合 ECO」这条 fail-closed 判据
+  是下一片），署名没有身份源（是声明不是证据），ECO 不联动尺寸链/成本/Product Truth 失效传播。
+  证据见 `docs/audit/ECO_CHANGE_ORDER_F-C6-ECO_2026-09-25.md`。
+
 - **v5.10 修复 F-EVID-03 第 23 片：证据侧车按「干名」拼，同干名的两个产物互相顶掉**：
   四个写入点各自 `path.with_suffix(".evidence.json")`，而换后缀会把 `.step` / `.dxf` 一起换掉 ⇒
   `assy.step` 与 `assy.dxf` 的侧车是**同一个文件名**，出完图再读模型，读到的是那张图的凭据

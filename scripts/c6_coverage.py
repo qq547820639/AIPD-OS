@@ -150,14 +150,20 @@ MAPPING: dict[str, dict[str, Any]] = {
         "note": "SOURCE_MANIFEST / RELEASE_MANIFEST / PROVENANCE 三份带哈希与 source_commit，"
                 "门禁真读它们。"},
     "版本与ECR/ECO": {
-        "verdict": "checker_only", "capabilities": ["ux.checkpoint",
-                                                    "industrialize.release_evidence"],
-        "producers": [], "tests": ["tests/test_backup_checkpoint.py",
-                                   "tests/test_production_release_gate.py"],
-        "note": "版本这一半有生产者（三源哈希 + 不一致只如实记录不对齐）；"
-                "**ECR/ECO 变更单零实现**：本仓有 changes/decisions 表但没有工程变更单实体。"
-                "注意此前 grep `ECO`/`ECR` 命中上百文件全是子串噪声"
-                "（SECONDS/SECRET 之类），按词边界重查才是 0——计数必须由判据现算。"},
+        "verdict": "producer",
+        "capabilities": ["ux.checkpoint", "industrialize.release_evidence",
+                         "industrialize.change_control"],
+        "producers": ["src/aipd_os/change_orders/eco.py",
+                      "src/aipd_os/cli/commands_eco.py",
+                      "src/aipd_os/release_manifest.py"],
+        "tests": ["tests/test_change_order_eco.py", "tests/test_release_manifest.py"],
+        "note": "版本那一半：SOURCE_MANIFEST / RELEASE_MANIFEST / PROVENANCE 三份带哈希与 "
+                "source_commit，门禁真读它们。变更单这一半是第 26 片补的：migration v19 的 "
+                "eco_records / eco_affected / eco_transitions 三张表——影响清单必须带改前/改后 "
+                "sha256（送审即冻结），批准人必须是**与创建人不同的真人**，"
+                "「已实施/已复验」必须交凭据。**仍未做**：发布门没有"
+                "「manifest 哈希有差却没有一笔闭合 ECO」这条 fail-closed 判据；"
+                "署名也没有身份源可查——那是声明，不是证据。"},
 }
 
 

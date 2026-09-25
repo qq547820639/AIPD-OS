@@ -18,7 +18,7 @@ description: "[已废弃-勿作为入口加载] 本技能的 agent 入口地位�
   影响、证据、不确定性、未回复时继续项、明确回复格式），等待所有者选择。
 - **所有者的自然语言视图**：Owner Experience 层以自然语言卡片呈现项目状态、
   门禁进度、待处理决策与风险，无需阅读底层仓库。
-- **一键命令**（`aipd <cmd>`，主线共 51 个，按工作流分组；另有 10 个 deprecated
+- **一键命令**（`aipd <cmd>`，主线共 55 个，按工作流分组；另有 10 个 deprecated
   旧别名保留兼容）：
   - 核心流程：`init` / `intake` / `resume` / `status` / `run` / `decide`
   - 所有者体验：`onboard` / `dashboard` / `operate` / `ui` / `reset` / `recover`
@@ -30,6 +30,7 @@ description: "[已废弃-勿作为入口加载] 本技能的 agent 入口地位�
   - 制造就绪（v5.10）：`bom show` / `bom add` / `bom release` / `quote apply` / `cost calc`
   - 验证与质量（v5.10）：`validation plan` / `validation list` / `validation show` / `validation import`
   - Issue 管理（v5.10）：`issue list` / `issue show` / `issue resolve`
+  - 工程变更（v5.12）：`eco create` / `eco affected`（影响清单带改前/改后 sha256） / `eco transition`（不许自批，被拒退 4） / `eco show`
   - 制造就绪度（v5.10）：`readiness check`
   - 审计与发布：`audit` / `release check` / `release manifest` / `test` / `eval` / `package`
   - 运维体检：`doctor` / `version`

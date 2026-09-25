@@ -442,6 +442,7 @@ AIPD 的**一键命令**（`aipd <cmd>`；权威清单是 `src/aipd_os/cli/comma
 - 产品定义：`product show` / `product gate`
 - 工业化：`industrialize` / `validate`
 - 制造就绪：`bom show` / `bom add` / `bom release` / `quote apply` / `cost calc`
+- 工程变更（v5.12）：`eco create` / `eco affected` / `eco transition` / `eco show`（影响清单带改前/改后 sha256；批准人必须与创建人不同，被状态机拒 ⇒ 退 4）
 - 审计与发布：`audit` / `release check` / `test` / `eval` / `package`
 - 运维体检：`doctor` / `version --verbose`
 

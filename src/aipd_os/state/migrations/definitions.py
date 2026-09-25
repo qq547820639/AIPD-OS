@@ -42,6 +42,8 @@ from .helpers import (
     _v17_perf_indexes,
     _v18_db_meta,
     _v18_drop_db_meta,
+    _v19_drop_eco_tables,
+    _v19_eco_tables,
 )
 from .schema import V1_INITIAL_SCHEMA
 
@@ -549,6 +551,19 @@ MIGRATIONS: list[dict[str, Any]] = [
         ],
         "down": [
             _v18_drop_db_meta,
+        ],
+    },
+    # v19: F-C6-ECO 工程变更单（ECR/ECO）。C6 普查里「版本与ECR/ECO」的
+    # 变更单那一半此前零实现：`changes` 表记的是「谁改了什么」（审计流水），
+    # 不是「谁批准了哪一项变更、影响哪些件、生效与复验了没有」。
+    {
+        "version": 19,
+        "name": "eco_change_orders",
+        "up": [
+            _v19_eco_tables,
+        ],
+        "down": [
+            _v19_drop_eco_tables,
         ],
     },
 ]

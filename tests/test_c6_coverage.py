@@ -51,15 +51,17 @@ def test_census_is_self_consistent_today():
 def test_verdict_rack_is_pinned_so_moves_are_deliberate():
     """档位数字是**棘轮**：想改动必须先说清哪一项进了哪一档（或退出）。
 
-    2026-09-25 第 19 片后实测（由 `cov.audit` 现算，不是手抄）：15 项 =
-    有生产者 13 / 只有校验方 1（版本与ECR-ECO）/ 零实现 1（ICD）。
+    2026-09-25 第 26 片后实测（由 `cov.audit` 现算，不是手抄）：15 项 =
+    有生产者 14 / 只有校验方 0 / 零实现 1（ICD）。
     第 18 片把「装配/维护」从 absent 升到 producer（只升装配那一半，维护指引仍无生产者，
     这话写在映射的 note 里而不是靠档位表达）；第 19 片把「DFM/DFA」从 checker_only 升到
-    producer。档位动之前先读 note——note 里写的边界比数字真。
+    producer；第 26 片把「版本与ECR/ECO」从 checker_only 升到 producer（升的是**变更单有生产
+    者**这一半；「发布门还没读 ECO」写在 note 里，不靠档位表达）。档位动之前先读 note——
+    note 里写的边界比数字真。
     """
     report = cov.audit(ROOT)
     assert report["item_count"] == 15, report["item_count"]
-    assert report["verdict_counts"] == {"producer": 13, "checker_only": 1,
+    assert report["verdict_counts"] == {"producer": 14, "checker_only": 0,
                                         "absent": 1}, report["verdict_counts"]
 
 

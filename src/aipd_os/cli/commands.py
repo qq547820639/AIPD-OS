@@ -57,6 +57,12 @@ from .commands_drawing import (
     cmd_drawing_dfm,
     cmd_drawing_spec,
 )
+from .commands_eco import (
+    cmd_eco_affected,
+    cmd_eco_create,
+    cmd_eco_show,
+    cmd_eco_transition,
+)
 from .commands_legacy import (
     cmd_build_release,
     cmd_init_project,
@@ -558,6 +564,10 @@ COMMAND_FUNCS: dict[str, Any] = {
     "validation show": cmd_validation_show,
     "validation import": cmd_validation_import,
     "issue list": cmd_issue_list,
+    "eco create": cmd_eco_create,
+    "eco affected": cmd_eco_affected,
+    "eco transition": cmd_eco_transition,
+    "eco show": cmd_eco_show,
     "issue show": cmd_issue_show,
     "issue resolve": cmd_issue_resolve,
     "readiness check": cmd_readiness_check,
