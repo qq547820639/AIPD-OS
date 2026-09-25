@@ -87,9 +87,9 @@ class TestContractedTypesAreDerived:
         monkeypatch.setattr(sb, "list_schemas",
                             lambda repo: [*real(repo), "product_manual.schema.json"])
         got = qg.contracted_types()
-        assert set(got) == {"project_checkpoint", "product_manual"}, got
+        assert set(got) == {"project_checkpoint", "cad_contract", "product_manual"}, got
         monkeypatch.undo()
-        assert set(qg.contracted_types()) == {"project_checkpoint"}
+        assert set(qg.contracted_types()) == {"project_checkpoint", "cad_contract"}
 
 
 class TestGateRejectsUncompliantDeliverables:

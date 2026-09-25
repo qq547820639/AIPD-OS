@@ -951,6 +951,39 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6 第 31 片：G 表只许有一个来源（声明 50 项、门只要求 40 项）**：
+  `scripts/quality_gate.py` 的注释写着「requirements mirror `gate_requirements.yaml`」，
+  实测是假的——YAML 声明 **50** 个交付物类型、脚本内联 `REQ` 只强制 **40** 个，
+  漂移单边（没有「门要求但没声明」的），缺的 10 项全在 CAD 阶梯上
+  （`cad_contract` `cad_primary_step` `cad_inspection_report` `cad_bom_mapping`
+  `cad_l1_functional_layout` `cad_l4_dfm_drawings` `cad_l5_release_package`
+  `cad_parametric_source` `cad_snapshot_packet` `evt_cad_configuration`）；
+  而**全仓没有任何解析器读过那份 YAML**——它的名字只出现在那句注释里。
+  `requires_owner_approval` 那一轴两份一直一致 ⇒ 漂的只有交付物轴，如实分开记。
+  改法：新增 `src/aipd_os/gate_requirements.py`，用 `yaml.safe_load` 把声明文件读成唯一权威
+  （`pyyaml` 是核心依赖 ⇒ 零新依赖；没有为此再引入声明文件的 schema 化工具），
+  `REQ`/`OWNER` 全部派生，脚本里不再出现内联 `'G3': [...]`（常驻用例用正则钉）；
+  **每次运行现读**而不是 import 期缓存，YAML 缺失/解析坏/顶层不是映射 ⇒ 门打
+  `unreadable` 并退 3，**不给** `pass=false` 这类可被误读的判决，也不退回旧副本。
+  今天升进强制集的是 `cad_contract`（有 schema、有模板、`production_release_gate` 的
+  `schema_valid` 真在核它，不是名字像就收）；它同时因为「有同名契约」进了第 30 片那侧的
+  形状门。剩下 9 项**逐项具名**在 `UNPRODUCED` 里并写理由：本仓没有产这些类型的代码，
+  硬接进门只会把 G3-G8 变成永久红灯（那只会训练人忽略门）。常驻用例钉
+  `声明 − 强制 == UNPRODUCED` 且等于那 9 个名字，另两条钉住自动行为：
+  加一项声明 ⇒ 立刻成要求；从豁免里删一项 ⇒ 立刻升进强制集。
+  端到端（真子进程，G3）：缺 ⇒ `pass=false missing=['cad_contract']`；
+  补齐 ⇒ `pass=true`（must-not-fire 的一侧，否则「收紧」只是多报）；
+  标完成却不填 path ⇒ 单独一条 `('cad_contract','path_missing')`。
+  **本片自己也被抓住一次自引用**：判「九项没有产者」的字面量探针第一版把
+  `gate_requirements.py` 自己也当被扫文本——九个名字就写在那份豁免表里，
+  于是九个负向读数全被点亮成假阴性；修法是排除本模块 + 名单改从声明文件现取 +
+  正向对照常驻（`project_brief`、`cad_contract` 必须探得到）。同时删掉一条
+  **永不为真**的 `unclassified()`：`enforced_table()` 丢的就是 `UNPRODUCED`，
+  那一格恒空，留着只会让人以为有闸。登记未做：`experience/` 里三份 `G0-G9 中文名`
+  已漂 5 格（短标签 vs 长描述，统一方向是属主裁决）；`selftest_quality.py`、
+  `e2e_acceptance.py`、`selftest_v4.py` 今天仍无人调用。
+  全量 2121 → **2139** 条。证据见 `docs/audit/GATE_REQUIREMENTS_TABLE_F-C6_2026-09-25.md`。
+
 - **v5.12 F-C6 第 30 片：契约绑定判据修正 + 把形状校验接到产物落点**：这一片起于**第 29 片
   自己的一条假阳性**。那片的 `scan_consumers` 按**文件名字面量**反查消费者，报「三份 schema 没人
   引用 ⇒ 没人校验的契约」；而 `src/aipd_os/scripts/schema_check.py` 其实按**命名约定**

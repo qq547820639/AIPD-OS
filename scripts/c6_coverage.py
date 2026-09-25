@@ -85,10 +85,13 @@ MAPPING: dict[str, dict[str, Any]] = {
         "capabilities": ["industrialize.release_evidence"],
         "producers": ["src/aipd_os/interface_contract.py", "src/aipd_os/schema_binding.py",
                       "src/aipd_os/scripts/schema_check.py", "scripts/quality_gate.py",
+                      "src/aipd_os/gate_requirements.py",
                       "scripts/outcome_acceptance.py"],
         "tests": ["tests/test_interface_contract.py", "tests/test_schema_check.py",
-                  "tests/test_quality_gate_shape.py"],
-        "note": "**升上去的是可自查的那一半，产物不叫 ICD**（与「装配/维护」只升装配那一半同一形状）。"
+                  "tests/test_quality_gate_shape.py",
+                  "tests/test_gate_requirements.py"],
+        "note": "**第 31 片再补一格**：G0-G9 的要求表从手抄改成读 `assets/templates/gate_requirements.yaml`（声明 50 项、旧 REQ 只强制 40 项，差 10 项且方向单边），差集 9 项具名在 `gate_requirements.UNPRODUCED`、`cad_contract` 升进强制集，YAML 读不到即门退 3（不退回内联副本）。\n"
+                "**升上去的是可自查的那一半，产物不叫 ICD**（与「装配/维护」只升装配那一半同一形状）。"
                 "NASA《SE Handbook》附录 L 的接口大纲（免费全文，访问 2026-09-25；该页把自己叫 "
                 "**IRD** 不叫 ICD）里 §1.3「Responsibility and Change Authority」与 §3.1.2"
                 "「Interface Responsibilities」两节的内容只能由**对侧**给 ⇒ 本仓单方产一份叫 ICD 的"

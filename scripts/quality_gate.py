@@ -15,36 +15,38 @@ SRC = str(Path(__file__).resolve().parents[1] / "src")
 if SRC not in sys.path:
     sys.path.insert(0, SRC)
 
-from aipd_os.state.db import AIPDStateDB  # noqa: E402
+from aipd_os import gate_requirements as gr  # noqa: E402
 from aipd_os import schema_binding as sb  # noqa: E402
+from aipd_os.state.db import AIPDStateDB  # noqa: E402
 
-# Kept dependency-free: requirements mirror assets/templates/gate_requirements.yaml.
-REQ = {
-    'G0': ['project_brief', 'material_index', 'initial_fact_register', 'execution_map'],
-    'G1': ['scenario_model', 'requirement_definition', 'non_goals', 'initial_risk_register'],
-    'G2': ['concept_comparison', 'recommended_route', 'v1_value_test'],
-    'G3': ['v1_engineering_definition', 'preliminary_bom', 'interface_register', 'dfmea_draft'],
-    'G4': ['simulation_or_calculation_plan', 'result_or_execution_package', 'parameter_register'],
-    'G5': ['product_specification', 'bom', 'key_parameter_table', 'supply_chain_plan',
-           'rfq_package', 'dfm_dfa_review'],
-    'G6': ['evt_plan', 'evt_raw_data', 'evt_report', 'issue_register'],
-    'G7': ['dvt_plan', 'dvt_raw_data', 'dvt_report', 'compliance_status'],
-    'G8': ['pvt_plan', 'process_capability', 'quality_control_plan',
-           'mass_production_recommendation'],
-    'G9': ['product_manual', 'release_package', 'release_audit', 'project_checkpoint'],
-}
-OWNER = {'G2', 'G5', 'G6', 'G7', 'G8', 'G9'}
+
+def _tables() -> dict:
+    """从声明文件现读 G 表。读不到就 fail-closed：不退回任何内联副本。"""
+    decl = gr.load()
+    if decl["status"] != "ok":
+        return {"ok": False, "why": decl["why"], "req": {}, "owner": set(),
+                "declared": {}, "unenforced": []}
+    declared = decl["gates"]
+    return {"ok": True, "why": "", "req": gr.enforced_table(declared),
+            "owner": decl["owner_gates"], "declared": declared,
+            "unenforced": gr.unproduced_in(declared)}
+
+
+TABLES = _tables()
+REQ: dict[str, list[str]] = TABLES["req"]
+OWNER = TABLES["owner"]
 DONE = {"complete", "approved", "released"}
 
 
-def contracted_types() -> dict[str, str]:
+def contracted_types(req: dict[str, list[str]] | None = None) -> dict[str, str]:
     """REQ 里哪些交付物**类型**有同名契约（`<type>.schema.json` 在盘上）。
 
     现算不写死：契约加一份、门就自动多核一类；契约改名则这一类从门里掉出去，
     由 `tests/test_quality_gate_shape.py` 钉住「今天恰好只有 project_checkpoint 一类」。
     """
     contracts = {sb.schema_stem(n): n for n in sb.list_schemas(sb.ASSET_ROOT)}
-    return {t: contracts[t] for t in {x for v in REQ.values() for x in v} if t in contracts}
+    table = REQ if req is None else req
+    return {t: contracts[t] for t in {x for v in table.values() for x in v} if t in contracts}
 
 
 def shape_findings(deliverables: list[dict], root: Path,
@@ -84,6 +86,17 @@ def main() -> int:
     a = p.parse_args()
 
     db = AIPDStateDB(a.db)
+    # 每次跑都现读权威表（不是 import 期缓存的那份）：YAML 被修好后不必重装/重启就生效，
+    # 而读不到时**没有**可读的表可退回。
+    tables = _tables()
+    req = tables["req"]
+    if not tables["ok"]:
+        # 权威表读不到 ⇒ 不能说「这关没有要求」，也不能悄悄拿旧副本继续判
+        print(json.dumps({"ok": False, "gate": a.gate,
+                          "error": f"gate requirements unreadable: {tables['why']}",
+                          "source": gr.DECLARATION},
+                         ensure_ascii=False, indent=2))
+        return 3
     tenant = "default"
     pid = a.project
     if pid is None:
@@ -96,14 +109,14 @@ def main() -> int:
         pid = projects[0]["project_id"]
     project = db.get_project(tenant, pid)
     gate = a.gate or project["gate"]
-    if gate not in REQ:
+    if gate not in req:
         print(json.dumps({"ok": False, "error": f"unknown gate {gate!r}"},
                          ensure_ascii=False, indent=2))
         return 1
     deliverables = db.list_deliverables(tenant, pid)
     complete = {d["type"] for d in deliverables if d.get("status") in DONE}
-    missing = [x for x in REQ[gate] if x not in complete]
-    contracts = contracted_types()
+    missing = [x for x in req[gate] if x not in complete]
+    contracts = contracted_types(req)
     shapes = shape_findings(deliverables, Path(a.root), contracts)
     proposed = [d for d in db.list_decisions(tenant, pid)
                 if d.get("status") == "proposed"]
@@ -111,8 +124,13 @@ def main() -> int:
               "missing_deliverables": missing,
               "contracted_types": contracts,
               "shape_findings": shapes,
+              "requirement_source": gr.DECLARATION,
+              "declared_unenforced": [t for t in tables["unenforced"]
+                                      if t in tables["declared"].get(gate, [])],
+              "enforced_counts": {"declared": len(tables["declared"].get(gate, [])),
+                                  "enforced": len(req.get(gate, []))},
               "open_decisions": [d["decision_id"] for d in proposed],
-              "owner_approval_required": gate in OWNER}
+              "owner_approval_required": gate in tables["owner"]}
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["pass"] else 1
 

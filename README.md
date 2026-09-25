@@ -325,6 +325,13 @@ aipd interfaces --repo . --out interface-contract.json
 #     contracts_without_instance=0、只判存在的落点=0（quality_gate G9 与 outcome_acceptance
 #     现在按同名词干的契约核形状，五态 valid/invalid/unreadable/no_schema/missing 都不折成通过）、
 #     形状与 FACT_STATUSES 不一致=0（$defs.fact 已单源化到 fact.schema.json）、未取证 2。
+#   ↑ 门的要求表（第 31 片）：`scripts/quality_gate.py` 不再自带 G 表，改读
+#     `assets/templates/gate_requirements.yaml`（那是唯一权威；读不到就退 3 并拒绝判决，
+#     不悄悄拿旧副本继续判）。今天从「声明 50」里强制 41 项——少要求的 9 项（CAD 阶梯的
+#     `cad_primary_step` 等）逐项在 `gate_requirements.UNPRODUCED` 里具名并写理由：
+#     本仓没有产这些类型的代码，硬接进门只会把 G3-G8 变成永久红灯。
+#     `cad_contract` 从今天起是 G3 的硬要求（它有 schema、模板，发布门真在核它），
+#     并因此也进了形状门那侧：标了完成却没填 path ⇒ 单独报一条 `path_missing`。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。
