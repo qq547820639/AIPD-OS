@@ -1,7 +1,7 @@
 {
   "name": "aipd-orchestrator",
   "version": "5.6.0",
-  "release_date": "2026-09-25",
+  "release_date": "2026-09-26",
   "release_type": "AI full-chain product development and delivery supervisor",
   "theory_reference": "references/AIPD-OS-v4.0.docx",
   "files": [
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 166554,
-      "sha256": "2a34fcc4cc68c95dbd41bb4e39f60e4fa5afced5a4584d50a58ea9f8bad6353b"
+      "size": 168346,
+      "sha256": "b9ed4296017ddf088bcfb732938a32923a8b93d2aa2692b015d1ca3bf3bc12cf"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 43239,
-      "sha256": "938ab1468f8467ff07cbadea778af38654b17655bf20379555c6f7d2ce7a69a0"
+      "size": 43447,
+      "sha256": "75d10f8d68d0046bf1d6273278ac110f87edfd232c2f3acd3e7396f8d43faf88"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -1842,8 +1842,8 @@
     },
     {
       "path": "src/aipd_os/state/server.py",
-      "size": 30302,
-      "sha256": "eb47d6086b84d6fdc16e126401c2547622421d9cd3ba5b8f0837103285d3701f"
+      "size": 30688,
+      "sha256": "98106448ac95bbe3780211d1cdc5a72f45f9cd61b3e13d08bfac15203faec837"
     },
     {
       "path": "src/aipd_os/state/stale_propagation.py",
@@ -2992,8 +2992,8 @@
     },
     {
       "path": "tests/test_risk_ownership.py",
-      "size": 15975,
-      "sha256": "309842ae88054a249d54c44d7984224685b1adc701d62007b92e9a0fdd2332b0"
+      "size": 18759,
+      "sha256": "7147f40911aef23d19337727bda009404f5d3803cf80ddcc27436431f99fe34e"
     },
     {
       "path": "tests/test_runtime.py",
