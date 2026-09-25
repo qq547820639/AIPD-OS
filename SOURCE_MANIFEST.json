@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-25T01:55:35+00:00",
+  "generated_at": "2026-09-25T02:20:14+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 112068,
-      "sha256": "545d89813bc0af0db921ebbaa5b1c051abaaa33125c29d0a8bc4c72eb9f8c367"
+      "size": 114485,
+      "sha256": "a664d540a45867616bde0f6b9981fc05f8187a69b08f7459302c0b39f26e3d3f"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 32437,
-      "sha256": "592a2692af144af220bdac63244136f28c08160bcd2c31f883b748a789b26a75"
+      "size": 32893,
+      "sha256": "0574078c77e685d2655286b35ca387a361d727c9d6571d47685254b94b240a33"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -972,8 +972,8 @@
     },
     {
       "path": "src/aipd_os/cad/assembly_steps.py",
-      "size": 15990,
-      "sha256": "cf9f7c66de2005d9d2555731063939e7136eb34947bec776b91814014f1c803b"
+      "size": 16025,
+      "sha256": "85f2c5ac1a5e7f9dbfb076f6b55e7d5ea1a50ca1bf80bddc6a62961db1040ef3"
     },
     {
       "path": "src/aipd_os/cad/backends.py",
@@ -982,18 +982,18 @@
     },
     {
       "path": "src/aipd_os/cad/dfm.py",
-      "size": 31080,
-      "sha256": "4610ae937cdf32a3bce76793c75e82bee0c9eb959792c8bdf8ae64734fbac9be"
+      "size": 31115,
+      "sha256": "86723f978026c2b19085f4e221effbc1c7e01a61427c485dc7a4268bf63333bb"
     },
     {
       "path": "src/aipd_os/cad/drawings2d.py",
-      "size": 71140,
-      "sha256": "6a611c6b3cdd984d45bdafe71c8b08f8277288e2d602c03ceb44957e3efef9a7"
+      "size": 71175,
+      "sha256": "11079119bbc3a315e38f71b692aa26e96740a8f0b3a33dde104b70200ba2d903"
     },
     {
       "path": "src/aipd_os/cad/evidence.py",
-      "size": 3331,
-      "sha256": "673d8a7c8cb94d889a438e40844ec43493e371ae4bea62f8c18a9ea7bf101868"
+      "size": 3831,
+      "sha256": "e6dcf83479aaf4940f2c6cf612028b5ead0961fe2af6d8776ae6ee2e104a45b4"
     },
     {
       "path": "src/aipd_os/cad/gdt.py",
@@ -1577,13 +1577,13 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 73535,
-      "sha256": "b62509958b2a2cac1ecb99d62e9894b4ded6a1411185c347a536338fe6a71618"
+      "size": 73961,
+      "sha256": "11877e5bfea9b8e12de4ef24dfa40198c2ada2096745fe075c770562e8c092be"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
-      "size": 38034,
-      "sha256": "dc77e799ddd933930aa21e9758721757f942cac124c998d87cd800732e623410"
+      "size": 38051,
+      "sha256": "1fb5b4ba0a9eae243f987264b50741501554d43d4ec60d4fc0f74b94ae8162b4"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -2232,28 +2232,28 @@
     },
     {
       "path": "tests/test_cad_assembly_balloons.py",
-      "size": 27012,
-      "sha256": "618324c991ec4ef45e3e267f68e3153b6beaaee60f1379db70567abde1327fc3"
+      "size": 27027,
+      "sha256": "c90db2b4e89f8b0500b32687ab7c133c2a467822fa6929495639dd81a53765a2"
     },
     {
       "path": "tests/test_cad_assembly_bom_link.py",
-      "size": 41472,
-      "sha256": "0757748ff35912fa875e0d776e001335c2609f5338cec0fa5f89de39d5ded6f6"
+      "size": 41471,
+      "sha256": "bec6795dceb1960d7bf724ef312474ad81cd61f6856d49161d793a4d95795833"
     },
     {
       "path": "tests/test_cad_assembly_explode.py",
-      "size": 16184,
-      "sha256": "c9817518e54453cddca036a5b685b7ca0bea72e1d2a47e881293104f23551f2e"
+      "size": 16199,
+      "sha256": "8a7b354119d7162e066b41b7a1e2447d336c8678f5e59fa02421f1dd8b4433d5"
     },
     {
       "path": "tests/test_cad_assembly_step_export.py",
-      "size": 14683,
-      "sha256": "c855df50246c4ef8388fb2401c5de1b5032cb81b55b10c56c9df8ed33f675fa7"
+      "size": 14688,
+      "sha256": "91a337c8306f3b06612fe5151bb16e93b45d962bfd8e4cdf96ad3189fa047b26"
     },
     {
       "path": "tests/test_cad_assembly_steps.py",
-      "size": 18439,
-      "sha256": "9b957ac06e57c0a8512de98dd5e6c63a2dd07fe29269753a1048a5d49791ada0"
+      "size": 18445,
+      "sha256": "5f7cb502e67ab50dfe4b4527c2d3f5867e402fe4959fe92ca1737d2f8192e8c3"
     },
     {
       "path": "tests/test_cad_contract_unify.py",
@@ -2267,18 +2267,18 @@
     },
     {
       "path": "tests/test_cad_dfm.py",
-      "size": 19522,
-      "sha256": "e39678e312a638581e3c17c16bcb3202c0a2e0b650b7f88434ee504c1cc82096"
+      "size": 19528,
+      "sha256": "9377639db5fd7366790006da2cb084e076f73f6b10c3057c36d9b1f32c749c03"
     },
     {
       "path": "tests/test_cad_drawings2d.py",
-      "size": 17579,
-      "sha256": "9a8e3060ca6f123ee878427c3b9826c74e71634c73fe62a9253e26abc8da2077"
+      "size": 17578,
+      "sha256": "2fc40ca2a588f74407865c8c30d8c1829cdecd6cdfbb4705c71a58612f4746f2"
     },
     {
       "path": "tests/test_cad_drawings_chain_tolerance.py",
-      "size": 17857,
-      "sha256": "15c69bbb989026760dc54c70a3e8df19fa31693252fad605288d29a6636d580a"
+      "size": 17856,
+      "sha256": "0d1689f59ebb24ba74460d11d1b5f8f729df5c5d358334cd4531c58eddd6fcb3"
     },
     {
       "path": "tests/test_cad_gdt_deviation.py",
@@ -2312,13 +2312,13 @@
     },
     {
       "path": "tests/test_cad_section_views.py",
-      "size": 10631,
-      "sha256": "a7ef79249411a6dc309dc1aeca63e401cf9e25588cd492b273dafc50928d3f49"
+      "size": 10646,
+      "sha256": "f893d03b411a502693285342565654b75b2d05d8549ea3090e3bb0c2d87fb94e"
     },
     {
       "path": "tests/test_cad_spec_from_truth.py",
-      "size": 23470,
-      "sha256": "a96dfd285cf616d3ea029291994410e2dade479b2db01f8ad90ea19e1a9abe8a"
+      "size": 23500,
+      "sha256": "39a2bc5123c19a3685ea4775c9f85f1f4661f65ad7da634be7084dd5f7ef4dfa"
     },
     {
       "path": "tests/test_cad_stackup.py",
@@ -2454,6 +2454,11 @@
       "path": "tests/test_evidence_relation_lineage_review.py",
       "size": 11689,
       "sha256": "db41ef5945a3ee049a820c9db6db51743373e15b1100660d4b3f77ecd40c723c"
+    },
+    {
+      "path": "tests/test_evidence_sidecar_paths.py",
+      "size": 5642,
+      "sha256": "787c557ccd1dac240ce93f40e7ad08b12308426ea196cb5acba669dd510970ce"
     },
     {
       "path": "tests/test_exception_hygiene.py",
@@ -2832,13 +2837,13 @@
     },
     {
       "path": "tests/test_release_manifest.py",
-      "size": 41572,
-      "sha256": "8eef42ae651c1dd271a81db317c5a109e6655ef89df7b631ca263ac40aad4a42"
+      "size": 41580,
+      "sha256": "301e6fd8e792eecad59345d9afab6dec21c8be017c48d0c4e66ec4dadd0c02d2"
     },
     {
       "path": "tests/test_release_manifest_assembly_step.py",
-      "size": 16199,
-      "sha256": "f61e798f35ddf351544c169e5112b23f9da595cf8bcb817e295f01cdf9ffe2c2"
+      "size": 16229,
+      "sha256": "0388692eaa0ea8609074dc1534983249c787e43589040268c1f5149062e7869c"
     },
     {
       "path": "tests/test_release_signing.py",
