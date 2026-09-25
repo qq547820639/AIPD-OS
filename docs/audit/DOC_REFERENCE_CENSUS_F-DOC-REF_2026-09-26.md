@@ -15,14 +15,20 @@
 
 ## 二、判据（六档，Σ 分类 == 分母是硬断言）
 
+下表的绝对数取**干净 HEAD 签出**那一棵（144 份文档、3553 处引用）。同一份代码在开发树里读出来
+是 multi 429 / missing 126 / resolved 2829 —— 差在开发树多了未跟踪的副本文件，
+既让同名简写更容易撞成 multi，也让更多引用"侥幸解析得到"。
+**两棵树的现状面都是 0**，所以门禁只钉 `live_defects == 0` 这一格树无关的事实；
+档位绝对数只出报表，作断言时只用"读得出来"级门限（multi > 50，两棵树都远高于）。
+
 | 档 | 今天 | 含义与取舍 |
 | --- | --- | --- |
-| `resolved` | 2829 | 全路径命中，或模块相对简写按后缀**唯一**命中（`migrations/runner.py` ⇒ `src/aipd_os/state/migrations/runner.py`）；带行号的还要求行号 ≤ 该文件行数 |
-| `multi` | 429 | 简写但有多个同名候选 ⇒ **只报不判**：散文里写裸文件名是合法表达，判红等于禁掉一种写法 |
-| `missing` | 126 | 全路径、后缀、同名三种解法都试完仍无 ⇒ 现状面判红，历史面只报 |
-| `line_beyond_eof` | 10 | 文件在但行号越界 ⇒ 同上分档 |
-| `elided` | 56 | 省略写法（`src/...py`）、尖括号占位（`<db>.manual.json`）、裸后缀提法（`.py`） |
-| `external` | 69 | 第三方/绝对/站点包内部路径（`ezdxf/…`、`/tmp/…`） |
+| `resolved` | 3156 | 全路径命中，或模块相对简写按后缀**唯一**命中（`migrations/runner.py` ⇒ `src/aipd_os/state/migrations/runner.py`）；带行号的还要求行号 ≤ 该文件行数 |
+| `multi` | 99 | 简写但有多个同名候选 ⇒ **只报不判**：散文里写裸文件名是合法表达，判红等于禁掉一种写法 |
+| `missing` | 149 | 全路径、后缀、同名三种解法都试完仍无 ⇒ 现状面判红，历史面只报 |
+| `line_beyond_eof` | 13 | 文件在但行号越界 ⇒ 同上分档 |
+| `elided` | 61 | 省略写法（`src/...py`）、尖括号占位（`<db>.manual.json`）、裸后缀提法（`.py`） |
+| `external` | 75 | 第三方/绝对/站点包内部路径（`ezdxf/…`、`/tmp/…`） |
 
 面划分：**现状面** = `README.md`、`SKILL.md`、`docs/architecture|contracts`、`references/`
 ⇒ 判红；**历史面** = `CHANGELOG.md`、`docs/audit/**` ⇒ 只报不判。
