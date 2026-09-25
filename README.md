@@ -335,6 +335,12 @@ aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷
 aipd truth tasks --db state.db --project P [--status pending]     # 只读列返工待办
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据
 aipd validate --manifest manifest.json --target C5    # 验证是否达到目标成熟度
+#   ↑ 门里凡是「引用一个文件」的键（drawings / step_assemblies / step_parts / bom /
+#     inspection_plan / assembly_instructions / release_manifest / physical_evidence…）
+#     **逐条**核存在与哈希：数组形状（模板与 `aipd release manifest` 写出来的就是数组）
+#     以前整条跳过 ⇒ 图纸全删、全被改过也读成「所有引用文件可打开」（F-EVID-02 已修）。
+#     没写 sha256 的条目只核存在，不现场算一个当期望值（现场算等于永不失配）。
+#     哈希核对按级触发：某键只在该目标级被要求时才核哈希，低一级只过 file_openable。
 ```
 
 ### 场景 5：准备开模物料清单与成本

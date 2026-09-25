@@ -77,6 +77,23 @@ def resolve_path(value):
     return None, None
 
 
+def resolve_paths(value):
+    """列出值里引用的**每一个**文件；不是文件引用就是空表。
+
+    模板里这些键是数组（``"drawings": []``、``"step_assemblies": []``），
+    `aipd release manifest` 产出的 ``evidence.drawings[]`` 也是数组：
+    只认单值的判据遇到数组整条跳过，于是「所有引用文件可打开」会在图纸
+    全丢、全被换过的包上照样绿。数组在这里摊平，逐条核。
+    """
+    if isinstance(value, (list, tuple)):
+        out = []
+        for item in value:
+            out.extend(resolve_paths(item))
+        return out
+    path, sha = resolve_path(value)
+    return [] if path is None else [(path, sha)]
+
+
 def file_hash(path: Path) -> str:
     h = hashlib.sha256()
     with open(str(path), 'rb') as f:
@@ -108,17 +125,18 @@ def check_requirement(d, root, level, key):
 
     # (b) file-path requirement exists / readable / sha256 matches
     if key in FILE_KEYS:
-        path, sha = resolve_path(value)
-        if path:
+        for path, sha in resolve_paths(value):
             p = (root / path).resolve()
             if not p.is_file():
                 errs.append(f"{level}:{key}: file not found: {path}")
-            elif sha:
-                try:
-                    if file_hash(p) != sha:
-                        errs.append(f"{level}:{key}: sha256 mismatch")
-                except OSError as exc:
-                    errs.append(f"{level}:{key}: unreadable: {exc}")
+                continue
+            if not sha:
+                continue  # 没写哈希就只核存在，不假装核过哈希
+            try:
+                if file_hash(p) != sha:
+                    errs.append(f"{level}:{key}: sha256 mismatch: {path}")
+            except OSError as exc:
+                errs.append(f"{level}:{key}: unreadable: {exc}")
 
     # (e) units / datum scheme completeness
     if key == 'units' and not (isinstance(value, str) and value.strip()):
@@ -175,14 +193,11 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
     # file_openable: for FILE_KEYS file paths, attempt to open.
     unopenable = []
     for k in sorted(FILE_KEYS):
-        value = val(d, k)
-        path, _ = resolve_path(value)
-        if not path:
-            continue
-        p = (root / path).resolve()
-        if not p.is_file():
-            unopenable.append(f"{k}: not found: {path}")
-        else:
+        for path, _expected_sha in resolve_paths(val(d, k)):
+            p = (root / path).resolve()
+            if not p.is_file():
+                unopenable.append(f"{k}: not found: {path}")
+                continue
             try:
                 with open(str(p), 'rb') as fh:
                     fh.read(1)

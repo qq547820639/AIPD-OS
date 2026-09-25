@@ -838,6 +838,26 @@
   mojibake 与不做约束/子层级），普查映射该项 note 同步、档位仍 13/1/1。
   证据见 `docs/audit/CAD_ASSEMBLY_STEP_EXPORT_F-DRAW-01_2026-09-25.md`。
 
+- **v5.10 修复 F-EVID-02 第 21 片：发布门 `FILE_KEYS` 的哈希核对对数组整条形同虚设**：
+  门自己写着「这些键的值可能引用一个必须存在且哈希对得上的文件」，但 `resolve_path` 只认
+  字符串与 `{path, sha256}` 字典——**而模板和生产者写出来的恰恰是数组**
+  （`step_assemblies: []`、`drawings: []`、`cae_reports: []`…；`aipd release manifest` 的
+  `evidence.drawings[]` 也是）。数组掉进最后一行返回 `(None, None)`，两条使用点
+  （逐键判据与 `file_openable`）一起 `continue` ⇒ 一份图纸全删、全被改过的包照样读成
+  「所有引用文件可打开」。以前没被发现是因为唯一钉这条的用例写的是**字符串**
+  （`tests/test_production_release_gate.py:86`），生产者真正用的形状一次都没进过用例。
+  修法是 `resolve_paths()` 把数组摊平（递归一层）后逐条核：每条都要在，各自核哈希，
+  **没写哈希的只核存在**（现场算一个当期望值等于永不失配），失配文案补上文件名（多条时指得认）。
+  常驻 11 条（新文件 9 条 + `test_release_manifest.py` 真产物反向对照 2 条：删掉图 ⇒ `file_openable`
+  点名、改掉内容 ⇒ `missing` 出 `C6:drawings: sha256 mismatch`；门禁逐级止步，故先把与本题无关的
+  C0..C5 各键填占位真值，`drawings` 一条不改）。变异电池 **8/8 killed**，其中 G4 是特意放的
+  **反向**注入（把「没给哈希」也判成错）——收紧判据必须同时证明它不该开火的地方没开火。
+  收紧后全量 **1865 passed / 0 failed**：没有任何一份现存包靠这条空判据蒙过去，
+  也没有一份被这次收紧误伤。能力行 `cad.production_release_gate` 的 `e2e_evidence` 里那句
+  「hash」此前对数组是虚的，与散文同批改；`current_limitation` 从 `None` 改成明写
+  「哈希核对按级触发、missing 只列到第一个没满足的层级」。
+  证据见 `docs/audit/RELEASE_GATE_FILE_LISTS_F-EVID-02_2026-09-25.md`。
+
 - **v5.10 修复 F-NET-01：HTTP 出口收敛为单一标准库客户端**：迁移前 src/ 有
   **9 个出口调用点 / 7 个模块**各写一遍（7 处 `urlopen` + 2 处 `requests.post`），
   超时默认值 3 种（60/30/20 秒）、9 处出口**一处都不重试**（会处理 429 与

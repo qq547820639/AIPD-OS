@@ -22,10 +22,14 @@
    BOM 行没填材料 ⇒ 点名球标并阻断；压根没绑上的行不重复计入；出图时没接 BOM ⇒ 写成
    盲区而不是 0。C6（`references/production-cad-deliverables.md`）要「材料与工艺」，
    所以「哪几行还没有材料」必须是文档里读得出的一格。
+6. **门对这份文档的数组形状真的开火**（`TestNumbersAreMeasured` 末两条）：生产者写出的
+   `evidence.drawings[]` 是数组，门禁的 `file_openable` 与逐键哈希核对都必须逐条读到它——
+   图没了要报、内容被换过要报。数组进不了判据时，「所有引用文件可打开」是句空话。
 """
 from __future__ import annotations
 
 import json
+import runpy
 import subprocess
 import sys
 from pathlib import Path
@@ -44,6 +48,7 @@ pytest.importorskip("ezdxf", reason="DXF 写出依赖 ezdxf")
 from aipd_os.cad.drawings2d import generate_drawing  # noqa: E402
 
 GATE = Path(__file__).resolve().parents[1] / "scripts" / "production_release_gate.py"
+_GATE_REQ = runpy.run_path(str(GATE))["REQ"]
 T = "default"
 P = "proj_rm"
 
@@ -112,6 +117,14 @@ def _gate_verdict(manifest_path, check, target="C5"):
     return entry["passed"], entry["detail"]
 
 
+def _gate_missing(manifest_path, target):
+    """真跑门禁，取逐键失败清单（`missing` 里才有 `C6:drawings: sha256 mismatch`）。"""
+    proc = subprocess.run(
+        [sys.executable, str(GATE), "--manifest", str(manifest_path), "--target", target],
+        capture_output=True, text=True)
+    return json.loads(proc.stdout)["missing"]
+
+
 def _spec_with(ref):
     return {"features": [{"feature": "TOP.hole_1", "ctq_ref": ref,
                           "tolerance": {"upper": 0.05, "lower": -0.05}}]}
@@ -152,6 +165,42 @@ class TestNumbersAreMeasured:
         assert ref["sha256"] == hashlib.sha256(dxf.read_bytes()).hexdigest()
         ok, detail = _gate_verdict(path, "file_openable")
         assert ok, detail
+
+    def test_a_deleted_drawing_in_a_produced_doc_is_not_openable(self, tmp_path, db):
+        """真产物 + 真门禁：图没了，`file_openable` 必须点名。
+
+        这两条在 `resolve_paths` 之前**过不了**：`evidence.drawings` 是数组，
+        旧的 `resolve_path` 只认单值，数组整条跳过 ⇒ 图纸全丢、全被换过，
+        门照样读成「所有引用文件可打开」。修的是那道判据认的形状，不是用例的写法。
+        """
+        dxf = _drawing(tmp_path, name="gone")
+        path, _payload = _manifest(tmp_path, db, [dxf])
+        assert _gate_verdict(path, "file_openable")[0] is True
+        dxf.unlink()
+        ok, detail = _gate_verdict(path, "file_openable")
+        assert ok is False, "图没了仍被读成「所有引用文件可打开」"
+        assert "gone.dxf" in detail
+
+    def test_a_tampered_drawing_in_a_produced_doc_is_a_hash_mismatch(self, tmp_path, db):
+        """出图之后被人改过：哈希核对必须落在 `drawings` 这一项上（C6 要求它有）。
+
+        门是逐级停的：`achieved` 停在没满足的那一级，上面各级的逐键判据就不跑了。
+        所以这里把**与本题无关**的 C0..C5 各键填成占位真值，让门真走到 C6 那一格——
+        `drawings` 保持生产者写进去的那个数组，一条都不改。
+        """
+        dxf = _drawing(tmp_path, name="tamper")
+        path, _payload = _manifest(tmp_path, db, [dxf])
+        doc = json.loads(path.read_text("utf-8"))
+        for level_keys in _GATE_REQ.values():
+            for k in level_keys:
+                if k != "drawings":
+                    doc["evidence"].setdefault(k, True)
+        path.write_text(json.dumps(doc), encoding="utf-8")
+
+        assert not [x for x in _gate_missing(path, "C6") if "drawings" in x]
+        dxf.write_text(dxf.read_text("utf-8") + "\n; 出图之后被人改过\n", encoding="utf-8")
+        hits = [x for x in _gate_missing(path, "C6") if "drawings" in x]
+        assert hits and any("sha256 mismatch" in x for x in hits), hits
 
     def test_model_solid_count_is_read_from_the_step_not_assumed(self, tmp_path, db):
         """``--model`` 分支必须真跑：两个不相连实体要数出 2，而不是写死 1 或折算成 0。"""
