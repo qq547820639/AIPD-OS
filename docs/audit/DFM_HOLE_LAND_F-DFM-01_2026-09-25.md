@@ -148,7 +148,7 @@ $ .venv/bin/python -m aipd_os.cli.main drawing dfm \
 （https://hlhrapid.com/knowledge/design-guide-cnc-machining/，访问 2026-09-25，借来的数：厂商页原述是别的特征，页内原述是给「金属最小壁厚」的）
 ```
 
-侧车 `bracket-6061.md.evidence.json`：`rulebook.rule_count` **10**（原 7 + 这一片 3），`blind` 三条 = 塑料两条壁厚/留肉（`material_is_the_other_class`）+公差那条（`no_declared_tolerance`，本次没给 `--spec`）。
+侧车 `bracket-6061.md.evidence.json`：`rulebook.rule_count` **10**（原 7 + 这一片 3），`blind` 三条 = 塑料两条壁厚/留肉（`material_is_the_other_class`） + 公差那条（`no_declared_tolerance`，本次没给 `--spec`）。
 
 ## 七、这一片没做的事
 
@@ -162,3 +162,30 @@ $ .venv/bin/python -m aipd_os.cli.main drawing dfm \
 - `geometry_facts.holes` 现在**依赖实体分类**：纯曲面输入（无线框以外的实体）会退回
   「按最坏情况仍计成孔」并单独计数，这条路径本机没有真实夹具能走通（`analyze` 的入口
   都来自 STEP/Workplane 实体），所以它只有单元测试、没有生产实测。
+
+## 八、收尾读数（落盘后由量具复算，不是计划）
+
+提交：`fc6cd7c`（代码 + 用例 + 文档）→ `025f98a`（发布工件重锚）→ `0b9ed1a`（快照随片重算）。
+
+| 量具 | 读数 |
+|---|---|
+| 全量 pytest（`docs/audit/pytest-report-v5.6.0.json`） | **1958 passed / 0 failed / 3 skipped**（共 1961；上一片收尾 1920/0/3=1923，本片 +38 条） |
+| `PROVENANCE.json` | `test_report.{passed:1958, failed:0, total:1961, source_commit:a66040520139…}` |
+| `SOURCE_MANIFEST.json` | 被哈希面 **606 → 607**（新增就是 `tests/test_cad_dfm_hole_land.py`）；快照 `hash_matches 607/607`、`tests 174 → 175` |
+| `production_release_gate --release-ready --tag v5.6.0` | rc=0，`release_ready: true`，8/8 项全过（工作树干净状态下复跑） |
+| `ruff check src tests state_service` / `mypy` | 均 rc=0 |
+| `scripts/c6_coverage.py --self-test` | 7/7；档位仍 **13 / 1 / 1**（本片加厚 `DFM/DFA` 那一格的 note，不改档位） |
+| 变异电池 `/tmp/slice25-mutations.py` | **28 条：杀 28 / 活 0 / 注入无效 0**（过程见 §五） |
+| 端到端 | `aipd drawing dfm` 跑金样品 rc=0；报告与侧车读数见 §六 |
+
+两处自己抓自己的读数，都记进规矩：
+
+1. **第一次跑 gate 报了 rc=0，是假的。** 命令写成 `gate … | tail -14; echo "rc=$?"`，
+   `$?` 取的是 `tail` 的退出码。去掉管道后真实 rc=2，三项红：
+   `workspace_clean`（工件未提交，正常）、
+   `commit_matches_head` 与 `test_numbers_from_report` —— 后两项是我把
+   `--source-commit` / `AIPD_SOURCE_COMMIT` 传成了 tag 名 `v5.6.0`，
+   而 gate 比的是 tag 解析出来的 **SHA**（`a660405…`）。锚点传参必须用 SHA，不能用 tag 名。
+2. **`repository_snapshot.json` 是 gate 自己写的。** 第一次把它漏在工件提交之外，
+   gate 跑完立刻把工作树弄脏 → `workspace_clean` 判红。要么与其余工件同批提交，
+   要么承认「gate 之后再 commit 一次」这个顺序（这次走了后者）。
