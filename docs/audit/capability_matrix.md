@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-25T08:11:11`
+- 生成时间：`2026-09-25T09:07:19`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`08b3bb663dfb654a06fff8357b898282d8c0d64b`
+- 默认分支：`main`；HEAD：`a66040520139405095648461f7144d4f00629924`
 - 版本：`5.6.0`
 - 能力总数：`82`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -80,7 +80,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CAD运行时预检 | `fully_implemented` | references/cad-runtime-acceptance.md | scripts/runtime_preflight.py; scripts/cad_maturity_gate.py | cad_maturity_gate.main | `aipd cad preflight --manifest <m> --target <Cx>` | tests/test_cad_maturity_gate.py |  |
 | text-to-cad | `external_dependency` | references/cad-plugin-installation.md | src/aipd_os/tool_adapters/cad_adapter.py | aipd_os.tool_adapters.cad_adapter.CadAdapter | `aipd cad build` | tests/test_adapters.py | 依赖外部 CAD 内核/插件 |
-| 本地原生B-Rep | `partially_implemented` | references/local-cad-fallback.md | src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py | aipd_os.cad.backends:get_default_backend | `aipd cad build` | tests/test_cad_golden_loop.py; tests/test_adapters.py | 单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2）；装配建模/连续运动/CAE/形位校验 仍依赖外部工具，不冒充已完成（二维的装配图与形位框已本地出图，见 cad.2d_drawings） |
+| 本地原生B-Rep | `partially_implemented` | references/local-cad-fallback.md | src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py; src/aipd_os/cad/assembly.py | aipd_os.cli.commands_drawing.cmd_drawing_assembly_step | `aipd cad build` | tests/test_cad_golden_loop.py; tests/test_adapters.py; tests/test_cad_assembly_step_export.py | 单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2）；装配级 STEP 已能导出并写后回读校验，但**摆放只用 manifest 声明的 offset**、不做装配约束/配合（本仓不建约束对象）、不做子装配层级（manifest 是平表）；非 ASCII 零件名被 OCCT 按单字节写进 PRODUCT(...) 成 mojibake，件号↔几何的对应只由证据 sidecar 承载，不宣称 STEP 里的名字可读（本机实测）。连续运动/CAE/形位校验 仍依赖外部工具，不冒充已完成（二维的装配图与形位框已本地出图，见 cad.2d_drawings） |
 | Faceted回退 | `partially_implemented` | references/cad-convergence-policy.md | src/aipd_os/tool_adapters/faceted_adapter.py; scripts/faceted_step.py | aipd_os.tool_adapters.faceted_adapter.FacetedAdapter | `aipd cad build` | tests/test_adapters.py; tests/maturity_consistency_test.py | 成熟度最高 C1，不可用于正式图纸/量产 |
 | 参数化模型 | `partially_implemented` | references/cad-engineering-readiness.md | src/aipd_os/cad/backends.py; src/aipd_os/tool_adapters/local_brep_adapter.py | aipd_os.cad.backends:get_default_backend | `aipd cad build` | tests/test_cad_golden_loop.py | 单零件参数化 B-Rep 由本地 CadQuery 内核实现（C2，需安装 cad extra）；装配建模/连续运动/CAE/形位校验 仍依赖外部工具，不冒充已完成（二维的装配图与形位框已本地出图，见 cad.2d_drawings） |
 | 装配约束 | `external_dependency` | references/cad-engineering-readiness.md |  |  | `` |  | 依赖外部 CAD 内核 |
