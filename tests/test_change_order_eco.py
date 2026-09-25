@@ -427,23 +427,20 @@ class TestReadingBack:
 
 class TestMigrationV19:
     def test_a_fresh_db_and_an_upgraded_db_converge_on_the_same_tables(self, tmp_path):
-        from aipd_os.state.migrations import MIGRATIONS, current_version, migrate
+        from aipd_os.state.migrations import MIGRATIONS, current_version, migrate, rollback
 
-        assert MIGRATIONS[-1]["version"] == 19 and MIGRATIONS[-1]["name"] == "eco_change_orders"
+        HEAD = MIGRATIONS[-1]["version"]
+        # v19 是那三张表的版本；它**不再是链尾**（第 32 片加了 v20），
+        # 所以这里按版本号取条目，而不是拿链尾当它。
+        assert [m["name"] for m in MIGRATIONS if m["version"] == 19] == ["eco_change_orders"]
         fresh = str(tmp_path / "fresh.db")
         AIPDStateDB(fresh)
-        assert current_version(fresh) == 19
+        assert current_version(fresh) == HEAD
 
         old = str(tmp_path / "old.db")
         AIPDStateDB(old)                       # 先建到 HEAD
-        with sqlite3.connect(old) as conn:     # 手工退到 v18，模拟老库
-            conn.execute("DROP INDEX IF EXISTS idx_eco_transition_order")
-            conn.execute("DROP INDEX IF EXISTS idx_eco_affected_object")
-            conn.execute("DROP INDEX IF EXISTS idx_eco_scope_status")
-            conn.execute("DROP TABLE IF EXISTS eco_transitions")
-            conn.execute("DROP TABLE IF EXISTS eco_affected")
-            conn.execute("DROP TABLE IF EXISTS eco_records")
-            conn.execute("DELETE FROM schema_migrations WHERE version=19")
+        rollback(old, 18)                      # 真退到 v18，模拟升级上来的老库
+        assert current_version(old) == 18
         migrate(old)
         tables = lambda path: {  # noqa: E731
             row[0] for row in sqlite3.connect(path).execute(
@@ -452,19 +449,20 @@ class TestMigrationV19:
                                                 "eco_transitions"}
 
     def test_rollback_removes_the_tables_and_applying_again_recreates_them(self, tmp_path):
-        from aipd_os.state.migrations import current_version, migrate, rollback
+        from aipd_os.state.migrations import MIGRATIONS, current_version, migrate, rollback
 
         path = str(tmp_path / "eco.db")
         AIPDStateDB(path)
-        assert current_version(path) == 19
-        assert rollback(path, 18) == [19]
+        assert current_version(path) == MIGRATIONS[-1]["version"]
+        # 链尾现在是 v20：退到 v18 要连着退两格
+        assert rollback(path, 18) == [20, 19]
         assert current_version(path) == 18
         with sqlite3.connect(path) as conn:
             names = {row[0] for row in conn.execute(
                 "SELECT name FROM sqlite_master WHERE name LIKE 'eco%'")}
         assert names == set()
         migrate(path)
-        assert current_version(path) == 19
+        assert current_version(path) == MIGRATIONS[-1]["version"]
 
 
 class TestCliSurface:

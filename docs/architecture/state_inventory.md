@@ -51,14 +51,19 @@
 | 报告 | `docs/audit/state_perf_report.json` | 最近一次完整测量输出 |
 | 确定性门禁 | `tests/test_state_perf_gates.py` | EXPLAIN QUERY PLAN、连接复用计数、claim 互斥、语句数线性度 |
 
-Schema 版本：HEAD = **v19**。真值是 `state/migrations/definitions.py` 的
+Schema 版本：HEAD = **v20**。真值是 `state/migrations/definitions.py` 的
 `MIGRATIONS` 末项（不是本表）；`tests/test_migration.py` 与
-`tests/test_state_perf_gates.py` 分别钉住 v18/v19 与 v17 的 up/down。
+`tests/test_state_perf_gates.py` 分别钉住 v18/v19 与 v17 的 up/down，
+v20 的 up/down 由 `tests/test_gate_attribution.py` 钉住。
 v17 = 两条热读路径索引 `idx_changes_scope_time`、`idx_outbox_due`
 （见 `state_infrastructure.md` §6.1）；v18 = `db_meta`（字段加密的每库盐）；
 v19 = `eco_records` / `eco_affected` / `eco_transitions`（ECR/ECO 变更单，
 落点 `change_orders/eco.py`；三张表各有一条服务热查询的索引，索引列序由
-`tests/test_change_order_eco.py::TestTheTablesAreShapedForTheQueriesWeRun` 钉住）。
+`tests/test_change_order_eco.py::TestTheTablesAreShapedForTheQueriesWeRun` 钉住）；
+v20 = `gates_approved_by_no_default`（重建 `gates`，把 `approved_by` 从
+`NOT NULL DEFAULT 'AI-internal'` 改成可空、无默认值；V1 冻结文本改不得，
+所以这一格只能以重建落地。读侧分类落点 `gate_attribution.py`，
+机器身份词表落点 `actors.py`）。
 
 ## Migration 版本清单
 
@@ -70,6 +75,7 @@ v19 = `eco_records` / `eco_affected` / `eco_transitions`（ECR/ECO 变更单，
 | v17 | hot_read_perf_indexes |
 | v18 | db_meta_table |
 | v19 | eco_change_orders |
+| v20 | gates_approved_by_no_default |
 
 ## Direct sqlite3.connect Classification
 

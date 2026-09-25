@@ -15,6 +15,7 @@ SRC = str(Path(__file__).resolve().parents[1] / "src")
 if SRC not in sys.path:
     sys.path.insert(0, SRC)
 
+from aipd_os import gate_attribution as ga  # noqa: E402
 from aipd_os import gate_requirements as gr  # noqa: E402
 from aipd_os import schema_binding as sb  # noqa: E402
 from aipd_os.state.db import AIPDStateDB  # noqa: E402
@@ -120,11 +121,15 @@ def main() -> int:
     shapes = shape_findings(deliverables, Path(a.root), contracts)
     proposed = [d for d in db.list_decisions(tenant, pid)
                 if d.get("status") == "proposed"]
+    # 门禁台账的批准归属只**报**不**判**：这一格分到「写了个像人的名字」为止，
+    # 没有身份源，拿它当放行依据等于把署名当证据（见 gate_attribution 模块说明）。
+    approvals = ga.project_gates(db, tenant, pid)
     result = {"gate": gate, "pass": not missing and not proposed and not shapes,
               "missing_deliverables": missing,
               "contracted_types": contracts,
               "shape_findings": shapes,
               "requirement_source": gr.DECLARATION,
+              "gate_approval_attribution": approvals,
               "declared_unenforced": [t for t in tables["unenforced"]
                                       if t in tables["declared"].get(gate, [])],
               "enforced_counts": {"declared": len(tables["declared"].get(gate, [])),

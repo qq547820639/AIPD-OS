@@ -44,6 +44,8 @@ from .helpers import (
     _v18_drop_db_meta,
     _v19_drop_eco_tables,
     _v19_eco_tables,
+    _v20_gates_approved_by_no_default,
+    _v20_restore_gates_approved_by_default,
 )
 from .schema import V1_INITIAL_SCHEMA
 
@@ -564,6 +566,20 @@ MIGRATIONS: list[dict[str, Any]] = [
         ],
         "down": [
             _v19_drop_eco_tables,
+        ],
+    },
+    # v20: F-C6 第 32 片。`gates.approved_by` 原本是
+    # `TEXT NOT NULL DEFAULT 'AI-internal'`（V1 冻结文本，改不掉）：任何不写审批人
+    # 的调用都把「没人批」记成「AI 批了」。重建为可空、无默认值；历史值原样保留，
+    # 由读侧 aipd_os.gate_attribution 按机器身份表分类。
+    {
+        "version": 20,
+        "name": "gates_approved_by_no_default",
+        "up": [
+            _v20_gates_approved_by_no_default,
+        ],
+        "down": [
+            _v20_restore_gates_approved_by_default,
         ],
     },
 ]

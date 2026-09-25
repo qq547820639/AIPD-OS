@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS gates (
   gate TEXT NOT NULL,
   result TEXT NOT NULL,
   checks_json TEXT NOT NULL DEFAULT '{}',
-  approved_by TEXT NOT NULL DEFAULT 'AI-internal',
+  approved_by TEXT,
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -1023,12 +1023,22 @@ class AIPDStateDB:
 
     # ---------------------------------------------------------------- gates
     def add_gate(self, tenant_id: str, project_id: str, gate: str, result: str,
-                 checks: dict[str, Any] | None = None, approved_by: str = "AI-internal") -> None:
+                 checks: dict[str, Any] | None = None,
+                 approved_by: str | None = None) -> None:
+        """记一笔门禁台账。**没人批就落 NULL**——旧默认值 `'AI-internal'` 会把
+        「没人批」写成「AI 批了」（migration v20 重建掉那一列的 DEFAULT）。
+
+        机器身份仍然可以写（供应链回写就盖 `supply-chain`），但要显式写：
+        读侧 `aipd_os.gate_attribution` 按机器身份表把它分成 human/non_human。
+        """
+        actor = None if approved_by is None else str(approved_by).strip()
+        if actor is not None and not actor:
+            raise ValueError("approved_by 给了就必须是名字，空白串不许冒充有人批了")
         ts = now_iso()
         with self.connect() as c:
             c.execute("INSERT INTO gates(project_id,tenant_id,gate,result,checks_json,approved_by,created_at) "  # noqa: E501
                       "VALUES(?,?,?,?,?,?,?)",
-                      (project_id, tenant_id, gate, result, _json(checks or {}), approved_by, ts))
+                      (project_id, tenant_id, gate, result, _json(checks or {}), actor, ts))
 
     def list_gates(self, tenant_id: str, project_id: str) -> list[dict[str, Any]]:
         with self.connect() as c:

@@ -15,6 +15,7 @@ from aipd_store import SCHEMA as LEGACY_SCHEMA  # noqa: E402
 from rollback_v5 import rollback_v5  # noqa: E402
 from v4_to_v5 import migrate_legacy  # noqa: E402
 
+from aipd_os import gate_attribution as ga  # noqa: E402
 from aipd_os.state.db import AIPDStateDB  # noqa: E402
 
 
@@ -76,7 +77,14 @@ def test_migrate_then_rollback(tmp_path):
     assert len(db.list_risks("default", "legacy-1")) == 1
     assert len(db.list_dependencies("default", "legacy-1")) == 1
     assert len(db.list_changes("default", "legacy-1")) == 1
-    assert len(db.list_gates("default", "legacy-1")) == 1
+    legacy_gates = db.list_gates("default", "legacy-1")
+    assert len(legacy_gates) == 1
+    # 老库那一列带 `DEFAULT 'AI-internal'`（建表文本在 `scripts/aipd_store.py`），
+    # 上面那条 INSERT 没写审批人 ⇒ 老库里存的确实是 'AI-internal'。
+    # 这一格证明 v4→v5 的搬运工**只搬不造**：值原样带过来，而读侧把它归成
+    # non_human，升级不会把「没人批的历史」洗成「有人批了」。
+    assert legacy_gates[0]["approved_by"] == "AI-internal"
+    assert ga.attribute_row(legacy_gates[0]) == ga.NON_HUMAN
 
     # 回滚为旧单项目格式
     rb = rollback_v5(new, restored, tenant_id="default", project_id="legacy-1")
@@ -136,8 +144,9 @@ def test_v18_db_meta_up_and_down(tmp_path):
 
     path = str(tmp_path / "v18.db")
     migrate(path)
-    # v19（ECO 三张表）进链后，HEAD 不再是 18：先退到 v18，才测得到 v18 自己的 up/down。
-    assert rollback(path, 18) == [19]
+    # v19（ECO 三张表）、v20（gates 那一列）进链后，HEAD 不再是 18：
+    # 先退到 v18，才测得到 v18 自己的 up/down。
+    assert rollback(path, 18) == [20, 19]
     assert current_version(path) == 18
     with sqlite3.connect(path) as c:
         assert c.execute("SELECT name FROM sqlite_master WHERE type='table' "

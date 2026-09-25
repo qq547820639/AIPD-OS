@@ -951,6 +951,50 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-C6 第 32 片：`gates.approved_by` 不再自带 `'AI-internal'`（没人批不许读成 AI 批了）**：
+  第 26 片建 ECO 三张表时，本仓已经把这条写成反面教材（`change_orders/eco.py` 的规矩 1：
+  「本仓 `gates.approved_by` 的默认值是 `'AI-internal'`，照抄那个形状就等于任何写入点
+  不写审批人也算已批准」），但 **`gates` 这张表本身一直没改**。实测到的形状：
+  ① 同一句 DDL 有三份拷贝（`state/migrations/schema.py:173` 的 V1 冻结文本、
+  `state/db.py:222` 的参考 SCHEMA、`scripts/aipd_store.py:135` 的废弃旧库）；
+  ② 写入口 `AIPDStateDB.add_gate`（`state/db.py:1025`）的形参默认值同样是
+  `"AI-internal"` ⇒ 不写审批人=写了一个审批人；③ **常驻用例自己就是受害者**：
+  `tests/test_golden_projects_e2e.py:262,440` 两处都没传审批人，过去一直在往权威表里
+  写 `'AI-internal'`。全仓仅有的两个生产写入口（`supply_chain/writeback.py:129,154`）
+  显式盖 `supply-chain`，而这词**不在**机器身份表里 ⇒ 只复用 ECO 那张表读数，
+  这两行会被读成「真人批的」。
+
+  改法：migration **v20** 重建 `gates`，`approved_by` 改成可空、无默认值；
+  写入口默认 `None` ⇒ 落 NULL，给了值就必须非空（空白串 `ValueError`，不许拿空格冒充署名）；
+  历史值**原样保留**（up 不改写任何一行）；机器身份词表从 `eco.py` 搬到叶子模块
+  `src/aipd_os/actors.py`（两处读者共用一份，`"supply-chain"` 补进去），ECO 的
+  `_is_human` 删掉、改调 `is_human_actor`；读侧新增 `src/aipd_os/gate_attribution.py`，
+  三态 `human / non_human / unattributed`（读不到这一列 = unattributed，不折成任何一态），
+  `scripts/quality_gate.py` 输出多一段 `gate_approval_attribution`，**只报不判**。
+
+  这一片被实测更正的四处（原计划是照旧登记写的）：写入口叫 `add_gate` 不是 `record_gate`
+  （后者是 `product_intelligence/gate.py` 的另一台机器，注释明写「不写 gates 表」）；
+  `schema.py:173` 在 `V1_INITIAL_SCHEMA` 里、被 `V1_FROZEN_SHA256` 与
+  `test_migration_freeze.py` 钉住 ⇒ **不能改**，「同步改两处 DDL」这条只成立一半；
+  还有第三份 DDL（废弃旧库）与两个 v4→v5 搬运脚本（`migrations/v4_to_v5.py:201`、
+  `rollback_v5.py:132`）是首轮 `| head -30` 的 grep 漏掉的，重跑不加截断才看见 ——
+  它们**只搬不造**（原样带 `g["approved_by"]`），已补一条常驻断言把这句话钉住；
+  降级方向上 NULL 无法在 v19 的 `NOT NULL` 列里表达，落**空串**而不是 `'AI-internal'`，
+  否则一次回滚就凭空造出一批「AI 批过」的台账。
+
+  常驻用例 **31 条**（`tests/test_gate_attribution.py`）+ `tests/test_migration.py`
+  里那条搬运工断言；全量 **2139 → 2170**。变异电池 `/tmp/slice32-mutations.py`
+  **14 条：杀 14 / 活 0 / 注入无效 0**（含「默认值留在 DDL 里」「签名干净但落盘补戳」
+  「词表漏掉在产的戳」「up 改写历史」「down 不还原 / down 造批准」「门把归属当判决」），
+  同树复跑第 31 片 **8/8**、第 30 片 **21/21**。ruff（CI 范围）全过，
+  mypy `Success: no issues found in 424 source files`。证据见
+  `docs/audit/GATE_APPROVED_BY_F-C6_2026-09-25.md`。
+
+  **没做（登记为待裁）**：这段归属要不要进发布门（现在只报不判；进了就是收紧共享门禁）；
+  「这个 actor 真是某个人」没有身份源，`owner` 这类角色占位符仍算 human。
+  同批仍开着的：那 9 项 CAD 阶梯交付物无产者、`experience/` 三份 G 名表漂 5 格、
+  `interfaces` 的 verdict 进不进发布门。
+
 - **v5.12 F-C6 第 31 片：G 表只许有一个来源（声明 50 项、门只要求 40 项）**：
   `scripts/quality_gate.py` 的注释写着「requirements mirror `gate_requirements.yaml`」，
   实测是假的——YAML 声明 **50** 个交付物类型、脚本内联 `REQ` 只强制 **40** 个，

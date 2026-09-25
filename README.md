@@ -332,6 +332,14 @@ aipd interfaces --repo . --out interface-contract.json
 #     本仓没有产这些类型的代码，硬接进门只会把 G3-G8 变成永久红灯。
 #     `cad_contract` 从今天起是 G3 的硬要求（它有 schema、模板，发布门真在核它），
 #     并因此也进了形状门那侧：标了完成却没填 path ⇒ 单独报一条 `path_missing`。
+#   ↑ 门禁台账的批准归属（第 32 片）：`gates.approved_by` 原来是
+#     `NOT NULL DEFAULT 'AI-internal'`，写入口 `AIPDStateDB.add_gate` 也带同名默认值 ⇒
+#     任何不写审批人的调用都把「没人批」记成「AI-internal 批了」。migration v20 把这一列
+#     重建为可空、无默认值（V1 冻结文本改不得，所以只能以重建落地），不写就是 NULL；
+#     历史行原样保留，由 `src/aipd_os/gate_attribution.py` 在**读侧**按机器身份词表
+#     （`src/aipd_os/actors.py`，与 ECO 共用一份）分成 human / non_human / unattributed。
+#     今天的真读数：`quality_gate` 输出多一段 `gate_approval_attribution`，只报不判——
+#     「这个 actor 真是某个人」没有身份源可证，拿它当放行依据等于把署名当证据。
 aipd release manifest --db state.db --project P --drawing out/bracket.dxf --bom BOM-1 --out evidence.json
 #   ↑ 发布就绪证据现取装配：CTQ 取 Product Truth、gdt 只从图纸证据长出来，版本三源独立不代为对齐
 #     图纸按 kind 分成单件图与装配图分别计数（part_drawing_count / assembly_drawing_count）。

@@ -637,3 +637,59 @@ def _v19_drop_eco_tables(conn: sqlite3.Connection) -> None:
     conn.execute("DROP TABLE IF EXISTS eco_transitions")
     conn.execute("DROP TABLE IF EXISTS eco_affected")
     conn.execute("DROP TABLE IF EXISTS eco_records")
+
+
+# ---------------------------------------------------------------------------
+# v20 helpers
+# ---------------------------------------------------------------------------
+_V20_GATE_COLUMNS = ("gate_record_id", "project_id", "tenant_id", "gate",
+                     "result", "checks_json", "approved_by", "created_at")
+
+
+def _v20_rebuild_gates(conn: sqlite3.Connection, approved_by_ddl: str,
+                       approved_by_expr: str) -> None:
+    """gates 表拷贝重建（SQLite 无 ALTER COLUMN）。
+
+    up 与 down 只差「那一列的形态」和「搬旧值时 approved_by 用的表达式」，
+    列序两边共用一份常量：各抄一遍列清单就是给下一次改表留一个丢列的机会。
+    """
+    from .sqlsplit import exec_script
+
+    cols = ", ".join(_V20_GATE_COLUMNS)
+    select = cols.replace("approved_by", approved_by_expr)
+    exec_script(conn, f"""
+    CREATE TABLE gates_new (
+      gate_record_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id TEXT NOT NULL,
+      tenant_id TEXT NOT NULL,
+      gate TEXT NOT NULL,
+      result TEXT NOT NULL,
+      checks_json TEXT NOT NULL DEFAULT '{{}}',
+      {approved_by_ddl},
+      created_at TEXT NOT NULL
+    );
+    INSERT INTO gates_new({cols}) SELECT {select} FROM gates;
+    DROP TABLE gates;
+    ALTER TABLE gates_new RENAME TO gates;
+    """)
+
+
+def _v20_gates_approved_by_no_default(conn: sqlite3.Connection) -> None:
+    """v20 up：`approved_by NOT NULL DEFAULT 'AI-internal'` → 可空、无默认值。
+
+    旧值**原样保留**（含历史里已经写进去的 `'AI-internal'`）：这一片改的是
+    「以后没人批就不许写成有人批」，不是替历史伪造一个新读数。历史行由
+    `aipd_os.gate_attribution` 在读侧按机器身份表分类。
+    """
+    _v20_rebuild_gates(conn, "approved_by TEXT", "approved_by")
+
+
+def _v20_restore_gates_approved_by_default(conn: sqlite3.Connection) -> None:
+    """v20 down：还原 v19 那一列的形态（NOT NULL + DEFAULT 'AI-internal'）。
+
+    NULL 在 v19 的列里放不下，只能落成一个非空串。这里落**空串**而不是
+    `'AI-internal'`：空串在机器身份表里，读侧仍算「不是人批的」；落
+    `'AI-internal'` 等于降级时凭空造出一批「AI 批过」的台账。
+    """
+    _v20_rebuild_gates(conn, "approved_by TEXT NOT NULL DEFAULT 'AI-internal'",
+                       "COALESCE(approved_by, '')")

@@ -7,10 +7,11 @@
 三条不能打折的形状规矩（每条都有常驻用例与变异电池对着）：
 
 1. **不许自批**：`APPROVED` 只认「与创建人不同的、而且是人」的 actor。
-   机器身份表 `NON_HUMAN_ACTORS` 不是装饰：本仓 `gates.approved_by` 的默认值是
-   `'AI-internal'`（`state/migrations/schema.py:173`），照抄那个形状就等于
-   任何写入点不写审批人也算「已批准」。这里 `creator` 与 `approver` 是两列，
-   且 `approver` 没有默认值。
+   机器身份表 `NON_HUMAN_ACTORS`（`aipd_os/actors.py`，第 32 片起与 `gates`
+   共用一份）不是装饰：本仓曾经把 `gates.approved_by` 建成
+   `NOT NULL DEFAULT 'AI-internal'`（`state/migrations/schema.py` 的 V1 冻结文本，
+   改不掉，由 migration v20 重建修掉），照抄那个形状就等于任何写入点不写审批人
+   也算「已批准」。这里 `creator` 与 `approver` 是两列，且 `approver` 没有默认值。
 2. **影响清单必须带哈希**：`UPDATE` 要改前 + 改后两个 sha256，`ADD` 要改后，
    `REMOVE` 要改前；送审（离开 `DRAFT`）之后清单冻结，要改就重开一张单。
 3. **「已实施 / 已复验」不是给自己盖章**：进 `IMPLEMENTED` 要有落地凭据
@@ -28,6 +29,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any
 
+from aipd_os.actors import is_human_actor
 from aipd_os.state.errors import (
     ConcurrentModificationError,
     InvalidTransitionError,
@@ -70,12 +72,6 @@ DECISION_STATUSES = frozenset({APPROVED, REJECTED})
 #: actor 不合法时错误信息里必须出现的短语（用例按它匹配，免得测试与文案各说各话）。
 INVALID_ACTOR_HINT = "actor 必须是人"
 
-#: 机器身份。**空串也算**：漏填 actor 不许被读成「有人批了」。
-NON_HUMAN_ACTORS = frozenset({
-    "", "ai", "ai-internal", "agent", "assistant", "auto", "automation",
-    "bot", "cli", "default", "n/a", "none", "null", "system", "unknown",
-})
-
 KINDS = frozenset({"ECR", "ECO"})
 CHANGE_TYPES = frozenset({"ADD", "REMOVE", "UPDATE"})
 
@@ -98,10 +94,6 @@ _COLUMNS = ("eco_id", "tenant_id", "project_id", "kind", "title", "reason",
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def _is_human(actor: Any) -> bool:
-    return str(actor or "").strip().casefold() not in NON_HUMAN_ACTORS
 
 
 def _is_sha256(value: Any) -> bool:
@@ -144,7 +136,7 @@ class EcoStore:
             raise EcoError("ECO 要有标题：空标题的单子事后无法追溯改的是什么")
         if kind not in KINDS:
             raise EcoError(f"kind 只能是 {sorted(KINDS)}，收到 {kind!r}")
-        if not _is_human(creator):
+        if not is_human_actor(creator):
             raise EcoError(f"creator 必须是人（收到 {creator!r}）："
                            "机器身份开单可以让单子存在，但作者身份是「谁不能批」的依据")
         ts = now_iso()
@@ -236,7 +228,7 @@ class EcoStore:
         if to_status not in ECO_TRANSITIONS[frm]:
             raise InvalidTransitionError(f"{eco_id}：{frm} → {to_status} 不是合法转移"
                                          f"（可去：{sorted(ECO_TRANSITIONS[frm]) or '无，终态'}）")
-        if not _is_human(actor):
+        if not is_human_actor(actor):
             raise InvalidTransitionError(
                 f"{eco_id}：{frm} → {to_status}：{INVALID_ACTOR_HINT}"
                 f"（收到 {actor!r}）——机器身份不能充当审批人")
