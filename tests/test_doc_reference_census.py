@@ -91,6 +91,9 @@ def test_json_artifact_matches_in_process_reading(tmp_path, report) -> None:
 
 def test_multi_and_missing_are_kept_apart(report) -> None:
     """简写歧义只报不判，真指不回才判红——两档混了就等于要么误伤要么放过。"""
-    assert report["buckets"].get("multi", 0) > 100, "multi 档读空 ⇒ 简写全被判红了？"
+    # 门限定在"这一档读得出来"，不抄某一棵树的绝对数：
+    # 开发树里多了未跟踪的副本（同名文件），multi 从 99 涨到 429、missing 从 149 降到 126，
+    # 而两棵树的**现状面都是 0**——所以只有 live_defects == 0 是树无关的可判格。
+    assert report["buckets"].get("multi", 0) > 50, "multi 档读空 ⇒ 简写全被判红了？"
     for doc, target, line in (tuple(x) for x in report["live_defects"]):
         assert target, (doc, line)
