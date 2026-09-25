@@ -155,3 +155,24 @@ ECO-001｜ECO｜APPROVED｜Ø8 孔从 x=25 移到 x=30
 - 没有变更单的可视化产物（PDF/表格），也没有回写 Product Truth 的失效传播
   （`truth propagate` 那条链不认识 ECO 这个对象类型）。
 - 未接 `release_manifest`：`aipd release manifest` 不看 ECO 是否存在或闭合。
+
+## 八、收尾读数（落盘后由量具复算，不是计划）
+
+提交：`eb2304c`（代码 + 用例 + 文档）→ `ce6f9a2` / `5aff2f6` / `3b20cef`（发布工件重锚三步）。
+
+| 量具 | 读数 |
+|---|---|
+| 全量 pytest（`docs/audit/pytest-report-v5.6.0.json`） | **2000 passed / 0 failed / 3 skipped**（共 2003；上一片收尾 1958/0/3=1961，本片 +42 条） |
+| `PROVENANCE.json` | `test_report.{passed:2000, failed:0, total:2003, source_commit:a66040520139…}` |
+| `SOURCE_MANIFEST.json` | 被哈希面 **607 → 611**（新增 4 个：`change_orders/{__init__,eco}.py`、`cli/commands_eco.py`、`tests/test_change_order_eco.py`） |
+| `production_release_gate --release-ready --tag v5.6.0` | rc=0，`release_ready: true`，8/8 |
+| `ruff check src tests state_service` / `mypy` | 均 rc=0 |
+| `scripts/c6_coverage.py --self-test` | 7/7；档位 **14 / 0 / 1**（本片把「版本与ECR/ECO」升 producer，`checker_only` 归零；`absent` 只剩 ICD，理由写在它自己的 note 里） |
+| 变异电池 `/tmp/slice26-mutations.py` | **19 条：杀 19 / 活 0 / 注入无效 0**（两条过程读数见 §五） |
+
+一处闸真的咬到了人的读数：第一次重锚时，报告是在「RELEASE_MANIFEST 已刷新、
+SOURCE_MANIFEST 还没重写」的窗口里跑的，那条 `test_source_manifest_hashes_match_disk`
+红了并被如实写进 `PROVENANCE.test_report`；gate 于是**拒绝放行**
+（`test_numbers_from_report`：`test_report has 1 failed`，rc=2）。
+没有把这格当噪声绕过去，而是等工件一致之后重跑一遍报告与 `release_evidence`，
+再放行 —— 这正是 `failed>0` 这一格存在的意义：**锚点窗口内的红也算红**。
