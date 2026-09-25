@@ -169,6 +169,59 @@ $ aipd release manifest … --baseline $BASE
 
 「变了 1 + 已闭合 1」与「没改 2」是两种不同来源的合格：前者靠单，后者靠基线。
 
+## 八、收口读数
+
+| 项 | 读数 |
+| --- | --- |
+| 全量用例 | 2028 → **2056** 条（新增 28：新模块 11 + 判据 15 + 门 2）；两轮全量各 `2053 passed / 0 failed / 3 skipped`（一轮记本轮，一轮带 `AIPD_SOURCE_COMMIT=tag`） |
+| 首跑（重锚之前） | `2 failed, 2051 passed` —— 红的正是 `test_packaging.py` 两条 `*_manifest_hashes_match_disk`，属预期，随重锚闭 |
+| ruff（CI 范围 `src tests state_service`） | All checks passed |
+| mypy（`src tests`） | Success: no issues found in **415** source files（+1：`delivery_baseline.py`） |
+| C6 普查 | `scripts/c6_coverage.py` 仍 15 项 = 14 / 0 / 1（档位不变，note 与本片实测数字更新）；`--self-test` 7/7 条注入被抓 |
+| 变异电池 | `/tmp/slice28-mutations.py` **15 条：杀 15 / 活 0 / 注入无效 0**；第 27 片的 17 条在同树复跑：第一轮 **15 杀 / 2 注入无效**（E3、E4 的锚被本片改形，命中 0 次），把两条锚重指到现役代码后 **17/17** |
+| 端到端 | 真命令行走完六步（§六），门侧读数由子进程真跑 `aipd validate` 取得 |
+| 发布门 `--release-ready --tag` | 见下方补记 |
+| 重锚 | 见下方补记 |
+
+### 电池放走过一条（记下来，因为它正是这一片要防的那类假绿）
+
+第一轮 **B8**（把「下线必须由 `VERIFIED` 的 `REMOVE` 行认领」放宽成「单里提过就行」）**全绿**：
+原判据用例只测了两端——「有合规 REMOVE 单 ⇒ 放行」与「什么都没提 ⇒ 拦」，
+**中间那一格「提过，但不是 REMOVE / 不是 VERIFIED」没人测**。
+补 `TestAgainstPreviousRelease::test_only_a_verified_removal_endorses_a_vanished_delivery`
+（两档：`UPDATE/VERIFIED` 与 `REMOVE/APPROVED` 都不许算认领），再加同族的 **B15**
+（只认 `REMOVE`、不要求 `VERIFIED`）——两条一起开火之后才是 15/15。
+这与第 26 片 G5「可选那一格没人查」、第 27 片五条存活读数同族：**判据多出来的那一半，
+必须有一发注入专门去撞它**，否则「杀掉 N 条」里的 N 会盖住没测到的那一格。
+
+同一次复跑还暴露了**电池自身的腐化**：第 27 片的 17 条在这棵树上是 15 杀 + 2 条「注入无效」——
+E3（盲区折叠成合格）与 E4（零张单也算已覆盖）的锚点被本片改 `_collect_eco` 时改掉了形状
+（E3 那两行之间插进了 added/modified 分支；E4 的 `"coverage": "undetermined",` 字面量
+从早退 return 变成了收尾的 `section["coverage"] = "undetermined"`）。
+**判据还在、用例也还在，是注入打不进去**。电池把这件事报成「锚点命中 0 次」而不是「杀掉」，
+正是把 `rc∈{4,5}` 且无失败行判成无效的用处；两条锚重指到现役代码后回到 17/17。
+教训写在这里：**每次改形一条判据，都要复跑上一片的电池**，否则登记册里的「17 条全杀」
+会变成一个没人再能复现的历史数字。
+
+### 易变白名单的边界（刻意留下的读法）
+
+`VOLATILE_FIELDS` 是**全局按整名**匹配的四个键，不区分产物类型：
+`generated_at` 在任何 JSON 里都会被省。这不是没代价的省事——真要收紧，
+得改成「哪个侧车类型声明哪些字段易变」，未做（§七 第 3 条）。
+两侧的反证都在：非 JSON 的交付物（`dfm.md` 报告体）语义摘要 = 原始哈希，
+④/⑤ 两步实测就是这一条：重跑只动侧车 ⇒ `unchanged 2`；改报告一行 ⇒ `modified ["dfm.md"]`。
+
+### 重锚补记
+
+提交序列：`a82fdbf`（代码 + 用例 + 两份审计文档）→ 产物重锚提交。
+
+| 读数 | 值 |
+| --- | --- |
+| 被哈希面 | 612 → **614**（新增 `src/aipd_os/delivery_baseline.py` 与 `tests/test_delivery_baseline.py`），`SOURCE_MANIFEST` 与磁盘逐条一致（0 条不匹配） |
+| `PROVENANCE.test_report` | 2053 passed / 0 failed / 2056 total，`source_commit` = `a66040520139…`（tag） |
+| `production_release_gate --release-ready --tag` | **8/8 绿**，`release_ready: true`，rc=0 |
+| `audit_repo --strict` | rc=1，唯一 ✗ 仍是既有裁决那条「Provenance source commit mismatch: manifest=a66040520139… vs HEAD=…」——锚点按裁决停在 tag，不是本片回归 |
+
 ## 七、这一片没做的事
 
 1. **整仓范围的差集**没做（§二 C 的实测就是它的代价）：`SOURCE_MANIFEST` 级别的

@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 129653,
-      "sha256": "f9bd6bb31fda72dfaf4ef0551927d1d10cd647e967ec3e36045da46804ed9038"
+      "size": 133846,
+      "sha256": "8b16b4247f27cb38f5418178221a5d4f372a6635675d2ff27d750cf73b17f56d"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 35818,
-      "sha256": "18f6fdb5f4d8319a6715c902a1d642e90b953b4935ca2d7ad2ad3b844251eb33"
+      "size": 37224,
+      "sha256": "b24bbad3bad886dc924838fc1c3a2a908d8af60cef9e1e461a2eedfe64ca8781"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -697,8 +697,8 @@
     },
     {
       "path": "scripts/c6_coverage.py",
-      "size": 23768,
-      "sha256": "ea920cf2e729410b78d66428f2995a1a4e81f46957ba91ce168fad864ee24204"
+      "size": 24254,
+      "sha256": "610481bd252cf620bdbf5da189ea02a090a0038919845a7a2af31be79612248f"
     },
     {
       "path": "scripts/cad_convergence.py",
@@ -792,8 +792,8 @@
     },
     {
       "path": "scripts/production_release_gate.py",
-      "size": 33656,
-      "sha256": "2b4b396b49a9263d4d38864edf0dc851f769e949abf75e9ae744c2ae61fddb00"
+      "size": 34540,
+      "sha256": "b4e40b596b0f49ea5d976771365ef95dad393b009342cb1799c3069ecfb74d30"
     },
     {
       "path": "scripts/quality_gate.py",
@@ -1097,8 +1097,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_release.py",
-      "size": 6163,
-      "sha256": "26942c903f208535e8552a587f85fff42fef3c6ab0646f0f1033ce07e9bcf994"
+      "size": 8243,
+      "sha256": "b5eab5b30cb877e89a26f48eaf02d57a6eed6572774d60615e519d1fe45a350b"
     },
     {
       "path": "src/aipd_os/cli/commands_supply.py",
@@ -1117,8 +1117,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 49596,
-      "sha256": "82743b2c0c3c4298e6515a12335b6448fc32a6c4c3fed065761221284fb06aa4"
+      "size": 50701,
+      "sha256": "f1a2cc4a473212ee16be51e40ea6695be065828158c721ce272a7c2ed57b5518"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1129,6 +1129,11 @@
       "path": "src/aipd_os/config.py",
       "size": 7076,
       "sha256": "73e05cbfd72e462ed8d5b633f76db4a72a93e40db26d6fdb5e5234911d7dd4d4"
+    },
+    {
+      "path": "src/aipd_os/delivery_baseline.py",
+      "size": 6976,
+      "sha256": "3c11dd831c76830ca0a72f0da00eb78542be07598097891078bbc933cff573c5"
     },
     {
       "path": "src/aipd_os/evals/__init__.py",
@@ -1592,13 +1597,13 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 80741,
-      "sha256": "12668fb32b12e37f3a727130fff55cf99e986d4d1c56999737f22e3f37dc4439"
+      "size": 83099,
+      "sha256": "a10824e068606079762752a599ae6148c0ede59a5a04988c27f32c53720a68d1"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
-      "size": 45213,
-      "sha256": "121653e323572e6c287b0b7bc4ecf0dfe7f606c9ac934a87f1c1eed71a2cdbbd"
+      "size": 49483,
+      "sha256": "d5211d45f497e909acca3d664dbd52627ddaf01a80af5502161c5057df07878c"
     },
     {
       "path": "src/aipd_os/research/__init__.py",
@@ -2446,6 +2451,11 @@
       "sha256": "8f82cc540b340079b98cdcab69624e4c39b0dc555708242535e5257ff9f24c16"
     },
     {
+      "path": "tests/test_delivery_baseline.py",
+      "size": 7867,
+      "sha256": "964907291c86456b35da0cd29de22ce32c2704e2e0667982f9535e64a3ef8b9c"
+    },
+    {
       "path": "tests/test_dispatcher.py",
       "size": 4326,
       "sha256": "e83e6678b4c49684ce69dcd3fb0ca3598344349c643d8a7958df7486d43b98b8"
@@ -2812,8 +2822,8 @@
     },
     {
       "path": "tests/test_production_release_gate.py",
-      "size": 13488,
-      "sha256": "9a5a097be9499af739524e198590473d7c58df7a693f1a05e936e63e0a141738"
+      "size": 15075,
+      "sha256": "a4d4e330f96984fa022fa8d2f866d2a87a776bca87b0b38e8719b05b55afa557"
     },
     {
       "path": "tests/test_production_release_gate_file_lists.py",
@@ -2877,8 +2887,8 @@
     },
     {
       "path": "tests/test_release_manifest_eco_coverage.py",
-      "size": 17812,
-      "sha256": "2922eb9c6d5e85633d2d88df470720ec3b90feb48d5224fc7bf532381fa1ff9b"
+      "size": 28460,
+      "sha256": "f10ff8e43a7106f7cc4edac928451ee8a03813208f2ebccb593abb9cea29846e"
     },
     {
       "path": "tests/test_release_signing.py",

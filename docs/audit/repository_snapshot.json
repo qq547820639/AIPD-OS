@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-25T14:47:17",
+  "generated_at": "2026-09-25T16:29:59",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 177
+      "tests": 178
     }
   },
   "tags": [
@@ -116,8 +116,8 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 612,
-    "hash_matches": 612,
+    "total_files": 614,
+    "hash_matches": 614,
     "hash_mismatch_count": 0,
     "mismatches": []
   },
