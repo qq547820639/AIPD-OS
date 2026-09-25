@@ -45,4 +45,8 @@
 | 既有授权面回归 | `tests/test_authorization.py`、`tests/test_mcp_authorization.py` 共 20 条 rc=0 |
 | 静态检查 | `mypy src` 0 error；`ruff check src tests state_service` rc=0 |
 
-（签出 attestation 与两道发布门的读数在最后一笔提交里补上。）
+| 签出 attestation | HEAD 干净签出 + `AIPD_SOURCE_COMMIT=<tag SHA>`：**2240 passed / 0 failed / 3 skipped**（2243 收集，2m18s），报告前缀 `023d7de20b52` 已绑进 `PROVENANCE.test_report` |
+| 发布门 | `production_release_gate --release-ready --tag v5.6.0`：**8/8、rc=0、`release_ready: true`** |
+| 仓库审计 | `audit_repo --strict` rc=1，一条红仍是既有的 tag 锚点判定 |
+| 电池重放 | 收尾时在最终树重跑：第 36 片 **4/4**、第 37 片 **4/4**，字节复算干净 |
+| 提交序列 | `b46ddf1`（代码+用例+登记）→ `559ce93`（清单重锚）→ `86cab3c`（证据绑签出那一跑）→ 本笔文档 |
