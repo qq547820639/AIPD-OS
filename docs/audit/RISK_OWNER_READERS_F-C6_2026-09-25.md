@@ -103,7 +103,9 @@
 | 变异电池（本片） | `/tmp/slice34-mutations.py` **15 条：杀 15 / 存活 0 / 注入无效 0 / 崩溃式红 0 / 已知无撤回案例 2**（带未注入对照臂） |
 | 同树复跑 | 第 32 片 **14/14**（I4 锚点因本片新增同形守卫命中 2 次，重锚到 `approved_by` 那句报错文案）；第 30 片 **21/21**；第 31 片 **8/8**；第 33 片 **9 杀 / 0 存活 / 0 注入无效 / 2 已知无撤回**——五片都在最终提交树上重跑，全部 rc=0 |
 | 静态检查 | `mypy src` 0 error；`ruff check src tests state_service`（CI 口径）rc=0；`ruff check .` 的 693 条是 CI 范围外目录，不在本片范围也未动 |
-| 提交序列 | `99b808a`（代码+用例）→ `833e8dd`（文档）→ `86f1617`（两份清单重锚，626 条）→ `b400f1c`（本轮记录改绑签出那一跑）→ 本条文档 |
+| 提交序列 | `99b808a`（代码+用例）→ `833e8dd`（文档）→ `86f1617`（两份清单重锚，626 条）→ `b400f1c`（本轮记录改绑签出那一跑）→ `2bd0170`（收口补记进 CHANGELOG）→ 最后一笔证据重绑（`PROVENANCE.test_report` = 最终 HEAD 那一跑：`2202 passed / 0 failed`，`sha256` 前缀 `046c65036ef8`） |
+| 又踩了一次的那条顺序 | `CHANGELOG.md` **在**清单里、`docs/audit/` 不在：把收口补记写进 CHANGELOG 之后，两份清单立刻与盘面对不上（`tests/test_packaging.py` 两条哈希断言当场判红，实测 2 failed）⇒ 再刷一轮清单与证据、并在最终 HEAD 上重跑一次签出全量。既有配方写着「补记必须在最后一次 `release_evidence.py` 之前」，本轮仍然先写了补记，代价是一整轮额外重放 |
+
 | 文档镜像 | `docs/architecture/state_inventory.md` 页眉与正文 HEAD、版本清单表三处同步到 v21，并由 `TestTheDocMirrorMatchesTheChain` 与 `MIGRATIONS` 对账 |
 
 ## 七、几处自己抓自己的读数
