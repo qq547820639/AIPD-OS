@@ -68,5 +68,8 @@ rollback 会执行第 N 格的 down，而 down 用的正是同一份重建模板
 | 变异电池 | `/tmp/slice36-mutations.py` **4 条：杀 4 / 存活 0 / 注入无效 0 / 崩溃式红 0**，每条带未注入对照臂；已知无撤回案例 1（白名单存在性那条，撤回面已被逐格对账覆盖） |
 | 静态检查 | `mypy src` 0 error；`ruff check src tests state_service` rc=0 |
 | 产品代码 | 零改动（本片只加尺子与登记） |
-
-签出 attestation 与两道发布门的读数在最后一笔提交里补上（不留占位）。
+| 签出 attestation | `git worktree` 的 HEAD 干净签出 + `AIPD_SOURCE_COMMIT=<tag SHA>`：**2232 passed / 0 failed / 3 skipped**（2235 收集，3m41s），报告 `sha256` 前缀 `ec9defd49bc7` 已绑进 `PROVENANCE.test_report` |
+| 发布门 | `production_release_gate --release-ready --tag v5.6.0`：**8/8、rc=0、`release_ready: true`**（带 venv PATH）|
+| 仓库审计 | `audit_repo --strict` rc=1，唯一一条红仍是既有的 tag 锚点判定；两份清单 `hash_mismatch_count = 0`（新尺子入册后 628 条）|
+| 电池重放 | 收尾时在最终树上重跑：第 34 片 **15/15**、第 35 片 **12/12**、第 36 片 **4/4**，全部 rc=0、字节复算干净 |
+| 提交序列 | `b7e7adb`（尺子+登记）→ `47f7036`（清单重锚 628 条）→ `06cedb5`（证据绑签出那一跑）→ 本笔文档 |
