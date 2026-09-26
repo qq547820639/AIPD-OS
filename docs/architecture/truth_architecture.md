@@ -61,11 +61,15 @@ trust_level / effective_at / expires_at / version / status / metadata），
 `TestReworkHalfIsWiredAndItsBoundaryStaysVisible` 要求产品侧真有调用点），
 边界本身由 `tests/test_truth_rework_cli.py` 逐条钉住。
 
-**发现与触发（2026-09-26 更新，F-DRIFT 第 51 片 / F-DRIFT-2 第 52 片 / F-SWEEP 第 54 片）**：
+**发现与触发（2026-09-26 更新，F-DRIFT 第 51 片 / F-DRIFT-2 第 52 片 / F-SWEEP 第 54 片 /
+F-DRIFT-5 第 57 片）**：
 上面所有"再跑一次 propagate"的前提是**有人记得跑**。现在这一环有两条命令：
 `aipd truth drift` 只读地把每条有效制品记录的键**按当前世界重算**再比对
 （`src/aipd_os/product_truth/drift.py` 分四态：一致 / 漂移 / 不可判 / 没有可比对的键；
-五类制品各有 resolver：`drawing_spec` 读声明文件哈希、`drawing_dxf` 重算出图输入签名、
+一条记录可以交**多个输入面**，每面各自与同一条已存基线比，优先级是
+漂移 > 没有基线 > 算不出 > 一致——"不可判"不许跨面折叠；
+五类制品各有 resolver：`drawing_spec` 交两面（文件面重读声明文件、源面按记录自己的
+`ctq_refs` 重跑一次 `spec_from_ctq`，第 57 片）、`drawing_dxf` 重算出图输入签名、
 `bom` 读当前 BOM 头与行、`bom_cost` 用记录里的口径五项重算、
 `quote_batch` 用记录里 `quote_ids` 读回的**当前报价事实**重算——
 键不靠报价文件，因为 `quote_id`/`version` 是 apply 时按库内版本号现铸的，文件里没有，
@@ -84,7 +88,7 @@ trust_level / effective_at / expires_at / version / status / metadata），
 
 **扫描成本现状（2026-09-26 量，F-DRIFT-4 第 55 片）**：`truth drift` / `truth sweep` 是这条链上
 唯一会随交付物数量长期变大的读路径，所以它的成本形状被钉成两层。进程内实测：
-5/20/100/300 条有效制品版本记录，`scan_drift` 走的 **SQL 条数恒为 1**（一条 SELECT 取全集），
+5/20/100/300 条有效制品版本记录，`scan_drift` 走的 **SQL 条数不随记录数增长**（第 57 片前恒为 1 条，即一条 SELECT 取全集；第 57 片给 `drawing_spec` 补源面之后恒为 8 条：多出的 1 条 CTQ SELECT 与 6 条 schema 引导来自第二次 store 实例，都是每次扫描的固定开销），
 声明文件**每条恰好读一次**，单条成本安静机器约 60~70 µs、同机负载 26 时读到 95~152 µs
 （`scripts/state_perf_gate.py` 的两个 `drift_scan_*` 场景，趋势棘轮；
 基线在负载下采到 131.24 µs 后已按安静读数重锚为 69.25 µs，方向是收紧）；两条线性度都由常驻用例钉死
@@ -107,11 +111,18 @@ CLI 侧另测三档（4/13/33 条记录 × 两遍 × 7 次重复）：一趟命�
 ② `drawing spec` 在 0 条 active CTQ 时旧行为是"写一份 `features: []` + 落一条无引用血缘 +
 退 0"，本轮改成判未收口（退 4，文件与血缘都不写，payload 多一格 `empty_declaration`）——
 空声明不是交付物，"还没有人声明要求"不能被读成"声明已完成"。
-仍留着的边界有一条被钉成常驻断言（`tests/test_truth_ctq_add.py::`
-`test_ctq_change_is_invisible_to_drift_and_sweep`）：**改了 CTQ 限值，`truth drift`/`truth sweep`
-看不见**，因为 `drawing_spec` 的身份键是声明文件的哈希而不是来源的哈希；那条路上今天只有
-`truth propagate --upstream <ctq>` 走得通。复合身份键（文件面 + 来源面，旧记录按不可判点名）
-是第 57 片的靶子。
+第 56 片那条"钉缺席"的边界已在**第 57 片闭掉**（`tests/test_truth_ctq_add.py::`
+`test_ctq_change_is_visible_to_drift_and_sweep`，同一条用例从"看不见"反成"必须看见"）：
+改了 CTQ 限值 ⇒ `truth drift` 点名那条声明记录（理由写 `source面`）、`truth sweep` 落刀标 stale
+并建返工任务 ⇒ `truth rework` 按新限值重写文件。判据形状借 Argo CD 实读的
+"compares the current, live state against the desired target state"（两侧都现算、基线只存一份），
+所以**没有新增 metadata 列、存量记录不需要迁移**：`spec_sha256` 本来就是声明正文的
+canonical 哈希（`cad/spec_lineage.py:41`），文件面与源面各自与它比。
+源面刻意**只吃记录自己声明的 `ctq_refs`**，不吃全作用域 CTQ——否则新增一条无关要求会把
+每条既有声明都读成漂移；"声明是否覆盖了当前全部要求"归发布门禁 `gdt_covers_ctq` 那一格，
+由 `tests/test_truth_spec_faces.py::test_unrelated_new_ctq_is_not_drift` 钉住不越界。
+上游 CTQ 被停用/删除算**漂移**而不是不可判（输入读得到、算得出，只是算出来的东西说这份声明
+立不住）；重算出缺口时用一个确定性的 `ctq-gap:` 键，不折进"算不出"。
 另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片）：血缘边有**三个**生产者——
 `product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）、
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的

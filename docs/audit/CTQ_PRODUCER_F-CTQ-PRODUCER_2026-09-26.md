@@ -83,6 +83,8 @@ $ aipd truth drift ⇒ {"scanned":1,"counts":{"in_sync":1, …}}
 端到端用例就是这么走的：propagate 标 stale + 建任务 → `truth rework --all-pending` 退 0
 → 声明文件按新限值被重写。复合身份键（文件面 + 来源面，旧记录按不可判点名）记为第 57 片。
 
+> **2026-09-27 更正（第 57 片已闭这一格）**：上面这段读数是当时的真实现场，措辞保留原文；现在 `drawing_spec` 交两个输入面，改 CTQ 会被 `truth drift` 点名、被 `truth sweep` 落刀，钉这条的用例也从 `test_ctq_change_is_invisible_to_drift_and_sweep` 反转成 `test_ctq_change_is_visible_to_drift_and_sweep`。第 57 片实际走的是「两面共用同一条 `spec_sha256` 基线」而不是新增一列 ⇒ **没有 `no_record_signature` 迁移代价**；会落进「没有可比对的键」的是**本来就没有 `ctq_refs`** 的记录（生产路径自第 43 片起都会写）。见 `docs/audit/SPEC_FACES_F-DRIFT-5_2026-09-27.md`。
+
 ## 七、变异电池（`/tmp/s56/battery.py` + `battery2.py`，worktree `/tmp/s56w @ 336441e`）
 
 对照臂未注入 `21 passed`（rc=0）。九条臂全部 KILLED、0 存活、0 注入无效：
@@ -128,7 +130,7 @@ commit 链（每步一个动作，证据件与代码不同 commit）：
 - 改一条已声明 CTQ 的限值（revise）与停用/取代（deprecate）今天没有命令：
   端到端用例里的限值变化是走库层 `store.update` 做的，所以"谁在什么时候把 8.05 改成 8.10"
   在 CTQ 这一格**没有审计入口**（图纸声明与 DXF 那两格有）。
-- CTQ 变更对 drift/sweep 不可见（§六），修法记为第 57 片（任务 #64）。
+- ~~CTQ 变更对 drift/sweep 不可见（§六）~~ **已闭（第 57 片）**：源面补上之后 drift 点名、sweep 落刀，见 `docs/audit/SPEC_FACES_F-DRIFT-5_2026-09-27.md`。
 - `aipd ctq` 只有 `add` 一个 verb：`main.py` 的 `ctq_sub` 里只挂了 `add_parser("add")`，
   今天要看一个项目的 CTQ 清单只能借 `aipd release manifest`（`doc["ctq"]`）或
   `aipd truth drift` 的读数，没有专门的列表命令。

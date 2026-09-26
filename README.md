@@ -456,13 +456,17 @@ aipd ctq add --db state.db --project P --feature hole_Ø8 --drawing-feature TOP.
 #     同一图纸尺寸上已有 active CTQ 时拒且不静默覆盖），不合法退 2 且一条都不落库。
 aipd truth drift --db state.db --project P                                   # 只读扫描漂移
 #   ↑ 按**当前输入**重算每条制品记录的身份键，与记录里存的那份比，报出「该 stale 却还挂着 active」的清单
-#     （`src/aipd_os/product_truth/drift.py` 分四态：一致 / 漂移 / 不可判 / 没有可比对的键）。
+#     （`src/aipd_os/product_truth/drift.py` 分四态：一致 / 漂移 / 不可判 / 没有可比对的键；
+#     一条记录可以交**多个输入面**，每面各自与同一条已存基线比，优先级 漂移 > 没有基线 > 算不出 > 一致）。
 #     不新建基线：记录里本来就存着自己那份键，每次拿当前世界重算再比（dbt 那套要比上一份 manifest，基线自己也会过期）。
 #     拿不齐输入的记录单列「不可判」，既不折成没漂也不折成漂了；本命令一个字都不写，有漂移即 exit 4。
 #     五类制品各有 resolver；`quote_batch` 那份与登记侧**共用同一个投影**
 #     （`quote_applied_rows`，按记录里的 quote_ids 读当前报价事实）——键不靠报价文件重算：
 #     quote_id/version 是 apply 时按库内版本号现铸的，文件里没有；只有事实态会变，
 #     所以「当初那批报价被后来的报价转 R」这格只有这么算才看得见（第 52 片）。
+#     `drawing_spec` 交**两个面**（第 57 片）：文件面重读那份声明，源面按记录自己声明的
+#     `ctq_refs` 重跑一次 `spec_from_ctq` —— 于是「属主改了 CTQ 限值、没人重出声明」也能被发现，
+#     而源面不吃全作用域的 CTQ：新增一条无关要求不该让每条既有声明都读成漂移（覆盖率归发布门禁用）。
 aipd truth sweep --db state.db --project P [--dry-run]                        # 把发现接落到刀
 #   ↑ 同一次进程内先按当前输入重算每条制品记录的键，再对「漂移且还 active」的记录
 #     按 `truth_lineage` 边表找它的**上游**，用与 `aipd truth propagate` 同一个入口

@@ -118,6 +118,28 @@ def test_ctq_limit_change_is_discovered_by_drift_alone(env, capsys):
     assert rc == 4, rc
 
 
+def test_recomputed_gap_is_drift_not_undecidable(env, capsys):
+    """上游记录被改坏（标称值没了）⇒ 重算出的是**缺口**，不是"算不出"。
+
+    缺口用一个确定性的 `ctq-gap:` 键参与比较，这样"这份声明按当前要求已经立不住"
+    会以漂移的身份出现在清单里；把它折成不可判，drift 的退出码就从 4 掉回 0。
+    """
+    tmp_path, db = env
+    _out, rid, ctq = _declare(env, capsys)
+    store = _store(db)
+    meta = dict(ctq.metadata)
+    meta.pop("nominal")
+    assert store.update(ctq.record_id, tenant_id=T, project_id=P, metadata=meta) is not None
+
+    verdict, faces = _classify(db, rid)
+    assert verdict["state"] == DRIFTED, verdict
+    assert "source面" in verdict["reason"] and "缺口" in verdict["reason"], verdict["reason"]
+    assert str(faces["source"]["current"]).startswith("ctq-gap"), faces["source"]
+
+    rc = main(["truth", "drift", "--db", str(db), "--project", P, "--json"])
+    assert rc == 4, rc
+
+
 def test_hand_edited_declaration_fires_only_the_file_face(env, capsys):
     """第 51 片那半判据不许退化：手改产物文件仍然单独开火，且不被源面遮蔽。"""
     tmp_path, db = env

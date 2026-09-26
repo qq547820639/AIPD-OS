@@ -951,6 +951,30 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.18 F-DRIFT-5 第 57 片：`drawing_spec` 的身份键补上「源面」——改了 CTQ 不再对漂移探测隐形**：
+  第 56 片 §六 用一条常驻用例钉住了一个实测到的洞：`drawing_spec` 记录的身份键只有
+  **声明文件的哈希**，所以「属主改了限值、没人重出声明」这一整类漂移 `truth drift`/`truth sweep`
+  都看不见，那条路上只有人记得跑 `truth propagate --upstream <ctq>` 才走得通。
+  本片把判据 `product_truth/drift.py` 从「一条 current 比一条 stored」抬成**多面协议**：
+  每个 `Face` 自带 (name, current, stored, reason)，优先级 **漂移 > 没有基线 > 算不出 > 一致**，
+  「不可判」不许跨面折叠（一红一算不出仍报漂移，两边的话都留在 reason 里）。
+  `drawing_spec` 交两面：`file` 重读那份声明，`source` 按**记录自己声明的** `ctq_refs`
+  重跑一次 `spec_from_ctq`。形状借 Argo CD 实读的 "compares the current, live state against
+  the desired target state"——两侧都现算、**基线只存一份**（`spec_sha256` 本就是声明正文的
+  canonical 哈希，`cad/spec_lineage.py:41`），所以没有新增 metadata 列、第 43~56 片的存量记录不需要迁移。
+  三格由常驻用例钉住的取舍：① 源面**不吃全作用域 CTQ**（否则新增一条无关要求会把每条既有声明
+  都读成漂移；「覆盖全部要求」归发布门禁 `gdt_covers_ctq`）；② 上游被停用/删除、或按当前输入
+  重算出缺口，都算**漂移**而不是不可判（缺口用确定性 `ctq-gap:` 键——折成不可判会让退出码从 4 掉回 0）；
+  ③ 每轮扫描只读一次 CTQ 表。改判三处：第 56 片那条"钉缺席"的边界用例反转成"必须看见"；
+  `test_truth_drift` 那条手写 spec 夹具从 `in_sync` 改判 `undecidable`（它没有 `ctq_refs`，
+  源面无从重算），而本片要钉的「手改文件要被发现」反而更强（理由点名 `file` 面）；
+  第 55 片那副性能夹具的 spec 正文改由生产函数生成（原来手写 dict 少 `drawing_feature`，
+  源面永不相等 ⇒ 量的就不是"扫一份一致的库"）。扫描形状配对实测（同一份生产形状数据，
+  改前树 vs 改后树）：SQL 语句 **1 → 8**、随记录数（5/20/100/300）**不变**，
+  声明文件读次数仍**恰好等于记录数**；多出的 7 条是源面那第二次 store 实例的固定开销
+  （1 条 CTQ SELECT + 6 条 schema 引导），不随记录数增长。取证见
+  `docs/audit/SPEC_FACES_F-DRIFT-5_2026-09-27.md`。
+
 - **v5.17 F-CTQ-PRODUCER 第 56 片：新公开命令 `aipd ctq add`——血缘链的头第一次有了生产写入点**：
   第 43/45/46 三片把「CTQ → 图纸声明 → DXF」这三跳接通之后，一直没人问过一句：**CTQ 本身谁写**。
   本轮复核的答案是「只有测试写」：`record_type="ctq"` 在 `src/` 侧只有四个读者
