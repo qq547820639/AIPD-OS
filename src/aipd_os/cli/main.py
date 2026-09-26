@@ -665,6 +665,43 @@ def build_parser() -> argparse.ArgumentParser:
     ca.add_argument("--note", help="备注（可选）")
     ca.add_argument("--json", action="store_true")
     ca.set_defaults(func=COMMAND_FUNCS["ctq add"])
+    cr = ctq_sub.add_parser(
+        "revise",
+        help="修订一条已声明 CTQ 的合格域：另起一条新版本，"
+             "旧的那条标 superseded 并留下链。"
+             "为什么不在原地改：改完限值后引用它的图纸声明会被源面判成漂移"
+             "（第 57 片），旧值留在库里才问得出「谁在什么时候把 8.05 改成 8.10」。"
+             "形状借 dbt model versions + django-simple-history，"
+             "落在本仓既有的 superseded 状态与 audit_log 通道上。")
+    cr.add_argument("--db", required=True)
+    cr.add_argument("--project", required=True)
+    cr.add_argument("--tenant", default="default")
+    cr.add_argument("--record", required=True, help="要修订的 CTQ 记录号（必须是 active）")
+    cr.add_argument("--nominal", help="新的标称值；不给就沿用旧值")
+    cr.add_argument("--lower", help="新的下极限；不给就沿用旧值")
+    cr.add_argument("--upper", help="新的上极限；不给就沿用旧值")
+    cr.add_argument("--inspection", help="新的检验方法；不给就沿用旧值")
+    cr.add_argument("--epistemic", help="新的认识论态 V/C/E/A/U；不给就沿用旧值")
+    cr.add_argument("--test-ref", action="append",
+                    help="新的验证引用，可重复；不给就沿用旧的那组")
+    cr.add_argument("--note", help="修订理由（同时作为旧记录的 superseded_reason）")
+    cr.add_argument("--by", required=True,
+                    help="谁改的。不留机器缺省值，且它会进审计行")
+    cr.add_argument("--json", action="store_true")
+    cr.set_defaults(func=COMMAND_FUNCS["ctq revise"])
+    cd = ctq_sub.add_parser(
+        "deprecate", help="停用一条 CTQ：状态改 superseded，必须给 --reason；"
+                          "--replaced-by 指了就得真存在（指向不存在的记录会骗过门禁那句"
+                          "「确认取代它的那条在名单里」）。")
+    cd.add_argument("--db", required=True)
+    cd.add_argument("--project", required=True)
+    cd.add_argument("--tenant", default="default")
+    cd.add_argument("--record", required=True)
+    cd.add_argument("--reason", required=True, help="为什么撤回这条要求（必填，不许空着停用）")
+    cd.add_argument("--replaced-by", help="取代它的那条记录号（可选）")
+    cd.add_argument("--by", required=True, help="谁停用的；会进审计行")
+    cd.add_argument("--json", action="store_true")
+    cd.set_defaults(func=COMMAND_FUNCS["ctq deprecate"])
 
     # ---- v5.10 制造就绪（bom 物料清单 / cost 成本核算）----
     p_bom = sub.add_parser(

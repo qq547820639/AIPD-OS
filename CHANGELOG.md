@@ -951,6 +951,44 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.20 F-CTQ-REVISION 第 59 片：新公开命令 `aipd ctq revise` / `aipd ctq deprecate`——链头第一次有带审计的改动入口**：
+  起点是第 56 片登记的限制原话「只有 add……「谁在什么时候把 8.05 改成 8.10」缺一个审计入口」
+  ＋「处置旧的那条还没有工具」。选型先被两条**本仓事实**否证再落笔：全仓对 SQLAlchemy 是 0 引用
+  （排除 `.venv/` 检索无命中）⇒ sqlalchemy-continuum 1.7.0（PyPI 现读 `license_expression=BSD-3-Clause`、
+  `requires SQLAlchemy>=1.4.53,<2.1`、2026-07-03 发行）没有它要吃的那套对象模型；
+  django-simple-history 3.13.0（2026-07-22 发行，README 自报 BSD-3-Clause）PyPI 读到
+  `requires_dist: django>=5.2`，而其 README 支持矩阵写 Django 5.2 对应 Python 3.10+，
+  与本项目 `requires-python = ">=3.9,<3.13"`（主解释器实测 3.9）相撞
+  ⇒ **两个候选都只借语义、不引依赖**：借 dbt model versions 实读到的"新版落地、`latest_version`
+  只决定未固定 `ref()` 指向哪版"与 "Deprecated models can continue to be built by producers and be
+  selected by consumers until they are disabled or removed."，加 django-simple-history 的
+  "历史行带 user 与改动理由"，落在本仓既有的 `superseded` 状态与 `add_audit(actor, before, after)` 通道上。
+  退役态选 `superseded` 是**出口判据**：`release_manifest.py:95-99` 对它 `blocking=False`，
+  而 `expired`/`stale`/`blocked` 走 `blocking=True` 那一支（永久卡在阻断名单里）。
+  形状：修订**不改写原文**——另起一条 active 新版本（`version = 被修订那条 + 1`），旧那条标 superseded
+  并留 `superseded_by` / `superseded_at` / `superseded_by_actor` / `superseded_reason` 四个链字段；
+  两条命令各写一行审计（actor 取 `--by`，before/after 是限值快照）；审计写不进去判未收口
+  （退 4、`--json` 的 `ok=false`、`changed` 仍为真——"改了却没人知道是谁改的"不是干净成功）；
+  `--replaced-by` 给了就得真存在（假引用会骗过门禁那句「确认取代它的那条在名单里」）。
+  实测冒出来的两个缺陷都不是设计时想到的：① 首轮 smoke 读到**同值修订照样另起一个版本**
+  （`supersedes` 把被修订那条从查重名单里摘掉，"改回同一个值"在 `declare_ctq` 眼里成了一条新声明）
+  ⇒ 补逐项幂等判据，同值不写库也不写审计，免得审计次数高于真实改动次数；
+  ② `ctq deprecate` 撤回最后一条要求后，`truth rework` 把磁盘上那份声明**重写成 `features: []` 并退 0**
+  ——第 56 片的"空声明不是交付物"只修在生产者那侧，返工执行器（`cad/spec_rework.py`）没有同一半守卫
+  ⇒ 补 `empty_declaration` 失败支，与 gap 同档（文件与记录都不动、任务留在 pending）。
+  连带改判：第 56 片端到端用例的"改限值"从直写库层换成走公开命令，实测到漂移走的**不是**预料的
+  `ctq-gap` 支而是 `commands_drift.py:99,108` 的 lost 支（reason 点名哪条上游已不在 active 集合），
+  判决与退码不变、那三条断言一字未动；一处语义位移如实记下（`(旧 id, spec)` 那条边从这一片起
+  钉的是"返工不许抹掉历史上游边"，"新版本接进上游名单"由第 59 片的 `refs == active` 钉）。
+  另有一处**本轮自己犯的错**：重写过的新限制里我写了一条不存在的命令 `aipd truth show`，
+  被只读普查抓回、改成实测表述（`aipd release manifest` 的 `ctq` 数组只收 active 且不写
+  `drawing_feature`，按图纸尺寸问不出）；门禁没拦是因为 `run_command` 只被
+  `capability_matrix.py:157` 原样渲染，**没有任何常驻判据核对登记文本里点名的命令是否真存在**
+  ——这条已记进遗留。常驻用例 **14 条**（`tests/test_truth_ctq_revise.py`：形状 / 审计 /
+  门口就拒 / 链条 / 命令面镜像五组），公开命令 60 → 62、命令面分母 70 → 72、
+  全量收集 2468 → 2482；变异电池 **10 条：杀 10 / 活 0 / 注入无效 0**（对照臂未注入先全绿）。
+  取证见 `docs/audit/CTQ_REVISION_F-CTQ-REVISION_2026-09-27.md`。
+
 - **v5.19 F-GATE-MULTIPLICITY 第 58 片：`gdt_covers_ctq` 改按记录号核对覆盖——同名要求不再被掩盖成绿**：
   起点是第 57 片 §九 留的一句「覆盖率归发布门禁管」＋一个疑点（该门两侧的 `feature` 会不会不同源）。
   假设先被**源码否证**：两条覆盖凭据写进 `gdt` 的 `feature` 就是 CTQ 自己的 `feature`

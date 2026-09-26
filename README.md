@@ -442,8 +442,9 @@ aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷
 #   ↑ 失效传播：沿血缘把下游 truth 标 stale、生成有界返工任务（rework_tasks，默认上限 3 次），
 #     并给出 owner 可读的四段变更说明（改了什么/为何影响/修复计划/需要批准什么）。
 #     本次新置 stale 与此前已 stale 分两栏报——空的那一栏不等于「没影响」。
-#     有下游待返工即退出码 4。返工的**执行**（run_rework）本仓刻意未接：没有真实执行器时
-#     引擎只判 blocked，绝不伪造成功。
+#     有下游待返工即退出码 4。返工的**执行**从第 45 片起接在下一行那条命令上：执行器今天认四类制品
+#     （drawing_spec / drawing_dxf / bom / bom_cost，各自按当前输入重算），不认识的制品（quote_batch）
+#     在烧 attempts 之前逐条点名拒；不给执行器时引擎仍只判 blocked，绝不伪造成功。
 aipd truth tasks --db state.db --project P [--status pending]     # 只读列返工待办
 aipd truth rework --db state.db --project P (--task RW-001 | --all-pending)   # 跑一次真实返工
 aipd ctq add --db state.db --project P --feature hole_Ø8 --drawing-feature TOP.hole_1 --nominal 8.0 --lower 7.95 --upper 8.05 --inspection CMM --by 张工   # 链头：由人声明一条 CTQ
@@ -454,6 +455,18 @@ aipd ctq add --db state.db --project P --feature hole_Ø8 --drawing-feature TOP.
 #     属主说一句话不等于「已被验证」（P0-08 同一条规则）；`--by` 无机器缺省值。
 #     校验在门口做完（标称必须在 [下限, 上限] 内、下限必须小于上限、检验方法必填、
 #     同一图纸尺寸上已有 active CTQ 时拒且不静默覆盖），不合法退 2 且一条都不落库。
+aipd ctq revise --db state.db --project P --record T-001 --upper 8.10 --by 张工 --note 放宽装配间隙   # 改一条已声明的要求
+#   ↑ 另起一条新版本、旧的那条标 `superseded` 并留 `superseded_by` 链，前后值一起写进 `audit_log`
+#     ——「谁在什么时候把 8.05 改成 8.10」从今天起问得出来（此前只能走库层 `store.update`，那是没有审计的改法）。
+#     形状借 dbt model versions（新版落地、旧版留在名单里）+ django-simple-history（历史行带 user 与 reason），
+#     落在本仓既有的 `superseded` 状态与 `add_audit(before/after)` 通道上。不给的旗子沿用旧值；
+#     值全同就不另起版本（也不写审计，免得审计次数高于真实改动）；非 active 的记录拒修订。
+#     改完引用它的图纸声明会被 `truth drift` 的源面点名 ⇒ 走 `truth sweep` + `truth rework` 收口。
+#     审计行写不进去判未收口（退码 4）：改了却没人知道是谁改的，正是这两条命令要消除的那格。
+aipd ctq deprecate --db state.db --project P --record T-001 --reason 客户取消该要求 --by 张工        # 停用一条要求
+#   ↑ `--reason` 必填（"没人说为什么就退掉了要求"是这一族最不能留的状态）；`--replaced-by` 给了就必须
+#     真存在——指向不存在的记录会骗过发布门禁那句「确认取代它的那条在名单里」，比不写更坏。
+#     已不在有效名单里的记录不重复停用（那会把 `superseded_at` 刷成今天，掩盖第一次改动的时刻）。
 aipd truth drift --db state.db --project P                                   # 只读扫描漂移
 #   ↑ 按**当前输入**重算每条制品记录的身份键，与记录里存的那份比，报出「该 stale 却还挂着 active」的清单
 #     （`src/aipd_os/product_truth/drift.py` 分四态：一致 / 漂移 / 不可判 / 没有可比对的键；

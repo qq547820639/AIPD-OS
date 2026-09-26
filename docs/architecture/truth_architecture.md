@@ -124,6 +124,30 @@ canonical 哈希（`cad/spec_lineage.py:41`），文件面与源面各自与它�
 那一条门也在第 58 片从"按特征名求差"改成**按记录号求差**：两条 CTQ 可以共用同一个 `feature` 标签（`aipd ctq add` 只拦「同一图纸尺寸重复」，不拦标签撞车），名字的集合差会把"其中一条没上图"掩盖成 `all ctq features covered`；缺 `record_id` 一律判不可核，不退回按名字猜。钉子见 `tests/test_production_release_gate.py::test_two_ctq_records_sharing_a_feature_label_are_not_masked` 与链上真数据的 `tests/test_cad_spec_from_truth.py::TestCliProducerAndGate::test_a_requirement_arriving_after_the_declaration_is_not_masked`。
 上游 CTQ 被停用/删除算**漂移**而不是不可判（输入读得到、算得出，只是算出来的东西说这份声明
 立不住）；重算出缺口时用一个确定性的 `ctq-gap:` 键，不折进"算不出"。
+**链头的改动入口（2026-09-27 起，F-CTQ-REVISION 第 59 片）**：第 56 片只给了 `add`，
+于是"属主改了要求"此前只有两条路——人工按记录号 `store.update`（**不留审计**），或者改完之后
+让第 57 片的源面把它读成漂移。现在补 `aipd ctq revise` 与 `aipd ctq deprecate`
+（`src/aipd_os/product_truth/ctq.py:revise_ctq` / `:deprecate_ctq`）：修订**不改写原文**，
+另起一条 active 新版本（`version = 被修订那条 + 1`），旧的标 `superseded` 并在 metadata 留
+`superseded_by` / `superseded_at` / `superseded_by_actor` / `superseded_reason` 四个链字段，
+两条命令都往 `audit_log` 落一行（actor 取 `--by`，before/after 是限值与检验方法的快照）。
+退役态选 `superseded` 而不是 `expired` 是**出口判据**：`release_manifest.py:95-99` 对
+`superseded` 只出非阻断点名（`blocking=False`，提醒"确认取代它的那条在名单里"），
+而 `expired`/`stale`/`blocked` 走的是 `blocking=True` 那一支，会把这条要求永久留在阻断名单里。
+形状借本轮实读的 dbt model versions（`latest_version` 决定未固定 `ref()` 指向哪一版；
+`deprecation_date` 原文 "Deprecated models can continue to be built by producers and be selected
+by consumers until they are disabled or removed."）与 django-simple-history 3.13.0 的
+"历史行带 user 与改动理由"，**两个候选都只借语义、不引依赖**：本仓对 SQLAlchemy 是 0 引用
+（全仓检索无命中），continuum 那条路前提就不在；而 Django 侧要求 3.10+，与本项目
+`requires-python = ">=3.9,<3.13"` 的验证矩阵相撞。三处判据值得记：① 同值修订判"没变"
+（不另起版本、不写审计行），否则审计次数会虚高于真实改动——这条是首轮 smoke 实测出来的；
+② 审计写不进去判未收口（退 4 且 `--json` 的 `ok` 同向、`changed` 保持真），
+"数据改了但没人知道是谁改的"不是干净成功；③ `--replaced-by` 给了就得真存在，
+指向不存在的记录会骗过门禁那句"确认取代它的那条在名单里"。新用例还顺手抓出返工执行器缺
+第 56 片的另一半守卫：撤回最后一条 CTQ 后 `aipd truth rework` 会把磁盘上那份声明重写成
+`features: []` 并退 0，现在 `cad/spec_rework.py` 与生产者同形地判 `empty_declaration` 失败
+（退 4，文件与记录都不动、返工任务留在 pending）。钉子见 `tests/test_truth_ctq_revise.py`
+（14 条：修订形状 / 审计 / 门口就拒 / 链条 / 命令面镜像）。
 另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片）：血缘边有**三个**生产者——
 `product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）、
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的

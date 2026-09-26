@@ -127,11 +127,19 @@ commit 链（每步一个动作，证据件与代码不同 commit）：
 
 ## 九、遗留
 
-- 改一条已声明 CTQ 的限值（revise）与停用/取代（deprecate）今天没有命令：
+- ~~改一条已声明 CTQ 的限值（revise）与停用/取代（deprecate）今天没有命令：
   端到端用例里的限值变化是走库层 `store.update` 做的，所以"谁在什么时候把 8.05 改成 8.10"
-  在 CTQ 这一格**没有审计入口**（图纸声明与 DXF 那两格有）。
+  在 CTQ 这一格**没有审计入口**（图纸声明与 DXF 那两格有）。~~ **已闭（第 59 片）**：
+  `aipd ctq revise` / `aipd ctq deprecate` 两条公开命令落地（`src/aipd_os/product_truth/ctq.py:218,324`），
+  前后值一起写进 `audit_log`（actor = `--by`，见 `src/aipd_os/cli/commands_truth.py:437`），
+  本片那条端到端用例的"改限值"也已从直写库层换成走公开命令；
+  取证见 `docs/audit/CTQ_REVISION_F-CTQ-REVISION_2026-09-27.md`。
 - ~~CTQ 变更对 drift/sweep 不可见（§六）~~ **已闭（第 57 片）**：源面补上之后 drift 点名、sweep 落刀，见 `docs/audit/SPEC_FACES_F-DRIFT-5_2026-09-27.md`。
-- `aipd ctq` 只有 `add` 一个 verb：`main.py` 的 `ctq_sub` 里只挂了 `add_parser("add")`，
+- `aipd ctq` ~~只有 `add` 一个 verb：`main.py` 的 `ctq_sub` 里只挂了 `add_parser("add")`，~~
   今天要看一个项目的 CTQ 清单只能借 `aipd release manifest`（`doc["ctq"]`）或
   `aipd truth drift` 的读数，没有专门的列表命令。
+  **verb 那一半已闭（第 59 片）**：`ctq_sub` 现挂 add / revise / deprecate 三个
+  （`src/aipd_os/cli/main.py:640,668,692`）；「没有专门的列表命令」这一格**仍开着**，
+  并已并入登记表 `product_truth.ctq_declaration` 的新限制句（`doc["ctq"]` 只收 active、
+  条目里不写 `drawing_feature`，所以按图纸尺寸问不出今天有效的是哪条）。
 - 本地开发库 `data/state.db` 刻意未打开，真实存量库里有几条 CTQ 仍未量。

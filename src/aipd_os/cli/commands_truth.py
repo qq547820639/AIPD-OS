@@ -432,3 +432,108 @@ def cmd_truth_ctq_add(args) -> int:
               "（按当前 active CTQ 生成图纸声明，再 aipd drawing generate 出图）")
     _emit(args, payload, prose)
     return 0
+
+
+def _ctq_audit(args: Any, action: str, before: Any, after: Any) -> str | None:
+    """把"谁在什么时候把什么改成了什么"写进既有的 `audit_log`；返回错误文案（None=成功）。
+
+    本仓不新造审计通道：`AIPDStateDB.add_audit` 已经带 `before_json`/`after_json`
+    （`state/db.py:1073`），形状正好。写不进去**不算收口**（调用方判 4），
+    因为"改了但没人知道是谁改的"正是这两条命令要消除的那格。
+    """
+    try:
+        from aipd_os.state.db import AIPDStateDB
+
+        AIPDStateDB(str(args.db)).add_audit(
+            actor=args.by, action=action, project_id=args.project,
+            tenant_id=args.tenant, before=before, after=after)
+    except Exception as exc:  # noqa: BLE001 - 报出来，由调用方判未收口
+        return f"{type(exc).__name__}: {exc}"
+    return None
+
+
+def cmd_truth_ctq_revise(args: Any) -> int:
+    """``aipd ctq revise``：改一条已声明 CTQ 的合格域，另起新版本并留下被取代的旧值。"""
+    from aipd_os.product_truth.ctq import CtqDeclarationError, revise_ctq
+
+    store, err = _open_store(args)
+    if err is not None:
+        return err
+    try:
+        result = revise_ctq(
+            store, record_id=args.record, revised_by=args.by,
+            nominal=args.nominal, lower_limit=args.lower, upper_limit=args.upper,
+            inspection_method=args.inspection, epistemic_status=args.epistemic,
+            test_refs=args.test_ref if args.test_ref is not None else None,
+            note=args.note, tenant_id=args.tenant, project_id=args.project)
+    except CtqDeclarationError as exc:
+        print(f"修订被拒：{exc}")
+        return 2
+    except Exception as exc:  # noqa: BLE001 - 写不进去不是"没写成功"
+        print(f"CTQ 修订失败：{type(exc).__name__}: {exc}")
+        return 2
+
+    audit_error = None
+    if result["changed"]:
+        audit_error = _ctq_audit(args, "ctq.revise", result["before"], result["after"])
+    payload = {"command": "ctq revise", "ok": audit_error is None,
+               "audit_error": audit_error, **result}
+
+    def prose():
+        if not result["changed"]:
+            print(f"未改动：{result['reason']}（{result['record_id']} 保持原样）")
+            return
+        print(f"已修订：{result['superseded']} → 新版本 {result['record_id']}"
+              f"（version {result['version']}，合格域 "
+              f"[{result['limits'][0]:g}, {result['limits'][1]:g}]）")
+        print(f"  旧值 [{result['before']['lower_limit']:g}, "
+              f"{result['before']['upper_limit']:g}] 仍留在库里，状态 superseded")
+        print(f"  信任级 {result['trust_level']}"
+              f"（认识论态 {result['epistemic_status']}，验证引用 "
+              f"{len(result.get('test_refs') or [])} 条）")
+        print("  下一步：aipd truth drift → aipd truth sweep → aipd truth rework"
+              "（引用旧版本的图纸声明会被源面点名漂移）")
+        if audit_error:
+            print(f"  未收口：审计行没写进去（{audit_error}）⇒"
+                  " 要求内容已改但没人知道是谁改的，退码 4")
+    _emit(args, payload, prose)
+    return 4 if audit_error else 0
+
+
+def cmd_truth_ctq_deprecate(args: Any) -> int:
+    """``aipd ctq deprecate``：停用一条 CTQ，写明理由与取代它的那条（如果有）。"""
+    from aipd_os.product_truth.ctq import deprecate_ctq
+
+    store, err = _open_store(args)
+    if err is not None:
+        return err
+    try:
+        result = deprecate_ctq(store, record_id=args.record, by=args.by,
+                               reason=args.reason, replaced_by=args.replaced_by,
+                               tenant_id=args.tenant, project_id=args.project)
+    except Exception as exc:  # noqa: BLE001 - 拒绝文案要点名是哪一格
+        from aipd_os.product_truth.ctq import CtqDeclarationError
+
+        if isinstance(exc, CtqDeclarationError):
+            print(f"停用被拒：{exc}")
+        else:
+            print(f"CTQ 停用失败：{type(exc).__name__}: {exc}")
+        return 2
+
+    audit_error = _ctq_audit(args, "ctq.deprecate", result["before"], result["after"])
+    payload = {"command": "ctq deprecate", "ok": audit_error is None,
+               "audit_error": audit_error, **result}
+
+    def prose():
+        lim = result["limits"]
+        print(f"已停用 {result['record_id']}：{result['feature']} @ "
+              f"{result['drawing_feature']}（原合格域 "
+              f"[{lim[0]:g}, {lim[1]:g}]）")
+        print(f"  理由：{args.reason}")
+        print("  取代它的那条：" + (result["replaced_by"] or "（未指明 —— "
+                                   "发布门禁会把它当'要求被撤回'来读，请自行确认图上不再需要它）"))
+        print("  下一步：aipd truth drift（引用它的声明会因上游不再 active 被判漂移）")
+        if audit_error:
+            print(f"  未收口：审计行没写进去（{audit_error}），退码 4")
+    _emit(args, payload, prose)
+    return 4 if audit_error else 0

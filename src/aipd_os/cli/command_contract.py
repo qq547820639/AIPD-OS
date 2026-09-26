@@ -151,6 +151,22 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                              "信任级由既有 _derive_trust 推导（无 --test-ref 即 unverified，"
                              "不自封 verified），同一个图纸尺寸上已有 active CTQ 时当场拒。"
                              "声明不合法退码 2，不留半条记录"),
+    CommandEntry("ctq revise", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.20",
+                 requires_args=frozenset({"--db", "--project", "--record", "--by"}),
+                 description="修订一条已声明 CTQ 的合格域：另起一条新版本，"
+                             "旧的那条标 superseded 并留下 superseded_by 链，"
+                             "前后值一起写进 audit_log（谁在什么时候把 8.05 改成 8.10）。"
+                             "不给的旗子沿用旧值；值全同则不另起版本；"
+                             "非 active 的记录拒修订（要重开请跑 ctq add）；"
+                             "审计写不进去判未收口（退码 4）——"
+                             "改了却没人知道是谁改的，正是这两条命令要消除的那格"),
+    CommandEntry("ctq deprecate", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.20",
+                 requires_args=frozenset({"--db", "--project", "--record",
+                                          "--reason", "--by"}),
+                 description="停用一条 CTQ：状态改 superseded 并写明理由与停用者；"
+                             "--replaced-by 给了就必须真存在（指向不存在的记录会骗过"
+                             "发布门禁那句「确认取代它的那条在名单里」）；"
+                             "已不在有效名单里的记录不重复停用"),
     CommandEntry("truth rework", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
                  requires_args=frozenset({"--db", "--project"}),
                  description="按当前 active CTQ 重算图纸声明并跑一次返工："

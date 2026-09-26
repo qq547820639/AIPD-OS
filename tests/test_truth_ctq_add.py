@@ -17,8 +17,8 @@
 4. **空声明不再被读成完成**：库里没有 active CTQ 时 `drawing spec` 旧行为是
    写一份 `features: []` + 落一条无引用的血缘记录 + `ok:true` 退 0（本轮实测），
    现在判未收口：文件不写、血缘不落、`empty_declaration` 为真；
-5. **端到端**：公开命令声明 CTQ → 出声明 → 改限值 → `truth drift` 发现 →
-   `truth sweep` 落刀 → `truth rework` 把声明文件按新限值重写。
+5. **端到端**：公开命令声明 CTQ → 出声明 → 用公开命令 `aipd ctq revise` 改限值 →
+   `truth drift` 发现 → `truth sweep` 落刀 → `truth rework` 把声明文件按新限值重写。
 """
 from __future__ import annotations
 
@@ -281,12 +281,27 @@ def test_scope_does_not_leak(env, capsys, tmp_path):
 # ---------- 五、端到端：链头到返工 ----------
 
 def _change_upper_limit(db, value=8.10):
-    """属主改了要求：今天没有 revise 命令，改限值只能走库层（那一格留给下一片）。"""
+    """属主改了要求：走公开命令 `aipd ctq revise`（第 59 片补上的那一格；
+    在那之前这里只能直接改库层记录，所以旧 docstring 里"今天没有 revise 命令"那句已过期）。
+
+    返回形状不变：`ctq` 仍是**被修订的那条旧记录**（调用点拿它的 record_id 做断言），
+    `store` 给调用点查状态与血缘。
+
+    机制跟着换了：revise 是"另起一条新版本 + 旧的标 superseded 并留 `superseded_by` 链"，
+    所以声明记录 `drawing_spec` 的源面不再走"按 ctq_refs 重算出的限值键 ≠ 记录里的
+    spec_sha256"那一支。实测到的读数是 lost 那一支：refs 里那条 id 已不在 active 集合
+    （`source面当前键与记录里那份不一致（source面：1 条上游 CTQ 已不在 active 集合里：…）`）。
+    严格说它不是 `ctq-gap:` 那半支——本夹具只有一条要求，全被撤回时
+    `spec_from_ctq([])` 交不出 gap、只交出一份空 spec，于是 current 是空声明的键。
+    两支都判 DRIFTED、退码都是 4，换的是原因而不是判决。
+    """
     store = _store(db)
     ctq = _ctqs(db)[0]
-    meta = dict(ctq.metadata)
-    meta["upper_limit"] = value
-    store.update(ctq.record_id, tenant_id=T, project_id=P, metadata=meta)
+    rc = main(["ctq", "revise", "--db", str(db), "--project", P,
+               "--record", str(ctq.record_id), "--upper", str(value),
+               "--by", "潘工"])
+    # 改不动就不算"属主改了要求"：退码非 0 时后面所有断言都在测一个没发生的改动
+    assert rc == 0, f"`aipd ctq revise` 没走通（rc={rc}）"
     return ctq, store
 
 
@@ -300,12 +315,14 @@ def _drifted(db):
 
 
 def test_ctq_change_is_visible_to_drift_and_sweep(env, capsys, tmp_path):
-    """第 56 片钉的是**缺席**，第 57 片把它反转：同一副夹具、同一个改法，只换期望。
+    """第 56 片钉的是**缺席**，第 57 片把它反转：同一副夹具、同一次改动，只换期望。
 
     第 56 片 §六 原文：`drawing_spec` 的身份键当时只有声明文件哈希，所以
     "改了 CTQ 但没人 propagate"这一条 drift/sweep 都看不见（当时先按"应该能发现"写断言、
     它红了，才改钉成缺席）。第 57 片补上源面之后这里必须反过来，
     来历记在 `docs/audit/SPEC_FACES_F-DRIFT-5_2026-09-27.md`。
+    第 59 片起"改限值"这一步从库层 `store.update` 换成公开命令 `aipd ctq revise`，
+    判决不变、变的是源面命中哪一支（见 `_change_upper_limit` 的说明）。
     """
     _, db = env
     assert _add(db) == 0
@@ -315,6 +332,8 @@ def test_ctq_change_is_visible_to_drift_and_sweep(env, capsys, tmp_path):
     _change_upper_limit(db)
 
     drifted, report = _drifted(db)
+    # 走的是"refs 里那条 id 已不在 active 集合"这支（lost），不是"重算出的限值键不等"那支；
+    # 两支都进 DRIFTED，所以这一条与下面的退码断言都不必改
     assert spec_record in drifted, f"改了 CTQ 却没被 drift 发现：{report}"
     # sweep 的前半就是 drift ⇒ 这一刀今天落得下去了
     assert main(["truth", "sweep", "--db", str(db), "--project", P]) == 4
@@ -327,7 +346,8 @@ def test_ctq_change_is_visible_to_drift_and_sweep(env, capsys, tmp_path):
 
 def test_declared_ctq_feeds_spec_propagate_and_rework(env, capsys, tmp_path):
     """公开命令走通的一整条链（这是本片存在的理由）：
-    声明 CTQ → 出声明 → 改限值 → propagate 标 stale 并建任务 → rework 按新限值重写文件。"""
+    声明 CTQ → 出声明 → `aipd ctq revise` 改限值 → propagate 标 stale 并建任务 →
+    rework 按新限值重写文件。"""
     _, db = env
     assert _add(db) == 0
     rc, payload, out = _spec(db, tmp_path, capsys)
@@ -336,6 +356,8 @@ def test_declared_ctq_feeds_spec_propagate_and_rework(env, capsys, tmp_path):
     spec_record = payload["lineage"]["record_id"]
 
     ctq, store = _change_upper_limit(db)
+    # `--upstream` 给的是**被修订的那条旧 id**：revise 之后它已 superseded，
+    # 但血缘边是 `drawing spec` 当时落的、不随状态消失 ⇒ propagate 仍顺着边找到下游
     assert main(["truth", "propagate", "--db", str(db), "--project", P,
                  "--upstream", str(ctq.record_id)]) == 4
     statuses = {str(r.record_id): str(r.status)
@@ -347,10 +369,17 @@ def test_declared_ctq_feeds_spec_propagate_and_rework(env, capsys, tmp_path):
     assert main(["truth", "rework", "--db", str(db), "--project", P,
                  "--all-pending"]) == 0
     text = out.read_text(encoding="utf-8")
+    # 新限值现在住在 revise 另起的那条新版本记录上（旧那条仍是 8.05、状态 superseded），
+    # 所以这一格比改夹具之前更硬：它证明 rework 读的是 active 名单里的新版本
     assert "8.1" in text, f"返工没按新限值重写声明：{text[:200]}"
     edges = {(e["upstream_id"], e["downstream_id"])
              for e in LineageGraph(store, tenant_id=T, project_id=P).edges(
                  tenant_id=T, project_id=P)}
+    # 修订之后这一条钉的事换了位置：`('旧 id', spec)` 这条边是 `drawing spec` 当年落的、
+    # rework 只补边不删边（实测 edges == {('T-001','T-002'), ('T-003','T-002')}），
+    # 所以它现在钉的是"返工不许抹掉历史上游边"，而"新版本被接进上游名单"那一半
+    # 由第 59 片的 `test_revise_is_visible_to_drift_sweep_and_rework`（`refs == active`）钉。
+    # 断言原样保留：按第 2、3 步的规矩不放宽、不删。
     assert (str(ctq.record_id), spec_record) in edges, edges
 
 

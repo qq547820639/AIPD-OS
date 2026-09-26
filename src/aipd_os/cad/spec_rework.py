@@ -18,9 +18,16 @@
 2. `rewrote` / `file_restored` —— 内容确实变了（`rewrote`），或内容没变但文件被删/被手改
    （`file_restored`，对应 BitBake 的"戳失配就重跑"）⇒ 用同一个 renderer 重写文件，
    更新记录的 content/metadata/source，并给新的 CTQ 引用集合补边；
-3. `gap` / `unsupported_artifact` / `missing_path` —— 重算出缺口（补齐 CTQ 之前这份声明
-   本来就不该存在）、记录不是本执行器认识的制品、或没写产物路径 ⇒ **返回失败**，
+3. `gap` / `empty_declaration` / `unsupported_artifact` / `missing_path` —— 重算出缺口
+   （补齐 CTQ 之前这份声明本来就不该存在）、重算出来是一份**空声明**（要求已被撤回，
+   见下）、记录不是本执行器认识的制品、或没写产物路径 ⇒ **返回失败**，
    交回引擎的有界退避与 max_attempts（不许把它记成"返工完成"）。
+
+`empty_declaration` 与 `gap` 分两支出：`spec_from_ctq` 在**一条 active CTQ 都没有**时
+返回的空 spec 不带任何 gap（分母为 0 时无从缺起）。生产者侧 `aipd drawing spec`
+在第 56 片实测后已按"空声明不是交付物"收口，这一片探的是执行器有没有同一半守卫——
+没有的话，`aipd ctq deprecate` 撤回最后一条要求后 `truth rework` 会把磁盘上那份
+真声明**重写成 `features: []` 并退 0**，把"要求没了"记成"产物完成了"。
 
 `unsupported_artifact` 这一支必须在**消费 attempts 之前**由调用面先问一次
 （见 `artifact_kind`）：拿一次注定失败的尝试去烧配额，等于让引擎替我们把
@@ -87,6 +94,12 @@ def rework_artifact(store: Any, truth_id: str) -> dict[str, Any]:
         return {"truth_id": truth_id, "ok": False, "outcome": "gap",
                 "reason": f"重算出 {len(gaps)} 条缺口，补齐之前这份声明本就不该存在",
                 "gap_kinds": [str(g.get("kind")) for g in gaps]}
+    if not spec["features"] and not (spec.get("datums") or []):
+        return {"truth_id": truth_id, "ok": False, "outcome": "empty_declaration",
+                "reason": f"按当前 active CTQ（{len(records)} 条）重算出来是一份空声明："
+                          "要求被撤回是『分母少一条』，不是『这份产物完成了』；"
+                          "磁盘上那份声明与记录都不动，先声明新的 CTQ 再返工"
+                          "（与 aipd drawing spec 第 56 片同一半守卫）"}
 
     content, digest, refs = spec_content(spec, path)
     recorded = str(meta.get("spec_sha256") or "")
