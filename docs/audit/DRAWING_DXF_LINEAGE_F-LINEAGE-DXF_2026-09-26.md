@@ -124,7 +124,7 @@ E9/E10 是补完输入键之后新立的两支：各自抽掉一类输入，只�
 cd /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
 PYTHONPATH=src:scripts .venv/bin/python -m pytest tests/test_drawing_dxf_lineage.py \
   tests/test_drawing_spec_lineage.py tests/test_truth_rework_cli.py -q
-.venv/bin/python /tmp/s46/battery.py          # 电池（8 条）
+.venv/bin/python /tmp/s46/battery.py          # 电池（10 条）
 .venv/bin/python /tmp/s46/bytes_probe.py      # DXF 字节漂移实测
 .venv/bin/python /tmp/s46/sig_gap.py          # 换模型是否复用同一条记录（修前后各跑一遍）
 .venv/bin/ruff check src tests
@@ -132,4 +132,28 @@ PYTHONPATH=src:scripts .venv/bin/python -m pytest tests/test_drawing_dxf_lineage
 
 ## 九、终读数
 
-（本轮收口链跑完后填：全量收集/通过数、干净工作树复算、发布门禁 8/8、audit_repo 单条按设计红）
+全部由命令现场产出（记录于 2026-09-26；被背书的树 = HEAD `53e4876`，
+attestation worktree 检出 `bbc74d6`）。本文件在 `docs/audit/` 下、不参与发布哈希，
+所以绝对数写在这里而不写进 CHANGELOG。
+
+| 项 | 读数 | 产出命令 |
+| --- | --- | --- |
+| 本片常驻用例 | 10 passed（11.97s） | `pytest tests/test_drawing_dxf_lineage.py -q` |
+| 邻接面（血缘／返工／命令面／C6／能力矩阵） | 71 passed | 上面那个文件 + `test_drawing_spec_lineage` `test_truth_rework_cli` `test_truth_propagate_cli` `test_command_surface_census` `test_c6_coverage` `test_capability_matrix` 一起跑 |
+| 变异电池 | 10 条：杀 10 / 存活 0 / 注入无效 0；对照臂 rc=0 | `.venv/bin/python /tmp/s46/battery.py` |
+| 撞键复现（补漏前后各一遍） | 修前记录数 **1**、两次 `inputs=30599f43…` 相同；修后 **2** 条（`29c694b8…` / `22f16d04…`） | `.venv/bin/python /tmp/s46/sig_gap.py` |
+| DXF 字节漂移 | 同输入两次：13170 行 / 仅 2 行不同（`$TDCREATE`、`$TDUPDATE`），sha 前缀 `855ce37c…` vs `d643913f…` | `.venv/bin/python /tmp/s46/bytes_probe.py` |
+| 全量复算（背书用） | **2326 passed / 3 skipped / 0 failed**，215.06s，total 2329 | 干净 worktree `/tmp/s46b` @`bbc74d6`，带 `AIPD_SOURCE_COMMIT=<tag>` 与 `--json-report` |
+| 全量复算（过程读数，不背书） | 2324 passed / 3 skipped / 0 failed，290.62s | 补漏前那一遍 @`cef8bb0` |
+| 发布清单 | `RELEASE_MANIFEST.json` 642 个文件（640 → 642，version 5.6.0） | `scripts/regenerate_release_manifest.py` |
+| 溯源锚 | `SOURCE_MANIFEST`/`PROVENANCE` 的 `source_commit` = `a66040520139…`（tag SHA，**不跟 HEAD**）；`test_report.present=true`、`total=2329`、`passed=2326`、`failed=0`，报告 sha256 `3e94b016ffe92124…` | `scripts/release_evidence.py --source-commit <tag> --test-report docs/audit/pytest-report-v5.6.0.json` |
+| 生产发布门禁 | `rc=0`、`release_ready=true`、8/8 checks `passed=true`（含 `test_numbers_from_report`、`signature_verifiable`、`no_secrets`、`no_unacknowledged_cve`） | `PATH="$PWD/.venv/bin:$PATH" .venv/bin/python scripts/production_release_gate.py --release-ready --tag v5.6.0` |
+| 严格审计 | `rc=1`，`✗` **恰好 1 条**：`Provenance source commit mismatch: manifest=a66040520139… vs HEAD=53e48760060a…`（按设计：清单钉 tag、树在往前走）。该量具不输出 `✓`（`✓` 计数 0 是它的形状，不等于"没有通过项"） | `scripts/audit_repo.py --strict` |
+| 文档引用普查 | 文档 150 份 / 代码引用 3654 处 / **现状面缺陷 0 条** / 历史面 128 条（只报不判） | `scripts/doc_reference_census.py` |
+| 命令面真调 | 已注册 67 条全部在 `cli` 档、低于 cli 档 0 条（本片只给既有命令加参数，命令数与手写分母不动） | `scripts/command_surface_census.py` |
+| SKILL 自审 | 0 警告 0 失败 | `scripts/skill_quality_audit.py` |
+| lint | `ruff check src tests` → All checks passed | — |
+
+**没跑的那部分（不是通过，是没跑）**：没有用任何外部 CAD 查看器打开新生成的 DXF 验渲染；
+`drawing_dxf` 的返工执行器与 BOM/成本的血缘生产者都还没接（§七）；
+`--json` 的 `lineage_skipped` 字段没有单独的机器面断言（终端面文案有断言）。
