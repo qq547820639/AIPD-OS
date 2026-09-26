@@ -55,11 +55,32 @@ trust_level / effective_at / expires_at / version / status / metadata），
 （`src/aipd_os/cad/spec_rework.py`）——按当前 active CTQ 重算图纸声明：哈希一致**且**磁盘产物
 仍匹配就一个字节都不动产物（`unchanged`，但库里的版本与 stale 真的收口）；内容变了、或文件被删/
 被手改，就重写并补血缘边（`rewrote` / `file_restored`）；重算出 gap 一律判失败，交给引擎的
-有界退避与 `max_attempts`。执行器认 `metadata.artifact` 为 `drawing_spec`（重算声明）、`drawing_dxf`（第 47 片：按记录的输入集合重跑出图，先出到暂存目录，只有 `drawing generate` 退码 0 才替换正式图纸——判未收口的重跑既不覆盖现状也不记成功）；不认识的制品在
+有界退避与 `max_attempts`。执行器认 `metadata.artifact` 为 `drawing_spec`（重算声明）、`drawing_dxf`（第 47 片：按记录的输入集合重跑出图，先出到暂存目录，只有 `drawing generate` 退码 0 才替换正式图纸——判未收口的重跑既不覆盖现状也不记成功）、`bom`（第 53 片：按当前 BOM 行演进这一条版本记录）与 `bom_cost`（第 49 片：按记录里的 BOM 与口径五项重跑核算）；不认识的制品（今天只剩 `quote_batch`）在
 **烧 attempts 之前**逐条点名拒掉——「这格没有执行器」不许被伪装成「返工失败了三次」。
 接线前那句「产品侧无人调用」现在反过来钉（`tests/test_truth_propagate_cli.py::`
 `TestReworkHalfIsWiredAndItsBoundaryStaysVisible` 要求产品侧真有调用点），
 边界本身由 `tests/test_truth_rework_cli.py` 逐条钉住。
+
+**发现与触发（2026-09-26 更新，F-DRIFT 第 51 片 / F-DRIFT-2 第 52 片 / F-SWEEP 第 54 片）**：
+上面所有"再跑一次 propagate"的前提是**有人记得跑**。现在这一环有两条命令：
+`aipd truth drift` 只读地把每条有效制品记录的键**按当前世界重算**再比对
+（`src/aipd_os/product_truth/drift.py` 分四态：一致 / 漂移 / 不可判 / 没有可比对的键；
+五类制品各有 resolver：`drawing_spec` 读声明文件哈希、`drawing_dxf` 重算出图输入签名、
+`bom` 读当前 BOM 头与行、`bom_cost` 用记录里的口径五项重算、
+`quote_batch` 用记录里 `quote_ids` 读回的**当前报价事实**重算——
+键不靠报价文件，因为 `quote_id`/`version` 是 apply 时按库内版本号现铸的，文件里没有，
+而"会变的"只有事实态（`retire_stale_officials` 把 `V` 改 `R`）），
+整表逐字段不变是断言不是叙述；
+`aipd truth sweep` 把发现接落到刀（`src/aipd_os/product_truth/sweep.py` +
+`cmd_truth_sweep`）：同一次进程内对「漂移且还 active」的记录按 `truth_lineage` 边表找上游，
+用与 `truth propagate` **同一个**入口 `on_upstream_changed` 标 stale 并建任务，
+边表里找不到上游的逐条点名不办。形状取自本轮开过的两页官方文档
+（OpenTofu plan/apply、dbt `state:modified`），但**不落 plan 工件**：本仓的只读检测已经是
+`truth drift`，再存一份就是把同一个事实存两处，还会引入"工件比现实更旧"。
+代价面有一条常驻用例钉住（`tests/test_truth_sweep_cli.py::`
+`test_hand_edited_spec_sweeps_to_the_ctq_and_rework_writes_the_file_back`）：
+人手工改生成出来的声明文件 ⇒ sweep 落刀到那条 CTQ ⇒ `truth rework` 按 CTQ 把人改的文件覆盖回去。
+这条语义不是 sweep 造的（propagate + 第 45 片执行器一直如此），但"一条命令就会走到"是本轮开始的。
 另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片）：血缘边有**三个**生产者——
 `product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）、
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的
@@ -72,7 +93,11 @@ trust_level / effective_at / expires_at / version / status / metadata），
 只有 2 行不同，差的是 `$TDCREATE` / `$TDUPDATE` 那一对儒略日时间戳——按字节哈希会把
 时间戳读成一次工程变更；DXF 自己的 sha256 仍作为**观测**留在 metadata 里。同一产物路径
 只留一版有效，新版落下时把旧版标 `superseded`，否则一张图改十次就有十条永久的下游。
-BOM / 成本那一支的血缘生产者已在第 48 片接上（`aipd cost calc --truth-lineage` → `src/aipd_os/bom/cost_lineage.py`：按「BOM 身份 + 参与行集合」写 `artifact=bom` 版本记录，按「BOM 签名 + 口径五项（tooling_fee/target_quantity/amortize_over/nre/margin_pct）」写 `artifact=bom_cost` 成本结论记录，连 `bom → cost` 的 `affects` 边；同作用域只留一版有效、旧版标 `superseded`；BOM 为空什么都不写），于是改一行 BOM 再跑 `aipd truth propagate` 就能把那笔成本结论标 stale；成本结论那一条已在第 49 片接上返工执行器（`src/aipd_os/bom/cost_rework.py`：按记录里的 BOM 与口径五项重跑核算，把**这一条**记录演进到新结果并补回边）。两条纪律值得单独写：① 执行器**不**走生产面的写版本路径（引擎 `run_rework` 成功时是对这一条 bump 版本、关 stale，所以这里用 `store.update` 演进它本身；「换输入另起一版 + 旧版 superseded」是生产面 `cost calc --truth-lineage` 的规则，两边刻意不同）；② 第 48 片那批记录没把口径五项的**值**存进 metadata（只存了哈希），那些记录重建不出同一次核算，执行器一律 `missing_inputs` 点名拒——拿默认口径猜一遍会得到一条「按当前 BOM 重算过」的假结论。上游方向在第 50 片接上了一跳：`aipd quote apply --truth-lineage`（`src/aipd_os/supply_chain/quote_lineage.py`）按「全部参与判定的报价事实 + 批次币种」写一条 `artifact=quote_batch` 版本记录，并连一条 `quote_batch → 当前 artifact=bom` 的边——这是整条链上第一个往 BOM 版本记录**连入边**的生产者，于是「改了报价」第一次能经 `truth propagate` 把 BOM 版本与那笔成本结论一起打成 stale。两个刻意的取舍：① **来源文件名不进签名**（同一批价换个路径重下载不是又一次工程变更，与第 46 片把 DXF 时间戳挡在签名外同一个理由，常驻用例正反各钉一条）；② 报价完全可以先于任何一次 `cost calc --truth-lineage` 发生，那时下游记录**还不存在**——记录照写、边数 0、把原因点名说出来，不算失败也不算连上。**BOM 版本记录仍没有执行器**（它的任务仍走「不认识的制品在烧 attempts 之前逐条点名拒掉」那条路）。图纸这一跳在第 47 片两头都接上了：`aipd truth rework` 会按记录里的输入集合重跑出图，并且**不新增版本记录**——引擎 bump 的是这一条；「换输入另起一版 + 旧版标 superseded」只是生产面（`aipd drawing generate`）的规则。
+BOM / 成本那一支的血缘生产者已在第 48 片接上（`aipd cost calc --truth-lineage` → `src/aipd_os/bom/cost_lineage.py`：按「BOM 身份 + 参与行集合」写 `artifact=bom` 版本记录，按「BOM 签名 + 口径五项（tooling_fee/target_quantity/amortize_over/nre/margin_pct）」写 `artifact=bom_cost` 成本结论记录，连 `bom → cost` 的 `affects` 边；同作用域只留一版有效、旧版标 `superseded`；BOM 为空什么都不写），于是改一行 BOM 再跑 `aipd truth propagate` 就能把那笔成本结论标 stale；成本结论那一条已在第 49 片接上返工执行器（`src/aipd_os/bom/cost_rework.py`：按记录里的 BOM 与口径五项重跑核算，把**这一条**记录演进到新结果并补回边）。两条纪律值得单独写：① 执行器**不**走生产面的写版本路径（引擎 `run_rework` 成功时是对这一条 bump 版本、关 stale，所以这里用 `store.update` 演进它本身；「换输入另起一版 + 旧版 superseded」是生产面 `cost calc --truth-lineage` 的规则，两边刻意不同）；② 第 48 片那批记录没把口径五项的**值**存进 metadata（只存了哈希），那些记录重建不出同一次核算，执行器一律 `missing_inputs` 点名拒——拿默认口径猜一遍会得到一条「按当前 BOM 重算过」的假结论。上游方向在第 50 片接上了一跳：`aipd quote apply --truth-lineage`（`src/aipd_os/supply_chain/quote_lineage.py`）按「全部参与判定的报价事实 + 批次币种」写一条 `artifact=quote_batch` 版本记录，并连一条 `quote_batch → 当前 artifact=bom` 的边——这是整条链上第一个往 BOM 版本记录**连入边**的生产者，于是「改了报价」第一次能经 `truth propagate` 把 BOM 版本与那笔成本结论一起打成 stale。两个刻意的取舍：① **来源文件名不进签名**（同一批价换个路径重下载不是又一次工程变更，与第 46 片把 DXF 时间戳挡在签名外同一个理由，常驻用例正反各钉一条）；② 报价完全可以先于任何一次 `cost calc --truth-lineage` 发生，那时下游记录**还不存在**——记录照写、边数 0、把原因点名说出来，不算失败也不算连上。**BOM 版本记录已在第 53 片接上返工执行器**（`src/aipd_os/bom/bom_rework.py`：按当前 BOM 行
+把**这一条**版本记录演进到新键，正文与 metadata 走生产面那份投影 `bom_version_fields`；
+「当前 BOM 没有行」「这张 BOM 已不是记录那张」「签名没变而 revision/version_no 变了」
+三种都不算收口）。今天没有执行器的那一类只剩 `quote_batch`——它的"返工"是重新 apply 一次报价，
+属生产面动作，不该由返工执行器代做。图纸这一跳在第 47 片两头都接上了：`aipd truth rework` 会按记录里的输入集合重跑出图，并且**不新增版本记录**——引擎 bump 的是这一条；「换输入另起一版 + 旧版标 superseded」只是生产面（`aipd drawing generate`）的规则。
 生产者集合由
 `tests/test_drawing_spec_lineage.py::TestProducerRatchet` 按 AST 两向钉住——
 多一个未登记的 `add_edge` 调用点要红，把本轮这个删掉也要红。
