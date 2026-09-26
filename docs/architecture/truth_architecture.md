@@ -93,6 +93,25 @@ CLI 侧另测三档（4/13/33 条记录 × 两遍 × 7 次重复）：一趟命�
 **几乎全是解释器启动与 import**，扫描本体约 10 ms 量级、落在两遍读数的散布之内
 （同机负载 5~11 时首趟还读到 4.2 s 的冷启动）。结论是不给产品面加 per-resolver 计时字段：
 被启动开销淹没的读数没有读者，而"该不该担心扫描成本"这件事现在由门禁而不是由感觉回答。
+
+**链头（2026-09-26 起，F-CTQ-PRODUCER 第 56 片）**：上面每一段都默认"库里已经有 CTQ"，
+而本轮复核的结果是：`record_type="ctq"` 在 `src/` 侧**只有读者没有写者**
+（`release_manifest.py:69`、`cad/spec_from_truth.py:55`、`cli/commands_drawing.py:86`、
+`cad/spec_rework.py:84`），PI gate 只写 `requirement`/`feature` 且 Feature 模型里没有任何公差字段，
+所以第二跳的输入此前只能由测试种出来。现在由 `aipd ctq add`
+（`src/aipd_os/product_truth/ctq.py:declare_ctq`）补上：属主自述，七个必填项一次校验后才落库，
+信任级复用 `product_intelligence/gate_criteria._derive_trust`——**没有 `--test-ref` 就是
+`unverified`**，"有人提了要求"不等于"要求被验证过"（与 P0-08 同一条规则）。
+两处形状值得记：① 同一个图纸尺寸上已有 active CTQ 时**点名拒**，因为
+`spec_from_truth` 对两条抢一个尺寸的处理是把两条一起撤回，出图那天才发现更坏；
+② `drawing spec` 在 0 条 active CTQ 时旧行为是"写一份 `features: []` + 落一条无引用血缘 +
+退 0"，本轮改成判未收口（退 4，文件与血缘都不写，payload 多一格 `empty_declaration`）——
+空声明不是交付物，"还没有人声明要求"不能被读成"声明已完成"。
+仍留着的边界有一条被钉成常驻断言（`tests/test_truth_ctq_add.py::`
+`test_ctq_change_is_invisible_to_drift_and_sweep`）：**改了 CTQ 限值，`truth drift`/`truth sweep`
+看不见**，因为 `drawing_spec` 的身份键是声明文件的哈希而不是来源的哈希；那条路上今天只有
+`truth propagate --upstream <ctq>` 走得通。复合身份键（文件面 + 来源面，旧记录按不可判点名）
+是第 57 片的靶子。
 另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片）：血缘边有**三个**生产者——
 `product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）、
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的

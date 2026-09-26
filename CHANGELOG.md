@@ -951,6 +951,33 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.17 F-CTQ-PRODUCER 第 56 片：新公开命令 `aipd ctq add`——血缘链的头第一次有了生产写入点**：
+  第 43/45/46 三片把「CTQ → 图纸声明 → DXF」这三跳接通之后，一直没人问过一句：**CTQ 本身谁写**。
+  本轮复核的答案是「只有测试写」：`record_type="ctq"` 在 `src/` 侧只有四个读者
+  （`release_manifest.py:69` 的发布证据分母、`cad/spec_from_truth.py:55` 的声明输入、
+  `cli/commands_drawing.py:86` 与 `cad/spec_rework.py:84` 的重算入口），
+  全仓 grep（排除 `tests/`）**没有任何写入点**；PI gate 只写 `requirement`/`feature`
+  （`product_intelligence/gate.py:455,476`），而 Feature 模型（`models.py:507-519`）
+  连一个公差字段都没有 —— 所以"让 gate 顺带派生 CTQ"会等于**凭空发明上下限**，这条路排除。
+  落点因此是属主自述：`--feature/--drawing-feature/--nominal/--lower/--upper/--inspection/--by`
+  全必填，校验一次性做完才落库（标称必须落在 `[下限, 上限]` 内、下限严格小于上限、
+  认识论态只认 `_derive_trust` 分支的那五个字母），`--by` 不留机器缺省值（AI 不自批）；
+  **信任级不自封**：复用 `gate_criteria._derive_trust`，没有 `--test-ref` 就是 `unverified`，
+  给了引用且态非 `U` 才 `verified`（P0-08 同一条规则）。
+  两条"门口就拒"的形状：同一图纸尺寸上已有 active CTQ 时点名拒（因为 `spec_from_truth`
+  遇到两条抢一个尺寸会把**两条一起撤回**，让它出图那天才发现更坏），同一份声明重跑幂等复用原记录。
+  顺手补一个实测到的洞：库里 0 条 active CTQ 时 `aipd drawing spec` 旧行为是写一份
+  `features: []` 的声明 + 落一条无引用的血缘记录 + `ok:true` 退 0（本轮真跑出来的读数），
+  现在判未收口（退 4、文件与血缘都不写、payload 多一格 `empty_declaration`）。
+  一条实测把边界钉住：**改了 CTQ 的限值，`truth drift` 与 `truth sweep` 都看不见**——
+  `drawing_spec` 的身份键是声明文件的哈希，不是来源的哈希（先按"应该能发现"写断言，它红了，
+  才改成钉缺席）；修法（复合身份键 + 旧记录按 undecidable 点名）记为第 57 片。
+  命令面镜像同批改：契约、`COMMAND_FUNCS`、`main.py` 子解析器、SKILL 计数 59→60、
+  README 速查、registry 新行 `product_truth.ctq_declaration`、census 分母 69→70。
+  常驻用例 19 条（`tests/test_truth_ctq_add.py`），端到端那条走完整链：
+  `ctq add` → `drawing spec`（1 条 CTQ→声明边）→ 改限值 → `truth propagate` 标 stale 建任务
+  → `truth rework` 按新限值把声明文件重写。取证见
+  `docs/audit/CTQ_PRODUCER_F-CTQ-PRODUCER_2026-09-26.md`。
 - **v5.16 F-DRIFT-4 第 55 片：漂移扫描的成本形状被量出来并钉成门禁——「要不要担心它」不再靠感觉**：
   `truth drift` / `truth sweep` 是这条链上唯一随交付物数量长期变大的读路径（第 51~54 片只钉了
   判决形状，没钉成本形状）。外部检索真做了并**改变了落地位置**：亲开 dbt《Run results JSON file》

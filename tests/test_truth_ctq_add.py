@@ -135,6 +135,21 @@ def test_verifiable_status_without_ref_stays_downgraded(env, capsys):
 
 
 # ---------- 三、门口就拒 ----------
+def test_changed_limits_are_not_treated_as_the_same_declaration(env, capsys):
+    """幂等只看"内容一样"，不看"名字一样"：改了上下限就是另一份声明。
+    这一条是电池逼出来的——把 `identical_declared_ctq` 里的数值比较去掉，
+    其余用例全绿，只有这里会红。"""
+    _, db = env
+    assert _add(db) == 0
+    rc = main(["ctq", "add", "--db", str(db), "--project", P,
+               "--feature", "hole_Ø8", "--drawing-feature", "TOP.hole_1",
+               "--nominal", "8.0", "--lower", "7.95", "--upper", "8.10",
+               "--inspection", "CMM", "--by", "潘工"])
+    out = capsys.readouterr().out
+    assert rc == 2, f"改了限值不是同一份声明，不该被幂等复用：{out!r}"
+    assert "已经被 CTQ" in out, out
+    assert len(_ctqs(db)) == 1, "被拒之后库里不该多出第二条"
+
 
 def test_nominal_outside_the_domain_is_refused_and_nothing_is_written(env, capsys):
     _, db = env
