@@ -138,7 +138,26 @@ A5 换原告后 KILLED，电池结束后 `git status --short` 为空（注入全
 
 ## 八、终读数
 
-@@FINAL@@
+commit 链：`555eb8d` 判据与两面 → `84183bf` 取证文档 + 三处镜像 + 电池逼出来的 gap 用例 →
+`54bc263` 重锚矩阵与清单 → `fd0d019` 电池读数 → `evidence` 绑定（本节后一条 commit）。
+
+| 量具 | 命令 | 读数 |
+| --- | --- | --- |
+| 收集数 | `pytest --collect-only -q tests` | `2464 collected`（第 56 片末 2452 → +12），新文件 `tests/test_truth_spec_faces.py` 单独读到 **12 条** |
+| attestation | 干净 worktree `/tmp/s57w @ fd0d019` + `PYTHONPATH=<wt>/src:<wt>/scripts` + `AIPD_SOURCE_COMMIT=<tag SHA>` | `2461 passed, 3 skipped, 95 warnings in 211.92s`，rc=0 |
+| 验签器 | `/tmp/s57/verify_report.py --report /tmp/s57/report.json` | 18 条前提全 `[OK]`、`RESULT 全部前提成立，可以绑定`；同一把尺子 `--self-test` 对第 56 片报告读到「拒签成立：6 条前提不成立」，其中一条正是"旧用例名还在报告里" |
+| 发布门 | `production_release_gate.py --release-ready --tag v5.6.0` | 8/8 `"passed": true`、0 false、rc=0 |
+| 存量审计 | `audit_repo.py --strict` | rc=1，仅 1 条 ✗：`Provenance source commit mismatch: manifest=a66040520139… vs HEAD=fd6e0e93b705…`（刻意：清单绑 tag SHA，不跟 HEAD 重锚） |
+| 发布清单 | `SOURCE_MANIFEST.json` `files` 长度 | 659 → **660**（多的就是 `tests/test_truth_spec_faces.py`） |
+| lint / 类型 | `ruff check src tests state_service` / `mypy src` | rc=0 `All checks passed!` / `no issues found in 245 source files` |
+| 电池 | `/tmp/s57/battery.py` @ `54bc263` | 对照臂 rc=0；**8 KILLED / 0 SURVIVED / 0 注入无效**；跑完 `git status --short` 空 |
+| 形状 | §五 配对探针 | SQL `1 → 8` 且随记录数不变；声明文件读次数 = 记录数；四态分桶 5/20/100/300 全 `in_sync` |
+| 镜像 | 公开命令 / 普查分母 / 登记表行数 | 本片**不新增命令** ⇒ 60 / 70 不变；`registry_data.CAPABILITIES` 仍 84 行（`None` id 0 条），但改对了 1 条不存在的用例名 + 登记了新测试文件 |
+
+一处"看着像红"的要写清：改判过程中主仓整套件读到过 `2 failed, 2458 passed`，两条红的都是
+`tests/test_packaging.py` 的清单哈希门（那棵树还没有重锚），不是行为回归；重锚之后
+attestation 读到 0 failed。另有一条是我自己的用法错：`capability_matrix.py --check` 不存在
+（rc=2 `unrecognized arguments`），它的真强制点是常驻用例与 `--pin-commit` 重锚。
 
 ## 九、遗留
 
@@ -147,7 +166,13 @@ A5 换原告后 KILLED，电池结束后 `git status --short` 为空（注入全
 - 源面每次扫描多开一个 store 实例（§五 那 6 条 schema 引导）。今天它是常数，
   若以后 resolver 变多，值得换成复用同一个 store；未做，因为没有门禁逼它。
 - 上游新增一条 CTQ 时，这条声明"覆盖不全"仍只由发布门禁回答，不由 drift 回答；
-  两个判据的分工写在 README 与架构文档里，但**没有一条用例正面钉"门禁会红"**
-  （`gdt_covers_ctq` 的既有钉子钉的是声明与 CTQ 一致的场景）。
+  两个判据的分工写在 README 与架构文档里，但**没有一条用例正面钉"门禁会红"**。
+  而且本轮读码读出一个更前面的疑点：`scripts/production_release_gate.py:271-284` 的
+  `gdt_covers_ctq` 拿 `doc["ctq"][].feature` 与 `doc["gdt"][].feature` 求差集，
+  前者的来源是 `release_manifest.py:74,87` 的 `metadata.feature`（`aipd ctq add --feature`
+  那个"要求名"，如 `hole_Ø8`），后者来自图纸特征（走的是 `metadata.drawing_feature`，
+  如 `TOP.hole_1`）⇒ 两个名字不同源时这条门对链上真数据**恒红**，
+  也可能它从未被真链数据走过（现有绿灯来自 `releases/golden-projects/**` 的清单）。
+  **未实测，不下结论**；已立任务 #65：先用生产命令造一份真链数据跑这条门，按读数三选一定档。
 - 真实存量库 `data/state.db` 刻意未打开，所以"库里现有记录里有多少条没有 `ctq_refs`"
   未测（它们在本片之后会落进 `no_record_signature` 而不是 `in_sync`，读数会变差是好事）。
