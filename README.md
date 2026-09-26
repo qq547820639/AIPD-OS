@@ -446,6 +446,14 @@ aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷
 #     引擎只判 blocked，绝不伪造成功。
 aipd truth tasks --db state.db --project P [--status pending]     # 只读列返工待办
 aipd truth rework --db state.db --project P (--task RW-001 | --all-pending)   # 跑一次真实返工
+aipd ctq add --db state.db --project P --feature hole_Ø8 --drawing-feature TOP.hole_1 --nominal 8.0 --lower 7.95 --upper 8.05 --inspection CMM --by 张工   # 链头：由人声明一条 CTQ
+#   ↑ `record_type="ctq"` 此前全仓只有读者（发布证据分母、`aipd drawing spec` 的输入、
+#     返工重算），没有任何生产写入点 ⇒ 链条第二跳在真库里永远对着 0 条 CTQ 跑
+#     （PI gate 只写 requirement/feature，Feature 模型里连公差字段都没有）。
+#     信任级由既有 `_derive_trust` 现算：不给 `--test-ref` 就落在 unverified，
+#     属主说一句话不等于「已被验证」（P0-08 同一条规则）；`--by` 无机器缺省值。
+#     校验在门口做完（标称必须在 [下限, 上限] 内、下限必须小于上限、检验方法必填、
+#     同一图纸尺寸上已有 active CTQ 时拒且不静默覆盖），不合法退 2 且一条都不落库。
 aipd truth drift --db state.db --project P                                   # 只读扫描漂移
 #   ↑ 按**当前输入**重算每条制品记录的身份键，与记录里存的那份比，报出「该 stale 却还挂着 active」的清单
 #     （`src/aipd_os/product_truth/drift.py` 分四态：一致 / 漂移 / 不可判 / 没有可比对的键）。

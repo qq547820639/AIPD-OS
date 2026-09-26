@@ -99,6 +99,7 @@ from .commands_release import (
 )
 from .commands_supply import cmd_quote
 from .commands_truth import (
+    cmd_truth_ctq_add,
     cmd_truth_propagate,
     cmd_truth_rework,
     cmd_truth_sweep,
@@ -538,6 +539,8 @@ COMMAND_FUNCS: dict[str, Any] = {
     "truth rework": cmd_truth_rework,
     "truth drift": cmd_truth_drift,
     "truth sweep": cmd_truth_sweep,
+    # 链头：CTQ 由人声明（判据见 product_truth/ctq.py 的模块 docstring）
+    "ctq add": cmd_truth_ctq_add,
     "outbox drain": cmd_outbox,
     "outbox review": cmd_outbox,
     "industrialize": cmd_industrialize,

@@ -141,6 +141,16 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                              "上游，用与 aipd truth propagate 同一个入口标 stale 并生成有界"
                              "返工任务；边表里找不到上游的逐条点名不办（绝不就近挑一条当上游）。"
                              "--dry-run 只交计划、不写任何状态；仍有待返工或有不办的记录即退码 4"),
+    CommandEntry("ctq add", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.16",
+                 requires_args=frozenset({"--db", "--project", "--feature",
+                                          "--drawing-feature", "--nominal", "--lower",
+                                          "--upper", "--inspection", "--by"}),
+                 description="声明一条关键尺寸合格域（CTQ）——血缘链的头。"
+                             "`record_type=\"ctq\"` 此前只有读者（发布证据分母、"
+                             "aipd drawing spec 的输入、返工重算）没有生产者；"
+                             "信任级由既有 _derive_trust 推导（无 --test-ref 即 unverified，"
+                             "不自封 verified），同一个图纸尺寸上已有 active CTQ 时当场拒。"
+                             "声明不合法退码 2，不留半条记录"),
     CommandEntry("truth rework", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
                  requires_args=frozenset({"--db", "--project"}),
                  description="按当前 active CTQ 重算图纸声明并跑一次返工："

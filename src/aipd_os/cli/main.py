@@ -627,6 +627,45 @@ def build_parser() -> argparse.ArgumentParser:
     tr.add_argument("--json", action="store_true")
     tr.set_defaults(func=COMMAND_FUNCS["truth rework"])
 
+    # ---- F-CTQ-PRODUCER 第 56 片：链头 CTQ 由人声明 ----
+    # record_type="ctq" 此前只有读者（发布证据分母、drawing spec 的输入、返工重算），
+    # 全仓排除 tests/ 后没有写入点 ⇒ 链条第二跳在真库里没有输入。判据见
+    # src/aipd_os/product_truth/ctq.py 的模块 docstring。
+    p_ctq = sub.add_parser(
+        "ctq", help="关键尺寸合格域（CTQ）的声明：血缘链的头。"
+                    " Example: aipd ctq add --db state.db --project P --feature hole_8 "
+                    "--drawing-feature TOP.hole_1 --nominal 8.0 --lower 7.95 "
+                    "--upper 8.05 --inspection CMM --by engineer")
+    ctq_sub = p_ctq.add_subparsers(dest="ctq_cmd", required=True)
+    ca = ctq_sub.add_parser(
+        "add", help="声明一条 CTQ（属主自述）。信任级由既有的 _derive_trust 推导："
+                    "没有 --test-ref 就落在 unverified，不自封 verified。"
+                    "同一个图纸尺寸上已有别的 active CTQ 时当场拒——"
+                    "aipd drawing spec 遇到两条抢一个尺寸会把两条一起撤回。")
+    ca.add_argument("--db", required=True)
+    ca.add_argument("--project", required=True)
+    ca.add_argument("--tenant", default="default")
+    ca.add_argument("--feature", required=True,
+                    help="要求自己的名字（发布证据与图纸按它点名）")
+    ca.add_argument("--drawing-feature", required=True,
+                    help="它约束图上的哪条尺寸；不填则 drawing spec 报 "
+                         "ctq_missing_drawing_feature（那里不按名字猜映射）")
+    ca.add_argument("--nominal", required=True,
+                    help="标称值。数值一律不用 argparse 转 float：校验只留 declare_ctq 一处")
+    ca.add_argument("--lower", required=True, help="下极限（须严格小于 --upper）")
+    ca.add_argument("--upper", required=True, help="上极限")
+    ca.add_argument("--inspection", required=True,
+                    help="检验方法（门禁 ctq_has_inspection 的必填项，缺了它发布判红）")
+    ca.add_argument("--by", required=True,
+                    help="谁声明的。不留机器缺省值：AI 不自批，也不拿 system 冒充属主")
+    ca.add_argument("--epistemic", default="A",
+                    help="认识论态 V/C/E/A/U（与 _derive_trust 分支同一套字母），默认 A 断言")
+    ca.add_argument("--test-ref", action="append", default=[],
+                    help="验证引用，可重复；给了且态非 U 才升 verified")
+    ca.add_argument("--note", help="备注（可选）")
+    ca.add_argument("--json", action="store_true")
+    ca.set_defaults(func=COMMAND_FUNCS["ctq add"])
+
     # ---- v5.10 制造就绪（bom 物料清单 / cost 成本核算）----
     p_bom = sub.add_parser(
         "bom", help="物料清单（show 汇总+发布检查 / add 添加行 / release 检查后发布）。"

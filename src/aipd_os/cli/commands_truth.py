@@ -382,3 +382,53 @@ def cmd_truth_sweep(args):
             print("⇒ 已按边表落刀；下一步 `aipd truth rework --all-pending` 执行返工。")
     _emit(args, result, prose)
     return 4 if pending else 0
+
+
+def cmd_truth_ctq_add(args) -> int:
+    """``aipd truth ctq add``：把一条 CTQ **由人声明**进 Product Truth（链头的生产者）。
+
+    判据与"为什么不能让 PI gate 顺带派生"都写在 `product_truth/ctq.py` 的模块 docstring：
+    `record_type="ctq"` 今天只有读者（发布证据分母、`drawing spec` 的输入、返工重算），
+    全仓排除 `tests/` 后没有任何写入点，所以链条第二跳在真库里根本没有输入。
+
+    数值参数**故意不用 `argparse type=float`**：校验只留 `declare_ctq` 一处，
+    错误文案要能点名"是哪一格、为什么"，而不是 argparse 的 usage 半句。
+    信任级不自封：由 `gate_criteria._derive_trust` 推导（无 `--test-ref` 就是
+    `unverified`），与 P0-08「Owner 批准本身 ≠ verified」同一条规则。
+    """
+    from aipd_os.product_truth.ctq import CtqDeclarationError, declare_ctq
+
+    store, err = _open_store(args)
+    if err is not None:
+        return err
+    try:
+        result = declare_ctq(
+            store, feature=args.feature, drawing_feature=args.drawing_feature,
+            nominal=args.nominal, lower_limit=args.lower, upper_limit=args.upper,
+            inspection_method=args.inspection, declared_by=args.by,
+            epistemic_status=args.epistemic, test_refs=args.test_ref or [],
+            note=args.note)
+    except CtqDeclarationError as exc:
+        print(f"声明被拒：{exc}")
+        return 2
+    except Exception as exc:  # noqa: BLE001 - 写不进去不是"没写成功"
+        print(f"CTQ 写入失败：{type(exc).__name__}: {exc}")
+        return 2
+    payload = {"command": "truth ctq add", "ok": True, **result}
+
+    def prose():
+        low, high = result["limits"]
+        print(f"{'已写入' if result['created'] else '已存在，未另起一条'}"
+              f" CTQ {result['record_id']}：{result['feature']} @ "
+              f"{result['drawing_feature']}，合格域 [{low:g}, {high:g}]，"
+              f"标称 {result['nominal']:g}，检验方法 {result['inspection_method']}")
+        refs = result.get("test_refs") or []
+        print(f"  信任级 {result['trust_level']}"
+              f"（认识论态 {result['epistemic_status']}，验证引用 {len(refs)} 条"
+              + ("" if refs else " ⇒ 没有引用就不自封 verified") + "）")
+        if not result["created"]:
+            print(f"  {result['reason']}")
+        print("  下一步：aipd drawing spec --db <state.db> --out <spec.json>"
+              "（按当前 active CTQ 生成图纸声明，再 aipd drawing generate 出图）")
+    _emit(args, payload, prose)
+    return 0

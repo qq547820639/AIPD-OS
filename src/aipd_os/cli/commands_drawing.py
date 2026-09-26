@@ -89,9 +89,15 @@ def cmd_drawing_spec(args):
         return 2
 
     spec, gaps = spec_from_ctq(records)
-    held = bool(gaps)
+    # 第 56 片实测补的一格：库里**一条 active CTQ 都没有**时 gaps 是空的，
+    # 于是旧行为是"写一份 features=[] 的声明 + 落一条没有引用的血缘记录 + ok=true"——
+    # 把"还没有人声明要求"读成"声明已完成"。链头（`aipd ctq add`）今天接上之后，
+    # 这个状态有了明确的下一步动作，所以判未收口（退码 4，与 gaps 同档）而不是判成功。
+    empty_declaration = not spec["features"] and not (spec.get("datums") or [])
+    held = bool(gaps) or empty_declaration
     result = {"command": "drawing spec", "ok": not held, "ctq_records": len(records),
               "declared": len(spec["features"]), "gaps": gaps,
+              "empty_declaration": empty_declaration,
               "spec": None if held else spec, "out": None if held else str(out)}
 
     lineage = None
@@ -120,6 +126,12 @@ def cmd_drawing_spec(args):
             print(f"  未收口：{gap['kind']} — {gap['detail']}")
         if gaps:
             print(f"未写 {out}：{len(gaps)} 条 CTQ 还挂不上图纸，补齐后重跑。")
+        elif empty_declaration:
+            print(f"未写 {out}：库里 {len(records)} 条 active CTQ"
+                  "没有声明出任何尺寸、形位或基准 ⇒ 这份声明是空的，"
+                  "空声明不是交付物。先跑 aipd ctq add --feature … "
+                  "--drawing-feature … --nominal … --lower … --upper … "
+                  "--inspection … --by <谁>")
         else:
             print(f"已写 {out}：可直接 aipd drawing generate --spec {out}")
             if lineage is not None:

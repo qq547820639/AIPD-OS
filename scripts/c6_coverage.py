@@ -98,7 +98,7 @@ MAPPING: dict[str, dict[str, Any]] = {
                 "文件等于伪造签署，这一格永远不升成「ICD 已交付」。已交付的是《接口清单与契约证据》"
                 "（`aipd interfaces`，kind=aipd.interface_contract.v1 + 同名侧车）：85 条接口逐条带"
                 "定义件 sha256、取证用例（AST 解析并有一条与 `pytest --collect-only` 对齐的复核）与"
-                "「证到什么 / 证不到什么」，分母全部重算（CLI 命令面 56 条取自 command_contract、"
+                "「证到什么 / 证不到什么」，分母全部重算（CLI 命令面取自 command_contract 现算、"
                 "MCP 6 条取自 mcp_server.py 的 def mcp_*、schema 5 份取自目录实况、"
                 "出网消费者 11 个取自 import 反查）。判定 incomplete 的理由在第 30 片换过一次："
                 "第 29 片按文件名字面量反查消费者，看不见 `schema_check.py` 的**命名约定**绑定，"
