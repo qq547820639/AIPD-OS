@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-26T09:12:21+00:00",
+  "generated_at": "2026-09-26T09:27:45+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 196221,
-      "sha256": "0b9df10c5b94c9a047bb9c5a5113955095b40665f2e7af686e0845c527bc93bf"
+      "size": 196913,
+      "sha256": "04b5ab1f3d77478dc297fbc02f6661b31b0ba389f6197524aa175780f3d37448"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 45493,
-      "sha256": "2f0c945b85d2d0ab2d99fc01464f3d9f257ee9a23c33d581804162bd2e39ff88"
+      "size": 45552,
+      "sha256": "7b9d8c2fac9265528125719d7a5c6b71f353ccb14d8dd78bface7b70f7e8262a"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 9175,
-      "sha256": "1d90cdbd1b1ce8afea0a5b8dfdc8db9eccb96de39005aaf1c8459dc7e0afc015"
+      "size": 9236,
+      "sha256": "ecacbfe52de891bada9efebebf0a2a9bb90a861193a75c0c3fc025377889e12d"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -1012,8 +1012,8 @@
     },
     {
       "path": "src/aipd_os/cad/dxf_lineage.py",
-      "size": 6991,
-      "sha256": "d7620b73547d54ef71548026efe6f29c25f1f9b641cb7aaeaa9d8d7187b211a4"
+      "size": 9385,
+      "sha256": "930c24c96eacb90c07cdeb36154395a071caf6e9acb3db136fb611aba4d5f2cf"
     },
     {
       "path": "src/aipd_os/cad/evidence.py",
@@ -1097,8 +1097,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 34084,
-      "sha256": "719b12eb06c8b858ce0e32ecd274de71ba5a72d4c9be8a351a33634fd70d0efe"
+      "size": 34358,
+      "sha256": "5cbb34dbd245acefa0230ab6607bc034f43d5a6fc261727725b887ac9f58c9d8"
     },
     {
       "path": "src/aipd_os/cli/commands_eco.py",
@@ -1647,8 +1647,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 92385,
-      "sha256": "b5a6dc439b24a3b8eb8ef9ac748ad479cc6ed75b0ff1f512575de310ededf735"
+      "size": 92517,
+      "sha256": "1ab237a1c97fa7da134dbb516a29eb5c11daadb924e89445aabba7d786bb9e2d"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2537,8 +2537,8 @@
     },
     {
       "path": "tests/test_drawing_dxf_lineage.py",
-      "size": 9397,
-      "sha256": "d1dd745d0d35fce08f09c2273e80dd31d26ea401323ae8620962f4ced82299b5"
+      "size": 11829,
+      "sha256": "c343f233d9ed90b36a5e24abca9d51123c900795ea15370cce2da9e97b43f579"
     },
     {
       "path": "tests/test_drawing_spec_lineage.py",
