@@ -55,7 +55,7 @@ def tmp_scope(monkeypatch):
     monkeypatch.setattr(census, "QUICKREF_DIRS", ())
     monkeypatch.setattr(census, "CODE_DIRS", ("src",))
     monkeypatch.setattr(census, "REPORT_ONLY_FILES", ())
-    monkeypatch.setattr(census, "REPORT_ONLY_DIRS", ("docs", "src"))
+    monkeypatch.setattr(census, "REPORT_ONLY_DIRS", ("docs", "src", ".trae", ".github"))
 
 
 def write_tree(tmp: Path, readme: str, registry: str, code: str | None = None,
@@ -183,6 +183,106 @@ def test_a_single_empty_judging_face_reads_as_failure_not_green(tmp_path: Path,
     assert any("judging_face_empty" in x for x in rep["problems"]), rep["problems"]
     assert not any("quickref_corpus_empty" in x for x in rep["problems"]), rep["problems"]
     assert census.main(["--repo", str(tmp_path)]) == 2
+
+
+def test_other_registry_fields_on_a_judged_line_are_still_reported(tmp_path: Path,
+                                                                   tmp_scope) -> None:
+    """第 60 片留下的**双重盲**：登记表一条记录常写在一个物理行里。
+
+    三档的排除在这一行上叠加：档 ① 只读 `run_command` 一个键、档 ③ 显式跳过
+    `REGISTRY_FILES`、只报面又按"该行已被判红面吃过"做**行级**减法 ⇒
+    同一行 `current_limitation` 里点名的命令**既不判也不报**。
+    夹具故意写成**正向断言**（不带任何否定词），所以这不是"合法否定句被放行"，
+    而是彻底的看不见。修完的最低要求：**至少要在只报面里出现**；
+    要不要升格成判红是裁决项，所以这里同时钉住"它今天不判红"。
+    """
+    reg = ('CAPABILITIES = [{"id": "a", "run_command": "aipd ctq revise --db x",'
+           ' "current_limitation": "先跑 `aipd ghost cmd` 再导出结果"}]\n')
+    write_tree(tmp_path, GOOD_README, reg, code='GOOD = "aipd ctq add 的调用点"\n')
+    rep = census.audit(tmp_path)
+    # 夹具必须是**一个物理行**：拆成两行就同时躲开了行级减法，测的就不再是那个盲区
+    spots = {(r["doc"], r["line"], r["written"]) for r in rep["report_only_unmatched"]}
+    assert ("src/aipd_os/registry_data.py", 1, "aipd ghost cmd") in spots, (rep["corpus"], spots)
+    assert fields(rep, "aipd ghost cmd") == set(), rep["violations"]
+
+
+def test_report_only_face_counts_each_mention_once(tmp_path: Path, tmp_scope) -> None:
+    """只报面不许把带否定标记的行数两遍。
+
+    第 60 片的写法是 `只报 = 全量扫描 − 判过的行 + code_neg`，而 `CODE_DIRS` 与
+    `REPORT_ONLY_DIRS` 都含 `src` ⇒ 那批否定行**本来就已经在全量扫描里**，
+    再加一遍就是重复计数（真仓库实测：5 条 `code_negated` 全部命中只报面，
+    所以 `report_only_mentions` 一直比应有的多 5）。
+    修法是"补集"而不是"并集"：只加**尚未出现在只报面里**的那些。
+    """
+    code = '# 没有 `aipd ghostly cmd` 这条命令\nGOOD = "aipd ctq add 的调用点"\n'
+    write_tree(tmp_path, GOOD_README, GOOD_REGISTRY, code=code)
+    rep = census.audit(tmp_path)
+    triples = [(r["doc"], r["line"], r["written"]) for r in rep["report_only_unmatched"]]
+    assert len(triples) == len(set(triples)), triples
+    dup = [t for t in set(triples) if triples.count(t) > 1]
+    assert dup == [], dup
+
+
+def test_spec_and_ci_writers_are_watched_by_the_report_face(tmp_path: Path,
+                                                            tmp_scope) -> None:
+    """`.trae/specs/**` 与 `.github/workflows/*` 第 61 片前**四档全看不见**。
+
+    这两类文本是会被真的执行的（agent 照 spec 跑、runner 照 yml 跑），所以至少要**可见**。
+    这里同时钉住两头的判决：可见（进只报面）但**不判红**——
+    行内命令要不要升成第四档判红面是裁决项，今天两向都是 0 幻影，升与不升不改判决。
+    """
+    write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+               code='GOOD = "aipd ctq add 的调用点"\n')
+    spec = tmp_path / ".trae" / "specs" / "v9" / "checklist.md"
+    spec.parent.mkdir(parents=True, exist_ok=True)
+    spec.write_text("全部测试通过（`aipd ghostspec run`）与 `aipd eval` 通过\n", encoding="utf-8")
+    ci = tmp_path / ".github" / "workflows"
+    ci.mkdir(parents=True, exist_ok=True)
+    (ci / "ci.yml").write_text("    - run: aipd ghostci check --db x\n", encoding="utf-8")
+    rep = census.audit(tmp_path)
+    spots = {(r["doc"], r["written"]) for r in rep["report_only_unmatched"]}
+    assert (".trae/specs/v9/checklist.md", "aipd ghostspec run") in spots, rep["corpus"]
+    assert (".github/workflows/ci.yml", "aipd ghostci check") in spots, rep["corpus"]
+    judged = {v["written"] for v in rep["violations"]}
+    assert "aipd ghostspec run" not in judged and "aipd ghostci check" not in judged
+    assert rep["ok"] is True, rep["violations"]      # 只报面不改判决
+
+
+def test_the_instruments_own_files_are_out_of_all_four_faces() -> None:
+    """量具与它的用例必须**四档全排除**——第 60 片只在判红面 ③ 排除，只报面照收。
+
+    后果不是判错而是**报表说谎**：这两份文件为了证明"会开火"而故意写的幻影名
+    （`aipd ghost cmd`/`ghostly`/`ghostspec`/`ghostci`）会混进"正文里点到未注册命令"
+    那张名单，读的人以为仓库里有这些缺口。第 61 片实测这两份文件贡献 **68** 处提及
+    （用例 41 + 脚本 27）。对照组钉住"排除没有外溢"：普通文档里的幻影仍要出现。
+    """
+    rep = census.audit(ROOT)
+    own = [r["doc"] for r in rep["report_only_unmatched"] if "doc_command_census" in r["doc"]]
+    assert own == [], own
+    prose, _ = census.prose_mentions(ROOT)
+    assert not [r for r in prose if Path(r[0]).stem in census.SELF_STEMS]
+    # 对照组：真仓库正文里合法写下的「没有 aipd ctq list」仍必须可见
+    assert any(r["written"] == "aipd ctq list" for r in rep["report_only_unmatched"]), rep
+
+
+def test_those_two_dirs_are_actually_walked_in_the_real_repo() -> None:
+    """分母前提：真仓库上 `.trae` **今天就有内容可走**。
+
+    上一条用例的 tmp 夹具证明"走得到"，但证明不了"本仓这两个目录还在"——
+    目录被改名/删掉时 `rglob` 安静地给 0 命中，读起来与"这里没有幻影"完全同形。
+    `.trae` 第 61 片实测 46 处提及、21 个 md，所以钉一个下界。
+    `.github` 今天 0 命中是**事实**而不是失效，不能拿它当下界（那会变成把现状钉成应然），
+    它的"走得到"由上一条夹具证明。
+    """
+    prose, problems = census.prose_mentions(ROOT)
+    assert problems == [], problems
+    trae = sorted({r[0] for r in prose if r[0].startswith(".trae")})
+    assert len(trae) >= 10, f"只报面没再走到 .trae：{len(trae)} 个文件"
+    assert all(not r[0].startswith(".trae") or ".trae/specs/" in r[0] for r in prose
+               if r[0].startswith(".trae")), trae
+
+
 
 
 def test_absence_written_in_prose_is_reported_not_judged(tmp_path: Path,

@@ -273,6 +273,7 @@ real = **2.44 / 2.18 / 1.73 s**；`pytest tests/test_doc_command_census.py` 整�
      但"登记表说：跑 X"这类错误可以藏在非 `run_command` 字段里而零信号。
      电池为什么没抓到：我没有"撤掉 registry 其余字段的判读"这一臂——**盲区不在设想的臂里，
      就不会被设想的臂打死**，这是本片电池覆盖面的真实边界。
+     **→ 第 61 片已闭**（按名去重 + 4 条常驻用例钉住，读数见 §九）。
   2. **`.trae/specs/**` 与 `.github/workflows/*` 不在任何一档的遍历面上**：
      `REPORT_ONLY_DIRS = (docs, src, tests, scripts, state_service, templates, agents, evals)`，
      两个都不在其中（我把整份 JSON 报告序列化成字符串搜 `.trae` ⇒ False）。
@@ -280,3 +281,82 @@ real = **2.44 / 2.18 / 1.73 s**；`pytest tests/test_doc_command_census.py` 整�
      （工程师/agent 照 spec 跑、CI 照 yml 跑），语义上恰恰最该判红；今天命中 0 个幻影，
      明天写错没人抓。附带一条：`git ls-files` 里没有 Makefile／`*.sh`／`*.html`（分母 0），
      而档 ③ 只 glob `*.py` ⇒ 将来引入 shell 脚本时它会落进只报面、永不判红。
+     **→ 第 61 片把 `.trae`/`.github` 补进只报面**（可见性；要不要升成第四档判红面仍是裁决项），
+     shell 那条未动，读数与理由见 §九。
+
+## 九、第 61 片：把 §八 那两处盲区补成判据
+
+调研跳过声明（按最高指令第三节要求写明理由）：本片**不选新组件**——改的是第 60 片那把自己研尺子的
+去重键与遍历清单，候选面只有"按行减／按名减"与"要不要把某类文本升成判红面"两个内部取舍，
+`sphinx-argparse*`/`linkspector` 在第 60 片已按六维比过并否决（方向相反、`requires-python >=3.10/3.11`
+与本仓 3.9 冲突），本片没有引入新的外部可比对象。
+
+### 1 动手前先量：三个数都是量出来的，不是推的
+
+| 量 | 改前 | 改后 | 怎么量的 |
+|---|---|---|---|
+| 被"行级减法"吞掉的提及 | **27** 处 | 0 | 同一份 `prose` 分别按 `(doc,line)` 与 `(doc,line,名)` 减，取长度差 |
+| `+ code_neg` 造成的**重复计数** | **5** 处 | 0 | `CODE_DIRS ⊂ REPORT_ONLY_DIRS` 都含 `src` ⇒ 那 5 条本就在 1256 的全量扫描里，逐条查成员命中 5/5 |
+| 量具自身两份文件贡献的提及 | **68** 处（脚本 27 + 用例 41） | 0 | `prose_mentions()` 结果里按 `SELF_STEMS` 过滤计数 |
+| `report_only_mentions`（真仓库） | 925 | **947**（升 `.trae`/`.github` 后再升到 **1002**） | 新旧两份实现同一棵树各跑一遍 `audit()`，并用手算分解核对 `920+5=925`、`947+0=947` |
+
+**关键一条**：`+ code_neg` 那 5 处说明"只报面"这个数**一直多 5**——不是估计偏差，是公式重复。
+证据是同树对账的两段分解：`按行减 920 + 5 = 925`（旧实现实际打印 925）、
+`按名减 947 + 0 = 947`（新实现实际打印 947），两个等式都由 `prose_mentions() / production_code_mentions()`
+的返回值现算，不是拟合。
+（此处我一度写下"电池子代理测到的 903 恰好比打印值 908 少 5"当旁证——**重开那份日志后作废**：
+`/tmp/s60/probe_b2_realrepo.log` 的 903 对应的全量扫描是 1234，而 908 那次是 1239，
+**两个不同时刻的读数相差 5 是巧合**，不构成同刻对照。写旁证之前要先把两边读到同一棵树上。）
+§三/§七 里那些数是当轮取证件，按规矩保留不追改。
+
+### 2 改了什么（三处判据形状，都不动判决）
+
+- `audit()`：去重键 `(doc,line)` → `(doc,line,写法)`；只报面由"并集"改"补集"
+  （`kept + [r for r in code_neg if r not in set(kept)]`）。
+- `prose_mentions()`：`SELF_STEMS` 的排除从"只有判红面 ③"扩到**四档全排**（含只报面）。
+  这条不是洁癖：不改的话，本片新写的夹具名 `aipd ghostspec run`／`aipd ghostci check`／
+  `aipd ghostly cmd` 会全部出现在"正文点到未注册命令"那张名单里（实测一度到 8 个名字），
+  **报表把测试当成仓库的缺口**——与第 60 片修的两处代码幻影同一族病，只是这次谎主是尺子自己。
+- `REPORT_ONLY_DIRS` 增 `.trae`、`.github`；升不升成判红面留作裁决项（两边今天都 0 幻影）。
+
+### 3 常驻用例 +5（同文件现 16 条），以及一条"看着有牙其实没牙"
+
+四条新用例先写先跑红（对着 `git show HEAD:scripts/doc_command_census.py` 换进同一棵树复算）：
+
+```
+改前那份 sha 77a458df3c18： 4 failed, 12 passed
+  ✗ test_other_registry_fields_on_a_judged_line_are_still_reported     ← §八 缺口 1
+  ✗ test_report_only_face_counts_each_mention_once                     ← 重复计数
+  ✗ test_the_instruments_own_files_are_out_of_all_four_faces           ← 夹具名污染名单
+  ✗ test_those_two_dirs_are_actually_walked_in_the_real_repo           ← §八 缺口 2
+还原后 sha 7c47a43541e9： 16 passed
+```
+
+**但 `test_spec_and_ci_writers_are_watched_by_the_report_face` 在改前那份上也绿**——
+因为它写的是 tmp 语料，而 `tmp_scope` 把 `REPORT_ONLY_DIRS` 一并 monkeypatch 成了含
+`.trae/.github` 的值：**夹具替生产常量做了决定**。真正判别"生产清单里有没有这两个目录"的
+是下一条（它跑真仓库、用模块自己的常量）。记进规则：*用 monkeypatch 扩大的作用域，
+不能同时用来证明该作用域已被写进生产清单*——要么断言常量的字面值，要么走真仓库分母。
+这条与第 60 片"autouse 把真仓库用例静默收窄成只剩 docs/"是同族病，方向相反（那次是收窄，这次是放大）。
+
+### 4 现状面判决：没变
+
+`violations=0`、`problems=[]`、退码 0——**三处改动一处都没让今天的仓库多红或少红**，
+它们改的是"下一次谁会先知道"。这正是本片要的效果：盲区从"看不见"变成"看得见但不误伤"。
+
+### 5 变异电池：每支改动配**自己的**原告（`/tmp/s61/battery.py`，5 臂全杀）
+
+"整份换回改前实现"那次复算只给得出**合起来**的证据；按"复合门禁的每一支都要自己的最小对"，
+这里逐支撤，原告只看各自那条（`[control] rc=0 红=（无）` 先证明不注入时 5 条全绿）：
+
+| 臂 | 撤掉的守卫 | 原告 | 判决 |
+|---|---|---|---|
+| A1 | 只报面去重键退回**按行**（=第 60 片的双重盲） | `test_other_registry_fields_on_a_judged_line_are_still_reported` | KILLED（`rc=1`，原告翻红） |
+| A2 | 只报面从**补集**退回**并集**（恢复 `+ code_neg` 的重复计数） | `test_report_only_face_counts_each_mention_once` | KILLED |
+| A3 | 撤掉只报面里的 `SELF_STEMS` 排除 | `test_the_instruments_own_files_are_out_of_all_four_faces` | KILLED |
+| A4 | `REPORT_ONLY_DIRS` 去掉 `.trae`/`.github` | `test_those_two_dirs_are_actually_walked_in_the_real_repo` | KILLED |
+| A5 | **对照**：撤掉第 60 片的三档非空前提 | `test_a_single_empty_judging_face_reads_as_failure_not_green` | KILLED（旧牙还在 ⇒ 本片没把它改松） |
+
+合计 `{"KILLED": 5}`、与预期不符的臂：无；每臂都过"锚点唯一 → sha 变 → 复位 sha 回 → 复跑回绿"。
+A4 与 §九 3 那条"tmp 夹具在改前也绿"互为提醒：**判别生产清单的是走真仓库的那条用例**，
+不是把作用域 monkeypatch 放大的那条。

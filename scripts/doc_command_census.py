@@ -30,7 +30,17 @@
   不存在的命令：本轮实测 registry 的限制句「没有 `aipd ctq list`」与
   CHANGELOG 里我引用来记错的 `aipd truth show` 都属于这一类——把它们判红，
   等于惩罚"把缺口写下来"这件事，下一轮就会没人写。
-  量具自己与它的用例（`SELF_STEMS`）也排除在外：它们**必须**写着幻影命令才能证明判据会开火。
+  量具自己与它的用例（`SELF_STEMS`）**四档全部排除**（第 61 片补一致）：它们**必须**写着幻影命令
+  才能证明判据会开火。第 60 片只在判红面 ③ 排了它们，只报面照收 ⇒ 那 68 处提及（脚本 27 +
+  用例 41）会把 `aipd ghost cmd` 这类**夹具名**混进"正文点到未注册命令"的名单，
+  报表因此说谎——读的人以为仓库里有这些缺口。
+  去重按**提及**而不是按行（第 61 片补）：只有"被某档真的按名判过的那个名字"不再重复出现，
+  同一行里**其他**提及仍要落进只报面。早先按行减会吃掉登记表同一物理行里
+  `current_limitation` 等字段点名的命令——档 ① 只读 `run_command`、档 ③ 跳过 `REGISTRY_FILES`、
+  只报面再按行减 ⇒ 那个名字**既不判也不报**。真仓库实测（第 61 片改前后对账）：
+  按行减吞掉、按名补回的提及 **27** 处，`+ code_neg` 造成的**重复计数 5** 处
+  （那 5 行本就在 `src/` 的全量扫描里），净效果 `report_only` 925 → **947**；
+  其中新**可见**的未注册名只有 1 个（`registry_data.py:22` 的 `aipd ctq list`，合法否定句）。
 
 退码（与同族量具同形）：0 现状面干净；4 现状面有未注册命令；2 前提不成立
 （权威面建不起来、判红面为空、或有文件解析失败——**空读数一律不当通过**）。
@@ -71,8 +81,13 @@ SELF_STEMS = {"doc_command_census", "test_doc_command_census"}
 
 # 只报面
 REPORT_ONLY_FILES = ("CHANGELOG.md",)
+# `.trae`（轮次 spec/checklist，第 61 片实测 46 处提及、21 个 md）与 `.github`（CI 定义，
+# 今天 `aipd ` 命中 0）原先**不在任何一档的遍历面上**——而这两类文本恰恰是会被真的执行的
+# （工程师/agent 照 spec 跑、runner 照 yml 跑）。先补进只报面拿到可见性；
+# "spec 里的行内命令要不要升成第四档判红面"是裁决项，今天两向都是 0 幻影，
+# 所以升不升都不改判决，只改"下一次谁先知道"。
 REPORT_ONLY_DIRS = ("docs", "src", "tests", "scripts", "state_service", "templates",
-                    "agents", "evals")
+                    "agents", "evals", ".trae", ".github")
 
 # `aipd` 后面跟 1~2 个小写 token；负向后看断言避开 `aipd-os` / `aipd_os`，
 # 大写与中文不匹配 ⇒ 自然避开 "aipd CLI"、"`aipd <命令>`" 这类非命令写法。
@@ -243,6 +258,8 @@ def prose_mentions(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
             continue
         for path in sorted(base.rglob("*")):
             if path.is_file() and path.suffix in SUFFIXES:
+                if path.stem in SELF_STEMS or "__pycache__" in path.parts:
+                    continue    # 量具与它的用例**四档全排除**：它们必须写幻影才能证明会开火
                 files.append(path)
     for path in files:
         try:
@@ -259,7 +276,10 @@ def prose_mentions(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
 def audit(root: Path) -> dict[str, Any]:
     paths, groups, problems = valid_commands()
     judged: list[tuple[str, int, str, str]] = []      # (field, 文件, 行, 写法)
-    seen_spots: set[tuple[str, int]] = set()          # 三档判红面**覆盖到的行**（不论判决）
+    # 去重键是**提及**而不是**行**：按行减会把同一行里没被判过的名字一起吞掉——
+    # 登记表一条记录常写在一个物理行内，档 ① 只读 run_command、档 ③ 跳过 REGISTRY_FILES，
+    # 于是"同一行另一个字段里点名的命令"既不判也不报（第 60 片的双重盲，第 61 片补）。
+    seen_names: set[tuple[str, int, str]] = set()
     verdicts: dict[str, str] = {}
 
     reg, p1 = registry_run_commands(root)
@@ -269,13 +289,14 @@ def audit(root: Path) -> dict[str, Any]:
     problems += p1 + p2 + p3 + p4
 
     def record(kind: str, rel: str, no: int, seg: str) -> None:
-        seen_spots.add((rel, no))
         for first, second in _mentions(seg):
+            name = f"aipd {first}{(' ' + second) if second else ''}"
+            seen_names.add((rel, no, name))
             hit = resolve(first, second or None, paths, groups)
             key = f"{kind}|{rel}:{no}|{first} {second}".strip()
             verdicts[key] = hit or "UNMATCHED"
             if hit is None:
-                judged.append((kind, rel, no, f"aipd {first}{(' ' + second) if second else ''}"))
+                judged.append((kind, rel, no, name))
 
     for rel, no, seg in reg:
         record("run_command", rel, no, seg)
@@ -284,10 +305,14 @@ def audit(root: Path) -> dict[str, Any]:
     for rel, no, seg in code:
         record("code", rel, no, seg)
 
-    # 只报面 = 全量扫描减去已被三档判红面覆盖的行，再加上"代码里带否定标记"那批；
+    # 只报面 = 全量扫描里**未被按名判过**的提及，再补上"代码里带否定标记"那批中
+    # 尚未被全量扫描覆盖的（今天 `CODE_DIRS ⊂ REPORT_ONLY_DIRS` 都含 src，五条全已被覆盖 ⇒
+    # 补集为空；第 60 片写成 `+ code_neg` 是把它们数了两遍，report_only 因此恒多 5）。
     # 去重是必须的：docs/architecture 与 src/ 同时落在两档的目录清单里，
     # 不去重的话 Σ 分桶 > 总数，"分桶等于分母"这条自证就成了一句空话。
-    report_rows = [r for r in prose if (r[0], r[1]) not in seen_spots] + list(code_neg)
+    kept = [r for r in prose if r not in seen_names]
+    have = set(kept)
+    report_rows = kept + [r for r in code_neg if r not in have]
 
     report_bad = []
     for rel, no, seg in report_rows:
