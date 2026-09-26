@@ -129,7 +129,40 @@ BOM 版本与那笔成本结论一起收进队列（原来要人抄两次 id）�
 
 ## 七、终读数
 
-@@FINAL@@
+全部为本轮（2026-09-26）实跑回显，命令与读数一一对应；树 = `bae001c`。
+
+- **提交链**：`29aea63`（用例 + §八 更正）→ `505ce2c`（重锚矩阵/清单）→
+  `406fc2c`（更正 `docs/architecture/truth_architecture.md` 的执行器清单并补
+  「发现与触发」一节）→ `d906ff1`（清单与证据，报告绑定之前）→ `bae001c`（绑定复算报告）。
+- **变异电池**（`/tmp/s54/battery3.log`，对照臂未注入 rc=0）：
+  `SUMMARY killed=8/8 survived=0 invalid=0`。其中 S7 的第一版（"落了刀但 tasks 为空"）
+  曾存活，追到是引擎对每个 affected 都建任务 ⇒ 那一格恒为空，已删字段并换成
+  `ok` 与退码同向那条臂。
+- **静态门禁**：`ruff check src tests state_service` → `All checks passed!`（rc=0）；
+  `mypy src` → `Success: no issues found in 244 source files`（rc=0）。
+- **干净树复算**：`git worktree add --detach /tmp/s54b d906ff1`（tree clean，
+  `PYTHONPATH=/tmp/s54b/src:/tmp/s54b/scripts`、`AIPD_SOURCE_COMMIT=a660405…`）→
+  `2425 passed, 3 skipped, 95 warnings in 501.26s (0:08:21)`，`suite rc=0`；
+  报告 `summary={'passed': 2425, 'skipped': 3, 'total': 2428, 'collected': 2428}`，
+  分母比第 53 片（校验器自测里读到的那份报告 = 2413）+15，正是
+  `tests/test_truth_sweep_cli.py` 那 15 条。
+  前两趟（`/tmp/s54/suite.log` 停在 20%、`suite2.log` 停在 2%）都是**半截、未采信**，
+  终读数只认 `suite3.log` 这一趟；半截的原因本轮没有归因（同机宿主 load 一度 10.79
+  / 4 个性能核，是同期观测，不是我证明的因果）。
+- **报告校验器**（`/tmp/s54/verify_report.py`）：14 条前提全 `[OK]`、rc=0；
+  它的自测先跑过一次——拿第 53 片那份报告喂它，读出
+  `RESULT 有 3 条前提不成立，禁止绑定`（collected 2413≠2427、新文件 0 条、root 指向旧树），
+  即这把尺子会红，不是恒绿。
+- **发布门禁**：`production_release_gate.py --release-ready --tag v5.6.0` →
+  `total checks 8 passed 8`，rc=0，其中 `test_report` 那格回显
+  `passed=2425 failed=0 total=2428 source_commit=a66040520139405095648461f7144d4f00629924`。
+- **仓库审计**：`audit_repo.py --strict` → rc=1，**只有一条红且是设计上该红的**：
+  `✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=bae001c8dfd0…`
+  （清单必须钉在 tag SHA，不随 HEAD 重锚）。
+- **清单规模**：`SOURCE_MANIFEST.json` 参与哈希 **655 → 657** 份文件
+  （+`src/aipd_os/product_truth/sweep.py`、+`tests/test_truth_sweep_cli.py`；
+  657 由 `git show <2c3180c|d906ff1|bae001c>:SOURCE_MANIFEST.json` 三处现读一致，
+  655 是第 53 片 §终读数记的那份）。
 
 ## 八、遗留
 
