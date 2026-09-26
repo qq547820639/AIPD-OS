@@ -268,16 +268,29 @@ def run_evidence_checks(d, root, runtime, ceiling, ceiling_idx, target, target_i
     add('units_datum_tolerance_complete', 'C5', not unit_issues,
         '; '.join(unit_issues) if unit_issues else 'units/datum/tolerance complete')
 
-    # gdt_covers_ctq: every ctq feature must appear in gdt features.
+    # gdt_covers_ctq: every ctq **record** must appear in gdt coverage evidence.
     ctq = d.get('ctq')
     gdt = d.get('gdt')
     if isinstance(ctq, list) and ctq and isinstance(gdt, list):
-        ctq_feats = {str(c.get('feature')) for c in ctq if isinstance(c, dict)}
-        gdt_feats = {str(g.get('feature')) for g in gdt if isinstance(g, dict)}
-        uncovered = sorted(ctq_feats - gdt_feats)
-        add('gdt_covers_ctq', 'C5', not uncovered,
-            f"ctq features not covered by gdt: {uncovered}" if uncovered
-            else 'all ctq features covered by gdt')
+        # 按记录号求差，不按特征名。两条 CTQ 记录可以共用同一个 feature 标签
+        # （`aipd ctq add` 只拦「同一图纸尺寸上重复声明」，不拦标签撞车），
+        # 而名字的集合差会把"其中一条没覆盖"掩盖成全绿 —— 实测过：
+        # 同名臂 passed=True、把标签换成异名臂就红，其余一模一样。
+        # 两条覆盖凭据（尺寸证据 release_manifest.py:256 与形位框 :292）都带 ctq_record_id。
+        labeled = {str(c.get('record_id') or ''): str(c.get('feature') or '')
+                   for c in ctq if isinstance(c, dict)}
+        if '' in labeled:
+            add('gdt_covers_ctq', 'C5', False,
+                'ctq 条目缺 record_id，无法按记录核对覆盖（按名字求差会把两条同名要求'
+                '算成一条）')
+        else:
+            covered = {str(g.get('ctq_record_id')) for g in gdt
+                       if isinstance(g, dict) and g.get('ctq_record_id')}
+            uncovered = sorted(f"{rid}（{labeled[rid] or '无特征名'}）"
+                               for rid in set(labeled) - covered)
+            add('gdt_covers_ctq', 'C5', not uncovered,
+                f"ctq records not covered by gdt: {uncovered}" if uncovered
+                else f'all {len(labeled)} ctq records covered by gdt')
     else:
         # 数据缺失即失败（fail-closed），不允许空真通过
         add('gdt_covers_ctq', 'C5', False,

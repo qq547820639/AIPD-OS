@@ -121,6 +121,7 @@ canonical 哈希（`cad/spec_lineage.py:41`），文件面与源面各自与它�
 源面刻意**只吃记录自己声明的 `ctq_refs`**，不吃全作用域 CTQ——否则新增一条无关要求会把
 每条既有声明都读成漂移；"声明是否覆盖了当前全部要求"归发布门禁 `gdt_covers_ctq` 那一格，
 由 `tests/test_truth_spec_faces.py::test_unrelated_new_ctq_is_not_drift` 钉住不越界。
+那一条门也在第 58 片从"按特征名求差"改成**按记录号求差**：两条 CTQ 可以共用同一个 `feature` 标签（`aipd ctq add` 只拦「同一图纸尺寸重复」，不拦标签撞车），名字的集合差会把"其中一条没上图"掩盖成 `all ctq features covered`；缺 `record_id` 一律判不可核，不退回按名字猜。钉子见 `tests/test_production_release_gate.py::test_two_ctq_records_sharing_a_feature_label_are_not_masked` 与链上真数据的 `tests/test_cad_spec_from_truth.py::TestCliProducerAndGate::test_a_requirement_arriving_after_the_declaration_is_not_masked`。
 上游 CTQ 被停用/删除算**漂移**而不是不可判（输入读得到、算得出，只是算出来的东西说这份声明
 立不住）；重算出缺口时用一个确定性的 `ctq-gap:` 键，不折进"算不出"。
 另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片）：血缘边有**三个**生产者——

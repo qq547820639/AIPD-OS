@@ -173,6 +173,9 @@ attestation 读到 0 failed。另有一条是我自己的用法错：`capability
   那个"要求名"，如 `hole_Ø8`），后者来自图纸特征（走的是 `metadata.drawing_feature`，
   如 `TOP.hole_1`）⇒ 两个名字不同源时这条门对链上真数据**恒红**，
   也可能它从未被真链数据走过（现有绿灯来自 `releases/golden-projects/**` 的清单）。
-  **未实测，不下结论**；已立任务 #65：先用生产命令造一份真链数据跑这条门，按读数三选一定档。
+  **2026-09-27 已实测并闭掉（第 58 片）**：假设的「前缀不同源」被源码否证——两条覆盖凭据写进 `gdt` 的
+  `feature` 就是 CTQ 自己的 `feature`（`release_manifest.py:256`/`:292`）；真缺陷在别处：**按名字求差会丢
+  记录条数**，两条同名记录里未覆盖的那条被掩盖成绿。改按 `record_id` 求差、缺号 fail-closed，
+  取证见 `docs/audit/GATE_MULTIPLICITY_F-GATE-MULTIPLICITY_2026-09-26.md`。
 - 真实存量库 `data/state.db` 刻意未打开，所以"库里现有记录里有多少条没有 `ctq_refs`"
   未测（它们在本片之后会落进 `no_record_signature` 而不是 `in_sync`，读数会变差是好事）。

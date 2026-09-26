@@ -951,6 +951,25 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.19 F-GATE-MULTIPLICITY 第 58 片：`gdt_covers_ctq` 改按记录号核对覆盖——同名要求不再被掩盖成绿**：
+  起点是第 57 片 §九 留的一句「覆盖率归发布门禁管」＋一个疑点（该门两侧的 `feature` 会不会不同源）。
+  假设先被**源码否证**：两条覆盖凭据写进 `gdt` 的 `feature` 就是 CTQ 自己的 `feature`
+  （`release_manifest.py:256`/`:292`，图纸名另存 `drawing_feature`），不存在前缀对不上；
+  但同一处暴露出更坏的一格——判据是 `ctq_feats - gdt_feats` 的**集合差**，
+  而 `aipd ctq add` 只拦「同一图纸尺寸上重复声明」，不拦两条不同图纸特征共用一个 `feature` 标签。
+  实测（生产命令、同一模型、同一限值、同一顺序，只换标签）：同名臂 `passed=True` 且理由是
+  `all ctq features covered by gdt`，而 `doc[ctq]` 有两条记录、`doc[gdt]` 只挂上其中一条；
+  把标签换成异名立刻红 ⇒ **一条 active 要求没有任何覆盖凭据，门禁宣布全覆盖**。
+  修法：按 `ctq[].record_id` ↔ `gdt[].ctq_record_id` 求差（生产者两列本来就写，门只是没读）；
+  `ctq` 条目缺 `record_id` 一律 fail-closed 判不可核，**不**退回按名字猜；未覆盖的理由点名记录号并带特征名。
+  连带三处按实测改判：第一轮实验两臂都停在 `drawing generate` 退 4（限值是抄来的 Ø6 而模型实测 Ø8，
+  未覆盖那条又被出图先拦掉）⇒ 那是**夹具错**而不是判据没问题，换成「先出图、后到要求」的顺序才测到；
+  `tests/test_production_release_gate.py`、`tests/test_cli.py`、
+  `tests/test_production_release_gate_file_lists.py` 三份手写夹具都只写名字不写记录号
+  ——**同一个生产者不会产出的形状抄了三份**，各自还断言门通过；补 `record_id` 后
+  新增 4 条常驻用例（同名掩盖必红／各自覆盖仍绿的不开放对照／缺记录号判不可核／链上真数据点名记录号）。
+  取证见 `docs/audit/GATE_MULTIPLICITY_F-GATE-MULTIPLICITY_2026-09-26.md`。
+
 - **v5.18 F-DRIFT-5 第 57 片：`drawing_spec` 的身份键补上「源面」——改了 CTQ 不再对漂移探测隐形**：
   第 56 片 §六 用一条常驻用例钉住了一个实测到的洞：`drawing_spec` 记录的身份键只有
   **声明文件的哈希**，所以「属主改了限值、没人重出声明」这一整类漂移 `truth drift`/`truth sweep`

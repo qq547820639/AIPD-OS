@@ -333,8 +333,11 @@ def test_validate_minimal_manifest(tmp_path, capsys):
         # fail-closed 证据项数据（缺失即失败，不得空真通过）
         "model_version": "1.0.0", "drawings_version": "1.0.0",
         "model_part_count": 1, "bom_line_count": 1, "drawing_count": 1,
-        "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
-        "gdt": [{"feature": "hole_a"}],
+        # 两侧都带记录号：生产者写的就是 `ctq[].record_id`（release_manifest.py:86）
+        # 与 `gdt[].ctq_record_id`（同文件 :257/:293），门禁也按记录号核对覆盖。
+        "ctq": [{"record_id": "T-001", "feature": "hole_a",
+                 "inspection_method": "CMM"}],
+        "gdt": [{"feature": "hole_a", "ctq_record_id": "T-001"}],
         "eco": {"coverage": "complete", "artifacts": 1, "covered": 1,
                 "uncovered": [], "unverified": [], "undetermined": []},
         "timestamp": "2026-08-01T00:00:00Z",
@@ -354,8 +357,11 @@ def test_release_check_on_minimal_repo(tmp_path, capsys):
         # fail-closed 证据项数据（缺失即失败，不得空真通过）
         "model_version": "1.0.0", "drawings_version": "1.0.0",
         "model_part_count": 1, "bom_line_count": 1, "drawing_count": 1,
-        "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
-        "gdt": [{"feature": "hole_a"}],
+        # 两侧都带记录号：生产者写的就是 `ctq[].record_id`（release_manifest.py:86）
+        # 与 `gdt[].ctq_record_id`（同文件 :257/:293），门禁也按记录号核对覆盖。
+        "ctq": [{"record_id": "T-001", "feature": "hole_a",
+                 "inspection_method": "CMM"}],
+        "gdt": [{"feature": "hole_a", "ctq_record_id": "T-001"}],
         "eco": {"coverage": "complete", "artifacts": 1, "covered": 1,
                 "uncovered": [], "unverified": [], "undetermined": []},
         "timestamp": "2026-08-01T00:00:00Z",

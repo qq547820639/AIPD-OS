@@ -49,8 +49,12 @@ def _pack(tmp_path: Path, **overrides) -> Path:
          "drawings_version": "1.0.0", "model_part_count": 3, "bom_line_count": 3,
          "drawing_count": 3, "units": "mm", "datum_scheme": "DRF-A",
          "approval_status": "approved",
-         "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
-         "gdt": [{"feature": "hole_a"}], "timestamp": "2026-08-01T00:00:00Z",
+         # 记录号是生产者一定会写的两列（`ctq[].record_id` 见 release_manifest.py:86，
+         # `gdt[].ctq_record_id` 见同文件 :257/:293），门禁按记录号核对覆盖。
+         "ctq": [{"record_id": "T-001", "feature": "hole_a",
+                  "inspection_method": "CMM"}],
+         "gdt": [{"feature": "hole_a", "ctq_record_id": "T-001"}],
+         "timestamp": "2026-08-01T00:00:00Z",
          "eco": {"coverage": "complete", "artifacts": 2, "covered": 2,
                  "uncovered": [], "unverified": [], "undetermined": []},
          "evidence": _base_evidence()}

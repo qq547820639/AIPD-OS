@@ -282,6 +282,49 @@ class TestCliProducerAndGate:
                      if c["check"] == "gdt_covers_ctq")
         assert entry["passed"], entry["detail"]
 
+    def test_a_requirement_arriving_after_the_declaration_is_not_masked(self, tmp_path, db):
+        """链上真数据钉住"覆盖率归发布门禁"这半句分工，并且不许被名字掩盖。
+
+        顺序是产品真会走的样子：声明 + 出图 **之后**又来一条新要求。
+        新要求与第一条**共用同一个 feature 标签**（`aipd ctq add` 只拦"同一图纸尺寸重复"，
+        不拦标签撞车）。判据若按名字集合求差，`{hole_Ø8} - {hole_Ø8}` 是空 ⇒ 假绿；
+        按记录号求差才看得见"第二条没有任何覆盖凭据"。
+        上一条用例（单条 CTQ 全绿）就是这里的不开放对照。
+        """
+        from aipd_os.cli.main import main
+        from aipd_os.release_manifest import build_release_manifest
+
+        def _add(feature, drawing_feature):
+            return main(["ctq", "add", "--db", str(db), "--project", P,
+                         "--feature", feature, "--drawing-feature", drawing_feature,
+                         "--nominal", "8.0", "--lower", "7.95", "--upper", "8.05",
+                         "--inspection", "CMM", "--by", "潘工"])
+
+        assert _add("hole_Ø8", "TOP.hole_1") == 0
+        spec = tmp_path / "order.json"
+        assert main(["drawing", "spec", "--db", str(db), "--project", P,
+                     "--out", str(spec)]) == 0
+        dxf = tmp_path / "order.dxf"
+        assert main(["drawing", "generate", "--db", str(db), "--project", P,
+                     "--out", str(dxf), "--part", "plate", "--views", "TOP",
+                     "--spec", str(spec)]) == 0
+        assert _add("hole_Ø8", "TOP.slot_1") == 0     # 声明之后才到的新要求
+
+        path = tmp_path / "release-evidence.json"
+        build_release_manifest(db_path=db, tenant_id=T, project_id=P,
+                               drawings=[dxf], out_path=path)
+        doc = json.loads(path.read_text("utf-8"))
+        ids = [str(c["record_id"]) for c in doc["ctq"]]
+        covered = {str(g["ctq_record_id"]) for g in doc["gdt"]}
+        assert len(ids) == 2 and covered == {ids[0]}, (ids, covered)
+
+        proc = subprocess.run([sys.executable, str(GATE), "--manifest", str(path),
+                               "--target", "C5"], capture_output=True, text=True)
+        entry = next(c for c in json.loads(proc.stdout)["evidence_checks"]
+                     if c["check"] == "gdt_covers_ctq")
+        assert entry["passed"] is False, entry
+        assert ids[1] in entry["detail"], entry
+
 
 FLATNESS = [{"characteristic": "flatness", "zone": 0.02}]
 

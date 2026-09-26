@@ -40,9 +40,14 @@ def write_complete_manifest(tmp_path: Path, **overrides) -> Path:
         "units": "mm",
         "datum_scheme": "DRF-A",
         "approval_status": "approved",
-        # fail-closed 证据项所需数据（缺失即失败，不得空真通过）
-        "ctq": [{"feature": "hole_a", "inspection_method": "CMM"}],
-        "gdt": [{"feature": "hole_a"}],
+        # fail-closed 证据项所需数据（缺失即失败，不得空真通过）。
+        # 两侧都带记录号，因为生产者就是这么写的（`ctq[].record_id` 见
+        # `src/aipd_os/release_manifest.py:86`，`gdt[].ctq_record_id` 见同文件 :257/:293），
+        # 门禁也按记录号核对覆盖。只写名字的夹具是**生产者不会产出的形状**，
+        # 它会把"按名字求差丢条数"这类真缺陷一直藏到有人用真链数据跑门禁那天。
+        "ctq": [{"record_id": "T-001", "feature": "hole_a",
+                 "inspection_method": "CMM"}],
+        "gdt": [{"feature": "hole_a", "ctq_record_id": "T-001"}],
         # 变更控制那一格由生产者（aipd release manifest）写好；缺它即判红，
         # 与上面 ctq/gdt 同一口径：没有证据 ≠ 证据说没问题。
         "eco": {"coverage": "complete", "artifacts": 2, "covered": 2,
@@ -107,22 +112,72 @@ def test_stale_evidence_fails(tmp_path):
 
 
 def test_gdt_not_covering_ctq_fails(tmp_path):
-    """gdt 未覆盖某个 ctq feature 时证据门失败。"""
+    """gdt 没覆盖某条 ctq **记录**时证据门失败，理由要点名是哪条记录。"""
     p = write_complete_manifest(
         tmp_path,
-        ctq=[{"feature": "hole_a", "inspection_method": "CMM"}],
-        gdt=[{"feature": "slot_b"}],
+        ctq=[{"record_id": "T-001", "feature": "hole_a",
+              "inspection_method": "CMM"}],
+        gdt=[{"feature": "slot_b", "ctq_record_id": "T-009"}],
     )
     r = run_gate(p, "C2")
     out = json.loads(r.stdout)
     assert out["passed"] is False
     assert r.returncode == 2
-    assert get_check(out, "gdt_covers_ctq")["passed"] is False
+    chk = get_check(out, "gdt_covers_ctq")
+    assert chk["passed"] is False, chk
+    assert "T-001" in chk["detail"], chk["detail"]
+    # 一条用例一个原告：这条夹具的 ctq 写了检验方法，不该顺手把那一格也判红
+    assert get_check(out, "ctq_has_inspection")["passed"] is True
+
+
+def test_two_ctq_records_sharing_a_feature_label_are_not_masked(tmp_path):
+    """两条记录共用一个 feature 标签时，未覆盖的那条不许被掩盖成绿。
+
+    判据原先按名字集合求差（`ctq_feats - gdt_feats`），名字撞车就只剩一个元素 ⇒
+    "其中一条没上图"读成全绿。本轮实测过：同名臂 passed=True、只把标签换成异名就红，
+    其余一模一样 —— 差别只在标签，说明集合差丢了**记录条数**。
+    """
+    p = write_complete_manifest(
+        tmp_path,
+        ctq=[{"record_id": "T-001", "feature": "hole_a", "inspection_method": "CMM"},
+             {"record_id": "T-002", "feature": "hole_a", "inspection_method": "CMM"}],
+        gdt=[{"feature": "hole_a", "ctq_record_id": "T-001"}],
+    )
+    out = json.loads(run_gate(p, "C2").stdout)
+    chk = get_check(out, "gdt_covers_ctq")
+    assert chk["passed"] is False, chk
+    assert "T-002" in chk["detail"], chk["detail"]
+
+
+def test_every_record_covered_is_green_even_with_shared_labels(tmp_path):
+    """不开火对照：两条同名记录**各自**都有覆盖凭据 ⇒ 绿，理由报出记录条数。"""
+    p = write_complete_manifest(
+        tmp_path,
+        ctq=[{"record_id": "T-001", "feature": "hole_a", "inspection_method": "CMM"},
+             {"record_id": "T-002", "feature": "hole_a", "inspection_method": "CMM"}],
+        gdt=[{"feature": "hole_a", "ctq_record_id": "T-001"},
+             {"feature": "hole_a", "ctq_record_id": "T-002"}],
+    )
+    out = json.loads(run_gate(p, "C2").stdout)
+    chk = get_check(out, "gdt_covers_ctq")
+    assert chk["passed"] is True, chk
+    assert "all 2 ctq records covered" in chk["detail"], chk["detail"]
+
+
+def test_ctq_entry_without_record_id_fails_closed(tmp_path):
+    """缺记录号只能判"不可核"，不许退回按名字猜——按名字正是刚被推翻的那个错做法。"""
+    p = write_complete_manifest(tmp_path,
+                                ctq=[{"feature": "hole_a",
+                                      "inspection_method": "CMM"}])
+    out = json.loads(run_gate(p, "C2").stdout)
+    chk = get_check(out, "gdt_covers_ctq")
+    assert chk["passed"] is False and "record_id" in chk["detail"], chk
 
 
 def test_ctq_missing_inspection_fails(tmp_path):
     """ctq 条目缺少 inspection_method / test_method 时证据门失败。"""
-    p = write_complete_manifest(tmp_path, ctq=[{"feature": "hole_a"}])
+    p = write_complete_manifest(
+        tmp_path, ctq=[{"record_id": "T-001", "feature": "hole_a"}])
     r = run_gate(p, "C2")
     out = json.loads(r.stdout)
     assert out["passed"] is False
