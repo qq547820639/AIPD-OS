@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T00:26:30",
+  "generated_at": "2026-09-27T00:32:58",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -116,63 +116,21 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 655,
-    "hash_matches": 646,
-    "hash_mismatch_count": 9,
+    "total_files": 657,
+    "hash_matches": 655,
+    "hash_mismatch_count": 2,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "9e271547b02e8ba610dfb409a4ba8cace743f675ab0344b65446bf6c1ca184aa",
-        "actual": "de11facf1e96979aae9a9f1692e511684b375ae5f37955c43334c203268ec68e"
+        "expected": "de11facf1e96979aae9a9f1692e511684b375ae5f37955c43334c203268ec68e",
+        "actual": "6c79b8cccab668bda2dac7a845f45cadbcfdb882bb6bc0cd2d34c87b9d9344ea"
       },
       {
-        "path": "README.md",
+        "path": "tests/test_truth_sweep_cli.py",
         "reason": "hash_mismatch",
-        "expected": "7e1774bdbadd04318f8c21a6547660ef4d81fec947b9b69931168fd7c44d0465",
-        "actual": "a19afeb51c76fe42912ad632c8d889fdbe70d6c2f8d4178576ca3bc445ceda6f"
-      },
-      {
-        "path": "SKILL.md",
-        "reason": "hash_mismatch",
-        "expected": "b38c1d0009e321c677c87b3e3a81e104df246da534d4e499ef9a6ac761176532",
-        "actual": "e757a5c30c219ba8d721a7549ff3b14ac3339e4d94dedee4910a68da4d33e5f6"
-      },
-      {
-        "path": "src/aipd_os/cli/command_contract.py",
-        "reason": "hash_mismatch",
-        "expected": "a8c5e41e7e9ce6275580fb2adc240ca7f52ec65ba3d6aab24f12f6d0f824ff20",
-        "actual": "68352f32b0732f70b0ff10607cd4d2744baee517fa3808b73a8615193ae15b6f"
-      },
-      {
-        "path": "src/aipd_os/cli/commands.py",
-        "reason": "hash_mismatch",
-        "expected": "0e5a8056060e996a0f25c485b89264e86f90e50148e2d6b2bda04601164d461c",
-        "actual": "076c3238aa34f750d56c7bbc55898e6f3c954ec2c6ba2f2391ed1019bf741de2"
-      },
-      {
-        "path": "src/aipd_os/cli/commands_truth.py",
-        "reason": "hash_mismatch",
-        "expected": "341ce720251ea417735ed1de4f5d79ecccdcc159e960a63d5b4de8328bf9baea",
-        "actual": "c0535170ba155a632d79ff36ba951349768316c66ce91185b9f81e93f94814bf"
-      },
-      {
-        "path": "src/aipd_os/cli/main.py",
-        "reason": "hash_mismatch",
-        "expected": "9cb026c104448debf68ee03c7a690e9025189cca10d9e0f7e18e5cd11df0a727",
-        "actual": "23c38717bb94a40b878730ae361fcfe44643c879cbc7ec97699f73a5787afb8f"
-      },
-      {
-        "path": "src/aipd_os/registry_data.py",
-        "reason": "hash_mismatch",
-        "expected": "3ff992712cd111768876c35a092b560386f0a3962463b57a0aeae101cd1ce519",
-        "actual": "e3551d94287aca74f46cc0a3adaa6c53a66b9717f7824b7c33e9e48944076b8c"
-      },
-      {
-        "path": "tests/test_command_surface_census.py",
-        "reason": "hash_mismatch",
-        "expected": "dff8f6a0796160295f3a4d3e52159a8adb4e12bb10866f19c50cbc6584a30a17",
-        "actual": "fc6e24e5ba38dca252851470a6d306ee67e2df2f8d266f6677f0ac6988fa0ece"
+        "expected": "049f00cf8f7b38c427ffbbd3d48503bcb906d41b4742df0a6f97b67a6c7832f3",
+        "actual": "76cb5c5469d1ff3e0e2ee75a505043c9d227c9964c083e22feb4f7bc6e67e3ac"
       }
     ]
   },
