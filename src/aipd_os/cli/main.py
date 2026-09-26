@@ -667,6 +667,9 @@ def build_parser() -> argparse.ArgumentParser:
     qp.add_argument("--file", required=True, help="报价 CSV/JSON 文件")
     qp.add_argument("--currency", default="CNY",
                     help="报价单价的币种（报价文件表头无币种列，必须显式声明）")
+    qp.add_argument("--truth-lineage", action="store_true",
+                    help="另登记「报价批次 → BOM 版本」血缘（不给会明说跳过；"
+                         "写不进去判未收口）")
     qp.add_argument("--json", action="store_true")
     qp.set_defaults(func=COMMAND_FUNCS["quote apply"])
 

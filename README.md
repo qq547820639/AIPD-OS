@@ -462,7 +462,11 @@ aipd validate --manifest manifest.json --target C5    # 验证是否达到目标
 ### 场景 5：准备开模物料清单与成本
 ```bash
 aipd bom add --db state.db --part 外壳 --material ABS --process "注塑" --quantity 1
-aipd quote apply --db state.db --file quotes.csv      # 报价 → quote.* 事实 → 该行单价
+aipd quote apply --db state.db --file quotes.csv --truth-lineage   # 报价 → quote.* 事实 → 该行单价
+#   ↑ 带 --truth-lineage 时另登记「报价批次 → BOM 版本」血缘（`src/aipd_os/supply_chain/quote_lineage.py`）：
+#     签名吃全部参与判定的报价事实（供应商/件号/版本号/状态/单价/行币种）+ 批次币种，**不吃文件名**；
+#     边指向**当前** artifact=bom 记录，于是改了报价再 `aipd truth propagate` 会把 BOM 版本与那笔成本一起标 stale。
+#     还没有 BOM 版本记录时：记录照写、边数 0、点名原因（不算失败）；不给旗子是明说的跳过；写不进去判未收口（4）。
 aipd bom show --db state.db --tooling 50000 --quantity 1000 --margin 20   # 汇总 + 发布检查
 aipd cost calc --db state.db --tooling 50000 --quantity 1000 --margin 20 --truth-lineage   # 成本核算
 #   ↑ 带 --truth-lineage 时另登记「BOM 版本 → 成本结论」血缘（`src/aipd_os/bom/cost_lineage.py`）：

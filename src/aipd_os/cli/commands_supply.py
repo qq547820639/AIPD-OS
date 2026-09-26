@@ -84,10 +84,38 @@ def _quote_apply(args: Any) -> int:
     # 报价侧干净 ≠ BOM 侧已定价：分批报价是正常工作流，所以缺价不改变本次退出码，
     # 但必须显式列出来，否则「已按报价定价」会被读成整张 BOM 都有价了。
     remaining = rollup(store, DEFAULT_TENANT, pid)["missing_cost_items"]
+
+    # 血缘：opt-in。给了 --truth-lineage 才登记「报价批次 → BOM 版本」；
+    # 没给是**明说的跳过**，写不进去则判未收口（cost calc 那一支同一条纪律）。
+    lineage = None
+    lineage_error = None
+    lineage_skip_reason = None
+    if getattr(args, "truth_lineage", False):
+        from aipd_os.product_truth import ProductTruthStore
+        from aipd_os.supply_chain.quote_lineage import quote_input_signature, record_quote_lineage
+
+        applied = [{"quote_id": q.quote_id, "supplier": q.supplier,
+                    "part": str(q.data.get("part") or q.part),
+                    "version": q.version, "status": q.status,
+                    "unit_price": (q.data or {}).get("unit_price"),
+                    "currency": currency} for q in quotes]
+        try:
+            truth = ProductTruthStore(str(args.db), tenant_id=DEFAULT_TENANT,
+                                      project_id=pid)
+            sig = quote_input_signature(currency=currency, applied=applied)
+            lineage = record_quote_lineage(
+                truth, signature=sig, source=str(parsed.get("source", "")),
+                currency=currency, applied=applied,
+                tenant_id=DEFAULT_TENANT, project_id=pid)
+        except Exception as exc:  # noqa: BLE001 - 下面判未收口，不静默
+            lineage_error = f"{type(exc).__name__}: {exc}"
+    else:
+        lineage_skip_reason = "未给 --truth-lineage ⇒ 不登记「报价批次 → BOM 版本」血缘"
+
     payload = {
         "command": "quote apply",
-        "ok": report.clean,
-        "status": "DONE" if report.clean else "HOLD",
+        "ok": report.clean and not lineage_error,
+        "status": "DONE" if (report.clean and not lineage_error) else "HOLD",
         "project": pid,
         "source": str(parsed.get("source", "")),
         "currency": currency,
@@ -96,6 +124,9 @@ def _quote_apply(args: Any) -> int:
         "reused_facts": reused,
         "retired_facts": retired,
         "bom_remaining_unpriced": remaining,
+        "lineage": lineage,
+        "lineage_error": lineage_error,
+        "lineage_skipped": lineage_skip_reason,
         **report.to_dict(),
     }
 
@@ -113,6 +144,16 @@ def _quote_apply(args: Any) -> int:
             print(f"  无对应 BOM 行：{m['part']}（{m['supplier']}）")
         for k in retired:
             print(f"  旧版报价事实转 R（Retired）：{k}")
+        if lineage is not None:
+            print(f"  血缘：写 {lineage['records']} 条记录、{lineage['edges']} 条边"
+                  f"（报价批次 {lineage['quote_record_id']}"
+                  f" → BOM 版本 {lineage['bom_record_id']}）")
+        if lineage and lineage["reason"]:
+            print(f"  血缘没连上：{lineage['reason']}")
+        if lineage_error:
+            print(f"  血缘写不进去（判未收口）：{lineage_error}")
+        if lineage_skip_reason:
+            print(f"  {lineage_skip_reason}")
         if not report.clean:
             print("⇒ 报价未全部落到 BOM 上（不静默通过）")
         if remaining:
@@ -120,7 +161,7 @@ def _quote_apply(args: Any) -> int:
                   "（`bom release` 会因此拒绝发布）")
 
     _emit(args, payload, prose)
-    return 0 if report.clean else 4
+    return 0 if (report.clean and not lineage_error) else 4
 
 
 __all__ = ["cmd_quote"]

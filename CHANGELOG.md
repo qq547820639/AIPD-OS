@@ -951,6 +951,44 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-LINEAGE-QUOTE 第 50 片：整条链上第一次有人往 BOM 版本记录**连入边****：
+  新增 `src/aipd_os/supply_chain/quote_lineage.py` 与 `aipd quote apply --truth-lineage`：
+  按「全部参与判定的报价事实（供应商/件号/版本号/状态/单价/行币种）+ 批次币种」写一条
+  `artifact=quote_batch` 版本记录，连一条指向**当前** `artifact=bom` 记录的 `affects` 边。
+  改前事实是普查出来的（全 `src` 按 `add_edge`/`add_fact`/`ProductTruthStore` 三符号交叉，
+  不是按名字 grep）：`supply_chain/` 的写点**全是** `add_fact`（`persistence.py:46,83,118`、
+  `writeback.py:47,78`、`impact.py:108`），一处 `add_edge` 都没有；
+  而 `artifact=bom` 唯一写点在 `bom/cost_lineage.py` ⇒ 报价把单价就地写进 BOM 行之后，
+  第 48 片登记过的那笔成本结论仍是 `active`，读的人看到「下游已处理」其实价已经换过。
+  真实 CLI 读数（`/tmp/s50`）：`quote apply --truth-lineage` 写 `T-003` 并把边挂到 `T-001`；
+  `truth propagate --upstream T-003` ⇒ `affected=[T-001, T-002]`、两条都标 stale、
+  生成 `RW-001`/`RW-002`、退码 4——**从报价出发跨两跳打到了那笔成本结论**，
+  这是 F-SUPPLY-03 那句「声明的影响传播 vs 只有 payload」第一次有了反向证据。
+  三条刻意的形状：① **来源文件名不进签名**（同一批价换个路径重下载不是又一次工程变更，
+  与第 46 片把 DXF 的 `$TDCREATE` 挡在签名外同理由；路径只写进 `metadata.source` 当观测）；
+  ② 报价完全可以先于任何一次 `cost calc --truth-lineage` 发生，那时下游记录**还不存在** ⇒
+  记录照写、`edges=0`、把原因点名（不算失败：常驻用例在「有 BOM 行、只缺版本记录」的形状下
+  断言 `ok=true` 且退码 0）；③ 空报价什么都不写，不给旗子是明说的跳过，
+  写不进去判未收口（退码 4 且 `ok` 同向）。
+  签名怎么定出来的被用例逼过一次：初版把文件名吃了进去，两条数记录条数的用例当场翻红，
+  顺着查出「同价换文件名会另起一版并把下游标 stale」这类假工程变更，才把 source 移出签名，
+  并补正反对照（改单价/币种/版本/状态/加一行都要换签名，改文件名不要）。
+  常驻用例 **10 条**（`tests/test_quote_lineage.py`）；撤改电池 **9 条：杀 9 / 活 0 / 注入无效 0**
+  （对照臂 rc=0）。电池这轮教了自己三次，都记进取证文档：
+  **还原禁止反向 `replace`**（一支注入串短到 `"}\n"`，反向替换命中全文，
+  把另一处代码吃成一个只在空 metadata 才触发的 NameError，**10 条用例照样全绿**、
+  是 `ruff` 的 F821 抓到的）；**恒真注入不算判决**（把 `"source": "x"` 加进签名对所有记录同值，
+  读出 SURVIVED 会被误判成缺用例，得改成真能翻转行为的实现）；
+  **一次存活是真缺陷**（撞键用例只改了批次币种、没改行币种，那一列本来零覆盖）。
+  登记与镜像：`registry_data` 三处（生产者计数 四→五、第五处生产者叙述、
+  `industrialize.quote_to_bom_cost` 那行的 run_command/input_output/unit_test）、
+  `truth_architecture`、README 速查；生产者棘轮登记新文件。
+  **只给既有命令加旗子、未新增命令** ⇒ 命令面计数与 census 分母不动；
+  连带改判清单为空（`quote apply` 原有「同文件重放零新事实/零改价」等断言全部保持）。
+  全量收集数 2368 → 2378。仍未接上：传播仍靠人给 `--upstream`（报价换了不会自动 propagate）；
+  `artifact=bom` 自己仍没有执行器；CTQ 方向仍断，「改一条 CTQ 打到成本」不成立。
+  证据见 `docs/audit/QUOTE_BOM_LINEAGE_F-LINEAGE-QUOTE_2026-09-26.md`。
+
 - **v5.12 F-REWORK-COST 第 49 片：成本结论这一支从「只有边」补成「边 + 执行器」**：
   第 48 片收尾那句「`bom` / `bom_cost` 两类制品没有返工执行器」本轮翻转一半——
   `bom_cost` 接上了，`artifact=bom` 那条仍没有。接之前先读码发现一条更硬的前提：
