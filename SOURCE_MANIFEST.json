@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-26T16:45:31+00:00",
+  "generated_at": "2026-09-26T17:31:16+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 227278,
-      "sha256": "6c79b8cccab668bda2dac7a845f45cadbcfdb882bb6bc0cd2d34c87b9d9344ea"
+      "size": 229789,
+      "sha256": "76c1486742ec3815615b6cdb43360d90b0a7f5164eacb9aa6fa16d82f0042f8a"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -387,8 +387,8 @@
     },
     {
       "path": "docs/architecture/state_inventory.md",
-      "size": 6974,
-      "sha256": "0700fead4949d8afbf65e3b7acbb3adaf8313cb596107f44024edbd4a77f5556"
+      "size": 7283,
+      "sha256": "3b617647b4defab62146e4c35e49b7ae6cab1dd23df4c0c16ea6ab295614f094"
     },
     {
       "path": "docs/architecture/state_ownership.md",
@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 14453,
-      "sha256": "7855ff3ead03da965cf3886f6229ff1d4f9fc7360a1429e9250a0a806fe74014"
+      "size": 15559,
+      "sha256": "43966db66e7deef416cb489c8eaeaf042d6ddf6f878e1bc6c078cf9f7a0f8ea2"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -937,8 +937,8 @@
     },
     {
       "path": "scripts/state_perf_gate.py",
-      "size": 19616,
-      "sha256": "0eff954dd986022da64040cc311bd75da7557b028cfa9d06ae844f7a88f135c0"
+      "size": 24315,
+      "sha256": "5d45c881548643d5d08f066a93a9a8ae5b7c2a13958732bb50a43ca6c92355ee"
     },
     {
       "path": "src/aipd_os/__init__.py",
@@ -1682,8 +1682,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 97433,
-      "sha256": "e3551d94287aca74f46cc0a3adaa6c53a66b9717f7824b7c33e9e48944076b8c"
+      "size": 97784,
+      "sha256": "46844d78340499f86abe2dc9e1fc3e56300dd6a526a0134398a28be7eaf556b6"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -3177,8 +3177,8 @@
     },
     {
       "path": "tests/test_state_perf_gates.py",
-      "size": 9946,
-      "sha256": "ab34a71dc225a4b1c2f079d7594f2173d0be8c3ef385119c15fe266b1b481345"
+      "size": 15898,
+      "sha256": "f32fbe50dae699941164523a204c3409a5d23495437e44a6044ba54c9e4e437b"
     },
     {
       "path": "tests/test_status_semantics_contract.py",
