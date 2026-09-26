@@ -1,0 +1,438 @@
+"""文档/登记表点名的 `aipd` 命令必须真的注册着（F-DOC-CMD 第 60 片）。
+
+起因是第 59 片的一处实测事故：重写 `registry_data.py` 的能力行时，我在限制句里写了
+一条**根本不存在的命令** `aipd truth show`（从 `truth drift`/`truth sweep` 的命名类推出来的），
+而**没有任何常驻判据看得见它**——`capability_matrix.py` 只是把 `run_command` 原样渲染进 markdown。
+本轮把它抓回来靠的是派出去的只读普查，不是机器。这一片补的就是那台机器。
+
+权威面（本轮实测决定的，不是抄来的）：
+- **不是** `COMMAND_FUNCS`。`aipd usage` 在派发表里查不到，却能跑（`cli/main.py:33` 注册 subparser、
+  `_cmd_usage` 处理，实测 `main(["usage"])` 退 0 并打出命令清单）；
+- 权威面是 `build_parser()` 走出来的 **argparse 声明树**（实测 88 条路径），
+  再并上 CLI 契约里 10 条 `deprecated → replacement` 的**别名**（别名是合法写法，不是文档错）。
+  实测 `COMMAND_FUNCS` 是它的真子集（「派发表有而 parser 没有」为空）。
+
+判据分两档，分档理由是本轮量过的假阳性面：
+- **判红面（现状面）**＝这三处，语义都是"照着跑/这是真命令"，不存在
+  "合法地指向一条不存在的命令"的用法：
+  ① 登记表 `run_command` 字段里以 `aipd` 开头的每一段（AST 读常量，不靠 ±N 行窗口）；
+  ② 文档里**行首**形如 `aipd …` 的可执行速查行（README / SKILL / QUICKSTART /
+     `docs/architecture` / `docs/contracts` / `references`）；
+  ③ 生产代码（`src/`、`scripts/`、`state_service/`）里的提及——代码写出来就是要跑的，
+     第 60 片实测到 `ctq.py` 把一条不存在的命令烙进了**每条**产出记录，比文档里的错更贵。
+     这一档带一条**否定例外**：同行有"没有/不存在/尚未…"时按只报处理，
+     因为登记表限制句「没有 `aipd ctq list`」正是合法写法（实测 336 提及、45 落在否定行、
+     其余 291 处全命中权威面 ⇒ 今天 0 违规而分母非空）。
+- **只报面**＝其余一切正文里的 `aipd` 提及。它必须只报不红，因为正文会**合法地**提到
+  不存在的命令：本轮实测 registry 的限制句「没有 `aipd ctq list`」与
+  CHANGELOG 里我引用来记错的 `aipd truth show` 都属于这一类——把它们判红，
+  等于惩罚"把缺口写下来"这件事，下一轮就会没人写。
+  量具自己与它的用例（`SELF_STEMS`）也排除在外：它们**必须**写着幻影命令才能证明判据会开火。
+
+退码（与同族量具同形）：0 现状面干净；4 现状面有未注册命令；2 前提不成立
+（权威面建不起来、判红面为空、或有文件解析失败——**空读数一律不当通过**）。
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parent.parent
+
+SKIP_DIRS = {".git", ".venv", "__pycache__", ".mypy_cache", ".pytest_cache",
+             "releases", "node_modules", "build", "dist"}
+SUFFIXES = (".md", ".py", ".json", ".yaml", ".yml", ".txt", ".rst", ".sh")
+
+# 判红面 ① 登记表文件（按 AST 取 run_command 常量）
+REGISTRY_FILES = ("src/aipd_os/registry_data.py",
+                  "scripts/product_capabilities_extra.py")
+# 判红面 ② 行首速查行的所在文件/目录
+QUICKREF_FILES = ("README.md", "SKILL.md", "QUICKSTART.md")
+QUICKREF_DIRS = ("docs/architecture", "docs/contracts", "references")
+
+# 判红面 ③ 生产代码里的提及。代码不像正文那样有权写"某命令不存在"——它写出来就是要跑的，
+#   所以这里的幻影比文档里的更贵（第 60 片实测：`ctq.py` 把 `aipd truth ctq add` 烙进了
+#   **每一条**产出的记录）。但同一行带否定标记时按只报处理：登记表的限制句
+#   「没有 `aipd ctq list`」就是这种合法写法。这条分档是量过假阳性的：
+#   实测 336 处提及、45 处落在否定行、其余 291 处全部命中权威面 ⇒ 今天 0 违规而分母非空。
+CODE_DIRS = ("src", "scripts", "state_service")
+NEGATION_MARKERS = ("没有", "不存在", "尚未", "还没", "仍未", "刻意未", "仍未接",
+                    "not registered", "no such", "does not exist")
+# 量具与它的用例不许当分母：它们**必须**写着幻影命令才能证明判据会开火
+SELF_STEMS = {"doc_command_census", "test_doc_command_census"}
+
+# 只报面
+REPORT_ONLY_FILES = ("CHANGELOG.md",)
+REPORT_ONLY_DIRS = ("docs", "src", "tests", "scripts", "state_service", "templates",
+                    "agents", "evals")
+
+# `aipd` 后面跟 1~2 个小写 token；负向后看断言避开 `aipd-os` / `aipd_os`，
+# 大写与中文不匹配 ⇒ 自然避开 "aipd CLI"、"`aipd <命令>`" 这类非命令写法。
+MENTION_RE = re.compile(
+    r"(?<![A-Za-z0-9_.\-])aipd[ \t]+`?([a-z][a-z0-9_\-]*)"
+    r"(?:[ \t]+`?([a-z][a-z0-9_\-]*))?"
+)
+
+
+def valid_commands() -> tuple[set[str], set[str], list[str]]:
+    """(全部合法路径, 有子命令的组名, 前提问题)。
+
+    权威面**永远取自本仓的 argparse 树**（`ROOT`），不跟着 `--repo` 走：普查别的语料时，
+    "什么算存在的命令"这件事只能由被发布的代码回答。这也避免临时目录里的
+    `src/aipd_os/` 遮蔽真包（命名空间包的解析顺序不是这里该赌的东西）。
+    """
+    src = ROOT / "src"
+    if str(src) not in sys.path:
+        sys.path.insert(0, str(src))
+    problems: list[str] = []
+    try:
+        import argparse as _ap
+
+        from aipd_os.cli.main import build_parser  # type: ignore
+    except Exception as exc:                              # noqa: BLE001
+        return set(), set(), [f"authority_unimportable: {type(exc).__name__}: {exc}"]
+
+    def walk(parser: Any, prefix: tuple[str, ...] = ()) -> set[str]:
+        out: set[str] = set()
+        for action in parser._actions:
+            if isinstance(action, _ap._SubParsersAction):
+                for name, sub in action.choices.items():
+                    path = prefix + (name,)
+                    out.add(" ".join(path))
+                    out |= walk(sub, path)
+        return out
+
+    paths = walk(build_parser())
+    try:
+        from aipd_os.cli.command_contract import CommandStatus, get_all_commands  # type: ignore
+        paths |= {e.name for e in get_all_commands()
+                  if e.status is CommandStatus.DEPRECATED and e.name}
+    except Exception as exc:                              # noqa: BLE001
+        problems.append(f"contract_unreadable: {type(exc).__name__}: {exc}")
+    groups = {p.split()[0] for p in paths if len(p.split()) > 1}
+    if not paths:
+        problems.append("authority_empty: argparse 声明树一条路径都没读到")
+    return paths, groups, problems
+
+
+def resolve(first: str, second: str | None, paths: set[str], groups: set[str]) -> str | None:
+    """命中的写法解析到合法命令；解不出返回 None。
+
+    规则刻意要求"给了第二段就必须落进那一段"：`aipd truth show` 里 `truth` 是个有子命令的组，
+    所以 `show` 是**不存在的子命令**，不许退化成"`truth` 合法 ⇒ 整条合法"。
+    """
+    if second:
+        two = f"{first} {second}"
+        if two in paths:
+            return two
+        return None if first in groups else (first if first in paths else None)
+    return first if first in paths else None
+
+
+def _mentions(text: str) -> list[tuple[str | None, str]]:
+    return [(m.group(1), m.group(2) or "") for m in MENTION_RE.finditer(text)]
+
+
+def registry_run_commands(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
+    """AST 取 `run_command` 字符串常量里的每一段 `aipd …` 写法。"""
+    out: list[tuple[str, int, str]] = []
+    problems: list[str] = []
+    for rel in REGISTRY_FILES:
+        path = root / rel
+        if not path.is_file():
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError as exc:
+            problems.append(f"parse_failure: {rel}: {exc}")
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Dict):
+                continue
+            for key, value in zip(node.keys, node.values):
+                if not (isinstance(key, ast.Constant) and key.value == "run_command"):
+                    continue
+                if not (isinstance(value, ast.Constant) and isinstance(value.value, str)):
+                    continue
+                for seg in value.value.split(" / "):
+                    seg = seg.strip()
+                    if seg.startswith("aipd"):
+                        out.append((rel, value.lineno, seg))
+    return out, problems
+
+
+def quickref_lines(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
+    """行首（可复制执行）的速查行：去掉 `#`/`-`/反引号/空白后以 `aipd ` 开头。"""
+    out: list[tuple[str, int, str]] = []
+    problems: list[str] = []
+    targets = [root / rel for rel in QUICKREF_FILES if (root / rel).is_file()]
+    for rel in QUICKREF_DIRS:
+        base = root / rel
+        if base.is_dir():
+            targets += [f for f in sorted(base.rglob("*.md")) if f.is_file()]
+    if not targets:
+        problems.append("quickref_corpus_empty: 一个速查文件都没读到")
+    for path in targets:
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeDecodeError) as exc:
+            problems.append(f"unreadable: {path.relative_to(root)}: {exc}")
+            continue
+        for no, line in enumerate(lines, 1):
+            body = line.strip().lstrip("#").strip()
+            while body.startswith(("-", "*", "`")):
+                body = body[1:].lstrip(" \t")
+            if body.startswith("aipd ") or body.startswith("aipd\t"):
+                out.append((str(path.relative_to(root)), no, body))
+    return out, problems
+
+
+def production_code_mentions(root: Path) -> tuple[list[tuple[str, int, str]],
+                                                  list[tuple[str, int, str]],
+                                                  list[str]]:
+    """判红面 ③：生产代码里的提及；同行带否定标记的走只报。返回 (判红, 因否定而只报, 问题)。"""
+    judged: list[tuple[str, int, str]] = []
+    negated: list[tuple[str, int, str]] = []
+    problems: list[str] = []
+    for rel in CODE_DIRS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            if path.stem in SELF_STEMS or "__pycache__" in path.parts:
+                continue
+            if str(path.relative_to(root)) in REGISTRY_FILES:
+                continue        # 登记表整行由判红面 ① 按字段精判，这里不重复数
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeDecodeError) as exc:
+                problems.append(f"unreadable: {path.relative_to(root)}: {exc}")
+                continue
+            for no, line in enumerate(lines, 1):
+                for first, second in _mentions(line):
+                    seg = f"aipd {first}{(' ' + second) if second else ''}"
+                    bucket = negated if any(k in line for k in NEGATION_MARKERS) else judged
+                    bucket.append((str(path.relative_to(root)), no, seg))
+    return judged, negated, problems
+
+
+def prose_mentions(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
+    """只报面：其余文本里的 `aipd …` 提及（正文会合法地提到不存在的命令，见模块 docstring）。"""
+    out: list[tuple[str, int, str]] = []
+    problems: list[str] = []
+    files: list[Path] = [root / rel for rel in REPORT_ONLY_FILES if (root / rel).is_file()]
+    for rel in REPORT_ONLY_DIRS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*")):
+            if path.is_file() and path.suffix in SUFFIXES:
+                files.append(path)
+    for path in files:
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for no, line in enumerate(lines, 1):
+            for first, second in _mentions(line):
+                out.append((str(path.relative_to(root)), no,
+                            f"aipd {first}{(' ' + second) if second else ''}"))
+    return out, problems
+
+
+def audit(root: Path) -> dict[str, Any]:
+    paths, groups, problems = valid_commands()
+    judged: list[tuple[str, int, str, str]] = []      # (field, 文件, 行, 写法)
+    seen_spots: set[tuple[str, int]] = set()          # 三档判红面**覆盖到的行**（不论判决）
+    verdicts: dict[str, str] = {}
+
+    reg, p1 = registry_run_commands(root)
+    quick, p2 = quickref_lines(root)
+    code, code_neg, p4 = production_code_mentions(root)
+    prose, p3 = prose_mentions(root)
+    problems += p1 + p2 + p3 + p4
+
+    def record(kind: str, rel: str, no: int, seg: str) -> None:
+        seen_spots.add((rel, no))
+        for first, second in _mentions(seg):
+            hit = resolve(first, second or None, paths, groups)
+            key = f"{kind}|{rel}:{no}|{first} {second}".strip()
+            verdicts[key] = hit or "UNMATCHED"
+            if hit is None:
+                judged.append((kind, rel, no, f"aipd {first}{(' ' + second) if second else ''}"))
+
+    for rel, no, seg in reg:
+        record("run_command", rel, no, seg)
+    for rel, no, seg in quick:
+        record("quickref", rel, no, seg)
+    for rel, no, seg in code:
+        record("code", rel, no, seg)
+
+    # 只报面 = 全量扫描减去已被三档判红面覆盖的行，再加上"代码里带否定标记"那批；
+    # 去重是必须的：docs/architecture 与 src/ 同时落在两档的目录清单里，
+    # 不去重的话 Σ 分桶 > 总数，"分桶等于分母"这条自证就成了一句空话。
+    report_rows = [r for r in prose if (r[0], r[1]) not in seen_spots] + list(code_neg)
+
+    report_bad = []
+    for rel, no, seg in report_rows:
+        first, second = _mentions(seg)[0]
+        if resolve(first, second or None, paths, groups) is None:
+            report_bad.append((rel, no, seg))
+
+    if not (reg and quick and code):
+        problems.append(f"judging_face_empty: run_command 段 {len(reg)}、速查行 {len(quick)}、"
+                        f"代码提及 {len(code)}（判红面任一档空读都不算绿）")
+    ok = not judged and not problems
+    return {
+        "ok": ok,
+        "authority_paths": len(paths),
+        "authority_groups": len(groups),
+        "corpus": {"run_command_segments": len(reg), "quickref_lines": len(quick),
+                   "code_mentions": len(code), "code_negated": len(code_neg),
+                   "prose_mentions": len(prose), "report_only_mentions": len(report_rows)},
+        "violations": [{"field": f, "doc": d, "line": n, "written": w}
+                       for f, d, n, w in judged],
+        "report_only_unmatched": [{"doc": d, "line": n, "written": w}
+                                  for d, n, w in report_bad],
+        "problems": problems,
+    }
+
+
+def render(rep: dict[str, Any]) -> str:
+    lines = ["=" * 60, "文档命令名对账（现状面判红，正文只报）", "=" * 60]
+    lines.append(f"权威面：{rep['authority_paths']} 条 argparse 路径 + 别名，"
+                 f"{rep['authority_groups']} 个组名")
+    c = rep["corpus"]
+    lines.append(f"判红面语料：run_command {c['run_command_segments']} 段 / "
+                 f"速查行 {c['quickref_lines']} 行 / 生产代码 {c['code_mentions']} 处"
+                 f"（另有 {c['code_negated']} 处同行带否定标记 ⇒ 只报）")
+    lines.append(f"只报面 {c['report_only_mentions']} 处（全量扫描 {c['prose_mentions']} 处，"
+                 "减去三档判红面覆盖的行）")
+    for v in rep["violations"]:
+        lines.append(f"  ✗ {v['field']} {v['doc']}:{v['line']} 写了 `{v['written']}`"
+                     " ⇒ 权威面上没有这条命令")
+    for p in rep["problems"]:
+        lines.append(f"  ! 前提不成立：{p}")
+    if rep["report_only_unmatched"]:
+        uniq: dict[str, list[str]] = {}
+        for r in rep["report_only_unmatched"]:
+            uniq.setdefault(r["written"], []).append(f"{r['doc']}:{r['line']}")
+        lines.append(f"  · 只报面（不判红）里点到未注册的命令 {len(uniq)} 个名字："
+                     + "；".join(f"{k}（{len(v)} 处）" for k, v in sorted(uniq.items())))
+    if not rep["violations"] and not rep["problems"]:
+        lines.append("现状面缺陷 0 条：文档与登记表点名的命令都注册着")
+    return "\n".join(lines)
+
+
+def _mark(marks: list, text: str) -> None:
+    """打一条开火读数并把它计入分母——末行的"几条"由这里现数，不靠我抄。"""
+    print("✓立住 " + text)
+    marks.append(text)
+
+
+def _self_test(tmp: Path) -> int:
+    """合成语料：判红面必须抓到假命令、放过真命令；只报面不许判红。"""
+    marks: list[str] = []
+    paths, groups, problems = valid_commands()
+    if problems or not paths:
+        print(f"--self-test 前提不成立：{problems}")
+        return 2
+    for probe, want in (("ctq add", True), ("usage", True), ("truth show", False),
+                        ("ctq list", False), ("truth", True)):
+        got = resolve(probe.split()[0], probe.split()[1] if " " in probe else None,
+                      paths, groups)
+        assert (got is not None) is want, (probe, got, want)
+    _mark(marks, f"权威面按 parser 树判定（{len(paths)} 条路径；"
+                 "`usage` 算存在、`truth show` 与 `ctq list` 不算）")
+
+    (tmp / "README.md").write_text(
+        "# t\naipd ctq add --db x --project p\naipd truth show --db x\n"
+        "运行 `aipd usage` 列出全部命令\naipd <命令> --help\naipd-os 与 aipd_os 不算\n",
+        encoding="utf-8")
+    (tmp / "src/aipd_os").mkdir(parents=True, exist_ok=True)
+    (tmp / "src/aipd_os/registry_data.py").write_text(
+        'CAPABILITIES = [{"id": "a", "run_command": "aipd ctq revise --db x / '
+        'aipd truth show"},\n {"id": "b", "run_command": "aipd drawing spec --db x"}]\n',
+        encoding="utf-8")
+    (tmp / "src/aipd_os" / "handlers.py").write_text(
+        'NOTE = "declared via aipd ctq list"        # 本轮实测：这条命令仍然没有\n'
+        'BAD = "先跑 aipd truth show 再看"\n'
+        'GOOD = "先跑 aipd ctq add 再看"\n', encoding="utf-8")
+    (tmp / "docs").mkdir(exist_ok=True)
+    (tmp / "docs/audit").mkdir(exist_ok=True)
+    (tmp / "docs/audit/x.md").write_text("本轮实测：库里 `aipd ctq list` 仍然没有\n",
+                                         encoding="utf-8")
+    saved = (REGISTRY_FILES, QUICKREF_FILES, QUICKREF_DIRS,
+             REPORT_ONLY_FILES, REPORT_ONLY_DIRS, CODE_DIRS)
+    globals_ = globals()
+    globals_["REGISTRY_FILES"] = ("src/aipd_os/registry_data.py",)
+    globals_["QUICKREF_FILES"] = ("README.md",)
+    globals_["QUICKREF_DIRS"] = ()
+    globals_["REPORT_ONLY_FILES"] = ()
+    globals_["REPORT_ONLY_DIRS"] = ("docs", "src")
+    globals_["CODE_DIRS"] = ("src",)
+    try:
+        rep = audit(tmp)
+    finally:
+        (globals_["REGISTRY_FILES"], globals_["QUICKREF_FILES"], globals_["QUICKREF_DIRS"],
+         globals_["REPORT_ONLY_FILES"], globals_["REPORT_ONLY_DIRS"],
+         globals_["CODE_DIRS"]) = saved
+    bad = {(v["written"], v["field"]) for v in rep["violations"]}
+    expect = {("aipd truth show", "quickref"), ("aipd truth show", "run_command"),
+              ("aipd truth show", "code")}
+    assert bad == expect, (sorted(bad), sorted(expect))
+    _mark(marks, "三档判红面各抓到一条注入的假命令（速查行、run_command 段、生产代码）")
+    assert not any("aipd ctq add" in b or "aipd usage" in b or "aipd drawing spec" in b
+                   for b, _f in bad), bad
+    _mark(marks, "真命令与占位符/`aipd-os` 一律不开火（反证：合规侧同批存在）")
+    assert ("aipd ctq list", "code") not in bad, bad
+    assert rep["corpus"]["code_negated"] >= 1, rep["corpus"]
+    _mark(marks, "生产代码里带否定标记的那行不判红（登记表的限制句就是这种写法）")
+    prose_bad = {r["written"] for r in rep["report_only_unmatched"]}
+    assert "aipd ctq list" in prose_bad and not any(
+        r["written"] == "aipd ctq list" for r in rep["violations"]), rep
+    _mark(marks, "只报面记名而不判红（正文里合法写出的「没有 aipd ctq list」）")
+    assert rep["ok"] is False, rep
+    assert rep["corpus"]["run_command_segments"] == 3, rep["corpus"]
+    assert rep["corpus"]["quickref_lines"] == 3, rep["corpus"]
+    assert rep["corpus"]["code_mentions"] == 2, rep["corpus"]
+    _mark(marks, "分母自报且与语料一致（run_command 3 段、速查行 3 行、代码 2 处）")
+    assert main(["--repo", str(tmp)]) == 4
+    empty = tmp / "empty"
+    (empty / "src/aipd_os").mkdir(parents=True)
+    (empty / "src/aipd_os/registry_data.py").write_text("CAPABILITIES = []\n",
+                                                        encoding="utf-8")
+    assert main(["--repo", str(empty)]) == 2, "判红面为空必须判前提不成立"
+    _mark(marks, "空语料读成「前提不成立」（退 2），不是「零违规」")
+    print(f"--self-test：{len(marks)} 条合成读数全部对上")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description="文档/登记表命令名对账")
+    ap.add_argument("--repo", default=str(ROOT))
+    ap.add_argument("--json", default="", help="把读数写成 JSON")
+    ap.add_argument("--self-test", action="store_true")
+    args = ap.parse_args(argv)
+    if args.self_test:
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            return _self_test(Path(td))
+    root = Path(args.repo).resolve()
+    rep = audit(root)
+    print(render(rep))
+    if args.json:
+        Path(args.json).write_text(json.dumps(rep, ensure_ascii=False, indent=1),
+                                   encoding="utf-8")
+    if rep["problems"]:
+        return 2
+    return 4 if rep["violations"] else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

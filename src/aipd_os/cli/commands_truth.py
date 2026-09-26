@@ -385,11 +385,12 @@ def cmd_truth_sweep(args):
 
 
 def cmd_truth_ctq_add(args) -> int:
-    """``aipd truth ctq add``：把一条 CTQ **由人声明**进 Product Truth（链头的生产者）。
+    """``aipd ctq add``：把一条 CTQ **由人声明**进 Product Truth（链头的生产者）。
 
     判据与"为什么不能让 PI gate 顺带派生"都写在 `product_truth/ctq.py` 的模块 docstring：
-    `record_type="ctq"` 今天只有读者（发布证据分母、`drawing spec` 的输入、返工重算），
-    全仓排除 `tests/` 后没有任何写入点，所以链条第二跳在真库里根本没有输入。
+    `record_type="ctq"` 在第 56 片之前只有读者（发布证据分母、`drawing spec` 的输入、返工重算），
+    全仓排除 `tests/` 后没有任何写入点，所以链条第二跳在真库里根本没有输入——
+    这一条就是那格的**生产者**（改动入口见 `aipd ctq revise` / `aipd ctq deprecate`）。
 
     数值参数**故意不用 `argparse type=float`**：校验只留 `declare_ctq` 一处，
     错误文案要能点名"是哪一格、为什么"，而不是 argparse 的 usage 半句。
@@ -414,7 +415,7 @@ def cmd_truth_ctq_add(args) -> int:
     except Exception as exc:  # noqa: BLE001 - 写不进去不是"没写成功"
         print(f"CTQ 写入失败：{type(exc).__name__}: {exc}")
         return 2
-    payload = {"command": "truth ctq add", "ok": True, **result}
+    payload = {"command": "ctq add", "ok": True, **result}
 
     def prose():
         low, high = result["limits"]

@@ -165,7 +165,7 @@ def declare_ctq(store: Any, *, feature: str, drawing_feature: str, nominal: Any,
             content=f"CTQ {feature} @ {drawing_feature} "
                     f"[{lower_limit:g}, {upper_limit:g}] 检验 {inspection_method}",
             source=SourceRef(note=f"declared by {declared_by} via "
-                                  f"aipd truth ctq add (epistemic={epistemic_status})"),
+                                  f"aipd ctq add (epistemic={epistemic_status})"),
             trust_level=trust_level,
             metadata={"feature": feature, "drawing_feature": drawing_feature,
                       "nominal": nominal, "lower_limit": lower_limit,
