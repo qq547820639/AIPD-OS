@@ -132,7 +132,9 @@ A5 不是门禁没牙，是**电池选错了原告**：那条用例把上游 CTQ
 ⇒ `ctq_missing_nominal` 缺口 ⇒ 断言 `ctq-gap:` 前缀、理由带"缺口"、`truth drift` 退 4），
 并把 A5 的原告换成它，复跑整批：
 
-@@BATTERY2@@
+复跑（worktree `/tmp/s57w @ 54bc263`，对照臂未注入 rc=0）：**8 KILLED / 0 SURVIVED / 0 注入无效**，
+A5 换原告后 KILLED，电池结束后 `git status --short` 为空（注入全部按原字节还原）。
+读数原文见 `/tmp/s57/battery2.log`。
 
 ## 八、终读数
 
