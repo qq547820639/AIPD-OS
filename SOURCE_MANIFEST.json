@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-26T10:08:26+00:00",
+  "generated_at": "2026-09-26T10:38:38+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 200024,
-      "sha256": "bca4ea7771e5dfa839b65c05e0f13edaefd0ad040fde7dd04cfac15357b93a6c"
+      "size": 200711,
+      "sha256": "6b53800f4bffd3d858077ccc2a801745067abfd271e078c6e040420c50b6ac3c"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1102,8 +1102,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 38751,
-      "sha256": "225160d9b73eb5ad34b88c3a98639b88b9dbdf9bf293b17cb32646dcaa3fc961"
+      "size": 39576,
+      "sha256": "4bfb8b8e8053d9a8ec2446e622d0e1cb2332aa1254fda45191b823cda9992078"
     },
     {
       "path": "src/aipd_os/cli/commands_eco.py",
@@ -2552,8 +2552,8 @@
     },
     {
       "path": "tests/test_dxf_rework.py",
-      "size": 17535,
-      "sha256": "5ad5ca2924420a451934a57d1133ed3d4dad0789f44f2464cf8dde56d46f075f"
+      "size": 22106,
+      "sha256": "4ab62f7a79361d2e58352bd9aec38f91f8ab02190fa11a5ffe3d3bd9d8c846b5"
     },
     {
       "path": "tests/test_encryption_key_policy.py",
