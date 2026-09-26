@@ -141,4 +141,26 @@
 
 ## 八、终读数
 
-（收尾复算后填）
+绑定前先过一道自建的报告前置校验（`/tmp/s48/verify_report.py`，11 条前提全成立才允许 mint）：
+报告不早于被 attested 的检出、`root=/private/tmp/s48b`（证明跑的是干净检出而不是主树）、
+`exitcode=0`、逐条 outcome 里无 `failed/error/x*/rerun`、`summary.collected == len(tests) == 2353`、
+`passed+skipped == collected`、`collected == 2353`、报告内 `source_commit == tag SHA`、
+`tests/test_cost_lineage.py` 恰 10 条且全 passed、attested HEAD == 主仓 HEAD。
+
+| 项 | 读数 |
+|---|---|
+| 全量（干净 worktree `git worktree add --detach /tmp/s48b HEAD` @4723e00） | **2350 passed / 3 skipped / 0 failed**，1012.89s，rc=0 |
+| 报告 | `docs/audit/pytest-report-v5.6.0.json`，sha256 `1d055c4bd493683e…`，`source_commit` = tag SHA |
+| 清单 | `RELEASE_MANIFEST` / `SOURCE_MANIFEST` 均 **646** 文件（644 → 646，+`bom/cost_lineage.py`、+`tests/test_cost_lineage.py`） |
+| 锚定 | 两份清单的 `source_commit` 都保持在 tag SHA `a66040520139405095648461f7144d4f00629924`，未跟 HEAD |
+| `production_release_gate --release-ready --tag v5.6.0` | **8/8 passed，rc=0，`release_ready: true`** |
+| `audit_repo --strict` | rc=1，**恰好 1 条 ✗**：`Provenance source commit mismatch: manifest=a66040520139… vs HEAD=…`（按设计：清单钉在 tag，树在其后） |
+| 撤改电池 | **8 杀 / 0 活 / 0 注入无效**（对照臂未注入 rc=0 先立，见 §六） |
+| 镜像后受影响常驻用例 | 53 passed（§六末） |
+| lint（CI 口径 `ruff check src tests`） | All checks passed |
+| `doc_reference_census` | 7 passed —— 但**它按设计不管 `docs/audit/**`**（该文件头第 12 行写明这里记的是当时的事实），所以本文件里 `cost_lineage.py:145-151` 这类行号引用不受该门禁保护，是本轮逐条读码核对过的，不是门禁背书的 |
+
+两条本轮自抓、都记了出处的问题：
+① 收尾提交漏了 `SOURCE_MANIFEST.json`，`workspace_clean` 那道检查把它判红（gate rc=2、
+`release_ready: false`）——是门禁救了这一手，补交后 8/8；
+② §二 初稿把 dbt 与 BitBake 归给了第 46 片，跨文件复grep 才暴露（第 46 片那张表里根本没有它们）。
