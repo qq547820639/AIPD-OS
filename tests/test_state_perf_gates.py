@@ -8,8 +8,10 @@
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 import time
+from contextlib import contextmanager
 
 import pytest
 
@@ -228,3 +230,111 @@ class TestStalePropagationScaling:
         assert marginal <= 1.5, (
             f"每个依赖新增 {marginal:.2f} 条语句（{n_small}→{n_large}），"
             "疑似 N+1：应一条 SELECT 取依赖 + 每条依赖一次写")
+
+
+class TestDriftScanScaling:
+    """漂移扫描（第 51/52 片的 `scan_drift`）的**形状**门禁：不看墙钟毫秒。
+
+    `truth drift` / `truth sweep` 每跑一次都要把库里每条有效制品版本记录判一遍，
+    所以它是这条链上唯一会随交付物数量长期变大的读路径。这里钉两条与机器无关的事实：
+    每条记录一次 SQL 之外不许多查（抓 N+1），每条记录只读一次声明文件
+    （抓"每条记录都把同一份文件重开一遍"这类静默放大）。
+    墙钟趋势读数另放 `scripts/state_perf_gate.py` 的两个 `drift_scan_*` 场景。
+    """
+
+    def _seed_specs(self, tmp_path, n: int, project: str):
+        """用生产血缘助手造 n 条 `drawing_spec` 版本记录（每条配一份磁盘声明）。"""
+        from aipd_os.cad.spec_lineage import record_spec_lineage
+        from aipd_os.product_truth import ProductTruthStore
+        from aipd_os.product_truth.models import TruthRecord
+        from aipd_os.state.db import AIPDStateDB
+
+        db_path = tmp_path / f"{project}.db"
+        state = AIPDStateDB(str(db_path))
+        state.ensure_default_tenant(TENANT)
+        state.init_project(TENANT, project, "drift scan", "goal")
+        store = ProductTruthStore(str(db_path), tenant_id=TENANT, project_id=project)
+        for i in range(n):
+            ctq = store.add(
+                TruthRecord(record_type="ctq", content=f"CTQ {i}",
+                            trust_level="verified",
+                            metadata={"feature": f"TOP.hole_{i}", "nominal": 8.0,
+                                      "lower_limit": 7.95, "upper_limit": 8.05,
+                                      "inspection_method": "CMM"}),
+                tenant_id=TENANT, project_id=project)
+            spec = {"features": [{"feature": f"TOP.hole_{i}", "ctq_ref": ctq,
+                                  "nominal": 8.0, "lower_limit": 7.95,
+                                  "upper_limit": 8.05}]}
+            out = tmp_path / f"{project}-spec-{i}.json"
+            out.write_text(json.dumps(spec, ensure_ascii=False, sort_keys=True),
+                           encoding="utf-8")
+            record_spec_lineage(store, spec, path=out,
+                                tenant_id=TENANT, project_id=project)
+        return store, db_path, project
+
+    def _scan_shape(self, tmp_path, n: int, project: str) -> tuple[int, int, int, dict]:
+        """跑一次真扫描，返回 (扫到几条, 走了几条 SQL, 读了几次声明文件, 四态计数)。"""
+        from aipd_os.cad import dxf_lineage
+        from aipd_os.cli.commands_drift import build_resolvers
+        from aipd_os.product_truth import ProductTruthStore
+        from aipd_os.product_truth.drift import scan_drift
+
+        store, db_path, pid = self._seed_specs(tmp_path, n, project)
+        # 计数器必须在 build_resolvers 之前挂上：resolver 在构造时就把函数绑进闭包
+        reads: list[str] = []
+        real_digest = dxf_lineage.spec_file_digest
+
+        def counting(path):
+            reads.append(str(path))
+            return real_digest(path)
+
+        dxf_lineage.spec_file_digest = counting
+        statements: list[str] = []
+        original = ProductTruthStore.connect
+
+        @contextmanager
+        def traced(self):
+            with original(self) as conn:
+                conn.set_trace_callback(statements.append)
+                try:
+                    yield conn
+                finally:
+                    conn.set_trace_callback(None)
+
+        ProductTruthStore.connect = traced
+        try:
+            report = scan_drift(store,
+                                resolvers=build_resolvers(str(db_path), pid, TENANT),
+                                tenant_id=TENANT, project_id=pid)
+        finally:
+            ProductTruthStore.connect = original
+            dxf_lineage.spec_file_digest = real_digest
+        return int(report["scanned"]), len(statements), len(reads), dict(report["counts"])
+
+    def test_scan_is_all_in_sync_on_a_clean_library(self, tmp_path):
+        """前提档：这一族的其余两条都按"全一致"的干净库算，先证库造对了。"""
+        scanned, _, _, counts = self._scan_shape(tmp_path, 5, "P-DRIFT-PREMISE")
+        assert scanned == 5, scanned
+        assert counts == {"in_sync": 5, "drifted": 0, "undecidable": 0,
+                          "no_record_signature": 0}, (
+            f"夹具没造出干净的一致库：{counts} —— 其余两条按 in_sync 分支算的形状成本，"
+            "落到 undecidable/早退分支上读数就不是那条路径")
+
+    def test_sql_statements_do_not_grow_per_record(self, tmp_path):
+        """记录 20 → 100 时语句数几乎不变：一次 SELECT 取全集，不逐条回表。"""
+        small_n, small_sql, _, _ = self._scan_shape(tmp_path, 20, "P-DRIFT-S20")
+        large_n, large_sql, _, _ = self._scan_shape(tmp_path, 100, "P-DRIFT-L100")
+        assert (small_n, large_n) == (20, 100)
+        marginal = (large_sql - small_sql) / (large_n - small_n)
+        assert marginal <= 0.1, (
+            f"每条记录新增 {marginal:.2f} 条 SQL（{small_sql}→{large_sql}）："
+            "扫描应一条 SELECT 取全部有效记录，逐条回表就是 N+1")
+
+    def test_each_record_reads_its_spec_file_exactly_once(self, tmp_path):
+        """每条记录只读一次声明文件：读两次以上就是把 O(N) 变成 O(2N) 的静默放大。"""
+        for n, project in ((7, "P-DRIFT-R7"), (30, "P-DRIFT-R30")):
+            scanned, _, reads, _ = self._scan_shape(tmp_path, n, project)
+            assert scanned == n, (scanned, n)
+            assert reads == n, (
+                f"{n} 条记录读了 {reads} 次声明文件：resolver 每条应当只被调用一次，"
+                "多出来的读要么重复哈希同一份文件，要么把同一份记录判了两遍")

@@ -52,6 +52,14 @@
     "changes_recent_100_ms": {
       "median": 1.1291,
       "metric": "ms"
+    },
+    "drift_scan_us_per_record": {
+      "median": 131.2402,
+      "metric": "us"
+    },
+    "drift_scan_scaling_ratio": {
+      "median": 0.7937,
+      "metric": "ratio"
     }
   }
 }

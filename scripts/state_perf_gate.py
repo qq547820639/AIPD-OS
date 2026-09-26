@@ -2,7 +2,8 @@
 """P2-M10：状态基础设施性能验证量具（含棘轮门禁）。
 
 覆盖 P2 收敛路径引入/改动的热路径：迁移、连接工厂、事务批处理边界、
-Outbox 追加与 claim、stale 传播、Readiness 快照。
+Outbox 追加与 claim、stale 传播、Readiness 快照、漂移扫描（第 55 片加：
+`scan_drift` 的单条成本与"记录变多后单条成本是否被放大"）。
 
 设计取舍（对齐 pytest-benchmark 的思路，零新增依赖）：
 - 每个场景多轮（rounds）独立建库，取 ms/op 或 ops/s 的 min/median/mean/max/stdev；
@@ -347,7 +348,84 @@ def sc_batch_vs_autocommit(workdir: Path) -> float:
     return batched / autocommit  # < 1 表示批处理更快
 
 
+def _seed_truth_specs(workdir: Path, n: int, project_id: str):
+    """用**生产血缘助手**造 n 条有效 `drawing_spec` 版本记录（每条配一份磁盘声明）。
+
+    不手写 INSERT：`record_spec_lineage` 与 `aipd drawing spec` 走的是同一个函数，
+    手写记录会造出一条生产路径 never 产生的形状（第 46 片就是这么抓到签名漏吃模型的）。
+    """
+    from aipd_os.cad.spec_lineage import record_spec_lineage
+    from aipd_os.product_truth import ProductTruthStore
+    from aipd_os.product_truth.models import TruthRecord
+    from aipd_os.state.db import AIPDStateDB
+
+    path = workdir / "state.db"
+    workdir.mkdir(parents=True, exist_ok=True)
+    db = AIPDStateDB(str(path))
+    db.ensure_default_tenant("default")
+    db.init_project("default", project_id, "perf", "perf goal")
+    store = ProductTruthStore(str(path), tenant_id="default", project_id=project_id)
+    for i in range(n):
+        ctq = store.add(
+            TruthRecord(record_type="ctq", content=f"CTQ {i}", trust_level="verified",
+                        metadata={"feature": f"TOP.hole_{i}", "nominal": 8.0,
+                                  "lower_limit": 7.95, "upper_limit": 8.05,
+                                  "inspection_method": "CMM"}),
+            tenant_id="default", project_id=project_id)
+        spec = {"features": [{"feature": f"TOP.hole_{i}", "ctq_ref": ctq,
+                              "nominal": 8.0, "lower_limit": 7.95,
+                              "upper_limit": 8.05}]}
+        out = workdir / f"spec-{i}.json"
+        out.write_text(json.dumps(spec, ensure_ascii=False, sort_keys=True),
+                       encoding="utf-8")
+        record_spec_lineage(store, spec, path=out,
+                            tenant_id="default", project_id=project_id)
+    return store, path
+
+
+def _scan_once(store, db_path: Path, project_id: str) -> tuple[float, int]:
+    """跑一次 `scan_drift`（与 `aipd truth drift` 同一个入口），返回 (µs, 扫到几条)。"""
+    from aipd_os.cli.commands_drift import build_resolvers
+    from aipd_os.product_truth.drift import scan_drift
+
+    resolvers = build_resolvers(str(db_path), project_id, "default")
+    start = time.perf_counter()
+    report = scan_drift(store, resolvers=resolvers,
+                        tenant_id="default", project_id=project_id)
+    elapsed = (time.perf_counter() - start) * 1e6
+    return elapsed, int(report["scanned"])
+
+
+def sc_drift_scan_us_per_record(workdir: Path) -> float:
+    """200 条制品版本记录的漂移扫描，摊到每条记录的 µs（越小越好）。
+
+    钉前提而不是只读数：`scanned` 必须等于种下的条数，且全部读成 `in_sync`——
+    有漂移的那一遍走的是另一条分支，混进来就把"扫描成本"读成了"判决成本"。
+    """
+    n = 200
+    store, path = _seed_truth_specs(workdir, n, "P-DRIFT-SCAN")
+    elapsed, scanned = _scan_once(store, path, "P-DRIFT-SCAN")
+    assert scanned == n, f"种了 {n} 条却扫到 {scanned} 条"
+    return elapsed / n
+
+
+def sc_drift_scan_scaling_ratio(workdir: Path) -> float:
+    """轮内比值：记录数 ×10 时，单条成本不得跟着涨（抓"每条都重开一次贵东西"）。
+
+    用比值而不是绝对毫秒数当硬门禁：绝对值受机器负载影响，本文件的绝对场景只做棘轮。
+    """
+    small_n, large_n = 20, 200
+    store_s, path_s = _seed_truth_specs(workdir, small_n, "P-DRIFT-S")
+    us_small, scanned_s = _scan_once(store_s, path_s, "P-DRIFT-S")
+    assert scanned_s == small_n, scanned_s
+    store_l, path_l = _seed_truth_specs(workdir, large_n, "P-DRIFT-L")
+    us_large, scanned_l = _scan_once(store_l, path_l, "P-DRIFT-L")
+    assert scanned_l == large_n, scanned_l
+    return (us_large / scanned_l) / (us_small / scanned_s)
+
+
 SCENARIOS: list[Scenario] = [
+
     Scenario("migrate_cold_ms", "absolute", "ms", sc_migrate_cold,
              note="v0→HEAD 全量迁移"),
     Scenario("migrate_noop_ms", "absolute", "ms", sc_migrate_noop,
@@ -375,6 +453,12 @@ SCENARIOS: list[Scenario] = [
     Scenario("batch_over_autocommit_ratio", "comparative", "ratio",
              sc_batch_vs_autocommit, require_ratio=0.34,
              note="批处理耗时 / 逐条自提交耗时（<=0.34 即至少 3x 收益）"),
+    Scenario("drift_scan_us_per_record", "absolute", "us",
+             sc_drift_scan_us_per_record, tolerance_pct=60.0,
+             note="200 条有效制品版本记录的漂移扫描，摊到每条的 µs"),
+    Scenario("drift_scan_scaling_ratio", "comparative", "ratio",
+             sc_drift_scan_scaling_ratio, require_ratio=3.0,
+             note="记录 20→200 时单条成本的比值（>3 即出现按记录放大的贵操作）"),
 ]
 
 
