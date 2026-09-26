@@ -82,9 +82,25 @@ E2 与 E5 各自只打断一条——它们必须分开，否则"未变不写"�
 
 ## 七、终读数
 
-- 全量：待本轮收尾（预期 2316 passed / 3 skipped，collected 2319）
-- `production_release_gate --release-ready --tag v5.6.0`：待填
-- `audit_repo --strict`：待填
+收尾链：`225ce99`（代码 + 清单重锚 638→640）→ 全量 → `b6e5295`（绑证据 + 报告入库）→ 门禁。
+
+- **全量**：**2316 passed / 3 skipped / 0 failed**，277.04s，跑在 `225ce99` 的
+  `git worktree` 干净签出里（`PYTHONPATH` 指向该签出的 `src`，`AIPD_SOURCE_COMMIT` = tag SHA）。
+  报告 sha256 `0a7aeb15173266ca…`，已入库并绑进 `PROVENANCE.test_report`
+  （passed 2316 / failed 0 / total 2319）。
+- **命令面连带面**：`-k "command or skill or surface or contract or cli or hygiene or registry or truth or rework"`
+  **499 passed / 0 failed**（SKILL 与 README 的镜像、contract 派生计数、argv 位棘轮都对上了）。
+- **`production_release_gate --release-ready --tag v5.6.0`**：**8/8 PASS，rc=0**。
+- **`audit_repo --strict`**：rc=1，唯一一条 ✗ 是按设计保留的 tag 锚点项
+  （`manifest=a66040520139… vs HEAD=b6e5295ad040…`），两份清单 `hash_mismatch_count` 均为 0。
+- **文档引用普查（开发树，写本节时测）**：149 份文档 / 3619 处引用，
+  `resolved` 2900 / `missing` 136 / `multi` 429 / `external` 83 / `elided` 61 /
+  `line_beyond_eof` 10（Σ == 分母 ✓），**现状面 0 条**，历史面 123 条。
+  绝对数按第 41 片的漂移规则只留在这里，不进 CHANGELOG/README。
+- 一处过程事实值得记：命令面从 56 长到 57 时，`EXPECTED_PUBLIC_COUNT` 是**派生**的
+  （`len(PUBLIC_COMMANDS)`）所以不用改，但 SKILL 的分组清单、SKILL 那句「主线共 N 个」、
+  README 速查、以及第 39/40 片那把 argv 位棘轮的分母（`66 → 67`）**都是手写镜像**——
+  少改一处就是一堆常驻用例红；本轮这四处一起改，红→绿的顺序也照这个记。
 
 ## 八、复算入口
 
