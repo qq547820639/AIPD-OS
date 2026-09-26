@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-26T17:49:21+00:00",
+  "generated_at": "2026-09-26T18:30:28+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 230057,
-      "sha256": "7f6c93ffcf9807bcefaa7e70ad151bdb697ec86b7145e7dbfb8848954e92216f"
+      "size": 232902,
+      "sha256": "41f8536493966b10c9bbb6b254a4c53880e5b7407b60d0e2c4f089ea76a93f26"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 49296,
-      "sha256": "a19afeb51c76fe42912ad632c8d889fdbe70d6c2f8d4178576ca3bc445ceda6f"
+      "size": 50238,
+      "sha256": "fbd4de3ecd9ae907aadecb4ea564b33610eebfbb798bc7f28642485df72e3a41"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -177,8 +177,8 @@
     },
     {
       "path": "SKILL.md",
-      "size": 3961,
-      "sha256": "e757a5c30c219ba8d721a7549ff3b14ac3339e4d94dedee4910a68da4d33e5f6"
+      "size": 4207,
+      "sha256": "e2e8b17a49cee87ccbeef5891c1cb0f827e8c74868e2720d96129646cad042e9"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 15708,
-      "sha256": "c265c688d44b17ffc653f98b48b4e39bc0ae3a9553e340c73c95c602e184326f"
+      "size": 17504,
+      "sha256": "0137d5aec78fce306302d6cd027d935bd11a8976778d071bb88e1f084502593f"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -703,7 +703,7 @@
     {
       "path": "scripts/c6_coverage.py",
       "size": 26483,
-      "sha256": "029ad6d72fb667e000a6999addac3d2d5b02c23b79b374ca187b57f6f166e220"
+      "sha256": "aaafb05dd194e87e8675e1eb841822d549b0dbf7db70510f35afc96220505f8c"
     },
     {
       "path": "scripts/cad_convergence.py",
@@ -1097,13 +1097,13 @@
     },
     {
       "path": "src/aipd_os/cli/command_contract.py",
-      "size": 19285,
-      "sha256": "68352f32b0732f70b0ff10607cd4d2744baee517fa3808b73a8615193ae15b6f"
+      "size": 20196,
+      "sha256": "6b31def5892da917ea7c1d5e7d8772dce71c30e3c8e1087be4f01a78129c8665"
     },
     {
       "path": "src/aipd_os/cli/commands.py",
-      "size": 23793,
-      "sha256": "076c3238aa34f750d56c7bbc55898e6f3c954ec2c6ba2f2391ed1019bf741de2"
+      "size": 23938,
+      "sha256": "2505fd2335ecbfaef23981a95804cb0cd864077313fd73d5d8e4ee3b66e42490"
     },
     {
       "path": "src/aipd_os/cli/commands_cad.py",
@@ -1117,8 +1117,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 39576,
-      "sha256": "4bfb8b8e8053d9a8ec2446e622d0e1cb2332aa1254fda45191b823cda9992078"
+      "size": 40584,
+      "sha256": "3cef38da2fac67c7392927b2c49d349a8679a8b287d9321bc74be432e71e10fe"
     },
     {
       "path": "src/aipd_os/cli/commands_drift.py",
@@ -1167,8 +1167,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_truth.py",
-      "size": 19556,
-      "sha256": "c0535170ba155a632d79ff36ba951349768316c66ce91185b9f81e93f94814bf"
+      "size": 22218,
+      "sha256": "2540d7a3c585ca8edd35c9393e56d751686033719d6c6e4d2fc2ce06a2510952"
     },
     {
       "path": "src/aipd_os/cli/commands_validation.py",
@@ -1177,8 +1177,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 54562,
-      "sha256": "23c38717bb94a40b878730ae361fcfe44643c879cbc7ec97699f73a5787afb8f"
+      "size": 57337,
+      "sha256": "73442681f869ee3c281090f7198753f46b290583aaaa8498de8ed83653fd52f3"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1626,6 +1626,11 @@
       "sha256": "58874a15ff6085ce1874faefd66adc1975713017ff960027e0fe6be1e52ac400"
     },
     {
+      "path": "src/aipd_os/product_truth/ctq.py",
+      "size": 9722,
+      "sha256": "9de6cb67b5713976816ecdc501af4ce402d2d7f77070fc9de2a529d2dd309731"
+    },
+    {
       "path": "src/aipd_os/product_truth/drift.py",
       "size": 6239,
       "sha256": "160500bd83e724adb8d6b64d7d8131476776d9443c652be12776f0fa4d3f3675"
@@ -1682,8 +1687,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 97862,
-      "sha256": "5f40bb78f8e1ac77df41f190c4fd5d5abf016106c9bd6b3c1c5bfd3b4b092a76"
+      "size": 99542,
+      "sha256": "4af17623db320252c459c0e93102fb546bab8064b3d09263807a568e7a2b1c58"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2527,8 +2532,8 @@
     },
     {
       "path": "tests/test_command_surface_census.py",
-      "size": 8840,
-      "sha256": "fc6e24e5ba38dca252851470a6d306ee67e2df2f8d266f6677f0ac6988fa0ece"
+      "size": 8903,
+      "sha256": "2fee001146b53bb48ac0acfaead36ee0cc20d50a16d445de47b7c735a791d3a5"
     },
     {
       "path": "tests/test_completion_endpoint.py",
@@ -3234,6 +3239,11 @@
       "path": "tests/test_transaction_semantics.py",
       "size": 4260,
       "sha256": "0c18c12f38e284b692a1fa7a31a514d10677fd4552b2bbb779c82379bdee60e3"
+    },
+    {
+      "path": "tests/test_truth_ctq_add.py",
+      "size": 18372,
+      "sha256": "914c7db7739ab0c9212ac5b1d97d2b5992694c734b97b5d72e147fcbaa37a222"
     },
     {
       "path": "tests/test_truth_drift.py",

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T01:44:02",
+  "generated_at": "2026-09-27T02:30:25",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
   "latest_commit_sha": "a66040520139405095648461f7144d4f00629924",
@@ -27,10 +27,10 @@
     "not_verifiable": "无法验证（缺证据/缺环境）"
   },
   "summary": {
-    "total_capabilities": 83,
+    "total_capabilities": 84,
     "by_classification": {
       "fully_implemented": 33,
-      "partially_implemented": 37,
+      "partially_implemented": 38,
       "protocol_only": 0,
       "template_only": 0,
       "external_dependency": 13,
@@ -278,6 +278,27 @@
     {
       "domain": "产品事实",
       "capabilities": [
+        {
+          "id": "product_truth.ctq_declaration",
+          "name": "关键尺寸合格域（CTQ）的声明",
+          "domain": "产品事实",
+          "classification": "partially_implemented",
+          "external_dependency": false,
+          "declaration_file": "docs/architecture/truth_architecture.md",
+          "implementation_file": "src/aipd_os/product_truth/ctq.py; src/aipd_os/cli/commands_truth.py",
+          "entry_point": "aipd_os.cli.commands_truth.cmd_truth_ctq_add",
+          "run_command": "aipd ctq add --db <state.db> --project <p> --feature <要求名> --drawing-feature <图上尺寸> --nominal <标称> --lower <下限> --upper <上限> --inspection <检验方法> --by <谁声明>",
+          "input_output": "属主声明的一条合格域 -> record_type=ctq 的 active 记录（feature / drawing_feature / nominal / 上下限 / inspection_method / declared_by 六个读者必填项齐备）；信任级由 product_intelligence/gate_criteria._derive_trust 现算，没给 --test-ref 就是 unverified",
+          "unit_test": "tests/test_truth_ctq_add.py",
+          "integration_test": null,
+          "e2e_evidence": "链头到返工全走公开命令：ctq add → drawing spec（1 条 CTQ→声明边）→ 改限值 → truth drift 发现 → truth sweep 落刀 → truth rework 按新限值重写声明文件（tests/test_truth_ctq_add.py::test_declared_ctq_feeds_spec_drift_sweep_and_rework）",
+          "current_limitation": "只有 add：改一条已声明 CTQ 的限值（revise）与停用/取代（deprecate）今天都没有命令，限值变化只能走库层 store.update ⇒ 「谁在什么时候把 8.05 改成 8.10」缺一个审计入口；同一个图纸尺寸上已有 active CTQ 时新声明在门口被拒（不静默覆盖、也不按遍历顺序挑赢家），但处置旧的那条还没有工具",
+          "probe": {
+            "implementation_file_exists": true,
+            "entry_callable": true,
+            "external_dependency_flag": false
+          }
+        },
         {
           "id": "product_truth.impact_propagation",
           "name": "事实失效传播与有界返工",
