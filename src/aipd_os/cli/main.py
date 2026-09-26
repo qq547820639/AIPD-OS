@@ -583,6 +583,15 @@ def build_parser() -> argparse.ArgumentParser:
                     help="返工上限（缺省 3）；必须 > 0")
     tp.add_argument("--json", action="store_true")
     tp.set_defaults(func=COMMAND_FUNCS["truth propagate"])
+    td = truth_sub.add_parser(
+        "drift",
+        help="只读扫描：按当前输入重算每条制品记录的身份键，与记录里那份比对，"
+             "报出「该 stale 却还挂着 active」的清单（不改任何状态；有漂移即退出码 4）。")
+    td.add_argument("--db", required=True)
+    td.add_argument("--project")
+    td.add_argument("--tenant", default="default")
+    td.add_argument("--json", action="store_true")
+    td.set_defaults(func=COMMAND_FUNCS["truth drift"])
     tt = truth_sub.add_parser(
         "tasks",
         help="列本作用域的返工待办（只读）。")

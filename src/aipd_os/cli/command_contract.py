@@ -128,6 +128,12 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
     CommandEntry("truth tasks", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
                  requires_args=frozenset({"--db", "--project"}),
                  description="列本作用域的返工待办（只读，不改任何状态）"),
+    CommandEntry("truth drift", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
+                 requires_args=frozenset({"--db", "--project"}),
+                 description="只读扫描：把每条有效制品记录按**当前输入**重算一遍身份键，"
+                             "与记录里存的那份比对，报出「该 stale 却还挂着 active」的清单。"
+                             "不改任何状态；拿不齐输入的记录单列「不可判」，"
+                             "既不折成没漂也不折成漂了；有漂移即退码 4"),
     CommandEntry("truth rework", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
                  requires_args=frozenset({"--db", "--project"}),
                  description="按当前 active CTQ 重算图纸声明并跑一次返工："

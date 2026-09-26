@@ -446,6 +446,11 @@ aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷
 #     引擎只判 blocked，绝不伪造成功。
 aipd truth tasks --db state.db --project P [--status pending]     # 只读列返工待办
 aipd truth rework --db state.db --project P (--task RW-001 | --all-pending)   # 跑一次真实返工
+aipd truth drift --db state.db --project P                                   # 只读扫描漂移
+#   ↑ 按**当前输入**重算每条制品记录的身份键，与记录里存的那份比，报出「该 stale 却还挂着 active」的清单
+#     （`src/aipd_os/product_truth/drift.py` 分四态：一致 / 漂移 / 不可判 / 没有可比对的键）。
+#     不新建基线：记录里本来就存着自己那份键，每次拿当前世界重算再比（dbt 那套要比上一份 manifest，基线自己也会过期）。
+#     拿不齐输入的记录单列「不可判」，既不折成没漂也不折成漂了；本命令一个字都不写，有漂移即 exit 4。
 #   ↑ 执行器今天认三类制品：drawing_spec（重算声明）、drawing_dxf（第 47 片：重跑出图）、
 #     bom_cost（第 49 片：按记录里的 BOM 与口径五项重跑核算）。不认识的（如 artifact=bom）
 #     在烧 attempts 之前逐条点名拒，记录不会被打成 blocked。

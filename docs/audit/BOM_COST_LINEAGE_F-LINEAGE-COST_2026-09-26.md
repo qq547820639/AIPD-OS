@@ -134,7 +134,7 @@
 - **上游方向仍断**：没有任何生产者往 `artifact=bom` 那条记录**连入边**
   （`quote apply` 写的是 `quote.*` fact，不是 truth 版本记录）。
   所以「改一条 CTQ 会打到成本」仍不成立——第 5 步是从 BOM 版本记录起算的。
-- **触发靠人给 id**：`aipd truth propagate --upstream` 取的是 `cost calc` 打印出来的
+- **触发靠人给 id**（**本条已被第 51 片补掉一半**：`aipd truth drift` 已经能只读地扫出「登记时的键 ≠ 当前输入的键」这类记录并点名为 `should_be_stale`，所以「发现」不再依赖人记得去 propagate；但**收口**仍要人跑 propagate + rework，drift 只报不写。原文照抄如下）：`aipd truth propagate --upstream` 取的是 `cost calc` 打印出来的
   `lineage.bom.record_id`；没有任何东西在 BOM 变化时自动去调它。
 - `superseded` 只有状态、没有后继指针；「磁盘上的 BOM 与记录不符」不做常驻判定。
 - 边表序列号与被忽略的插入一起增长（§五），本轮不修，只登记。

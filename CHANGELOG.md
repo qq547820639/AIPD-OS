@@ -951,6 +951,48 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-DRIFT 第 51 片：新公开命令 `aipd truth drift`——发现「上游已变、下游还 active」不再靠人记得**：
+  第 48/49/50 三轮的 §七 都留了同一句：传播的触发靠人给 `--upstream`。
+  写侧（生产者）与执行侧（返工执行器）都接上了，缺的是**发现**那一半。
+  新增 `src/aipd_os/product_truth/drift.py`（纯分类，四态
+  `in_sync / drifted / undecidable / no_record_signature`）+
+  `src/aipd_os/cli/commands_drift.py`（四类制品的 resolver：读声明文件、取模型摘要、
+  开 `bom.db` 取当前行）+ `cli/main.py`/`commands.py`/`command_contract.py` 接线。
+  技术选型这轮做了真实检索并**改变了设计**：读到 dbt《Node selector methods》
+  （`state:*` 是「与上一份 manifest 比」，body/configs/relations/descriptions 算变更、
+  tags/meta 刻意不算）与 Nx《Run Only Tasks Affected》（原文 "Nx uses the Git history
+  and the project graph"，从真相源现算、不存基线），对比本仓第 46 片已实读的 Bazel action key，
+  **选 B 的思路 + C 的键形状** ⇒ 不新建基线表、不做基线刷新策略，
+  避开「基线工件自己会比现实更旧」那个坑（本仓记录里本来就存着上一份键，基线住在记录身上）。
+  命令形状也对比过：给 `truth propagate` 加 `--scan` 要把它的 `--upstream`
+  从 `required=True`（实测 `cli/main.py:578`）改松并新增「两个都不给」的退码语义，
+  那是在改一条既有命令的契约 ⇒ 选新开一条只读命令。
+  三条判据：**只读**（跑出漂移后整表逐字段不变，这条是断言不是叙述）；
+  **不可判不折叠**（拿不齐输入的记录既不折成没漂也不折成漂了——第 48 片那批没存口径值的
+  `bom_cost`、以及本轮没接 resolver 的 `quote_batch` 都落这一格，静默跳过会把覆盖率读成 100%）；
+  **空库不算通过**（`clean=False`、退码 4）。
+  键的两端**由各类制品自己交出**：`drawing_spec` 存的是 `spec_sha256` 而不是
+  `input_signature`，用一个字段名兜两类记录会把「读不到键」与「键确实不同」混成同一种读数
+  ——这是写第一版时被用例当场打红才改的。
+  真实库读数（第 50 片留下的 `/tmp/s50/state.db`：改过报价、没重跑 cost calc）：
+  `扫描 3 条有效制品记录：一致 0、漂移 2、不可判 1、没有可比对的键 0`，
+  `T-001`(bom) 与 `T-002`(bom_cost) 都被点出、`T-003`(quote_batch) 落不可判，**rc=4**
+  （第一次读成 0 是 `| tail` 的退码，本仓第三次踩这条，已去掉管道重测）。
+  常驻用例 **13 条**（`tests/test_truth_drift.py`）；撤改电池 **7 条：杀 7 / 活 0 / 注入无效 0**
+  （对照臂 rc=0；D2 把不可判折进一致→2 红、D5 未覆盖类型静默跳过→1 红、
+  D6 扫描顺手标 stale→1 红、D1 空库算通过→1 红等）。
+  新公开命令的镜像按「新增公开命令」那一档全套同步：契约、COMMAND_FUNCS、子解析器、
+  `SKILL.md` 分组清单与「主线共 57 个」→58、README 速查、registry 三处、
+  `tests/test_command_surface_census.py` 两处手写分母 67 → 68（新命令有 argv 位真调用用例，
+  属合法增长；不改它它会红两次）。一处被门禁抓住的错写法：把新命令塞进 registry 的
+  `entry_point`（`; ` 分隔两条点号路径）被 `test_capability_entry_surface` 判红——
+  那个字段只接受单个可导入 callable，改放 `implementation_file` 与 `run_command`。
+  全量收集数 2378 → 2391。仍未接上：**发现 ≠ 收口**（本命令只报不写，
+  要收口仍得 propagate + rework）；`quote_batch` 没有 resolver；
+  `drawing_dxf` 的 resolver 本轮没有真库端到端用例；扫描耗时未量；
+  本地开发库刻意没碰，所以「存量库里到底漂着多少」仍是未知数。
+  证据见 `docs/audit/TRUTH_DRIFT_F-DRIFT_2026-09-26.md`。
+
 - **v5.12 F-LINEAGE-QUOTE 第 50 片：整条链上第一次有人往 BOM 版本记录**连入边****：
   新增 `src/aipd_os/supply_chain/quote_lineage.py` 与 `aipd quote apply --truth-lineage`：
   按「全部参与判定的报价事实（供应商/件号/版本号/状态/单价/行币种）+ 批次币种」写一条

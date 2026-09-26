@@ -57,6 +57,7 @@ from .commands_drawing import (
     cmd_drawing_dfm,
     cmd_drawing_spec,
 )
+from .commands_drift import cmd_truth_drift
 from .commands_eco import (
     cmd_eco_affected,
     cmd_eco_create,
@@ -530,6 +531,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "truth propagate": cmd_truth_propagate,
     "truth tasks": cmd_truth_tasks,
     "truth rework": cmd_truth_rework,
+    "truth drift": cmd_truth_drift,
     "outbox drain": cmd_outbox,
     "outbox review": cmd_outbox,
     "industrialize": cmd_industrialize,

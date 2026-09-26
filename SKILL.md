@@ -18,14 +18,14 @@ description: "[已废弃-勿作为入口加载] 本技能的 agent 入口地位�
   影响、证据、不确定性、未回复时继续项、明确回复格式），等待所有者选择。
 - **所有者的自然语言视图**：Owner Experience 层以自然语言卡片呈现项目状态、
   门禁进度、待处理决策与风险，无需阅读底层仓库。
-- **一键命令**（`aipd <cmd>`，主线共 57 个，按工作流分组；另有 10 个 deprecated
+- **一键命令**（`aipd <cmd>`，主线共 58 个，按工作流分组；另有 10 个 deprecated
   旧别名保留兼容）：
   - 核心流程：`init` / `intake` / `resume` / `status` / `run` / `decide`
   - 所有者体验：`onboard` / `dashboard` / `operate` / `ui` / `reset` / `recover`
   - 手册链：`manual plan` / `manual generate`
   - CAD：`cad preflight` / `cad build` / `drawing generate` / `drawing spec` / `drawing assembly` / `drawing assembly-steps` / `drawing assembly-step` / `drawing dfm`
   - 产品定义：`product show` / `product gate`
-  - 产品事实：`truth propagate`（沿血缘标 stale + 建返工任务） / `truth tasks`（列待办） / `truth rework`（跑一次真实返工：按当前 CTQ 重算图纸声明，未变不写文件、变了重写）
+  - 产品事实：`truth propagate`（沿血缘标 stale + 建返工任务） / `truth tasks`（列待办） / `truth rework`（跑一次真实返工：按当前 CTQ 重算图纸声明，未变不写文件、变了重写） / `truth drift`（只读扫描：按**当前输入**重算每条制品记录的身份键，报出「该 stale 却还挂着 active」的清单，不改状态；有漂移即 exit 4）
   - 工业化：`industrialize` / `validate`
   - 制造就绪（v5.10）：`bom show` / `bom add` / `bom release` / `quote apply` / `cost calc`
   - 验证与质量（v5.10）：`validation plan` / `validation list` / `validation show` / `validation import`

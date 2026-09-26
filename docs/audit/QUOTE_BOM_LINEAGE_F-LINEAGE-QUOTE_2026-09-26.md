@@ -102,7 +102,7 @@ Reproducible Builds、dbt `state:modified`、FreeCAD TechDraw）。
 
 ## 七、仍然没接上的（是读数，不是完成度）
 
-- **触发仍靠人给 `--upstream`**：`quote apply` 写完边之后，
+- **触发仍靠人给 `--upstream`**（第 51 片把「发现」那一半接上了：`aipd truth drift` 能只读扫出漂了的记录；**传播与收口仍要人跑**。原文：`quote apply` 写完边之后，
   没有任何东西自动去调 `truth propagate`；库里报价换了、下游仍是 `active` 这一态仍然存在。
 - **`artifact=bom` 自己没有返工执行器**：从报价 propagating 会同时生成
   BOM 版本记录与成本结论两条任务，前者仍走点名拒（第 49 片只接了 `bom_cost`）。

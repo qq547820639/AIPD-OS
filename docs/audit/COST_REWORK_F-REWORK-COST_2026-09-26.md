@@ -110,7 +110,7 @@ Bazel action key + Reproducible Builds 时间戳（第 46 片）。
   但 BOM 版本记录自身的返工任务仍走点名拒那条路。
 - **上游方向仍断**：没有任何生产者往 `artifact=bom` 连**入边**（`quote apply` 写的是 `quote.*` fact），
   所以「改一条 CTQ 会打到成本」仍不成立。
-- **触发仍靠人给 id**：`truth propagate --upstream` 取的是 `cost calc` 打印的 `lineage.bom.record_id`。
+- **触发仍靠人给 id**（第 51 片补掉「发现」那一半：`aipd truth drift` 只读扫描能自己指出「登记时的键与当前输入的键不一致」的记录；收口仍要人跑 propagate + rework。原文：`truth propagate --upstream` 取的是 `cost calc` 打印的 `lineage.bom.record_id`。
 - 执行器只重算并演进记录，**不写 `facts.cost.total`**（那是命令面的副作用，
   跑一次 `cost calc` 才会刷新）——所以返工之后库里会有「结论已收口、fact 还是旧数」的两态，
   本轮不做这条对账。
