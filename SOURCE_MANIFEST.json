@@ -1,8 +1,8 @@
 {
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
-  "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-26T14:02:25+00:00",
+  "source_commit": "e331a13a71f7210e0ccddc44e14866f91b1eff62",
+  "generated_at": "2026-09-26T14:07:10+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
