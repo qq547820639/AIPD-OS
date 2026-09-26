@@ -21,55 +21,118 @@
 
 签名怎么算（读声明文件、开 BOM 库、取模型摘要）留在 CLI 侧注入：
 `product_truth` 层不该知道 `bom.db` 在哪、也不该知道 DXF 的模型是黄金件还是 STEP。
+
+第 57 片：一份记录允许有**多个输入面**，且**每个面各自与同一条已存基线比**
+----------------------------------------
+`drawing_spec` 的输入其实有两处：磁盘上那份声明文件，和**当初喂给生产者的那批 CTQ 记录**。
+第 51~54 片只比前者，于是"属主改了 CTQ 限值、没人重出声明"这一整类漂移读成 `in_sync`
+（第 56 片 §六 把这件事钉成了缺席断言）。现在两个面一起算，判据形状借 Argo CD
+`docs/operator-manual/architecture.md` 实读的那句 "compares the current, live state against
+the desired target state"：**两边都现算，基线只存一份**——所以存量记录不需要迁移、不会整片掉进
+"没有键"。为什么不新增一列"源面签名"：那要把写侧两条入口（生产者与返工执行器）同时改，
+且第 43~56 片的记录会集体变成 `no_record_signature`，把今天的"一致"读数换成"看不见"。
+
+多出来的纪律只有一条，也是最容易做错的一条：**不可判不许跨面折叠**。
+- 任一面与基线不一致 ⇒ `drifted`（原因里点名是哪一面）——哪怕另一面算不出来；
+- 没有一面有基线 ⇒ `no_record_signature`；只有一部分面有基线且**算得出的面全部一致** ⇒
+  仍判 `no_record_signature`（不能因为"文件面自己跟自己合"就宣布这份记录没问题）；
+- 有基线但算不出当前值 ⇒ `undecidable`，原因用那一面自己交上来的话。
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any, Callable
 
 __all__ = ["IN_SYNC", "DRIFTED", "UNDECIDABLE", "NO_SIGNATURE",
-           "classify_record", "scan_drift"]
+           "Face", "classify_record", "scan_drift"]
 
 IN_SYNC = "in_sync"
 DRIFTED = "drifted"
 UNDECIDABLE = "undecidable"
 NO_SIGNATURE = "no_record_signature"
 
-#: resolver(meta) 回 **(当前输入算出的键, 记录里存着的那份键, 算不出时的原因)**。
+
+@dataclass(frozen=True)
+class Face:
+    """一个输入面：`current` 是当前世界算出的键，`stored` 是记录里存着的那份基线。
+
+    两面**同源于一次生产**才有意义：`drawing_spec` 的文件面与源面共用
+    `metadata.spec_sha256` 这一条基线（写声明时文件内容与 CTQ 重算结果本就同一份），
+    所以任何一个面与它不等都是"当前输入不再是当初那份"。
+    """
+
+    name: str
+    current: str | None
+    stored: str | None
+    reason: str | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"face": self.name,
+                "current": str(self.current)[:16] if self.current else None,
+                "stored": str(self.stored)[:16] if self.stored else None,
+                "reason": self.reason}
+
+
+#: resolver(meta) 回**一组面**。单面制品回一个即可；两面制品（`drawing_spec`）回两个。
 #: 两侧都由各类制品自己交出：`drawing_spec` 存的是 `spec_sha256`（没有 input_signature），
-#: DXF / bom / bom_cost 存的是 `input_signature`——用一个字段名去兜两类记录，
+#: DXF / bom / bom_cost / quote_batch 存的是 `input_signature`——用一个字段名去兜两类记录，
 #: 会把「读不到那份键」与「键确实不同」混成同一种读数。
-Resolver = Callable[[dict[str, Any]], "tuple[str | None, str | None, str | None]"]
+Resolver = Callable[[dict[str, Any]], Sequence[Face]]
+
+
+def _reason_with_faces(label: str, faces: Sequence[Face]) -> str:
+    parts = [f"{f.name}面：{f.reason or '（未给原因）'}" for f in faces if f.reason]
+    return f"{label}（{'；'.join(parts)}）" if parts else label
 
 
 def classify_record(record: Any, resolver: Resolver) -> dict[str, Any]:
-    """把**一条**记录分进四态之一。"""
+    """把**一条**记录分进四态之一（多面判据见模块 docstring 的那条优先级）。"""
     meta = dict(record.metadata or {})
     artifact = str(meta.get("artifact") or "")
+    base = {"record_id": str(record.record_id), "artifact": artifact,
+            "status": str(record.status), "faces": []}
     if not artifact:
-        return {"record_id": str(record.record_id), "artifact": None,
-                "state": UNDECIDABLE, "status": str(record.status),
+        return {**base, "artifact": None, "state": UNDECIDABLE,
                 "reason": "记录里没有 metadata.artifact，认不出是哪类制品"}
     try:
-        current, stored, why = resolver(meta)
+        faces = list(resolver(meta))
     except Exception as exc:  # noqa: BLE001 - 算不出来是读数，不是崩溃
-        return {"record_id": str(record.record_id), "artifact": artifact,
-                "state": UNDECIDABLE, "status": str(record.status),
+        return {**base, "state": UNDECIDABLE,
                 "reason": f"重算抛了 {type(exc).__name__}: {exc}"}
-    if not stored:
-        return {"record_id": str(record.record_id), "artifact": artifact,
-                "state": NO_SIGNATURE, "status": str(record.status),
-                "reason": why or "这条记录里没有可比对的输入键（该轮的生产者还没写这一项）"}
-    if not current:
-        return {"record_id": str(record.record_id), "artifact": artifact,
-                "state": UNDECIDABLE, "status": str(record.status),
-                "reason": why or "重算器说它拿不齐输入"}
-    same = str(current) == str(stored)
-    return {"record_id": str(record.record_id), "artifact": artifact,
-            "state": IN_SYNC if same else DRIFTED,
-            "status": str(record.status),
-            "stored_signature": str(stored)[:16],
-            "current_signature": str(current)[:16],
-            "reason": None if same else "当前输入算出的键与记录里那份不一致"}
+    if not faces:
+        # 判据不开火与判据判"合"在终端上同形，所以这一档单独点名，不进 in_sync。
+        return {**base, "state": UNDECIDABLE,
+                "reason": "重算器一个面都没交出来（这把尺子对它不开火，不算通过）"}
+
+    differing = [f for f in faces if f.current and f.stored
+                 and str(f.current) != str(f.stored)]
+    if differing:
+        lead = differing[0]
+        names = "、".join(f.name for f in differing)
+        reason = _reason_with_faces(f"{names}面当前键与记录里那份不一致",
+                                    [f for f in faces if f.reason])
+        return {**base, "state": DRIFTED, "faces": [f.as_dict() for f in faces],
+                "stored_signature": str(lead.stored)[:16],
+                "current_signature": str(lead.current)[:16],
+                "reason": reason}
+
+    lacking_baseline = [f for f in faces if not f.stored]
+    if lacking_baseline:
+        return {**base, "state": NO_SIGNATURE, "faces": [f.as_dict() for f in faces],
+                "reason": _reason_with_faces(
+                    "这条记录里没有可比对的输入键（该轮的生产者还没写这一项）",
+                    lacking_baseline)}
+    uncomputable = [f for f in faces if not f.current]
+    if uncomputable:
+        return {**base, "state": UNDECIDABLE, "faces": [f.as_dict() for f in faces],
+                "reason": _reason_with_faces("重算器说它拿不齐输入", uncomputable)}
+
+    lead = faces[0]
+    return {**base, "state": IN_SYNC, "faces": [f.as_dict() for f in faces],
+            "stored_signature": str(lead.stored)[:16],
+            "current_signature": str(lead.current)[:16],
+            "reason": None}
 
 
 def scan_drift(store: Any, *, resolvers: dict[str, Resolver],

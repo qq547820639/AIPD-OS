@@ -354,7 +354,8 @@ def _seed_truth_specs(workdir: Path, n: int, project_id: str):
     不手写 INSERT：`record_spec_lineage` 与 `aipd drawing spec` 走的是同一个函数，
     手写记录会造出一条生产路径 never 产生的形状（第 46 片就是这么抓到签名漏吃模型的）。
     """
-    from aipd_os.cad.spec_lineage import record_spec_lineage
+    from aipd_os.cad.spec_from_truth import spec_from_ctq
+    from aipd_os.cad.spec_lineage import record_spec_lineage, render_spec_text
     from aipd_os.product_truth import ProductTruthStore
     from aipd_os.product_truth.models import TruthRecord
     from aipd_os.state.db import AIPDStateDB
@@ -368,16 +369,18 @@ def _seed_truth_specs(workdir: Path, n: int, project_id: str):
     for i in range(n):
         ctq = store.add(
             TruthRecord(record_type="ctq", content=f"CTQ {i}", trust_level="verified",
-                        metadata={"feature": f"TOP.hole_{i}", "nominal": 8.0,
-                                  "lower_limit": 7.95, "upper_limit": 8.05,
+                        metadata={"feature": f"hole_{i}",
+                                  "drawing_feature": f"TOP.hole_{i}",
+                                  "nominal": 8.0, "lower_limit": 7.95,
+                                  "upper_limit": 8.05,
                                   "inspection_method": "CMM"}),
             tenant_id="default", project_id=project_id)
-        spec = {"features": [{"feature": f"TOP.hole_{i}", "ctq_ref": ctq,
-                              "nominal": 8.0, "lower_limit": 7.95,
-                              "upper_limit": 8.05}]}
+        # 第 57 片：声明正文改由生产函数 `spec_from_ctq` 生成（理由见
+        # `tests/test_state_perf_gates.py::_seed_specs` 里那段注释）。
+        spec, gaps = spec_from_ctq([store.get(ctq)])
+        assert not gaps, gaps
         out = workdir / f"spec-{i}.json"
-        out.write_text(json.dumps(spec, ensure_ascii=False, sort_keys=True),
-                       encoding="utf-8")
+        out.write_text(render_spec_text(spec), encoding="utf-8")
         record_spec_lineage(store, spec, path=out,
                             tenant_id="default", project_id=project_id)
     return store, path

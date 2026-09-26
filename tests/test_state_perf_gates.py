@@ -8,7 +8,6 @@
 """
 from __future__ import annotations
 
-import json
 import sqlite3
 import time
 from contextlib import contextmanager
@@ -244,7 +243,8 @@ class TestDriftScanScaling:
 
     def _seed_specs(self, tmp_path, n: int, project: str):
         """用生产血缘助手造 n 条 `drawing_spec` 版本记录（每条配一份磁盘声明）。"""
-        from aipd_os.cad.spec_lineage import record_spec_lineage
+        from aipd_os.cad.spec_from_truth import spec_from_ctq
+        from aipd_os.cad.spec_lineage import record_spec_lineage, render_spec_text
         from aipd_os.product_truth import ProductTruthStore
         from aipd_os.product_truth.models import TruthRecord
         from aipd_os.state.db import AIPDStateDB
@@ -258,16 +258,20 @@ class TestDriftScanScaling:
             ctq = store.add(
                 TruthRecord(record_type="ctq", content=f"CTQ {i}",
                             trust_level="verified",
-                            metadata={"feature": f"TOP.hole_{i}", "nominal": 8.0,
-                                      "lower_limit": 7.95, "upper_limit": 8.05,
+                            metadata={"feature": f"hole_{i}",
+                                      "drawing_feature": f"TOP.hole_{i}",
+                                      "nominal": 8.0, "lower_limit": 7.95,
+                                      "upper_limit": 8.05,
                                       "inspection_method": "CMM"}),
                 tenant_id=TENANT, project_id=project)
-            spec = {"features": [{"feature": f"TOP.hole_{i}", "ctq_ref": ctq,
-                                  "nominal": 8.0, "lower_limit": 7.95,
-                                  "upper_limit": 8.05}]}
+            # 第 57 片改的这格：spec 必须由**生产函数** `spec_from_ctq` 生成。
+            # 原来手写的 `{"features": [...]}` 少 `drawing_feature`、也不是那函数的产物，
+            # 于是源面（按记录自己的 ctq_refs 重算）与基线永不相等 ⇒ 整批记录读成漂移，
+            # 量的就不再是"扫一份一致的库"了。
+            spec, gaps = spec_from_ctq([store.get(ctq)])
+            assert not gaps, gaps
             out = tmp_path / f"{project}-spec-{i}.json"
-            out.write_text(json.dumps(spec, ensure_ascii=False, sort_keys=True),
-                           encoding="utf-8")
+            out.write_text(render_spec_text(spec), encoding="utf-8")
             record_spec_lineage(store, spec, path=out,
                                 tenant_id=TENANT, project_id=project)
         return store, db_path, project

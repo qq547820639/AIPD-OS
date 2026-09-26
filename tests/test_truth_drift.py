@@ -26,6 +26,7 @@ from aipd_os.product_truth.drift import (
     IN_SYNC,
     NO_SIGNATURE,
     UNDECIDABLE,
+    Face,
     classify_record,
     scan_drift,
 )
@@ -33,6 +34,11 @@ from aipd_os.state.db import AIPDStateDB
 
 T = "default"
 P = "TRUTH-DRIFT"
+
+
+def _one(current, stored, reason=None):
+    """单面制品的 resolver：把 (current, stored, reason) 抬成群面协议。"""
+    return [Face("input", current, stored, reason)]
 
 
 class FakeRec:
@@ -48,15 +54,18 @@ def test_classifier_four_states():
     ok = SimpleNamespace(record_id="T-1", metadata={"artifact": "bom",
                                                     "input_signature": "abc"},
                          status="active")
-    same = classify_record(ok, lambda m: ("abc", m.get("input_signature"), None))
+    same = classify_record(ok, lambda m: _one("abc", m.get("input_signature")))
     assert same["state"] == IN_SYNC
-    diff = classify_record(ok, lambda m: ("zzz", m.get("input_signature"), None))
+    diff = classify_record(ok, lambda m: _one("zzz", m.get("input_signature")))
     assert diff["state"] == DRIFTED and diff["status"] == "active"
-    blind = classify_record(ok, lambda m: (None, m.get("input_signature"), "读不到 BOM 行"))
-    assert blind["state"] == UNDECIDABLE and blind["reason"] == "读不到 BOM 行"
+    blind = classify_record(ok, lambda m: _one(None, m.get("input_signature"), "读不到 BOM 行"))
+    assert blind["state"] == UNDECIDABLE
+    assert "读不到 BOM 行" in blind["reason"]
+    assert blind["faces"] == [{"face": "input", "current": None, "stored": "abc",
+                               "reason": "读不到 BOM 行"}], blind["faces"]
     keyless = SimpleNamespace(record_id="T-2", metadata={"artifact": "bom"},
                               status="active")
-    assert classify_record(keyless, lambda m: ("abc", None, None))["state"] \
+    assert classify_record(keyless, lambda m: _one("abc", None))["state"] \
         == NO_SIGNATURE
 
 
@@ -74,7 +83,7 @@ def test_classifier_does_not_leak_resolver_exception():
 
 def test_record_without_artifact_is_undecidable_not_skipped():
     rec = FakeRec("T-9", {"input_signature": "abc"})
-    out = classify_record(rec, lambda m: ("abc", "abc", None))
+    out = classify_record(rec, lambda m: _one("abc", "abc"))
     assert out["state"] == UNDECIDABLE and out["artifact"] is None
 
 
@@ -99,7 +108,7 @@ def test_superseded_records_are_not_scanned():
     recs = [FakeRec("T-1", {"artifact": "bom", "input_signature": "abc"},
                     status="superseded")]
     report = scan_drift(FakeStore(recs),
-                        resolvers={"bom": lambda m: ("zzz", "abc", None)})
+                        resolvers={"bom": lambda m: _one("zzz", "abc")})
     assert report["scanned"] == 0 and report["nothing_scanned"] is True
 
 
@@ -107,7 +116,7 @@ def test_should_be_stale_only_counts_active_drift():
     recs = [FakeRec("T-1", {"artifact": "bom", "input_signature": "abc"}, status="active"),
             FakeRec("T-2", {"artifact": "bom", "input_signature": "abc"}, status="stale")]
     report = scan_drift(FakeStore(recs),
-                        resolvers={"bom": lambda m: ("zzz", m["input_signature"], None)})
+                        resolvers={"bom": lambda m: _one("zzz", m["input_signature"])})
     assert report["counts"][DRIFTED] == 2
     assert [r["record_id"] for r in report["should_be_stale"]] == ["T-1"]
 
@@ -197,7 +206,14 @@ def test_legacy_cost_record_is_undecidable_not_in_sync(env, capsys):
 
 
 def test_spec_record_drifts_when_the_file_on_disk_changes(env, capsys, tmp_path):
-    """`drawing_spec` 那一类存的是 spec_sha256，不是 input_signature：换一种键名也要能吃。"""
+    """`drawing_spec` 那一类存的是 spec_sha256，不是 input_signature：换一种键名也要能吃。
+
+    第 57 片改判的一格：这条夹具的 spec 是手写形状（只有 `tolerances`，不是
+    `spec_from_ctq` 的产物），所以记录里 `ctq_refs` 是空的 ⇒ **源面没有从重算**。
+    改判前它整条记 `in_sync`，改判后记 `undecidable`，而本片真正要钉的那半句
+    ——「手改产物文件必须被发现」——不但没弱，反而更精确：漂移理由点名是 `file` 面。
+    两面各自独立的正例（改 CTQ 只红源面）在 `tests/test_truth_spec_faces.py`。
+    """
     from aipd_os.cad.spec_lineage import record_spec_lineage
 
     tmp_path, db = env
@@ -208,15 +224,21 @@ def test_spec_record_drifts_when_the_file_on_disk_changes(env, capsys, tmp_path)
     out = record_spec_lineage(store, payload, path=spec,
                               tenant_id=T, project_id=P)
     assert out["created"] is True and out["record_id"], out
+    assert out["ctq_refs"] == [], out
 
     resolvers = build_resolvers(str(db), P)
     verdict = classify_record(store.get(out["record_id"]), resolvers["drawing_spec"])
-    assert verdict["state"] == IN_SYNC, verdict
+    assert verdict["state"] == UNDECIDABLE, verdict
+    assert {f["face"] for f in verdict["faces"]} == {"file", "source"}
+    by_face = {f["face"]: f for f in verdict["faces"]}
+    assert by_face["file"]["current"] == by_face["file"]["stored"], by_face["file"]
+    assert by_face["source"]["current"] is None and "ctq_refs" in by_face["source"]["reason"]
 
     payload["tolerances"][0]["nominal"] = 6.05
     spec.write_text(json.dumps(payload), encoding="utf-8")
     verdict2 = classify_record(store.get(out["record_id"]), resolvers["drawing_spec"])
     assert verdict2["state"] == DRIFTED, verdict2
+    assert "file面" in verdict2["reason"], verdict2["reason"]
 
 
 def test_drift_is_read_only_even_when_it_finds_drift(env, capsys):

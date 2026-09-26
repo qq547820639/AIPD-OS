@@ -19,37 +19,112 @@
 | `quote_batch` | `metadata.input_signature`（第 50 片，第 52 片换基）
   → `quote_input_signature(批次币种 + 按记录里 quote_ids 读回的当前报价事实)` |
 
-拿不齐输入的，一律回 `(None, 原因)` 让上层判「不可判」——
+拿不齐输入的，一律交一个 `current=None` 的面让上层判「不可判」——
 第 46 片之前的 DXF、第 48 片那批没存口径值的 `bom_cost`、
 以及第 50 片那批按**文件态**算键的 `quote_batch` 就落在这一档。
+
+第 57 片把 `drawing_spec` 拆成**两个面**（判据与优先级在 `product_truth/drift.py`）：
+
+| 面 | 当前怎么算 | 抓到的是哪一类改动 |
+|---|---|---|
+| `file` | 重读那份声明文件求 canonical 哈希 | 有人手改/删了产物 |
+| `source` | 拿**这条记录自己声明的** `ctq_refs` 那批 active CTQ |
+  重跑一次 `spec_from_ctq` | 属主改了限值、或上游 CTQ 被停用/删除，但没人重出声明 |
+
+源面为什么不取"本作用域全部 active CTQ"：一条记录只覆盖它当初吃进去的那批要求，
+按全集算会把"新增了另一条无关要求"读成这条记录漂了（常驻用例
+`test_unrelated_new_ctq_is_not_drift` 钉住这一格，它会红如果这里取错）。
 """
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from aipd_os.product_truth.drift import Resolver, scan_drift
+from aipd_os.product_truth.drift import Face, Resolver, scan_drift
 
 __all__ = ["build_resolvers", "cmd_truth_drift"]
 
 
-def _spec_signature_resolver() -> Resolver:
-    from aipd_os.cad.dxf_lineage import spec_file_digest
+#: 只有一路输入（一份 `input_signature`）的制品写这个形状；`build_resolvers` 用
+#: `_single_face` 把它抬成群面协议。别为了"统一"去改那四个函数的签名——
+#: 它们各自的原因文案都有常驻用例钉着。
+SingleFace = Callable[[dict[str, Any]], "tuple[str | None, str | None, str | None]"]
 
-    def resolve(meta: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
-        stored = meta.get("spec_sha256")
-        path = str(meta.get("path") or "")
-        if not path:
-            return None, stored, "记录里没写声明文件路径"
-        current = spec_file_digest(Path(path))
-        if current is None:
-            return None, stored, f"声明文件读不到或不是合法 JSON：{path}"
-        return current, stored, None
+
+def _single_face(fn: SingleFace) -> Resolver:
+    def resolve(meta: dict[str, Any]) -> list[Face]:
+        current, stored, reason = fn(meta)
+        return [Face("input", current, stored, reason)]
 
     return resolve
 
 
-def _dxf_signature_resolver() -> Resolver:
+def _spec_signature_resolver(db_path: str, project_id: str,
+                             tenant: str) -> Resolver:
+    from aipd_os.cad.dxf_lineage import spec_file_digest
+
+    # 一次扫描只读一遍：缓存 miss 与"库里真没有 active CTQ"是两个状态，
+    # 所以用 None 哨兵而不是空容器当"没读过"。
+    read: tuple[list[Any], str | None] | None = None
+
+    def active_ctqs() -> tuple[list[Any], str | None]:
+        """本作用域的 active CTQ，一次扫描只读一遍（面与面之间、记录与记录之间都复用）。"""
+        nonlocal read
+        if read is None:
+            try:
+                from aipd_os.product_truth.store import ProductTruthStore
+
+                store = ProductTruthStore(db_path, tenant_id=tenant, project_id=project_id)
+                read = (list(store.query(record_type="ctq", status="active",
+                                         tenant_id=tenant, project_id=project_id)), None)
+            except Exception as exc:  # noqa: BLE001 - 读不到权威需求是"不可判"，不是崩溃
+                read = ([], f"上游 CTQ 读不到：{type(exc).__name__}: {exc}")
+        return read
+
+    def source_face(meta: dict[str, Any], stored: str | None) -> Face:
+        from aipd_os.cad.spec_from_truth import spec_from_ctq
+        from aipd_os.cad.spec_lineage import spec_digest
+
+        if stored is None:
+            return Face("source", None, None, "记录里没有 spec_sha256，源面没有基线可比")
+        refs = [str(r).strip() for r in (meta.get("ctq_refs") or []) if str(r).strip()]
+        if not refs:
+            return Face("source", None, stored,
+                        "记录里没有 ctq_refs（第 43 片之前的声明），源面无从重算")
+        ctqs, why = active_ctqs()
+        if why:
+            return Face("source", None, stored, why)
+        wanted = set(refs)
+        present = [r for r in ctqs if str(r.record_id) in wanted]
+        lost = sorted(wanted - {str(r.record_id) for r in present})
+        spec, gaps = spec_from_ctq(present)
+        if gaps:
+            # 输入读到了、也算得出来，只是算出来的东西说明这份声明立不住——
+            # 这是漂移，不是不可判（折叠成"不可判"等于把最响的警报调成哑）。
+            keyed = sorted(gaps, key=lambda g: (str(g.get("kind")), str(g.get("record_id"))))
+            current = "ctq-gap:" + spec_digest({"gaps": keyed})
+        else:
+            current = spec_digest(spec)
+        reason = (f"{len(lost)} 条上游 CTQ 已不在 active 集合里：" + "、".join(lost[:5])
+                  if lost else (f"按 {len(present)} 条上游 CTQ 重算出 {len(gaps)} 条缺口"
+                                if gaps else None))
+        return Face("source", current, stored, reason)
+
+    def resolve(meta: dict[str, Any]) -> list[Face]:
+        stored = meta.get("spec_sha256")
+        path = str(meta.get("path") or "")
+        if not path:
+            file_face = Face("file", None, None, "记录里没写声明文件路径，文件面没有基线可比")
+        else:
+            current = spec_file_digest(Path(path))
+            file_face = Face("file", current, stored,
+                             None if current else f"声明文件读不到或不是合法 JSON：{path}")
+        return [file_face, source_face(meta, stored)]
+
+    return resolve
+
+
+def _dxf_signature_resolver() -> SingleFace:
     from aipd_os.cad.dxf_lineage import dxf_input_signature, model_input_digest, spec_file_digest
 
     def resolve(meta: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
@@ -93,7 +168,7 @@ def _dxf_signature_resolver() -> Resolver:
 
 
 def _bom_resolvers(db_path: str, project_id: str,
-                   tenant: str) -> dict[str, Resolver]:
+                   tenant: str) -> dict[str, SingleFace]:
     """`bom` 与 `bom_cost` 共用一次「读当前 BOM」的开销。"""
     from aipd_os.bom import BomStore
     from aipd_os.bom.cost_lineage import bom_input_signature, cost_input_signature
@@ -145,7 +220,7 @@ def _bom_resolvers(db_path: str, project_id: str,
     return {"bom": bom, "bom_cost": bom_cost}
 
 
-def _quote_resolver(db_path: str, project_id: str, tenant: str) -> Resolver:
+def _quote_resolver(db_path: str, project_id: str, tenant: str) -> SingleFace:
     """报价批次：键按**库里当前的报价事实**重算，所以「这批被后来的报价转 R」读得出来。
 
     第 52 片定论（不是没做，是不该按别的东西做）：不重解析报价文件、不反查 `source` 路径。
@@ -197,10 +272,11 @@ def _quote_resolver(db_path: str, project_id: str, tenant: str) -> Resolver:
 def build_resolvers(db_path: str, project_id: str,
                     tenant: str = "default") -> dict[str, Resolver]:
     resolvers: dict[str, Resolver] = {
-        "drawing_spec": _spec_signature_resolver(),
-        "drawing_dxf": _dxf_signature_resolver(),
-        "quote_batch": _quote_resolver(db_path, project_id, tenant)}
-    resolvers.update(_bom_resolvers(db_path, project_id, tenant))
+        "drawing_spec": _spec_signature_resolver(db_path, project_id, tenant),
+        "drawing_dxf": _single_face(_dxf_signature_resolver()),
+        "quote_batch": _single_face(_quote_resolver(db_path, project_id, tenant))}
+    for kind, fn in _bom_resolvers(db_path, project_id, tenant).items():
+        resolvers[kind] = _single_face(fn)
     return resolvers
 
 

@@ -299,10 +299,13 @@ def _drifted(db):
     return {str(r["record_id"]) for r in report["buckets"][DRIFTED]}, report
 
 
-def test_ctq_change_is_invisible_to_drift_and_sweep(env, capsys, tmp_path):
-    """钉住本片实测到的边界：`drawing_spec` 记录的身份键是**声明文件的哈希**，
-    所以"改了 CTQ 但没人 propagate"这条路 drift/sweep 都看不见。
-    不是猜测——本轮先按"应该能发现"写断言，它红了，才改成钉缺席（F-DRIFT-5 的靶子）。
+def test_ctq_change_is_visible_to_drift_and_sweep(env, capsys, tmp_path):
+    """第 56 片钉的是**缺席**，第 57 片把它反转：同一副夹具、同一个改法，只换期望。
+
+    第 56 片 §六 原文：`drawing_spec` 的身份键当时只有声明文件哈希，所以
+    "改了 CTQ 但没人 propagate"这一条 drift/sweep 都看不见（当时先按"应该能发现"写断言、
+    它红了，才改钉成缺席）。第 57 片补上源面之后这里必须反过来，
+    来历记在 `docs/audit/SPEC_FACES_F-DRIFT-5_2026-09-27.md`。
     """
     _, db = env
     assert _add(db) == 0
@@ -312,16 +315,14 @@ def test_ctq_change_is_invisible_to_drift_and_sweep(env, capsys, tmp_path):
     _change_upper_limit(db)
 
     drifted, report = _drifted(db)
-    assert drifted == set(), (
-        f"这一格今天应该看不见（signature 是文件哈希）：{report}")
-    # sweep 的前半就是 drift ⇒ 它也落不到这一刀；库里没有任何东西被标 stale
-    assert main(["truth", "sweep", "--db", str(db), "--project", P]) == 0
-    assert spec_record not in _drifted(db)[0]
+    assert spec_record in drifted, f"改了 CTQ 却没被 drift 发现：{report}"
+    # sweep 的前半就是 drift ⇒ 这一刀今天落得下去了
+    assert main(["truth", "sweep", "--db", str(db), "--project", P]) == 4
     statuses = {str(r.record_id): str(r.status)
                 for r in _store(db).query(record_type="artifact_version",
                                           tenant_id=T, project_id=P)}
-    assert statuses[spec_record] == "active", (
-        "sweep 不该在看不见漂移时顺手把记录标 stale：那等于伪造触发依据")
+    assert statuses[spec_record] == "stale", (
+        f"漂移被看见之后 sweep 必须标 stale：{statuses}")
 
 
 def test_declared_ctq_feeds_spec_propagate_and_rework(env, capsys, tmp_path):
