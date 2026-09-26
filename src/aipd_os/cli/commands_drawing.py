@@ -205,6 +205,38 @@ def cmd_drawing(args):
     section_warnings = list(evidence.get("section_warnings") or [])
     detail_issues = list(evidence.get("detail_issues") or [])
 
+    # 血缘：给了 --db 才登记，没给就明说（图纸本身仍然成立，不是失败）。
+    lineage = None
+    lineage_error = None
+    lineage_skip_reason = None
+    db_arg = getattr(args, "db", None)
+    spec_arg = getattr(args, "spec", None)
+    if db_arg:
+        import hashlib
+
+        from aipd_os.cad.dxf_lineage import record_dxf_lineage
+        from aipd_os.product_truth.store import ProductTruthStore
+
+        db = Path(db_arg)
+        if not db.is_file():
+            print(f"状态库不存在：{db}（读不到权威库不等于「没有血缘」）")
+            return 2
+        try:
+            store = ProductTruthStore(str(db), tenant_id=args.tenant,
+                                      project_id=args.project)
+            lineage = record_dxf_lineage(
+                store, dxf_path=out,
+                spec_path=Path(spec_arg) if spec_arg else None,
+                part=args.part, revision=args.revision,
+                views=[v.strip() for v in args.views.split(",") if v.strip()],
+                scale=args.scale, sheet=args.sheet,
+                dxf_sha256=hashlib.sha256(out.read_bytes()).hexdigest(),
+                tenant_id=args.tenant, project_id=args.project)
+        except Exception as exc:      # noqa: BLE001 - 下面判未收口，不静默
+            lineage_error = f"{type(exc).__name__}: {exc}"
+    else:
+        lineage_skip_reason = "未给 --db ⇒ 不登记「声明 → 图纸」血缘"
+
     def prose():
         print(f"已出图：{out}（{evidence['sheet']} 1:{evidence['scale']}，"
               f"{len(evidence['views'])} 个视图）")
@@ -285,11 +317,29 @@ def cmd_drawing(args):
                   f"CTQ 的 {issue['min']:g}–{issue['max']:g} 内"
                   f"{('（CTQ ' + issue['ctq_ref'] + '）') if issue['ctq_ref'] else ''}")
         print(f"证据文件：{evidence['evidence_file']}  sha256={evidence['sha256'][:16]}…")
+        if lineage is not None:
+            print(f"血缘：{lineage['record_id']}（输入签名 "
+                  f"{lineage['input_signature'][:16]}，边 {lineage['edges']} 条"
+                  f"{'，新建' if lineage['created'] else '，同输入命中已有记录'}）")
+            if lineage["upstream_reason"]:
+                print(f"  上游未连的原因：{lineage['upstream_reason']}")
+        elif lineage_error:
+            print(f"  血缘未落库：{lineage_error}"
+                  "（图纸已写出，但传播到不了它 ⇒ 判未收口）")
+        else:
+            print(f"  血缘：{lineage_skip_reason}")
         print("未含阶梯剖/旋转剖，装配图请走 aipd drawing assembly；"
               "爆炸图/装配约束仍未含，详见 capability cad.2d_drawings 的 limitation。")
-    _emit(args, evidence, prose)
+    emitted = {**evidence, "lineage": lineage, "lineage_error": lineage_error,
+               "lineage_skipped": lineage_skip_reason}
+    if lineage_error:
+        # 与第 43 片同一条纪律：--json 的 ok 必须与退码同向，
+        # 否则机器面读到的是"成功"，终端读到的是一句"没落库"。
+        emitted["ok"] = False
+    _emit(args, emitted, prose)
     held = bool(unmatched or evidence.get("stackup_inconsistent") or gdt_issues
-                or gdt_unmatched or section_issues or limit_issues or detail_issues)
+                or gdt_unmatched or section_issues or limit_issues or detail_issues
+                or lineage_error)
     return 4 if held else 0
 
 

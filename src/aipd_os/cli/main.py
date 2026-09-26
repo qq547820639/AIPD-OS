@@ -239,6 +239,10 @@ def build_parser() -> argparse.ArgumentParser:
                                    '"global_tolerance":{"upper":0.2,"lower":-0.2}}'
                                    "；不传则整张图不含公差。这份声明可由 "
                                    "aipd drawing spec 从 Product Truth 的 CTQ 生成")
+    dp.add_argument("--db", help="Product Truth 状态库：给了才把这张图纸登记成"
+                                 "「声明 → 图纸」的血缘下游（不给就明说不写，不静默跳过）")
+    dp.add_argument("--tenant", default="default")
+    dp.add_argument("--project", default="default")
     dp.add_argument("--json", action="store_true")
     dp.set_defaults(func=COMMAND_FUNCS["drawing generate"])
 

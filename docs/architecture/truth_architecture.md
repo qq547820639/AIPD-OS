@@ -60,14 +60,22 @@ trust_level / effective_at / expires_at / version / status / metadata），
 接线前那句「产品侧无人调用」现在反过来钉（`tests/test_truth_propagate_cli.py::`
 `TestReworkHalfIsWiredAndItsBoundaryStaysVisible` 要求产品侧真有调用点），
 边界本身由 `tests/test_truth_rework_cli.py` 逐条钉住。
-另一处现状（2026-09-26 更新，F-LINEAGE-PROD 第 43 片）：血缘边有**两个**生产者——
-`product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）与
+另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片）：血缘边有**三个**生产者——
+`product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）、
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的
 `ctq_ref` 写一条 `artifact_version` 记录，并给每条参与 CTQ 连一条 `affects` 边；
-有 gap 时文件与血缘都不写）。于是链条的**第二跳 CTQ → 图纸声明**今天传播得到：
-改一条 CTQ 再跑 `aipd truth propagate`，那份声明会被标 stale 并生成返工任务。
-仍未接上的两段：**图纸 DXF / BOM / 成本那一支没有血缘生产者**（只有声明这一条边），
-以及上面说到的返工**执行**。生产者集合由
+有 gap 时文件与血缘都不写），以及 `aipd drawing generate --db`
+（`src/aipd_os/cad/dxf_lineage.py`：按**输入签名**——声明内容哈希 + part/revision/views/
+scale/sheet——写图纸的 `artifact_version`，并连「声明记录 → 图纸记录」的边）。
+于是链条的**第二跳 CTQ → 图纸声明**与**第三跳 图纸声明 → DXF 制品**今天都传播得到：
+改一条 CTQ 再跑 `aipd truth propagate`，那份声明**和按它画出来的那张图**一起被标 stale
+并各自生成返工任务。身份取输入签名而不取 DXF 字节是实测决定的：同输入连跑两次，两份 `.dxf` 的 13170 行里
+只有 2 行不同，差的是 `$TDCREATE` / `$TDUPDATE` 那一对儒略日时间戳——按字节哈希会把
+时间戳读成一次工程变更；DXF 自己的 sha256 仍作为**观测**留在 metadata 里。同一产物路径
+只留一版有效，新版落下时把旧版标 `superseded`，否则一张图改十次就有十条永久的下游。
+仍未接上的两段：**BOM / 成本那一支没有血缘生产者**，DXF 这一跳只有边、**没有返工执行器**
+（落到图纸上的任务仍走「不认识的制品在烧 attempts 之前逐条点名拒掉」那条路）。
+生产者集合由
 `tests/test_drawing_spec_lineage.py::TestProducerRatchet` 按 AST 两向钉住——
 多一个未登记的 `add_edge` 调用点要红，把本轮这个删掉也要红。
 
