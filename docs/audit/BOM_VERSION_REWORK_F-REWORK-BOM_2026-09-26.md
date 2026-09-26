@@ -100,13 +100,53 @@ selected = [RW-001, RW-002]，refused = []（本副本里没有 quote_batch 任�
 
 ## 六、终读数
 
-@@FINAL@@
+- 提交链（`git log --oneline` 现读）：`7ffe355`（代码 + 用例 + 文档）→ `b6de2c7`（补 lint）→
+  `30fd34c`（重锚矩阵/清单/证据）→ `389ee9a`（绑定报告）→ 本小节所在提交。
+- **干净 worktree 复算**：`/tmp/s53b`（HEAD `30fd34c` 的 detach 检出），
+  `2410 passed, 3 skipped in 306.98s`，collected **2413**（2398 → 2413，+15），rc=0。
+- **绑定前 18 道前提**（`/tmp/s53/verify_report.py`）全 [OK]；这把尺子先被证过会开火——
+  同一份脚本喂第 52 片那份报告，报 **4 条前提不成立、禁止绑定**
+  （root 不是本片树、`collected=2398≠2413`、新文件读到 0 条、改判用例点名不到）。
+- `production_release_gate --release-ready --tag v5.6.0`：**8/8、rc=0**；
+  绑定调用**两个旗子一起给**（第 52 片那条教训已落到操作上），绑定后逐字回读
+  `SOURCE_MANIFEST`/`PROVENANCE` 的 `source_commit` 均 == tag SHA，
+  `PROVENANCE.test_report` 记 `passed=2410, total=2413`。
+- `audit_repo.py --strict`：**rc=1**，唯一一条红是按设计如此的那条
+  `✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=389ee9ac5a00…`。
+- 参与哈希的文件数 **653 → 655**（+`bom_rework.py`、+`test_bom_rework.py`；
+  取证文档与报告不计）。`ruff check src tests state_service` rc=0、`mypy src` 0 error。
 
-## 七、遗留
+## 七、本轮自记（含一件没做到的事）
+
+- **独立审查未做到**：本轮按"机械件交子代理"的指令派了两个子代理
+  （一个执行器代码审查、一个生态检索），**两次都撞本机 Chat 日额度**，
+  各自 `tool_uses=0` 就失败退出。⇒ 代码审查改由主理人自审（下面三条），
+  生态检索改由主理人自己开官方页（下一条）。这里不留"已交叉复核"的说法。
+- 自审三条，都按证据处置，没有落成随意改动：
+  ① `revision` 空串会不会被当「缺输入」误拒 → 读 `bom/store.py:25`（列
+  `revision TEXT NOT NULL DEFAULT '0.1'`）与 `store.py:153`
+  （`ensure_bom(..., revision: str = "0.1")`），产品路径写不出空串 ⇒ **不加**presence-only 豁免；
+  ② `unchanged` 分支目前也要求重算器交出 `header/lines`，虽然它自己不写正文 ⇒ **保留**，
+  理由是两支前置条件同形比"少一道前提"更好读，代价是 `unchanged` 多一道可达性要求；
+  ③ `_fail(..., "recalc_failed")` 里「重算器回的不是 dict」那一支**没有主人**（没有用例注入非 dict）。
+  与第 49 片同形（`cost_rework` 那一支同样没主人），本轮不为一格补夹具，记在此处。
+- **提交纪律踩一次**：`7ffe355` 是带着一条 `ruff F841`（`test_bom_rework.py` 里没用上的局部变量）
+  提交的——常驻全量用例不跑 lint，红要等 CI 的 lint job 才露出来。已单独补 `b6de2c7`，
+  并把"电池/编辑之后、提交之前复跑 lint"从记忆里的一次教训升成本轮实踩：
+  收尾命令串里 lint 与 pytest 必须**都**在 commit 之前。
+- §四 表格里 BR2/BR3 的读数不干净已经写在表下，不重复；两份日志路径在那一节。
+
+## 八、遗留
 
 - `quote_batch` 仍没有执行器（刻意：它的"返工"是重新 apply 一次报价，属生产面动作）。
-- 扫描 ≠ 触发：发现漂移之后要不要 `truth propagate` 仍靠人；「漂移清单 → 建返工任务」
-  这一格是本片之后最直接的下一步。
+- 扫描 ≠ 触发：发现漂移之后要不要 `truth propagate` 仍靠人。下一片（F-DRIFT-3）要拍的是
+  桥的形状；本轮已读到的内部事实：`--upstream` 是单值且 `required=True`
+  （`cli/main.py:578`），并出现在命令契约的 `requires_args`（`cli/command_contract.py:126`）
+  ⇒ "放宽既有契约"与"新开子命令"的镜像代价不同。
+  外部对照本轮只开了 dbt 官方页（`docs.getdbt.com/reference/node-selection/methods`）：
+  它把**同一套选择语法**同时给 `dbt ls --select "state:modified"`（列）与
+  `dbt run --select "state:modified"`（执行），检测本身不写；Nx/Bazel 两页本轮没来得及开。
 - BOM/成本变动反向影响 CTQ（上游方向）仍没有路。
 - 本地开发库 `data/state.db` 刻意未打开，存量记录在新老基准下的分布仍未量。
+
 
