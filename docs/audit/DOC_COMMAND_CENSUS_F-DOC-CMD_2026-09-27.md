@@ -384,3 +384,37 @@ A4 与 §九 3 那条"tmp 夹具在改前也绿"互为提醒：**判别生产清
 所以它**从不扫自己的 `.py`**，"自指排除只排了一半"这个形状在它那里不存在；
 它的两面也按文件 disjoint 划分，没有"同一行被一档吃掉就对所有档隐身"的重叠面。
 记下来是为了下一轮别去"修"一个不存在的问题。
+
+### 6 那条遗留的裁决项，本轮就用数据定了（第 61 片收尾）
+
+`.trae/specs/**` 要不要升成**第四档判红面**——我先派独立只读测量，再**自己重算它两个承重读数**：
+
+- 现状（attested 树）：`.trae` + `.github` 合计 **46** 处提及（我自己数：46），
+  **未命中权威面 0 处**（用 `valid_commands()` + `resolve()` 逐条判，`problems=[]`）；
+  全部 46 处都是**行内代码**形状（`` `aipd x` ``），**行首可执行行 0 处**
+  ⇒ 第四档没法复用档 ② 的"行首"判据，得另写正文解析器。
+- **决定性的一条是历史回测**：真把这 46 处判红，会红在哪儿？答案是
+  `.trae/specs/v5.1-audit-deepening-edition/spec.md:47`
+  「**WHEN** 运行 `aipd audit` 或 `script/audit_repo.py`」**两次**（提交 `ead4860`、`67fb368`）——
+  我逐提交 `git show <sha>:src/aipd_os/cli/main.py | count('add_parser("audit"')` 复核：
+  那两次都是 **0**，到 `9cfec24` 才变 **1**。
+  ⇒ 那不是"文档写错命令"，而是**需求写在建成之前**——spec 的本职就是这件事。
+  判红面吃掉它，等于要求 spec 提前知道未来。
+- 规模感：第四档 46 处 = 现有三档判红量 384 的 **12%**、最小那一档的 55%。
+
+**裁决：不升。** `.trae`/`.github` 留在只报面（本轮已经把可见性补上）。
+理由不是"省事"，是**这条判据在它的语义域上会系统性开错火**：今天真违规 0、
+历史假违规 2/10 个改过 `.trae` 的提交。留一个已量好的备选给下一轮：
+**只把 `checklist.md` + `tasks.md`（34 处，回测 0 红）纳入第四档**、`spec.md` 永远只报——
+真要接就接这一形，并把上面这条回测当"必须不开火"的对照臂。
+
+## 十、第 61 片终读数
+
+（本节由 `/tmp/s61/section10.py` 从**原件**生成后我读回磁盘核对；没有一个数是手抄的。）
+
+- **干净检出 attestation**：worktree `s61a` @ `206d9d9c2cb85c98c0e584fe91e763f22e762122`，`summary.collected == len(tests) == 2498`，逐条 outcome = {'passed': 2495, 'skipped': 3}，`exitcode=0`，`root='/private/tmp/s61a'`，`duration=276.889368057251 s`，`source_commit=a66040520139405095648461f7144d4f00629924`（由 `AIPD_SOURCE_COMMIT` 显式给 tag SHA `a66040520139405095648461f7144d4f00629924`）。
+- **3 条 skip 逐条点名**：tests/test_mail_protocol.py::test_real_smtp_imap_roundtrip_thread_attachment_idempotent; tests/test_mail_protocol.py::test_real_tls_auth_failure_and_timeout; tests/test_researchstudio_provider.py::test_real_arxiv_engine_integration。
+- **收尾验签器**：`[OK]` **25** 条（由 `grep -c '^\[OK\]'` 现算），`[FAIL]` **0** 条，RESULT 行「RESULT 全部前提成立，可以绑定」。
+- **量具在被 attested 的树上现算**（`--json` 落 `/tmp/s61/attested_corpus.json`）：corpus = {"run_command_segments": 84, "quickref_lines": 90, "code_mentions": 210, "code_negated": 5, "prose_mentions": 1247, "report_only_mentions": 938}，violations = **0**，problems = []，退码 = **0**。
+- **只报面里未注册名 8 个**：`aipd ctq list`（11 处）；`aipd ctq listy`（3 处）；`aipd ghost cmd`（3 处）；`aipd ghostci check`（1 处）；`aipd ghostly cmd`（2 处）；`aipd ghostspec run`（1 处）；`aipd truth ctq`（6 处）；`aipd truth show`（11 处）
+- 生成时 `doc_command_census --json` 的 stderr/stdout 尾部：`'）；aipd ghost cmd（3 处）；aipd ghostci check（1 处）；aipd ghostly cmd（2 处）；aipd ghostspec run（1 处）；aipd truth ctq（6 处）；aipd truth show（11 处）\n现状面缺陷 0 条：文档与登记表点名的命令都注册着'`
