@@ -202,3 +202,10 @@ real = **2.44 / 2.18 / 1.73 s**；`pytest tests/test_doc_command_census.py` 整�
   本片只管命令名；两面合起来才是一条完整命令。
 - 只报面目前只有"人读"这一个读者（渲染 + JSON 落盘），没有棘轮。若要把 `aipd ctq list`
   这类名字钉成"只许减不许增"的账，需要先决定它归谁裁决。
+- **量具族本身没有登记面**（本轮实测）：`grep -c census src/aipd_os/registry_data.py` = **0**，
+  `docs/architecture/` 里也搜不到 `doc_reference_census`/`command_surface_census`。
+  也就是说 `scripts/` 下这**三把**普查尺子（`command_surface_census`／`doc_reference_census`／
+  `doc_command_census`，`ls scripts/ | grep -ci census` 现算 = 3；第 39-40 与 41 与 60 片各一把）
+  在能力登记表与架构文档里**都不存在**，
+  读者只能从 CHANGELOG 倒推它们存在。本片没有破坏这个性质（同族同形），但也不该假装它是对的：
+  要么给"质量量具"开一档登记，要么在 `docs/architecture/` 立一张表，二选一都归后续裁决。
