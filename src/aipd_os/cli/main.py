@@ -592,6 +592,18 @@ def build_parser() -> argparse.ArgumentParser:
     td.add_argument("--tenant", default="default")
     td.add_argument("--json", action="store_true")
     td.set_defaults(func=COMMAND_FUNCS["truth drift"])
+    tsw = truth_sub.add_parser(
+        "sweep",
+        help="把漂移发现接落到刀：同一次进程内重算每条制品记录的键，对「漂移且还 active」"
+             "的记录按边表找到它的上游，用与 truth propagate 同一个入口标 stale 并建返工任务；"
+             "边表里找不到上游的逐条点名不办（不猜）。--dry-run 只交计划、一个字都不写。")
+    tsw.add_argument("--db", required=True)
+    tsw.add_argument("--project")
+    tsw.add_argument("--tenant", default="default")
+    tsw.add_argument("--dry-run", action="store_true",
+                     help="只打印计划（哪些上游会被调用、哪些记录没人管），不写任何状态")
+    tsw.add_argument("--json", action="store_true")
+    tsw.set_defaults(func=COMMAND_FUNCS["truth sweep"])
     tt = truth_sub.add_parser(
         "tasks",
         help="列本作用域的返工待办（只读）。")

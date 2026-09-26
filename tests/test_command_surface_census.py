@@ -105,16 +105,17 @@ def test_tiers_partition_the_denominator(report) -> None:
     assert report["denominator"] == len(COMMAND_FUNCS)
     total = sum(len(v) for v in report["buckets"].values())
     # 绝对数是**漂移报警**（第 45 片加 `truth rework` 时 66 → 67，
-    # 第 51 片加 `truth drift` 时 67 → 68）：注册面自己变大是
-    # 合法事件，被上面两行等式接住；这里钉的是"档位合计必须等于这个已知分母"。
-    assert total == report["denominator"] == 68, (
+    # 第 51 片加 `truth drift` 时 67 → 68，第 54 片加 `truth sweep` 时 68 → 69）：
+    # 注册面自己变大是合法事件，被上面两行等式接住；
+    # 这里钉的是"档位合计必须等于这个已知分母"。
+    assert total == report["denominator"] == 69, (
         f"分母漂了：档位合计 {total}，注册 {report['denominator']}")
 
 
 def test_reading_is_not_vacuous(report) -> None:
     """探针得真读到位语料，且 cli 档非空——空读数不能算绿。"""
     assert report["files_read"] > 100, f"只读了 {report['files_read']} 个测试文件"
-    assert len(report["buckets"][census.TIER_CLI]) == 68, (
+    assert len(report["buckets"][census.TIER_CLI]) == 69, (
         f"cli 档读数漂到 {len(report['buckets'][census.TIER_CLI])}（第 40 片起为满覆盖）")
     assert report["parse_failures"] == []
 

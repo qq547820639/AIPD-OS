@@ -279,3 +279,106 @@ def cmd_truth_rework(args):
             print("本批返工全部 succeeded。")
     _emit(args, result, prose)
     return 4 if pending else 0
+
+
+def cmd_truth_sweep(args):
+    """``aipd truth sweep``：把「发现漂移」接到「沿边标 stale + 建返工任务」上。
+
+    一次进程内现算现用（判据与不选 plan 文件的理由都写在 `product_truth/sweep.py` 的
+    模块 docstring）：先用第 51/52 片那五支 resolver 算出「漂移且还 active」的清单，
+    再按**边表**找每条记录的上游，对找得到的上游调用与 `truth propagate` **同一个**
+    入口 `PropagationEngine.on_upstream_changed`；找不到的逐条点名不办。
+
+    `--dry-run` 只交计划，一个字节都不写——这条命令的默认动作是写，
+    所以判「本次到底改没改」要按 `dry_run` 这一格读，不能凭退码。
+    """
+    from aipd_os.cli.commands_drift import build_resolvers
+    from aipd_os.cli.commands_manufacturing import _resolve_project
+    from aipd_os.product_truth import ProductTruthStore
+    from aipd_os.product_truth.drift import DRIFTED, scan_drift
+    from aipd_os.product_truth.lineage import LineageGraph
+    from aipd_os.product_truth.propagation import PropagationEngine
+    from aipd_os.product_truth.sweep import plan_sweep
+    from aipd_os.state.db import AIPDStateDB
+
+    db = Path(args.db)
+    if not db.is_file():
+        print(f"状态库不存在：{db}")
+        return 2
+    tenant = str(getattr(args, "tenant", None) or "default")
+    dry_run = bool(getattr(args, "dry_run", False))
+    try:
+        pid = _resolve_project(AIPDStateDB(str(db)), getattr(args, "project", None))
+    except ValueError as exc:
+        print(f"错误：{exc}")
+        return 1
+    store = ProductTruthStore(str(db), tenant_id=tenant, project_id=pid)
+    graph = LineageGraph(store, tenant_id=tenant, project_id=pid)
+    try:
+        report = scan_drift(store, resolvers=build_resolvers(str(db), pid, tenant),
+                            tenant_id=tenant, project_id=pid)
+    except Exception as exc:  # noqa: BLE001 - 扫不出来不是「没漂移」，判用法错误
+        print(f"漂移扫描失败：{type(exc).__name__}: {exc}")
+        return 2
+    if report["nothing_scanned"]:
+        print("库里没有可扫的有效制品版本记录 ⇒  sweep 什么都不做"
+              "（先把 aipd drawing generate --db / cost calc --truth-lineage 跑起来）")
+        return 2
+
+    plan = plan_sweep(report["buckets"][DRIFTED],
+                      lambda rid: graph.upstream_of(rid, tenant_id=tenant,
+                                                    project_id=pid))
+    engine = PropagationEngine(store)
+    applied = []
+    for target in plan["targets"]:
+        if dry_run:
+            applied.append({"upstream_id": target["upstream_id"],
+                            "reason": target["reason"], "dry_run": True,
+                            "triggered_by": target["triggered_by"]})
+            continue
+        out = engine.on_upstream_changed(target["upstream_id"],
+                                         reason=target["reason"])
+        applied.append({"upstream_id": target["upstream_id"],
+                        "reason": target["reason"], "dry_run": False,
+                        "triggered_by": target["triggered_by"],
+                        "affected": out.get("affected") or [],
+                        "newly_stale": out.get("stale") or [],
+                        "tasks": out.get("tasks") or []})
+    # 曾想过一格「落了刀但 tasks 为空 = 这一刀什么都没做成」的读数，实测删掉：
+    # 引擎对 affected 里每条**都**建任务（`propagation.py:54-61` 的建任务在状态判断之外），
+    # 所以那一格恒为空 —— 留一个永远为空的字段就是对读者的假承诺。
+    # 电池 S7 臂（把 pending 里这一项摘掉）当场存活，是它证明了这一点。
+    pending = bool(plan["targets"] or plan["orphaned"])
+    result = {
+        "command": "truth sweep", "project": pid, "dry_run": dry_run,
+        "ok": not pending, "scanned": report["scanned"],
+        "drifted": report["counts"][DRIFTED],
+        "drifted_active": plan["drifted_active"],
+        "targets": applied, "orphaned": plan["orphaned"],
+        "no_upstream_edge": len(plan["orphaned"]),
+        "nothing_scanned": report["nothing_scanned"],
+    }
+
+    def prose():
+        head = ("预演（--dry-run，不写任何东西）" if dry_run else "已落刀")
+        print(f"扫描 {report['scanned']} 条有效制品记录：漂移 "
+              f"{report['counts'][DRIFTED]}，其中还挂着 active 的 "
+              f"{plan['drifted_active']} 条 ⇒ {head}")
+        for a in applied:
+            print(f"  · 上游 {a['upstream_id']}：{a['reason']}")
+            for t in a["triggered_by"]:
+                print(f"      由 {t['record_id']}（{t['artifact']}）触发")
+            if not a.get("dry_run"):
+                print(f"      新置 stale {len(a.get('newly_stale') or [])} 条、"
+                      f"建返工任务 {len(a.get('tasks') or [])} 条"
+                      f"（影响面 {len(a.get('affected') or [])} 条）")
+        for o in plan["orphaned"]:
+            print(f"  × 不办：{o['record_id']}（{o['artifact']}）{o['reason']}")
+        if not pending:
+            print("没有「漂移且还 active」的记录 ⇒ 无事可做。")
+        elif dry_run:
+            print("⇒ 以上是计划；去掉 --dry-run 才会真的标 stale 与建任务。")
+        else:
+            print("⇒ 已按边表落刀；下一步 `aipd truth rework --all-pending` 执行返工。")
+    _emit(args, result, prose)
+    return 4 if pending else 0

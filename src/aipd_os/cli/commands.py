@@ -98,7 +98,12 @@ from .commands_release import (
     cmd_test,
 )
 from .commands_supply import cmd_quote
-from .commands_truth import cmd_truth_propagate, cmd_truth_rework, cmd_truth_tasks
+from .commands_truth import (
+    cmd_truth_propagate,
+    cmd_truth_rework,
+    cmd_truth_sweep,
+    cmd_truth_tasks,
+)
 from .commands_validation import (
     cmd_issue_list,
     cmd_issue_resolve,
@@ -532,6 +537,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "truth tasks": cmd_truth_tasks,
     "truth rework": cmd_truth_rework,
     "truth drift": cmd_truth_drift,
+    "truth sweep": cmd_truth_sweep,
     "outbox drain": cmd_outbox,
     "outbox review": cmd_outbox,
     "industrialize": cmd_industrialize,

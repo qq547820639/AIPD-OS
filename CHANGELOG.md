@@ -951,6 +951,43 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.15 F-SWEEP 第 54 片：新公开命令 `aipd truth sweep`——发现漂移之后，落刀不再靠人抄 record id**：
+  第 51/52/53 三片的 §六 都留着同一句：扫描能点名、返工收得了口，但**要不要 propagate 仍由人决定**。
+  选型本轮真做了外部检索并**改变了形状**：亲开 OpenTofu《cli/commands/plan》
+  （"You can use the optional `-out=FILE` option to save the generated plan to a file on disk,
+  which you can later execute by passing the file to `tofu apply`…"、
+  "The `plan` command alone does not actually carry out the proposed changes"）与
+  dbt《node-selection/methods》（`state:modified` 同一套选择器既喂 `dbt ls` 也喂 `dbt run`），
+  对比后**借语义不落工件**：本仓的"检测"那一半已经是只读的 `truth drift`，
+  再存一份 plan 就是把同一个事实存两处，还引入"工件比现实更旧"这个新洞
+  （OpenTofu 自己用"apply 默认重算并要求确认"兜底，本仓没这个预算）。
+  也不选"放宽 `truth propagate`"：`--upstream` 是 `required=True`（`cli/main.py:578`）
+  且被契约声明为必带（`cli/command_contract.py:126`），第 51 片已按同一条理由否过一次。
+  实现：`src/aipd_os/product_truth/sweep.py`（纯计划：只收 `drifted ∧ active`，
+  按 `LineageGraph.upstream_of` 找上游并**按上游去重**，找不到上游的进 `orphaned` 点名不办）
+  + `cmd_truth_sweep`（落刀走与 propagate **同一个**入口
+  `PropagationEngine.on_upstream_changed`，`--dry-run` 只交计划）
+  + 契约/子解析器/注册表三处接线；每条任务原因里写着
+  `stored_signature → current_signature` 两个键，事后能问出当时按什么落的刀。
+  真库读数（生产 CLI 自己造的 `/tmp/s54/state.db`）：`scanned 3、drifted 2、drifted_active 2、
+  orphaned 0`，两刀分别 `T-001→[T-002]`、`T-003→[T-001, T-002]`，
+  `truth tasks --status pending` 有 3 条 ⇒ **第 50 片那条 quote→bom 边第一次变成可执行的依据**
+  （`bom` 记录自己漂了也能被落刀，因为它的上游在库里）。
+  常驻用例 **2413 → 2427**（新文件 `tests/test_truth_sweep_cli.py` 14 条）；
+  撤改电池 `/tmp/s54/battery.py` **8 条：杀 8 / 活 0 / 注入无效 0**（对照臂 rc=0，一臂一原告）。
+  电池改掉我自己一处设计：**"落了刀但没建任务"那格恒为空**——
+  注入"摘掉它"当场存活，顺着读到 `propagation.py:54-61` 对每个 affected 都建任务，
+  于是删掉该字段、把 S7 换成"`ok` 与退码必须同向"，并补一条正向用例把
+  "两个上游指向同一条记录 ⇒ 引擎建两条任务"钉成事实。
+  镜像一档全套同步：`SKILL.md` 主线 58→59、README 速查、`registry_data` 三处、
+  `tests/test_command_surface_census.py` 两处手写分母 68→69。
+  委派这一轮**没成**：三次派发里两次撞 Chat 日额度（`tool_uses=0`）、
+  一次模型连接中断（25 次工具调用后失败，事后 `git status` 核实它对镜像一处未改），
+  全部由主理人自己做完 ⇒ 本轮不写"已交叉复核"；Nx/Bazel 两页抓取失败（`fetch failed`）
+  记为未检索到。仍未接上：上游是磁盘文件的那类记录（`drawing_spec`）只点名不办；
+  sweep 与 rework 之间仍要人（执行有配额与退避，不该被扫描顺带触发）；开发库存量漂移半径未量。
+  证据见 `docs/audit/TRUTH_SWEEP_F-SWEEP_2026-09-26.md`。
+
 - **v5.14 F-REWORK-BOM 第 53 片：`artifact=bom` 第一次有返工执行器——发现之后收得了口**：
   第 51/52 片的 §六 都留了同一格：`truth rework` 只认三类制品
   （`commands_truth.py:175` 的 `supported` 实测是 `[drawing_spec, drawing_dxf, bom_cost]`），

@@ -134,6 +134,13 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                              "与记录里存的那份比对，报出「该 stale 却还挂着 active」的清单。"
                              "不改任何状态；拿不齐输入的记录单列「不可判」，"
                              "既不折成没漂也不折成漂了；有漂移即退码 4"),
+    CommandEntry("truth sweep", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
+                 requires_args=frozenset({"--db"}),
+                 description="把漂移发现接落到刀：同一次进程内按当前输入重算每条制品记录的"
+                             "身份键，对「漂移且还 active」的记录按 truth_lineage 边表找到"
+                             "上游，用与 aipd truth propagate 同一个入口标 stale 并生成有界"
+                             "返工任务；边表里找不到上游的逐条点名不办（绝不就近挑一条当上游）。"
+                             "--dry-run 只交计划、不写任何状态；仍有待返工或有不办的记录即退码 4"),
     CommandEntry("truth rework", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
                  requires_args=frozenset({"--db", "--project"}),
                  description="按当前 active CTQ 重算图纸声明并跑一次返工："

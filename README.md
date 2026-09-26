@@ -455,6 +455,13 @@ aipd truth drift --db state.db --project P                                   # �
 #     （`quote_applied_rows`，按记录里的 quote_ids 读当前报价事实）——键不靠报价文件重算：
 #     quote_id/version 是 apply 时按库内版本号现铸的，文件里没有；只有事实态会变，
 #     所以「当初那批报价被后来的报价转 R」这格只有这么算才看得见（第 52 片）。
+aipd truth sweep --db state.db --project P [--dry-run]                        # 把发现接落到刀
+#   ↑ 同一次进程内先按当前输入重算每条制品记录的键，再对「漂移且还 active」的记录
+#     按 `truth_lineage` 边表找它的**上游**，用与 `aipd truth propagate` 同一个入口
+#     （`PropagationEngine.on_upstream_changed`）标 stale 并生成有界返工任务；
+#     边表里找不到上游的（上游是磁盘文件而不是库里的记录）逐条点名不办，绝不就近挑一条。
+#     `--dry-run` 只交计划、一个字都不写；仍待返工或有不办的记录即 exit 4（成因看 `targets`
+#     与 `orphaned` 两栏，别只看退码）。落刀原因里带着两个键，事后能问出当时按什么落的刀。
 #   ↑ 执行器今天认四类制品：drawing_spec（重算声明）、drawing_dxf（第 47 片：重跑出图）、
 #     bom（第 53 片：按当前 BOM 行演进这一条版本记录，正文与 metadata 走生产面那份投影）、
 #     bom_cost（第 49 片：按记录里的 BOM 与口径五项重跑核算）。不认识的（如 artifact=quote_batch）
