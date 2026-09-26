@@ -458,10 +458,10 @@ SCENARIOS: list[Scenario] = [
              note="200 条有效制品版本记录的漂移扫描，摊到每条的 µs"),
     Scenario("drift_scan_scaling_ratio", "comparative", "ratio",
              sc_drift_scan_scaling_ratio, require_ratio=2.0,
-             note="记录 20→200 时单条成本的比值。两侧实测：干净库 median 0.76~0.90"
+             note="记录 20→200 时单条成本的比值。两侧实测：合规侧 median 0.76~1.03"
                   "（重启后负载下有单轮冲到 6.44 的离群，但判决取 median）；"
-                  "注入 N+1 median 2.94 / 3.23 ⇒ 阈值 2.0 落在两侧中间，"
-                  "两侧各有一条电池臂钉着（D4 开火 / D4b 不开火）"),
+                  "注入 N+1 median 2.94~5.99 ⇒ 阈值 2.0 落在两侧中间（两侧余量不对称，"
+                  "所以这档只当趋势件，硬约束在 tests/test_state_perf_gates.py 的形状用例）"),
 ]
 
 
