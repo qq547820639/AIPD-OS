@@ -337,7 +337,6 @@ def test_refuses_when_projection_inputs_absent(env, capsys):
     tmp_path, db = env
     _add_line(db, "bracket")
     bom_id = _calc(db, capsys)["lineage"]["bom"]["record_id"]
-    meta = dict(_store(db).get(bom_id).metadata or {})
     before = _snapshot(db)
     out = rework_bom_artifact(
         _store(db), bom_id,
