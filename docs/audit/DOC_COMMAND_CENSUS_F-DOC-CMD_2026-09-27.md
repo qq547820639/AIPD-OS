@@ -96,6 +96,11 @@
 ⇒ **现状面今天 0 违规，而三档分母各自非空**：这是一把"会开火、但今天没人被它抓到"的尺子，
 不是恒真判据（恒真与看不见在终端上同形，所以 §五/§六 每一面都配了必须开火的一侧）。
 
+> 本节是**接线过程中**的读数。只报面的绝对数会随本轮继续往文档里写幻影名而涨
+> （收口读数见 §七：只报面已从 883 涨到 908、未注册名从 4 个变成 5 个），
+> 而判红面三档的分母不动——因为**判红面只吃登记表/速查行/生产代码，而取证文档属只报面**。
+> 这正是分档要的效果：把缺口写下来不会让自己判红。
+
 ## 四、实现形状
 
 `scripts/doc_command_census.py`：`valid_commands()`（永远取本仓的 argparse 树，不跟着 `--repo` 走，
@@ -152,7 +157,7 @@ real = **2.44 / 2.18 / 1.73 s**；`pytest tests/test_doc_command_census.py` 整�
 | B1 | `resolve()` 里"组存在但子命令不存在要判红"那半支 | KILLED | KILLED（原告断言翻红） |
 | B2 | 生产代码面的否定例外（把带"没有…"的行也判红） | KILLED | KILLED |
 | B3 | `judging_face_empty` 三档非空前提 | **SURVIVED** | **原告选错了**：那副空语料同时踩了 `quickref_corpus_empty`，撤掉 B3 的守卫它照样退 2。补一条把两个原因分开的常驻用例（速查档非空、只有登记表与代码档空）⇒ 第二轮 **C1 KILLED**（`rc=1`，原告 = `test_a_single_empty_judging_face_reads_as_failure_not_green`） |
-| B4 | 把契约 deprecated 别名并进权威面 | **SURVIVED** | **今天无法判**（不是缺牙）：实测 10 个别名全部仍注册在 argparse 树上（`aliases - paths == ∅`），撤掉并集 11 条全绿。已把该步改写成一条活的前置 `alias_unregistered`；第二轮 **C2 = UNDECIDABLE-BY-DATA**（明写"今天没有能红它的语料"，不当杀、也不当活） |
+| B4 | 把契约 deprecated 别名并进权威面 | **SURVIVED** | **今天无法判**（不是缺牙）：实测 10 个别名全部仍注册在 argparse 树上（`aliases - paths == ∅`），撤掉并集 10 条全绿。已把该步改写成一条活的前置 `alias_unregistered`；第二轮 **C2 = UNDECIDABLE-BY-DATA**（明写"今天没有能红它的语料"，不当杀、也不当活） |
 | B5 | 只报面与三档之间的去重 | **CRASH-KILL** | **分类器误标**：原告是 `AssertionError` 翻红（`report_only_mentions == 0` 被打破），不是异常崩溃。第二轮 **C3 KILLED**（同一条变异，驱动直接把原告错误行打出来定性：`FAILED …test_compliant_side_does_not_fire - AssertionError`） |
 | B6 | 量具自指排除 `SELF_STEMS` | KILLED | KILLED（真仓库现状面立刻被自己的正文判红，原告 `test_real_repo_clean_…`） |
 | B7 | 记录 `source.note` 里的命令名 | KILLED | KILLED（原告读到 `aipd truth ctq`） |
@@ -168,6 +173,21 @@ real = **2.44 / 2.18 / 1.73 s**；`pytest tests/test_doc_command_census.py` 整�
    `UNDECIDABLE-BY-DATA`，不能记成"有牙"也不能记成"没牙"。
 3. **成因分类器不可外包**：第一轮把 `AssertionError` 标成 CRASH-KILL，是因为驱动按"这段文本里
    有没有异常词"判；第二轮改成把**原告那一行的首条错误文本原样打出来**再定性，误标就没了。
+4. **"有牙"与"今天载不载重"是两件事**（B2 的补算，电池报告提出、我独立复算过）：
+   那条例外的牙在**合成夹具**上（原告那条用例确实翻红 ⇒ KILLED 成立），但在真仓库上
+   **今天不载重**——把 `production_code_mentions()` 返回的 5 条 negated 行逐条按同一个
+   `resolve()` 判一遍，**新判红 0 行**；这 5 行点名的命令（`ctq deprecate`/`init-project`/
+   `drawing spec`/`ctq add`/`ctq revise`）全都注册着，只是同行带了否定标记。
+   也就是说它保护的是一类**尚未发生**的误伤（代码注释写「没有 `aipd X`」而 X 不存在）。
+   记下来的理由：如果只写"B2 KILLED"，下一轮会以为这条例外在保护现存的真行，
+   从而不敢动它——那是一句没有依据的保守。
+
+另记一处**由电池报告抓到、但报告本身不是证据**的事：量具自己的 docstring 抄了一份
+更早范围的分母读数（"336 提及 / 45 否定 / 291 命中"），与它现在打印的 210/5 不符。
+修法**不是把数改对**，而是**把绝对数从文档面上删掉、改成指针**（现算值看 `--json` 的
+`corpus.code_mentions / code_negated`，下界由常驻用例钉）——与第 55 片"12 个场景"那处同一族病。
+我先用一把**不同正则**去复算这个差（只扫 `src`+`scripts`，漏了 `state_service/`），
+读出 1122/1050 一类数，那不能用来解释 336 从哪来 ⇒ 放弃因果叙述，只删掉抄的数。
 
 
 ## 七、终读数

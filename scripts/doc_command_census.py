@@ -22,8 +22,10 @@
   ③ 生产代码（`src/`、`scripts/`、`state_service/`）里的提及——代码写出来就是要跑的，
      第 60 片实测到 `ctq.py` 把一条不存在的命令烙进了**每条**产出记录，比文档里的错更贵。
      这一档带一条**否定例外**：同行有"没有/不存在/尚未…"时按只报处理，
-     因为登记表限制句「没有 `aipd ctq list`」正是合法写法（实测 336 提及、45 落在否定行、
-     其余 291 处全命中权威面 ⇒ 今天 0 违规而分母非空）。
+     因为登记表限制句「没有 `aipd ctq list`」正是合法写法。
+     分母**不在本文抄**（抄一份就会漂——本轮就抓到自己的 docstring 抄了一份更早范围的读数）：
+     现算值看 `--json` 的 `corpus.code_mentions / code_negated`，两个键非空由常驻用例
+     `test_real_repo_clean_and_all_three_judging_faces_live` 钉下界。
 - **只报面**＝其余一切正文里的 `aipd` 提及。它必须只报不红，因为正文会**合法地**提到
   不存在的命令：本轮实测 registry 的限制句「没有 `aipd ctq list`」与
   CHANGELOG 里我引用来记错的 `aipd truth show` 都属于这一类——把它们判红，
@@ -59,8 +61,8 @@ QUICKREF_DIRS = ("docs/architecture", "docs/contracts", "references")
 # 判红面 ③ 生产代码里的提及。代码不像正文那样有权写"某命令不存在"——它写出来就是要跑的，
 #   所以这里的幻影比文档里的更贵（第 60 片实测：`ctq.py` 把 `aipd truth ctq add` 烙进了
 #   **每一条**产出的记录）。但同一行带否定标记时按只报处理：登记表的限制句
-#   「没有 `aipd ctq list`」就是这种合法写法。这条分档是量过假阳性的：
-#   实测 336 处提及、45 处落在否定行、其余 291 处全部命中权威面 ⇒ 今天 0 违规而分母非空。
+#   「没有 `aipd ctq list`」就是这种合法写法。这条分档是量过假阳性才定的；
+#   分母的现算值看 `--json` 的 corpus 两个键，本文不抄绝对数（抄一份就会漂）。
 CODE_DIRS = ("src", "scripts", "state_service")
 NEGATION_MARKERS = ("没有", "不存在", "尚未", "还没", "仍未", "刻意未", "仍未接",
                     "not registered", "no such", "does not exist")
