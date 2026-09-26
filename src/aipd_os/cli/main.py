@@ -567,7 +567,7 @@ def build_parser() -> argparse.ArgumentParser:
     tp = truth_sub.add_parser(
         "propagate",
         help="沿血缘把下游事实标 stale 并生成有界返工任务；有下游待返工即退出码 4。"
-             "只接传播这半条链，返工的**执行**（run_rework）本仓尚未接线。")
+             "返工的**执行**在 aipd truth rework（真实执行器：按当前 CTQ 重算声明）。")
     tp.add_argument("--db", required=True)
     tp.add_argument("--project", required=True)
     tp.add_argument("--tenant", default="default")
@@ -588,6 +588,19 @@ def build_parser() -> argparse.ArgumentParser:
     tt.add_argument("--status", help="按任务状态过滤，如 pending / blocked / succeeded")
     tt.add_argument("--json", action="store_true")
     tt.set_defaults(func=COMMAND_FUNCS["truth tasks"])
+    tr = truth_sub.add_parser(
+        "rework",
+        help="跑一次真实返工（run_rework 的产品调用点）：按当前 active CTQ 重算图纸声明，"
+             "未变则不动产物，变了则重写并补血缘边；仍有任务未 succeeded 即退出码 4。")
+    tr.add_argument("--db", required=True)
+    tr.add_argument("--project", required=True)
+    tr.add_argument("--tenant", default="default")
+    tr.add_argument("--task", help="返工任务号 RW-xxx（与 --all-pending 二选一）")
+    tr.add_argument("--all-pending", action="store_true",
+                    help="跑本作用域全部 pending 任务（执行器不认识的制品会在烧 "
+                         "attempts 之前点名拒掉，不会伪装成失败）")
+    tr.add_argument("--json", action="store_true")
+    tr.set_defaults(func=COMMAND_FUNCS["truth rework"])
 
     # ---- v5.10 制造就绪（bom 物料清单 / cost 成本核算）----
     p_bom = sub.add_parser(

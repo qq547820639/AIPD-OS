@@ -951,6 +951,36 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-REWORK 第 45 片：`run_rework` 从「产品侧无人调用」变成有真实执行器**：
+  第 31 片故意不接这一半——没有执行器时引擎只会判 `blocked`，而一条永远不可能成功的命令
+  比没有命令更容易被读成「返工跑过了」；当时把缺口钉成断言并写明"接上执行器那一轮必须连同
+  极性一起改判"。本轮兑现那句话：新增 `aipd truth rework --db --project (--task RW-xxx |
+  --all-pending)`，执行器在 `src/aipd_os/cad/spec_rework.py`，三态判据借两条成熟实现的形状
+  （**本轮实读文档**，非凭记忆）：dbt 的 `state:modified` 用"当前节点签名 vs 上一份 manifest"
+  判变更、cosmetic 字段不算变更；BitBake 用输入校验和 + `STAMPS_DIR` 戳文件决定跳过还是重跑，
+  上游签名变则下游连锁重算。落到本仓就是：
+  ① `unchanged`——重算哈希与记录一致**且**磁盘产物重算后也一致 ⇒ 产物一个字节都不动，
+  但库里的版本与 stale 真的收口（否则"没做"与"做了且证明未变"在库里同形）；
+  ② `rewrote` / `file_restored`——内容变了，或内容没变但文件被删/被手改 ⇒ 用同一个
+  renderer 重写、更新记录 content/metadata/source 并补 `ctq → 声明` 边；
+  ③ `gap`——重算有缺口一律**失败**，交回引擎的有界退避与 `max_attempts`。
+  还有一条防"把缺口伪装成配额用尽"的判据：**执行器不认识的制品（只认
+  `metadata.artifact=drawing_spec`）必须在烧 attempts 之前逐条点名拒掉**，
+  所以那类任务保持 pending 且 `attempts==0`，而不是被记成"返工失败三次"。
+  同批改判（不删断言，只翻极性）：`tests/test_truth_propagate_cli.py::TestUnwiredHalfStaysVisible`
+  → `::TestReworkHalfIsWiredAndItsBoundaryStaysVisible`（现在要求产品侧真有调用点，且必须落在
+  CLI 那一层）、`registry_data` 两行、`docs/architecture/truth_architecture.md`、
+  `commands_truth.py` 的模块说明与 `truth propagate` 的收口提示。
+  第 43 片装的生产者棘轮**当场开火**：`spec_rework.py` 新增一处 `add_edge` 调用点被它拦住，
+  按登记补进集合而不是放宽判据。常驻 `tests/test_truth_rework_cli.py`（8 条，含 `--json`
+  的 `ok` 与退码同向、库不存在判 2 不判"没有待办"）+ 电池 `/tmp/s45/battery.py`
+  **5 条：杀 5 / 存活 0 / 注入无效 0**（E1 跳过引擎伪造 succeeded→半径 5、E2 未变也去重写→1、
+  E3 不认识的也照跑→2、E4 gap 记成成功→1、E5 只看记录哈希不看磁盘→1）。
+  仍没接的那一半要说清：**DXF / BOM / 成本这几类制品今天没有执行器**，它们的任务正确地留在
+  pending——"链路上还有几格没人跑"是读数，不是本轮的完成度。
+  命令面同步：公开命令 56 → 57（`command_contract` 派生计数、SKILL 分组与计数、README 速查、
+  命令面 argv 位棘轮的分母 66 → 67）。读数：全量 **2308 → 2316**（+8）。
+
 - **v5.12 F-CTQ-STALE 第 44 片：把「要求被标陈旧」从"少一条要求"改判成"一条没收口"**：
   发布证据的 CTQ 分母来自 `_collect_ctq`，它按 `status="active"` 查——**非 active 的记录整条静默消失**。
   实测（两条 CTQ，一条标 stale）：`doc["ctq"]` 只剩一条，`issues` 里没有任何一句提到不见的那条。

@@ -128,6 +128,13 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
     CommandEntry("truth tasks", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
                  requires_args=frozenset({"--db", "--project"}),
                  description="列本作用域的返工待办（只读，不改任何状态）"),
+    CommandEntry("truth rework", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
+                 requires_args=frozenset({"--db", "--project"}),
+                 description="按当前 active CTQ 重算图纸声明并跑一次返工："
+                             "内容未变且磁盘产物匹配则一个字节都不写，"
+                             "变了或被删/被改则重写并补血缘边；"
+                             "重算出缺口即失败（交回有界退避，绝不伪造成功），"
+                             "执行器不认识的制品在烧 attempts 之前就点名拒掉"),
 
     # ---- 对外副作用（outbox）----
     CommandEntry("outbox drain", CommandStatus.PUBLIC, CommandCategory.OPERATIONS, "5.10",

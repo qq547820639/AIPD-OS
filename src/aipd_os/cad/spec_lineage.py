@@ -26,7 +26,23 @@ import json
 from pathlib import Path
 from typing import Any
 
-__all__ = ["consumed_ctq_ids", "record_spec_lineage"]
+__all__ = ["consumed_ctq_ids", "record_spec_lineage", "spec_content",
+           "spec_digest", "render_spec_text", "SUPPORTED_ARTIFACT"]
+
+SUPPORTED_ARTIFACT = "drawing_spec"
+
+
+def render_spec_text(spec: dict[str, Any]) -> str:
+    """声明文件的落盘格式只有一个写法——生产者（`aipd drawing spec`）与返工执行器
+    必须写同一形状，否则"文件是否还是那一份"要按字节而不是按内容判，白丢一次核对。"""
+    return json.dumps(spec, ensure_ascii=False, indent=2)
+
+
+def spec_digest(spec: dict[str, Any]) -> str:
+    """声明正文的内容哈希。键序固定，所以同一内容重跑必得同一哈希。"""
+    return hashlib.sha256(
+        json.dumps(spec, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
 
 
 def consumed_ctq_ids(spec: dict[str, Any]) -> list[str]:
@@ -44,6 +60,15 @@ def consumed_ctq_ids(spec: dict[str, Any]) -> list[str]:
     return sorted(refs)
 
 
+def spec_content(spec: dict[str, Any], path: Path) -> tuple[str, str, list[str]]:
+    """(content, digest, ctq_refs) 一份来源——写新记录与返工改旧记录必须用同一公式，
+    否则返工后的记录与生产者写的记录长得不一样，幂等与对账都会失真。"""
+    refs = consumed_ctq_ids(spec)
+    digest = spec_digest(spec)
+    content = f"drawing spec {Path(path).name} sha256={digest[:16]} ← CTQ {'、'.join(refs)}"
+    return content, digest, refs
+
+
 def record_spec_lineage(store: Any, spec: dict[str, Any], *, path: Path,
                         relation: str = "affects",
                         tenant_id: str | None = None,
@@ -56,12 +81,7 @@ def record_spec_lineage(store: Any, spec: dict[str, Any], *, path: Path,
     from aipd_os.product_truth.lineage import LineageGraph
     from aipd_os.product_truth.models import SourceRef, TruthRecord
 
-    refs = consumed_ctq_ids(spec)
-    digest = hashlib.sha256(
-        json.dumps(spec, ensure_ascii=False, sort_keys=True).encode("utf-8")
-    ).hexdigest()
-    name = Path(path).name
-    content = f"drawing spec {name} sha256={digest[:16]} ← CTQ {'、'.join(refs)}"
+    content, digest, refs = spec_content(spec, path)
 
     found = store.find_id_by_type_and_content(
         "artifact_version", content, tenant_id=tenant_id, project_id=project_id)

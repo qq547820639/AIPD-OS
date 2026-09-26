@@ -127,7 +127,8 @@ class TestSpecWritesItsOwnLineage:
         assert result["ctq_refs"] == [used] and result["edges"] == 1
         edges = _edges(db)
         assert (used, result["record_id"], "affects") in edges
-        assert not any(u == unused for u, _d, _r in edges), "给没参与的 CTQ 连边＝让传播去打扰无关要求"
+        assert not any(u == unused for u, _d, _r in edges), \
+            "给没参与的 CTQ 连边＝让传播去打扰无关要求"
 
         report = PropagationEngine(store).on_upstream_changed(unused)
         assert result["record_id"] not in report["affected"]
@@ -198,6 +199,7 @@ class TestProducerRatchet:
     TRUTH_SQL_WRITERS = ["src/aipd_os/product_truth/lineage.py"]
     REGISTERED_PRODUCERS = {
         "src/aipd_os/cad/spec_lineage.py",              # 第 43 片：CTQ → 图纸声明
+        "src/aipd_os/cad/spec_rework.py",               # 第 45 片：返工重算后补同一类边
         "src/aipd_os/product_intelligence/gate.py",     # PI 需求/Feature → truth
         "src/aipd_os/product_truth/lineage.py",         # 自身：canonical 镜像
         "src/aipd_os/idea/decomposer.py",               # 以下三处写 canonical，

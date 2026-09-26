@@ -50,11 +50,16 @@ trust_level / effective_at / expires_at / version / status / metadata），
 **可达性现状（2026-09-25，F-TRUTH-PROP-01）**：传播这一半已从产品面走得到——
 `aipd truth propagate --db <state.db> --project <p> --upstream <id>` 调
 `on_upstream_changed`（标 stale + 生成 `rework_tasks` 有界任务 + 产出 owner 可读四段
-变更说明），`aipd truth tasks` 只读列待办。返工的**执行**（`run_rework`）仍然没有任何
-产品调用点，因为本仓没有真实返工执行器；这不是遗漏而是刻意选择——一条在没有执行器时
-唯一可能输出的就是 `blocked` 的命令，比没有命令更容易被读成「返工跑过了」。该缺口由
-`tests/test_truth_propagate_cli.py::TestUnwiredHalfStaysVisible` 以 AST 扫描钉住
-（接上执行器那一轮它必须变红，并连同本节与登记里的 `current_limitation` 一起改判）。
+变更说明），`aipd truth tasks` 只读列待办。**返工的执行也已接上（2026-09-26，F-REWORK 第 45 片）**：
+`aipd truth rework --task RW-xxx | --all-pending` 调 `run_rework` 并交真实执行器
+（`src/aipd_os/cad/spec_rework.py`）——按当前 active CTQ 重算图纸声明：哈希一致**且**磁盘产物
+仍匹配就一个字节都不动产物（`unchanged`，但库里的版本与 stale 真的收口）；内容变了、或文件被删/
+被手改，就重写并补血缘边（`rewrote` / `file_restored`）；重算出 gap 一律判失败，交给引擎的
+有界退避与 `max_attempts`。执行器只认 `metadata.artifact=drawing_spec`，不认识的制品在
+**烧 attempts 之前**逐条点名拒掉——「这格没有执行器」不许被伪装成「返工失败了三次」。
+接线前那句「产品侧无人调用」现在反过来钉（`tests/test_truth_propagate_cli.py::`
+`TestReworkHalfIsWiredAndItsBoundaryStaysVisible` 要求产品侧真有调用点），
+边界本身由 `tests/test_truth_rework_cli.py` 逐条钉住。
 另一处现状（2026-09-26 更新，F-LINEAGE-PROD 第 43 片）：血缘边有**两个**生产者——
 `product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）与
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的

@@ -136,8 +136,9 @@ def cmd_drawing_spec(args):
     # 先落盘、再落血缘，最后统一输出：血缘写不进去时**不能**报成功——
     # 一份没有出处的声明正是这一族命令要防的东西（第 43 片）。
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(spec, ensure_ascii=False, indent=2), encoding="utf-8")
-    from aipd_os.cad.spec_lineage import record_spec_lineage
+    from aipd_os.cad.spec_lineage import record_spec_lineage, render_spec_text
+
+    out.write_text(render_spec_text(spec), encoding="utf-8")
 
     try:
         lineage = record_spec_lineage(store, spec, path=out,

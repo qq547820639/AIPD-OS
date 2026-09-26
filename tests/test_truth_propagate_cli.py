@@ -310,17 +310,15 @@ class TestReachableFromProductPath:
         assert len(_tasks(tmp_path)) == 1      # 之后才有——只可能来自 CLI
 
 
-class TestUnwiredHalfStaysVisible:
-    def test_run_rework_is_still_unreachable_from_product_code(self):
-        """没有真实执行器 ⇒ 本轮不接 `run_rework`，并把这句话钉成断言。
+class TestReworkHalfIsWiredAndItsBoundaryStaysVisible:
+    def test_run_rework_has_a_product_call_site_now(self):
+        """第 45 片翻极性：这条以前钉的是**absence**（`run_rework` 在 src 里 0 调用点）。
 
-        扫的是 **AST 里的代码引用**（`Name`/`Attribute`），不是子串：本文件的模块 docstring
-        与 `--help` 文案都要提到这个名字，子串扫描会把「写清楚了没接」误判成「已经接了」
-        ——而这两种情况的正确处置完全相反。
-
-        极性说明：将来接上返工执行器时这条**必须**变红，逼着同一趟把
-        `registry_data` 的 `current_limitation`、`docs/architecture/truth_architecture.md`
-        与这里的断言一起改判，而不是让「传播已接线」悄悄越界成「返工已接线」。
+        扫的是 **AST 里的代码引用**（`Name`/`Attribute`），不是子串：模块 docstring 与
+        `--help` 文案都要提到这个名字，子串扫描会把"写清楚了没接"和"已经接了"读成同一样。
+        翻极性的理由按仓库自己留的话执行——原注释写着"接上执行器那一轮必须连同该断言
+        极性一起改判"，同时改判的还有 `registry_data` 的 `current_limitation`、
+        `docs/architecture/truth_architecture.md` 与 `commands_truth.py` 的模块说明。
         """
         import ast
 
@@ -334,7 +332,9 @@ class TestUnwiredHalfStaysVisible:
                          node.attr if isinstance(node, ast.Attribute) else None)
                 if named == "run_rework":
                     hits.append(f"{path.relative_to(REPO)}:{node.lineno}")
-        assert hits == [], f"run_rework 已被产品代码引用（{hits}）：请连同本用例极性一起改判"
+        assert hits, "产品侧又没人调用 run_rework 了：那登记与文档里的『已接线』就是假的"
+        assert any(h.startswith("src/aipd_os/cli/commands_truth.py") for h in hits), \
+            f"调用点应落在 CLI 的 truth rework 上，实际 {hits}"
 
     def test_the_registry_states_what_is_wired_and_what_is_not(self):
         """登记里两句话必须同时成立：传播已可达；返工执行仍是缺口。
@@ -356,8 +356,11 @@ class TestUnwiredHalfStaysVisible:
         assert new.get("entry_point") == "aipd_os.cli.commands_truth.cmd_truth_propagate"
         assert (REPO / str(new.get("implementation_file"))).is_file()
         limitation = str(new.get("current_limitation") or "")
-        assert "run_rework" in limitation and "0 调用点" in limitation, \
-            "未接的那一半必须写在这一行里，不能只留在测试断言里"
+        assert "0 调用点" not in limitation, \
+            "返工执行已接线（aipd truth rework），登记里不该还写着 0 调用点"
+        assert "truth rework" in limitation and "drawing_spec" in limitation, \
+            "要写清是谁在跑这次返工、以及执行器只认哪类制品（边界不能省）"
+        assert "run_rework" in limitation, "接线的落点名字要留在登记里"
 
 
 def test_prose_json_is_not_the_carrier(tmp_path, capsys):

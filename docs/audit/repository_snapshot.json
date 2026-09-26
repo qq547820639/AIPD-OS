@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-26T15:42:48",
-  "source_commit": "6ee84d9d56d70377942c52808b0f1aa6e854a4ec",
+  "generated_at": "2026-09-26T16:34:35",
+  "source_commit": "e6f603556a0820815f6728e154921fac77f2031e",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "6ee84d9d56d70377942c52808b0f1aa6e854a4ec",
-  "latest_commit_time": "2026-09-26 07:50:22 +0800",
+  "latest_commit_sha": "e6f603556a0820815f6728e154921fac77f2031e",
+  "latest_commit_time": "2026-09-26 15:54:31 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 193
+      "tests": 194
     }
   },
   "tags": [
@@ -116,39 +116,99 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 637,
-    "hash_matches": 634,
-    "hash_mismatch_count": 3,
+    "total_files": 638,
+    "hash_matches": 626,
+    "hash_mismatch_count": 12,
     "mismatches": [
       {
-        "path": "CHANGELOG.md",
+        "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "2431307347413b13a5247b24cfde123bf5bdb4cb01402ccb22bbefaa642826f3",
-        "actual": "309ec0881d13bf7abdcc16dd369440aab063ed9994493ba3ec6d16a4ee877e64"
+        "expected": "1fd658df0f2714b989797b041934948e9c7e6a3f8fd1ca9847f73ba74d865a51",
+        "actual": "f9062f65a6d8114d049e76cbbf869a266db1e188dabde36d907db0529cf666c6"
+      },
+      {
+        "path": "SKILL.md",
+        "reason": "hash_mismatch",
+        "expected": "d8786458dab26a55372de1512ca7b2023a0c93b8e79dab097f3e4f06eb95aeed",
+        "actual": "b99e2ba700a529dd7956f91f27376c280939a5d95f2655696e3e9a5acc499d36"
+      },
+      {
+        "path": "docs/architecture/truth_architecture.md",
+        "reason": "hash_mismatch",
+        "expected": "171d995c49ec4f7def85bb64f294c24b1fc37cc47a6a27c5455c35bbe9df0f65",
+        "actual": "93e55332e47543f5dca19cbed0104f4fb4c1c1471d3db81025591f0519fc7057"
+      },
+      {
+        "path": "src/aipd_os/cad/spec_lineage.py",
+        "reason": "hash_mismatch",
+        "expected": "eb27df07cc7cc1938acfb302ea13c3e39781abd9ad95f5a171bbb7a0a7a8e053",
+        "actual": "0573b1560ce71b06572961efaafae2307030b05a8e8b75be7d759dd1afcf557b"
+      },
+      {
+        "path": "src/aipd_os/cli/command_contract.py",
+        "reason": "hash_mismatch",
+        "expected": "5c1f136694c13acc800b30f96a17f8ee5b153c2f7358fe39dcebca0bd69682d1",
+        "actual": "a9723f4c56d315db30681a4e197184bfee6a8b3eaa03d8829a3c28e94ff76748"
+      },
+      {
+        "path": "src/aipd_os/cli/commands.py",
+        "reason": "hash_mismatch",
+        "expected": "c211eacfec55a56066d1cb4cb6f647dc21b8e923e313e674143847db7768e330",
+        "actual": "14f5afcdd1303805210f35099248e8e22e25cfe32b0dbbb176150d5b3435aa19"
+      },
+      {
+        "path": "src/aipd_os/cli/commands_drawing.py",
+        "reason": "hash_mismatch",
+        "expected": "364fee037066c5e13b753fc2ce75adeaceb87c9e266f93e82e64f144d6cca1ca",
+        "actual": "4b963bc19560cab14110915af4e55b3a9a70d4a644586b1002ca8fb5e0832e65"
+      },
+      {
+        "path": "src/aipd_os/cli/commands_truth.py",
+        "reason": "hash_mismatch",
+        "expected": "13e80543c22b8ec2d7766df3ddf2a0cf8ef4ecd5b8c04b403dfb1183e14461f0",
+        "actual": "8712dda90ff4a34b4b9ca1eaf979175ceb99c383a36b604e0f4165f3f62e9c1c"
+      },
+      {
+        "path": "src/aipd_os/cli/main.py",
+        "reason": "hash_mismatch",
+        "expected": "c29de3ce7904575c2c5b790a3d2b39a7e5e5db3d1252afbec2b44d2a7ef609aa",
+        "actual": "661774b192e1128e4de93b2ffe4b6af5b1530d2caadaae995784809a551f81b0"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "eacf34eee8ed35b3b4737e4666371cd55ad3678ae90b1f92b0439c9bf344e6e6",
-        "actual": "6d1ee031557bbf2ddefabb18440aa0fde59d96552155a33662db3e224301da5f"
+        "expected": "6d1ee031557bbf2ddefabb18440aa0fde59d96552155a33662db3e224301da5f",
+        "actual": "ce9b99f400e083c1f4d5ecf383270b329d1a70e0e01e08cc890af88372812b9a"
       },
       {
-        "path": "src/aipd_os/release_manifest.py",
+        "path": "tests/test_command_surface_census.py",
         "reason": "hash_mismatch",
-        "expected": "d5211d45f497e909acca3d664dbd52627ddaf01a80af5502161c5057df07878c",
-        "actual": "28a36ab400abc7093a6d78c1a98ed604610318bb6bdd8b38e4c8adeb4762b546"
+        "expected": "59413518fb4113d992b03630467895d8d9cced34b6b5f9afceb9511c05e29414",
+        "actual": "f081feb388915b0b202dd89929b1b957bab3b3a867b03fc19dffa5ee9d4d1d10"
+      },
+      {
+        "path": "tests/test_truth_propagate_cli.py",
+        "reason": "hash_mismatch",
+        "expected": "d1f8b975883ceae49b724d9250f1d6f235e3a76dc0915cc9e43223f7dfe88e47",
+        "actual": "2843587e99d78b6d100e70fded2e4f671a025df4c399d547babebc58c41fba88"
       }
     ]
   },
   "untracked_or_generated": [
-    " M CHANGELOG.md",
-    " M docs/audit/capability_matrix.json",
-    " M docs/audit/capability_matrix.md",
-    " M docs/audit/repository_snapshot.json",
+    " M README.md",
+    " M SKILL.md",
+    " M docs/architecture/truth_architecture.md",
+    " M src/aipd_os/cad/spec_lineage.py",
+    " M src/aipd_os/cli/command_contract.py",
+    " M src/aipd_os/cli/commands.py",
+    " M src/aipd_os/cli/commands_drawing.py",
+    " M src/aipd_os/cli/commands_truth.py",
+    " M src/aipd_os/cli/main.py",
     " M src/aipd_os/registry_data.py",
-    " M src/aipd_os/release_manifest.py",
-    "?? docs/audit/RELEASE_EVIDENCE_CTQ_STATUS_F-CTQ-STALE_2026-09-26.md",
-    "?? tests/test_release_evidence_ctq_status.py",
+    " M tests/test_command_surface_census.py",
+    " M tests/test_truth_propagate_cli.py",
+    "?? src/aipd_os/cad/spec_rework.py",
+    "?? tests/test_truth_rework_cli.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],
