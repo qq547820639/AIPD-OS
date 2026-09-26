@@ -54,9 +54,22 @@ def _evidence_path(artifact: Path) -> Path:
 
 
 def _collect_ctq(truth: Any, issues: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    """CTQ 记录 → {record_id: 条目}；缺 feature 的逐条点名（不静默少一条）。"""
+    """CTQ 记录 → {record_id: 条目}；缺 feature 的逐条点名（不静默少一条）。
+
+    状态不是 active 的 CTQ **不算"要求消失了"**：`gdt_covers_ctq` / `ctq_has_inspection`
+    的分母来自这里，按 `status="active"` 过滤会把被标 stale 的那条直接从天平上拿掉——
+    三条要求标成陈旧就只剩一条要覆盖，本来放行不了的发布反而能过（实测：两条 CTQ、
+    一条 stale，`doc["ctq"]` 只剩一条，issues 里没有任何一句提到它）。所以：
+    `stale/expired/blocked/未知状态` 各出一条 **blocking** 点名（它是"还没收口的要求"，
+    不是"少一条要求"），`superseded`（被新版本合法取代）只出**非 blocking** 的点名，
+    让读者看得见分母为什么小了。分母本身仍只含 active——下游逐条核对的逻辑不动。
+    """
     by_id: dict[str, dict[str, Any]] = {}
-    for rec in truth.query(record_type="ctq", status="active"):
+    open_by_status: dict[str, list[str]] = {}
+    for rec in truth.query(record_type="ctq"):
+        if rec.status != "active":
+            open_by_status.setdefault(str(rec.status), []).append(str(rec.record_id))
+            continue
         meta = rec.metadata or {}
         feature = meta.get("feature")
         if not feature:
@@ -77,6 +90,17 @@ def _collect_ctq(truth: Any, issues: list[dict[str, Any]]) -> dict[str, dict[str
             "upper_limit": meta.get("upper_limit"),
             "trust_level": rec.trust_level,
         }
+    for status, ids in sorted(open_by_status.items()):
+        names = "、".join(f"{i}（{status}）" for i in ids)
+        if status == "superseded":
+            _issue(issues, "ctq_superseded_not_required",
+                   f"CTQ {names} 已被新版本取代，不计入本轮覆盖分母——"
+                   f"确认取代它的那条在名单里", blocking=False)
+            continue
+        _issue(issues, "ctq_not_active",
+               f"CTQ {names} 状态不是 active：这条要求**今天没有收口**，"
+               f"不能因为标了陈旧就从天平上拿掉（覆盖分母只含 active，"
+               f"少一条就等于少一条要求）", blocking=True)
     if not by_id:
         _issue(issues, "no_ctq", "Product Truth 里没有 active 的 ctq 记录；"
                                  "门禁 gdt_covers_ctq / ctq_has_inspection 都会 fail-closed",

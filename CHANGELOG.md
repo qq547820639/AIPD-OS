@@ -951,6 +951,29 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-CTQ-STALE 第 44 片：把「要求被标陈旧」从"少一条要求"改判成"一条没收口"**：
+  发布证据的 CTQ 分母来自 `_collect_ctq`，它按 `status="active"` 查——**非 active 的记录整条静默消失**。
+  实测（两条 CTQ，一条标 stale）：`doc["ctq"]` 只剩一条，`issues` 里没有任何一句提到不见的那条。
+  后果是一条 fail-open 通路：`gdt_covers_ctq` / `ctq_has_inspection` 的覆盖义务按分母算，
+  两条里标陈旧一条就只剩一条要覆盖，**本来放行不了的发布反而能过**；只有全部掉光才由
+  `no_ctq` 兜住。讽刺的是这个函数自己的 docstring 写着「缺 feature 的逐条点名（不静默少一条）」——
+  它对"字段缺"守了这条纪律，对"状态不在 active"没守。
+  改判：`stale / expired / blocked` 各出一条 **blocking** 点名，带上 record_id 与状态名
+  （读者要能复核是哪一条，"有 N 条陈旧"不算点名）；枚举外的状态也走这一支，但那是兜底
+  hardening——store 的 `update` 把状态核在 `TRUTH_STATUS` 内，今天没有生产者能写进去；
+  `superseded`（被新版本合法取代）**不计入分母**
+  但出一条非阻断点名，让读者看得见分母为什么小了。覆盖分母本身仍只含 active——
+  本轮改的是"缩水必须可见"，不是把陈旧要求拿去和图纸硬核对。
+  常驻 `tests/test_release_evidence_ctq_status.py`（6 条）里配了两条方向对照：
+  全 active 时新判据**不许开火**（否则它只是永远抱怨），以及"非 active 混进分母"必须红
+  （证明分母语义也被钉着，而不只是点名）；电池 `/tmp/s44/battery.py`
+  **4 条：杀 4 / 存活 0 / 注入无效 0**（D1 降级成非阻断→2、D2 把 superseded 当缺陷→1、
+  D3 点名不写记录号→3、D4 非 active 收进分母→5）。
+  与第 43 片接上：那一轮之后 CTQ 真的会被 `aipd truth propagate` 打成 stale，
+  所以这条通路从"理论存在"变成"按一次 propagate 就能踩到"——两片是同一件事的两半。
+  登记行 `industrialize.release_evidence` 的 `current_limitation` 同步补这一段。
+  读数：全量 **2302 → 2308**（+6）。
+
 - **v5.12 F-LINEAGE-PROD 第 43 片：给「CTQ → 图纸声明」补血缘边生产者，`truth propagate` 的第二跳今天到得了**：
   前几轮登记里写着「血缘边只有 `product_intelligence/gate.commit_snapshot` 会写，
   CTQ/图纸/BOM 之间没有生产者，所以链条更长的那一段传播不到」——本轮先把这句**核实**了：
