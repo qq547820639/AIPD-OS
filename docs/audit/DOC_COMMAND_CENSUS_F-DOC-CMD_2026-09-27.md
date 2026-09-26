@@ -241,6 +241,11 @@ real = **2.44 / 2.18 / 1.73 s**；`pytest tests/test_doc_command_census.py` 整�
   `tests/test_mail_protocol.py:201` 与 `:239`（`AIPD_MAILPIT_*` 未配置 ⇒ 走 HOLD 断言，
   需要本地 mailpit 实例）、`tests/test_researchstudio_provider.py:233`
   （`integration: requires internet`，需 `AIPD_RESEARCHSTUDIO_INTEGRATION=1`）。
+  **记一处记账事故**：把这三条写进提交 `267223f` 的信息时，我把带反引号的路径放进了
+  双引号的 `-m "…"` 里 ⇒ zsh 把反引号当命令替换执行掉，提交信息里那两个路径变成空白
+  （读起来是"…逐条点名到 与 的前提"）。**文件本身没受影响**（上面就是完整读数），
+  历史也不改写——与第 59 片"提交信息把 36 条前提抄成 30 条"同一处置：原位更正、不重铸提交。
+  往后写提交信息一律用 `<<'EOF'` 引号型 heredoc，路径不用反引号包。
 
 ## 八、遗留
 
