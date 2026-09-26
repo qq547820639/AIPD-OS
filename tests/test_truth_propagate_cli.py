@@ -354,7 +354,12 @@ class TestReworkHalfIsWiredAndItsBoundaryStaysVisible:
         new = by_id.get("product_truth.impact_propagation")
         assert new is not None, "新接的能力必须在登记里有自己的行"
         assert new.get("entry_point") == "aipd_os.cli.commands_truth.cmd_truth_propagate"
-        assert (REPO / str(new.get("implementation_file"))).is_file()
+        # implementation_file 在登记里就是可以写 "; " 分隔的多文件（别的行早就是这么写的），
+        # 所以这里逐个验存在——只取整串当一条路径，会把合法的多文件声明读成"文件不见了"。
+        impls = [p.strip() for p in str(new.get("implementation_file")).split(";") if p.strip()]
+        assert impls, "implementation_file 不能是空的"
+        for one in impls:
+            assert (REPO / one).is_file(), f"登记里的 implementation_file 指不到文件：{one}"
         limitation = str(new.get("current_limitation") or "")
         assert "0 调用点" not in limitation, \
             "返工执行已接线（aipd truth rework），登记里不该还写着 0 调用点"

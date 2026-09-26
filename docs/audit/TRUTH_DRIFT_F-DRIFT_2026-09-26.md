@@ -87,6 +87,21 @@ rc=4
   （用 `; ` 分隔两条点号路径），`test_capability_entry_surface` 当场红——
   那个字段只接受**单个**可导入 callable。改放 `implementation_file` 与 `run_command`。
 
+## 五点五、两处自抓（都在门禁面上，不是风格问题）
+
+1. **干净检出全量抓出一条本地没跑到的常驻用例**：
+   `test_truth_propagate_cli.py::TestReworkHalfIsWiredAndItsBoundaryStaysVisible::test_the_registry_states_what_is_wired_and_what_is_not`
+   把 `implementation_file` 当**单条路径**判 `(REPO / 整串).is_file()`；
+   本轮把那一行改成 `"; "` 分隔的多文件（登记里别的行早就是这么写的），于是它断言失败。
+   报告前置校验把绑定拒了（`exitcode=1`、坏 outcome、`passed+skipped != collected` 三条同时红），
+   所以**没有 mint 任何证据**——这正是它存在的理由。
+   修法是**加强那条断言**（split 之后每个路径都要存在），不是把登记退回单文件：
+   退回就是为了让尺子闭眼。加强后配了一次反向对照——把 `src/nope/gone.py` 放到第二个位置，
+   循环确实抓到它（只验第一项的话这里会静默通过）。
+2. **一条提交信息里的数写错了**：`Re-anchor` 那次写「650 → 652」，实测清单是 **653**
+   （漏算 `tests/test_truth_drift.py`）。不改历史（本地未推送也守"新提交优先"的规矩），
+   正确读数记在这里与 §七 的表里。
+
 ## 六、仍然没接上的（是读数，不是完成度）
 
 - **发现 ≠ 收口**：命令只报不写。`should_be_stale` 里的记录仍然挂着 active，
