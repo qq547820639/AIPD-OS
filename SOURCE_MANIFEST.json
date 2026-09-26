@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-26T13:27:08+00:00",
+  "generated_at": "2026-09-26T13:33:29+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -3232,8 +3232,8 @@
     },
     {
       "path": "tests/test_truth_propagate_cli.py",
-      "size": 19632,
-      "sha256": "2843587e99d78b6d100e70fded2e4f671a025df4c399d547babebc58c41fba88"
+      "size": 20099,
+      "sha256": "243a8d7fb0578bda145324f9419bd2dbd4711d079679343c3718a4c50c5a8e73"
     },
     {
       "path": "tests/test_truth_rework_cli.py",
