@@ -2,137 +2,157 @@
   "engine": "scripts/state_perf_gate.py",
   "python": "3.9.6",
   "sqlite": "3.54.0",
-  "rounds": 7,
+  "rounds": 5,
   "scenarios": {
     "migrate_cold_ms": {
       "kind": "absolute",
       "metric": "ms",
-      "rounds": 7,
-      "min": 26.9701,
-      "median": 27.8881,
-      "mean": 28.3885,
-      "max": 31.241,
-      "stdev": 1.2674
+      "rounds": 5,
+      "min": 24.185,
+      "median": 24.7764,
+      "mean": 24.7245,
+      "max": 25.6222,
+      "stdev": 0.5208
     },
     "migrate_noop_ms": {
       "kind": "absolute",
       "metric": "ms",
-      "rounds": 7,
-      "min": 0.9149,
-      "median": 1.1107,
-      "mean": 1.1458,
-      "max": 1.7278,
-      "stdev": 0.259
+      "rounds": 5,
+      "min": 0.5991,
+      "median": 0.699,
+      "mean": 0.6863,
+      "max": 0.7539,
+      "stdev": 0.0533
     },
     "connect_overhead_us": {
       "kind": "absolute",
       "metric": "us",
-      "rounds": 7,
-      "min": 194.0404,
-      "median": 224.325,
-      "mean": 223.3831,
-      "max": 241.8983,
-      "stdev": 15.5346
+      "rounds": 5,
+      "min": 96.3412,
+      "median": 98.9908,
+      "mean": 106.3965,
+      "max": 124.4725,
+      "stdev": 10.9255
     },
     "fact_batched_ops_s": {
       "kind": "absolute",
       "metric": "ops/s",
-      "rounds": 7,
-      "min": 11678.8608,
-      "median": 18424.6891,
-      "mean": 16633.2984,
-      "max": 19634.9933,
-      "stdev": 3043.7568
+      "rounds": 5,
+      "min": 12104.9651,
+      "median": 13453.6878,
+      "mean": 13320.9115,
+      "max": 13951.2174,
+      "stdev": 658.6996
     },
     "fact_autocommit_ops_s": {
       "kind": "absolute",
       "metric": "ops/s",
-      "rounds": 7,
-      "min": 186.0217,
-      "median": 277.2147,
-      "mean": 262.8812,
-      "max": 310.5037,
-      "stdev": 38.1189
+      "rounds": 5,
+      "min": 533.9242,
+      "median": 537.8132,
+      "mean": 539.5632,
+      "max": 547.0866,
+      "stdev": 4.7017
     },
     "outbox_append_ops_s": {
       "kind": "absolute",
       "metric": "ops/s",
-      "rounds": 7,
-      "min": 76281.776,
-      "median": 81639.3175,
-      "mean": 83300.4816,
-      "max": 98067.6553,
-      "stdev": 7192.592
+      "rounds": 5,
+      "min": 139077.2226,
+      "median": 160926.9392,
+      "mean": 158891.3763,
+      "max": 171136.4366,
+      "stdev": 10794.4635
     },
     "outbox_claim_batch_ms": {
       "kind": "absolute",
       "metric": "ms",
-      "rounds": 7,
-      "min": 1.8637,
-      "median": 2.1283,
-      "mean": 2.2573,
-      "max": 2.582,
-      "stdev": 0.2613
+      "rounds": 5,
+      "min": 1.5743,
+      "median": 2.3608,
+      "mean": 3.0439,
+      "max": 6.943,
+      "stdev": 1.9945
     },
     "changes_recent_100_ms": {
       "kind": "absolute",
       "metric": "ms",
-      "rounds": 7,
-      "min": 0.9373,
-      "median": 1.1291,
-      "mean": 1.1715,
-      "max": 1.4905,
-      "stdev": 0.211
+      "rounds": 5,
+      "min": 0.1981,
+      "median": 0.2113,
+      "mean": 0.2194,
+      "max": 0.2436,
+      "stdev": 0.0165
     },
     "stale_fanout_500_ms": {
       "kind": "absolute",
       "metric": "ms",
-      "rounds": 7,
-      "min": 8.4987,
-      "median": 8.7675,
-      "mean": 8.9881,
-      "max": 9.6565,
-      "stdev": 0.4564
+      "rounds": 5,
+      "min": 3.8172,
+      "median": 4.1566,
+      "mean": 4.1206,
+      "max": 4.4012,
+      "stdev": 0.2046
     },
     "snapshot_create_ops_s": {
       "kind": "absolute",
       "metric": "ops/s",
-      "rounds": 7,
-      "min": 25460.1379,
-      "median": 27880.5564,
-      "mean": 27767.9253,
-      "max": 30893.198,
-      "stdev": 1860.5228
+      "rounds": 5,
+      "min": 50928.3733,
+      "median": 53463.4277,
+      "mean": 55534.0871,
+      "max": 61824.5857,
+      "stdev": 4054.0723
     },
     "readiness_evaluate_ops_s": {
       "kind": "absolute",
       "metric": "ops/s",
-      "rounds": 7,
-      "min": 199.4921,
-      "median": 220.1613,
-      "mean": 233.376,
-      "max": 299.6588,
-      "stdev": 33.1322
+      "rounds": 5,
+      "min": 402.6741,
+      "median": 408.4969,
+      "mean": 414.3063,
+      "max": 443.7547,
+      "stdev": 14.89
     },
     "nested_txn_marginal_us": {
       "kind": "absolute",
       "metric": "us",
-      "rounds": 7,
-      "min": 43.6677,
-      "median": 52.2289,
-      "mean": 50.6755,
-      "max": 54.1523,
-      "stdev": 3.6638
+      "rounds": 5,
+      "min": 23.9733,
+      "median": 24.9758,
+      "mean": 24.7803,
+      "max": 25.7648,
+      "stdev": 0.6947
     },
     "batch_over_autocommit_ratio": {
       "kind": "comparative",
       "metric": "ratio",
-      "rounds": 7,
-      "min": 0.0143,
-      "median": 0.015,
-      "mean": 0.0156,
-      "max": 0.0181,
-      "stdev": 0.0016
+      "rounds": 5,
+      "min": 0.0443,
+      "median": 0.0485,
+      "mean": 0.0493,
+      "max": 0.0585,
+      "stdev": 0.0052
+    },
+    "drift_scan_us_per_record": {
+      "kind": "absolute",
+      "metric": "us",
+      "rounds": 5,
+      "min": 56.885,
+      "median": 59.8052,
+      "mean": 60.2526,
+      "max": 64.9523,
+      "stdev": 2.797
+    },
+    "drift_scan_scaling_ratio": {
+      "kind": "comparative",
+      "metric": "ratio",
+      "rounds": 5,
+      "min": 0.6497,
+      "median": 0.7336,
+      "mean": 0.7322,
+      "max": 0.8268,
+      "stdev": 0.0596
     }
   }
 }

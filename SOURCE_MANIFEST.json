@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-26T17:38:21+00:00",
+  "generated_at": "2026-09-26T17:44:05+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 229789,
-      "sha256": "76c1486742ec3815615b6cdb43360d90b0a7f5164eacb9aa6fa16d82f0042f8a"
+      "size": 230057,
+      "sha256": "7f6c93ffcf9807bcefaa7e70ad151bdb697ec86b7145e7dbfb8848954e92216f"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 15559,
-      "sha256": "43966db66e7deef416cb489c8eaeaf042d6ddf6f878e1bc6c078cf9f7a0f8ea2"
+      "size": 15708,
+      "sha256": "c265c688d44b17ffc653f98b48b4e39bc0ae3a9553e340c73c95c602e184326f"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -1682,8 +1682,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 97784,
-      "sha256": "46844d78340499f86abe2dc9e1fc3e56300dd6a526a0134398a28be7eaf556b6"
+      "size": 97862,
+      "sha256": "5f40bb78f8e1ac77df41f190c4fd5d5abf016106c9bd6b3c1c5bfd3b4b092a76"
     },
     {
       "path": "src/aipd_os/release_manifest.py",

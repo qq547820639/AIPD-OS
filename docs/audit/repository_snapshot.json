@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T01:30:40",
+  "generated_at": "2026-09-27T01:44:00",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -117,48 +117,36 @@
     "version": "5.6.0",
     "parsed": true,
     "total_files": 657,
-    "hash_matches": 651,
-    "hash_mismatch_count": 6,
+    "hash_matches": 654,
+    "hash_mismatch_count": 3,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "6c79b8cccab668bda2dac7a845f45cadbcfdb882bb6bc0cd2d34c87b9d9344ea",
-        "actual": "76c1486742ec3815615b6cdb43360d90b0a7f5164eacb9aa6fa16d82f0042f8a"
-      },
-      {
-        "path": "docs/architecture/state_inventory.md",
-        "reason": "hash_mismatch",
-        "expected": "0700fead4949d8afbf65e3b7acbb3adaf8313cb596107f44024edbd4a77f5556",
-        "actual": "3b617647b4defab62146e4c35e49b7ae6cab1dd23df4c0c16ea6ab295614f094"
+        "expected": "76c1486742ec3815615b6cdb43360d90b0a7f5164eacb9aa6fa16d82f0042f8a",
+        "actual": "7f6c93ffcf9807bcefaa7e70ad151bdb697ec86b7145e7dbfb8848954e92216f"
       },
       {
         "path": "docs/architecture/truth_architecture.md",
         "reason": "hash_mismatch",
-        "expected": "7855ff3ead03da965cf3886f6229ff1d4f9fc7360a1429e9250a0a806fe74014",
-        "actual": "43966db66e7deef416cb489c8eaeaf042d6ddf6f878e1bc6c078cf9f7a0f8ea2"
-      },
-      {
-        "path": "scripts/state_perf_gate.py",
-        "reason": "hash_mismatch",
-        "expected": "0eff954dd986022da64040cc311bd75da7557b028cfa9d06ae844f7a88f135c0",
-        "actual": "5d45c881548643d5d08f066a93a9a8ae5b7c2a13958732bb50a43ca6c92355ee"
+        "expected": "43966db66e7deef416cb489c8eaeaf042d6ddf6f878e1bc6c078cf9f7a0f8ea2",
+        "actual": "c265c688d44b17ffc653f98b48b4e39bc0ae3a9553e340c73c95c602e184326f"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "e3551d94287aca74f46cc0a3adaa6c53a66b9717f7824b7c33e9e48944076b8c",
-        "actual": "46844d78340499f86abe2dc9e1fc3e56300dd6a526a0134398a28be7eaf556b6"
-      },
-      {
-        "path": "tests/test_state_perf_gates.py",
-        "reason": "hash_mismatch",
-        "expected": "ab34a71dc225a4b1c2f079d7594f2173d0be8c3ef385119c15fe266b1b481345",
-        "actual": "f32fbe50dae699941164523a204c3409a5d23495437e44a6044ba54c9e4e437b"
+        "expected": "46844d78340499f86abe2dc9e1fc3e56300dd6a526a0134398a28be7eaf556b6",
+        "actual": "5f40bb78f8e1ac77df41f190c4fd5d5abf016106c9bd6b3c1c5bfd3b4b092a76"
       }
     ]
   },
   "untracked_or_generated": [
+    " M CHANGELOG.md",
+    " M docs/architecture/truth_architecture.md",
+    " M docs/audit/DRIFT_SCAN_COST_F-DRIFT-4_2026-09-26.md",
+    " M docs/audit/state_perf_baseline.json",
+    " M docs/audit/state_perf_report.json",
+    " M src/aipd_os/registry_data.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

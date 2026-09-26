@@ -85,8 +85,9 @@ trust_level / effective_at / expires_at / version / status / metadata），
 **扫描成本现状（2026-09-26 量，F-DRIFT-4 第 55 片）**：`truth drift` / `truth sweep` 是这条链上
 唯一会随交付物数量长期变大的读路径，所以它的成本形状被钉成两层。进程内实测：
 5/20/100/300 条有效制品版本记录，`scan_drift` 走的 **SQL 条数恒为 1**（一条 SELECT 取全集），
-声明文件**每条恰好读一次**，单条成本约 95~131 µs（`scripts/state_perf_gate.py` 的两个
-`drift_scan_*` 场景，趋势棘轮）；两条线性度都由常驻用例钉死
+声明文件**每条恰好读一次**，单条成本安静机器约 60~70 µs、同机负载 26 时读到 95~152 µs
+（`scripts/state_perf_gate.py` 的两个 `drift_scan_*` 场景，趋势棘轮；
+基线在负载下采到 131.24 µs 后已按安静读数重锚为 69.25 µs，方向是收紧）；两条线性度都由常驻用例钉死
 （`tests/test_state_perf_gates.py::TestDriftScanScaling`，与机器无关，抓 N+1 与重复读）。
 CLI 侧另测三档（4/13/33 条记录 × 两遍 × 7 次重复）：一趟命令墙钟 1.31~1.42 s，
 **几乎全是解释器启动与 import**，扫描本体约 10 ms 量级、落在两遍读数的散布之内
