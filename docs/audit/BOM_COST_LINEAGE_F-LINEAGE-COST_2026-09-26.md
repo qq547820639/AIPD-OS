@@ -16,13 +16,24 @@
 
 ## 二、技术选型：为什么这一片没有外部检索
 
-按例外条款明写跳过理由：**这不是一个新的技术决策**。第 46 片已经就「制品按什么认身份」做过
-候选比较并定了判据（当时对照 Bazel action key、dbt `state:modified`、BitBake 输入校验和三类
-现成做法，结论是**按输入签名认身份、不按产物字节**，取证在
-`docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md`）。
-本片只是把那条已定判据套到第二种制品上，唯一的新问题是「BOM 与成本的输入集合各包含什么」——
+按例外条款明写跳过理由：**这不是一个新的技术决策**。制品按什么认身份，本仓已经有两轮实读文档的取证：
+
+- 第 45 片 `docs/audit/TRUTH_REWORK_F-REWORK_2026-09-26.md` 读了 **dbt `state:modified`**
+  （node-selection 文档：拿当前节点签名与 `--state` 指的上一份 manifest 比才判「变了」，
+  纯 cosmetic 字段刻意不算变更）与 **BitBake / Yocto concepts**（输入校验和汇成签名，
+  `STAMPS_DIR` 里有签名匹配的戳文件才跳过执行）；
+- 第 46 片 `docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md` 在
+  「按输出字节哈希 / Bazel action key / Reproducible Builds 抹时间戳后比字节 / Nix fixed-output」
+  四个候选里选了 **Bazel 式动作键**（Nix 那条当时未读到，登记为不引用），
+  并用实测否掉了按字节（同输入两份 `.dxf` 13170 行只差 2 行时间戳）。
+
+⇒ 结论「**按输入签名认身份、不按产物字节**」在两轮之前已经定了，本片只是把这条已定判据
+套到第二种制品上。唯一的新问题是「BOM 与成本的输入集合各包含什么」——
 答案在本仓代码里（`CostInputs` 的五个字段、`BOMLine` 的行事实），不在外部生态里。
-所以本轮没有做外部检索，也没有查阅任何未实际访问的项目或文档。
+所以本片**没有做新的外部检索**，也没有查阅任何未实际访问的项目或文档。
+
+（自查记录：本节初稿把 dbt 与 BitBake 记成了「第 46 片对照过的三项」——那是错的归因，
+这两个来源属第 45 片，第 46 片的表里根本没有它们。落盘后跨文件复grep 才发现，就地改成本节这样。）
 
 签名集合（照第 46 片的教训：先写全再撞键复现，见 §五）：
 
@@ -115,6 +126,11 @@
 
 - **`bom` / `bom_cost` 两类制品没有返工执行器**：第 6 步实测拒跑，任务停在 pending。
   收口那条 stale 今天只能靠再跑一次 `cost calc --truth-lineage`。
+  而且这不是「只差接线」：`bom_cost` 记录的 metadata 今天只存了
+  `input_signature`（哈希）、`total_cost`、`currency`、`line_ids`、`bom_record_id`，
+  **没有存口径五项的值**（`cost_lineage.py:145-151`）⇒ 拿这条记录重建不出同一次核算，
+  执行器只能拿默认值猜。第 47 片对「缺字段的旧 DXF 记录」的纪律是**点名拒而不是猜**，
+  所以接执行器之前必须先让生产者把口径五项写进 metadata（记为第 49 片第一步）。
 - **上游方向仍断**：没有任何生产者往 `artifact=bom` 那条记录**连入边**
   （`quote apply` 写的是 `quote.*` fact，不是 truth 版本记录）。
   所以「改一条 CTQ 会打到成本」仍不成立——第 5 步是从 BOM 版本记录起算的。
