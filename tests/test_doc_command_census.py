@@ -157,6 +157,32 @@ def test_contract_alias_is_legal(tmp_path: Path, tmp_scope) -> None:
                code='GOOD = "先跑 aipd ctq add 再看"\n')
     rep = census.audit(tmp_path)
     assert rep["ok"] is True, rep["violations"]
+    paths, _g, problems = census.valid_commands()
+    assert not problems, problems
+    # 别名合法的真实原因不是"契约说它存在"，而是**它还注册在 argparse 树上**——
+    # 第 60 片电池 B4 实测：把别名并进权威面是死代码（10 个别名全在树上），
+    # 撤掉那条并集八臂全绿。故该步已改成活的前置 `alias_unregistered`。
+    assert alias in paths, alias
+
+
+def test_a_single_empty_judging_face_reads_as_failure_not_green(tmp_path: Path,
+                                                                tmp_scope) -> None:
+    """README 有速查行、登记表与代码档都空 ⇒ 必须读成「前提不成立」，不是「0 违规」。
+
+    这条是电池 B3 教出来的：原来只有 `--self-test` 里那个空仓库用例钉它，而那副语料
+    **同时**踩了 `quickref_corpus_empty` —— 把 `judging_face_empty` 整条撤掉它照样退 2，
+    于是"撤守卫"那一臂读成没牙。这里把两个原因分开：速查档非空、只有另两档空，
+    能救场的就只剩 `judging_face_empty`。
+    """
+    write_tree(tmp_path, "aipd ctq add --db x --project p\n",
+               'CAPABILITIES = []\n')
+    rep = census.audit(tmp_path)
+    assert rep["corpus"]["quickref_lines"] == 1, rep["corpus"]
+    assert rep["corpus"]["run_command_segments"] == 0, rep["corpus"]
+    assert not rep["ok"], rep
+    assert any("judging_face_empty" in x for x in rep["problems"]), rep["problems"]
+    assert not any("quickref_corpus_empty" in x for x in rep["problems"]), rep["problems"]
+    assert census.main(["--repo", str(tmp_path)]) == 2
 
 
 def test_absence_written_in_prose_is_reported_not_judged(tmp_path: Path,

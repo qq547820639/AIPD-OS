@@ -9,8 +9,9 @@
 - **不是** `COMMAND_FUNCS`。`aipd usage` 在派发表里查不到，却能跑（`cli/main.py:33` 注册 subparser、
   `_cmd_usage` 处理，实测 `main(["usage"])` 退 0 并打出命令清单）；
 - 权威面是 `build_parser()` 走出来的 **argparse 声明树**（实测 88 条路径），
-  再并上 CLI 契约里 10 条 `deprecated → replacement` 的**别名**（别名是合法写法，不是文档错）。
-  实测 `COMMAND_FUNCS` 是它的真子集（「派发表有而 parser 没有」为空）。
+  `COMMAND_FUNCS` 是它的真子集（「派发表有而 parser 没有」为空）。CLI 契约里 10 条
+  `deprecated` 别名**不再并进权威面**——第 60 片电池实测那是死代码（它们全部还注册在树上），
+  改成一条活的前置：契约声称存在的命令必须还在树上（`alias_unregistered`）。
 
 判据分两档，分档理由是本轮量过的假阳性面：
 - **判红面（现状面）**＝这三处，语义都是"照着跑/这是真命令"，不存在
@@ -110,8 +111,16 @@ def valid_commands() -> tuple[set[str], set[str], list[str]]:
     paths = walk(build_parser())
     try:
         from aipd_os.cli.command_contract import CommandStatus, get_all_commands  # type: ignore
-        paths |= {e.name for e in get_all_commands()
-                  if e.status is CommandStatus.DEPRECATED and e.name}
+        aliases = {e.name for e in get_all_commands()
+                   if e.status is CommandStatus.DEPRECATED and e.name}
+        # 第 60 片电池 B4 实测：把 deprecated 别名"并进权威面"**今天是死代码**——
+        # 契约里那 10 个别名全部还注册在 argparse 声明树上（`aliases - paths` 为空集），
+        # 撤掉这一步八条用例一条都不红。所以把它换成一条活的不变量：
+        # 契约声称存在的命令必须还在树上，否则文档里照抄的别名写法会静默失效，
+        # 而语料面只会显示"名字不认识"，看不见原因。
+        for one in sorted(aliases - paths):
+            problems.append(f"alias_unregistered: 契约里 deprecated 的命令 {one!r} "
+                            "不在 argparse 声明树上（文档中的别名写法已失效）")
     except Exception as exc:                              # noqa: BLE001
         problems.append(f"contract_unreadable: {type(exc).__name__}: {exc}")
     groups = {p.split()[0] for p in paths if len(p.split()) > 1}
@@ -305,7 +314,8 @@ def audit(root: Path) -> dict[str, Any]:
 
 def render(rep: dict[str, Any]) -> str:
     lines = ["=" * 60, "文档命令名对账（现状面判红，正文只报）", "=" * 60]
-    lines.append(f"权威面：{rep['authority_paths']} 条 argparse 路径 + 别名，"
+    lines.append(f"权威面：{rep['authority_paths']} 条 argparse 路径"
+                 "（契约 deprecated 别名不并进权威面，由 alias_unregistered 单独核），"
                  f"{rep['authority_groups']} 个组名")
     c = rep["corpus"]
     lines.append(f"判红面语料：run_command {c['run_command_segments']} 段 / "
