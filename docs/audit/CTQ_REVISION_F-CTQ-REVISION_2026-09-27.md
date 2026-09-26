@@ -248,3 +248,27 @@ reason 的差别按实测落笔：B 臂走的是 `commands_drift.py:99,108` 的 
   （例如同时撤 `supersedes` 摘名单与同值幂等判据）——那是另一格，未做。
 
 @FINAL@
+
+## 十、终读数（收尾链，2026-09-27）
+
+全部由本轮真实跑过的命令取得，每条给命令与实际读数；跑序：代码提交 → 重锚 → 干净检出复算 → 验签 → 绑定 → 门禁/审计。
+
+| 项 | 命令 | 实际读数 |
+|---|---|---|
+| 提交序列 | `git log --oneline` | `d026b16`（feat：命令+执行器守卫+14 用例）→ `fea0ab2`（重锚矩阵与清单）→ `f7fd119`（绑定 attestation）→ `528d673`（本文 §七/§八）→ 本条 |
+| 干净检出复算 | `git worktree add --detach /tmp/s59a HEAD` @ `fea0ab2200bb`，`PYTHONPATH=/tmp/s59a/src:/tmp/s59a/scripts AIPD_SOURCE_COMMIT=<tag SHA> pytest tests -q --json-report` | **2479 passed, 3 skipped**（collected 2482）in 235.43s，rc=0；跳过那条是 `test_researchstudio_provider.py:233`（要联网） |
+| 收集数增长 | 同上 vs 第 58 片绑定值 | 2468 → **2482**（+14，恰为本片新用例数；参数化那条按 3 次计） |
+| 验签器 | `/tmp/s59/verify_report.py --report /tmp/s59/report.json` | **36 条 [OK] / 0 条 [FAIL]**，rc=0，末行「全部前提成立，可以绑定」 |
+| 验签器会开火 | 同一把尺子 `--self-test`（喂仓库里那份第 58 片报告） | 「拒签成立：**16 条前提不成立**」——它没把旧报告放行 |
+| 发布就绪门 | `scripts/production_release_gate.py --release-ready --tag v5.6.0` | rc=**0**，`"passed": true` 共 **8** 条、`false` 0 条（含 `source_manifest_zero_diff: zero diff`、`no_secrets`、`no_unacknowledged_cve`） |
+| 仓库审计 | `scripts/audit_repo.py --strict` | rc=**1**，✗ **恰好 1 条**：`Provenance source commit mismatch: manifest=a66040520139… vs HEAD=…` ⇒ **设计如此**（清单绑 tag，不跟 HEAD 重锚） |
+| lint / 类型 | `ruff check src tests state_service`；`mypy src` | `All checks passed!`；`Success: no issues found in 245 source files` |
+| 命令面 | `scripts/command_surface_census.py --repo /tmp/s59a --json` | rc=0，`denominator=72`、cli 档 72、低于 cli 档 `[]`；`len(PUBLIC_COMMANDS)=62` |
+| 参与发布哈希的文件数 | `scripts/regenerate_release_manifest.py` | 660 → **661**（新增 `tests/test_truth_ctq_revise.py`） |
+| 变异电池 | `/tmp/s59/battery.py`（副本 `/tmp/s59w`） | 对照臂先全绿；**杀 10 / 活 0 / 注入无效 0 / 崩溃击杀 0**（§八） |
+
+一处要按实读数更正的面：**绑定那条提交说明（`f7fd119`）里写的「30 条前提全 [OK]」是错的**，
+实际由脚本现数得 **36 条 [OK] / 0 条 [FAIL]**（`grep -c '^\[OK\]' /tmp/s59/verify.log` = 36）。
+提交说明已落 git、按纪律不改历史，以本节为准；根因是我照上一片脚本的输出行数写的数字，
+没在本轮数过——同一类"抄一个没数的数"的错，见 `[[feedback-doc-edit-anchoring]]`。
+
