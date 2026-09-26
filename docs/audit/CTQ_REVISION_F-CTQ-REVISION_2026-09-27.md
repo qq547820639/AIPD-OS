@@ -171,13 +171,61 @@ argparse 报「`--reason`: expected one argument」并以 2 退出——**看着
 
 ## 七、取证（改前 / 改后配对）
 
-@TESTS@
+配对探针 `/tmp/s59/probe.py` 跑在**干净检出** `/tmp/s59a`（`git worktree add --detach … HEAD`）上，
+两臂同副夹具（同库、同项目、同一条 CTQ 8.0/7.95/8.05、同新上限 8.10），只换"改限值"这一步的做法：
+
+| 读数 | 臂 A：直写库层（第 56 片那时的做法） | 臂 B：`aipd ctq revise`（本片） |
+|---|---|---|
+| 改动这一步 rc | 0 | 0 |
+| CTQ 行 `(id, status, version, superseded_by)` | `[('T-001','active',1,None)]` | `[('T-001','superseded',1,'T-003'), ('T-003','active',2,None)]` |
+| `audit_log` 里 `ctq.*` 行数 | **0**（全表也 0 行） | **1**，动作 `ctq.revise`、actor `潘工` |
+| `truth drift` 点名那条声明记录 | 是 | 是 |
+| `truth drift` 的源面 reason | `source面当前键与记录里那份不一致` | `source面当前键与记录里那份不一致（source面：1 条上游 CTQ 已不在 active 集合里：T-001）` |
+| `truth drift` 退码 | 4 | 4 |
+
+这张表就是本片存在的理由，也是它没有把判决改宽的证明：**判决两臂相同（都 4、都点名），
+多出来的是"谁、什么时候、从什么值改到什么值"这一列事实**（`superseded_by` 链 + 1 行审计 + 版本号 2）。
+reason 的差别按实测落笔：B 臂走的是 `commands_drift.py:99,108` 的 lost 半支，
+不是我一开始写的 `ctq-gap` 半支（§六）。
+
+命令面读数由同一把尺子现算（不抄 SKILL/README 里的数字）：
+`len(PUBLIC_COMMANDS)` = **62**（第 56 片起为 60，本片 +2）、`len(COMMAND_FUNCS)` = **72**、
+`scripts/command_surface_census.py --repo /tmp/s59a --json` rc=0 且
+`denominator=72 / cli 档=72 / 低于 cli 档=[]`。
+
+参与发布哈希的文件数 **660 → 661**（只多一个 `tests/test_truth_ctq_revise.py`；
+`docs/audit/` 整体在排除面内，所以本片新增的取证文档不进分母）。
 
 ## 八、变异电池（`/tmp/s59/battery.py`，工作副本 `/tmp/s59w`）
 
-十臂，每臂只撤一条守卫，原告用例由判据自己点名；对照臂（未注入）必须先全绿。
+十条臂，每臂只撤一条守卫；`import` 先证过解析在工作副本里
+（`/tmp/s59w/src/aipd_os/product_truth/ctq.py`），对照臂未注入先跑：**14 条全绿、rc=0**。
+判定写死在脚本里：原告 node id 出现在 `FAILED`/`ERROR` 名单 ⇒ KILLED；
+测试跑起来而原告不红 ⇒ SURVIVED；锚点命中数 ≠ 1、改后编译不过、或 pytest rc≥2 且无红 ⇒ INJECT-INVALID。
 
-@BATTERY@
+| 臂 | 撤掉的守卫 | 判决 | 实际开火 |
+|---|---|---|---|
+| M1 | 返工执行器的空声明守卫（`if not spec["features"] …` → `if False:`） | KILLED | `test_deprecating_the_last_ctq_does_not_empty_the_declaration` |
+| M2 | 修订不落取代链（去掉 `superseded_by`） | KILLED | `test_revise_supersedes_the_old_record_and_chains_to_the_new` |
+| M3 | 修订不退役旧记录（`store.update(old, status=…)` 去掉 status） | KILLED | 上述 + `test_revise_is_visible_to_drift_sweep_and_rework` |
+| M4 | 新版本号不跟着走（`+1` 去掉） | KILLED | `test_revise_supersedes_the_old_record_and_chains_to_the_new` |
+| M5 | 允许修订已停用的 CTQ（状态门 → `if False:`） | KILLED | `test_revise_refuses_missing_inactive_and_foreign_records` |
+| M6 | 接受指向不存在的 `--replaced-by`（存在性校验 → `if False:`） | KILLED | `test_deprecate_requires_reason_and_a_real_successor` |
+| M7 | 修订不写审计行（调用点替成 `None`） | KILLED | `test_revise_writes_one_audit_row_with_both_values` + `test_unwritable_audit_is_not_a_clean_success` |
+| M8 | 同值幂等判据反向（`==` → `!=`） | KILLED | `test_revise_to_the_same_values_creates_nothing` |
+| M9 | 停用可重复（状态集合门 → `if False:`） | KILLED | `test_deprecate_is_audited_once_and_not_repeatable` |
+| M10 | 停用不写审计行（调用点替成 `None`） | KILLED | `test_deprecate_is_audited_once_and_not_repeatable` |
+
+合计：**杀 10 / 活 0 / 注入无效 0 / 崩溃击杀 0**。
+
+两处电池自己要被教的地方（都不是产品缺陷）：
+1. 第一版电池把 node id 键拼成 `tests/test_truth_ctq_revise::名`（`SUITE[:-3]` 把 `.py` 削掉了），
+   于是十条臂全部落到 `KILLED-OTHER` 这一档——原告其实都开火了，是我把匹配串写错。
+   修法不是"人工看一眼算过"，而是**改脚本重跑一遍**（第二版读数即上表），
+   并把这条档留在脚本里：原告在名单内才叫 KILLED，否则一律降级报告。
+2. M3 的注入（去掉 `status="superseded"`）让旧记录留在 active，于是链条那条用例也一起红——
+   这不是"一臂多原告"的失败，而是这条守卫同时被两支用例看着；按纪律仍只把
+   `test_revise_supersedes_…` 记成本臂原告，多开火的那条如实列出但不改判。
 
 ## 九、遗留
 
