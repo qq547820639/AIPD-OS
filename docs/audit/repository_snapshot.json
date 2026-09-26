@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-26T17:26:43",
+  "generated_at": "2026-09-26T18:06:32",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 195
+      "tests": 196
     }
   },
   "tags": [
@@ -117,50 +117,56 @@
     "version": "5.6.0",
     "parsed": true,
     "total_files": 642,
-    "hash_matches": 635,
-    "hash_mismatch_count": 7,
+    "hash_matches": 634,
+    "hash_mismatch_count": 8,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "0b9df10c5b94c9a047bb9c5a5113955095b40665f2e7af686e0845c527bc93bf",
-        "actual": "04b5ab1f3d77478dc297fbc02f6661b31b0ba389f6197524aa175780f3d37448"
+        "expected": "04b5ab1f3d77478dc297fbc02f6661b31b0ba389f6197524aa175780f3d37448",
+        "actual": "bca4ea7771e5dfa839b65c05e0f13edaefd0ad040fde7dd04cfac15357b93a6c"
       },
       {
         "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "2f0c945b85d2d0ab2d99fc01464f3d9f257ee9a23c33d581804162bd2e39ff88",
-        "actual": "7b9d8c2fac9265528125719d7a5c6b71f353ccb14d8dd78bface7b70f7e8262a"
+        "expected": "7b9d8c2fac9265528125719d7a5c6b71f353ccb14d8dd78bface7b70f7e8262a",
+        "actual": "59707f3ca8fdb0daa23c109d175abcf60a2f1394fae30059f7091e9956bbdeda"
       },
       {
         "path": "docs/architecture/truth_architecture.md",
         "reason": "hash_mismatch",
-        "expected": "1d90cdbd1b1ce8afea0a5b8dfdc8db9eccb96de39005aaf1c8459dc7e0afc015",
-        "actual": "ecacbfe52de891bada9efebebf0a2a9bb90a861193a75c0c3fc025377889e12d"
+        "expected": "ecacbfe52de891bada9efebebf0a2a9bb90a861193a75c0c3fc025377889e12d",
+        "actual": "c9adc9a9d2ae2f2a164fb8a3c7c7769b4286c235b9b6eb93f709ec99c1d087ed"
       },
       {
         "path": "src/aipd_os/cad/dxf_lineage.py",
         "reason": "hash_mismatch",
-        "expected": "d7620b73547d54ef71548026efe6f29c25f1f9b641cb7aaeaa9d8d7187b211a4",
-        "actual": "930c24c96eacb90c07cdeb36154395a071caf6e9acb3db136fb611aba4d5f2cf"
+        "expected": "930c24c96eacb90c07cdeb36154395a071caf6e9acb3db136fb611aba4d5f2cf",
+        "actual": "dd4fdf172027622a546ddf2e4d584cfb56de99e5ebb616038976c1d559ab5a18"
       },
       {
         "path": "src/aipd_os/cli/commands_drawing.py",
         "reason": "hash_mismatch",
-        "expected": "719b12eb06c8b858ce0e32ecd274de71ba5a72d4c9be8a351a33634fd70d0efe",
-        "actual": "5cbb34dbd245acefa0230ab6607bc034f43d5a6fc261727725b887ac9f58c9d8"
+        "expected": "5cbb34dbd245acefa0230ab6607bc034f43d5a6fc261727725b887ac9f58c9d8",
+        "actual": "225160d9b73eb5ad34b88c3a98639b88b9dbdf9bf293b17cb32646dcaa3fc961"
+      },
+      {
+        "path": "src/aipd_os/cli/commands_truth.py",
+        "reason": "hash_mismatch",
+        "expected": "0efa9e8852c43a9f245ee45c4dcf0607b112aeb6bf2a28166f56094272086f2d",
+        "actual": "b192444f5c26619a68248e681606281aa1bfb4e7514c074871a599ba1bbe5ed1"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "b5a6dc439b24a3b8eb8ef9ac748ad479cc6ed75b0ff1f512575de310ededf735",
-        "actual": "1ab237a1c97fa7da134dbb516a29eb5c11daadb924e89445aabba7d786bb9e2d"
+        "expected": "1ab237a1c97fa7da134dbb516a29eb5c11daadb924e89445aabba7d786bb9e2d",
+        "actual": "6a3fd98afcc7a3a053968d31cb50db4a6ffd202816655908a1be3a482cfed572"
       },
       {
-        "path": "tests/test_drawing_dxf_lineage.py",
+        "path": "tests/test_drawing_spec_lineage.py",
         "reason": "hash_mismatch",
-        "expected": "d1dd745d0d35fce08f09c2273e80dd31d26ea401323ae8620962f4ced82299b5",
-        "actual": "c343f233d9ed90b36a5e24abca9d51123c900795ea15370cce2da9e97b43f579"
+        "expected": "9090bf842de1daed48919fbe598b3e189058c8d88d6827d493db0aaab7e5d961",
+        "actual": "8e33fa1dd4acd3f5b57f59129eff3564389f9387b2642b42ea6aa39ca945c206"
       }
     ]
   },
@@ -171,8 +177,12 @@
     " M docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md",
     " M src/aipd_os/cad/dxf_lineage.py",
     " M src/aipd_os/cli/commands_drawing.py",
+    " M src/aipd_os/cli/commands_truth.py",
     " M src/aipd_os/registry_data.py",
-    " M tests/test_drawing_dxf_lineage.py",
+    " M tests/test_drawing_spec_lineage.py",
+    "?? docs/audit/DXF_REWORK_F-REWORK-DXF_2026-09-26.md",
+    "?? src/aipd_os/cad/dxf_rework.py",
+    "?? tests/test_dxf_rework.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

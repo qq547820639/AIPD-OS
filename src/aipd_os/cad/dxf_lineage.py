@@ -34,8 +34,8 @@ from typing import Any
 
 from aipd_os.cad.spec_lineage import spec_digest
 
-__all__ = ["dxf_input_signature", "find_artifact_record", "model_input_digest",
-           "record_dxf_lineage"]
+__all__ = ["dxf_input_signature", "dxf_version_content", "find_artifact_record",
+           "model_input_digest", "record_dxf_lineage"]
 
 
 def _canonical_sha256(payload: Any) -> str:
@@ -80,6 +80,14 @@ def dxf_input_signature(*, spec_sha256: str | None, model: dict[str, str],
                               "details": list(details)})
 
 
+def dxf_version_content(*, dxf_name: str, signature: str,
+                        spec_sha256: str | None) -> str:
+    """版本记录的正文只有一个写法——生产者与返工执行器必须写同一形状，
+    否则「同输入命中同一行」这条幂等判据会因两处拼装不同而失效。"""
+    spec_tag = spec_sha256[:16] if spec_sha256 else "未知"
+    return f"drawing dxf {dxf_name} inputs={signature[:16]} ← spec {spec_tag}"
+
+
 def spec_file_digest(path: Path) -> str | None:
     """声明文件的**内容**哈希；读不出或不是 JSON ⇒ None（不可核，不是"没声明"）。"""
     try:
@@ -121,8 +129,8 @@ def record_dxf_lineage(store: Any, *, dxf_path: Path, spec_path: Path | None,
                                     revision=revision, views=views, scale=scale,
                                     sheet=sheet, material=material,
                                     sections=sections, details=details)
-    spec_tag = (spec_sha[:16] if spec_sha else "未知")
-    content = (f"drawing dxf {dxf.name} inputs={signature[:16]} ← spec {spec_tag}")
+    content = dxf_version_content(dxf_name=dxf.name, signature=signature,
+                                  spec_sha256=spec_sha)
 
     upstream = None
     upstream_reason = "未给 --spec：这张图没有可追的公差声明"

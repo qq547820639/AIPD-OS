@@ -55,7 +55,7 @@ trust_level / effective_at / expires_at / version / status / metadata），
 （`src/aipd_os/cad/spec_rework.py`）——按当前 active CTQ 重算图纸声明：哈希一致**且**磁盘产物
 仍匹配就一个字节都不动产物（`unchanged`，但库里的版本与 stale 真的收口）；内容变了、或文件被删/
 被手改，就重写并补血缘边（`rewrote` / `file_restored`）；重算出 gap 一律判失败，交给引擎的
-有界退避与 `max_attempts`。执行器只认 `metadata.artifact=drawing_spec`，不认识的制品在
+有界退避与 `max_attempts`。执行器认 `metadata.artifact` 为 `drawing_spec`（重算声明）与 `drawing_dxf`（第 47 片：按记录的输入集合重跑出图，先出到暂存目录，只有 `drawing generate` 退码 0 才替换正式图纸——判未收口的重跑既不覆盖现状也不记成功）；不认识的制品在
 **烧 attempts 之前**逐条点名拒掉——「这格没有执行器」不许被伪装成「返工失败了三次」。
 接线前那句「产品侧无人调用」现在反过来钉（`tests/test_truth_propagate_cli.py::`
 `TestReworkHalfIsWiredAndItsBoundaryStaysVisible` 要求产品侧真有调用点），
@@ -72,8 +72,8 @@ trust_level / effective_at / expires_at / version / status / metadata），
 只有 2 行不同，差的是 `$TDCREATE` / `$TDUPDATE` 那一对儒略日时间戳——按字节哈希会把
 时间戳读成一次工程变更；DXF 自己的 sha256 仍作为**观测**留在 metadata 里。同一产物路径
 只留一版有效，新版落下时把旧版标 `superseded`，否则一张图改十次就有十条永久的下游。
-仍未接上的两段：**BOM / 成本那一支没有血缘生产者**，DXF 这一跳只有边、**没有返工执行器**
-（落到图纸上的任务仍走「不认识的制品在烧 attempts 之前逐条点名拒掉」那条路）。
+仍未接上的一段：**BOM / 成本那一支既没有血缘生产者也没有返工执行器**
+（它们的任务仍走「不认识的制品在烧 attempts 之前逐条点名拒掉」那条路）。图纸这一跳在第 47 片两头都接上了：`aipd truth rework` 会按记录里的输入集合重跑出图，并且**不新增版本记录**——引擎 bump 的是这一条；「换输入另起一版 + 旧版标 superseded」只是生产面（`aipd drawing generate`）的规则。
 生产者集合由
 `tests/test_drawing_spec_lineage.py::TestProducerRatchet` 按 AST 两向钉住——
 多一个未登记的 `add_edge` 调用点要红，把本轮这个删掉也要红。

@@ -147,10 +147,10 @@ def cmd_truth_rework(args):
 
     三条不退让的判据：
 
-    - **不认识就不烧 attempts**：`--all-pending` 会扫到别的制品类型（今天只有
-      `drawing_spec` 有执行器）。那些任务必须在调用引擎**之前**被点名拒掉——
-      拿一次注定失败的尝试去烧配额，等于让引擎替我们把"这格还没接执行器"
-      伪装成"返工失败了三次"。
+    - **不认识就不烧 attempts**：`--all-pending` 会扫到别的制品类型。今天有执行器的是
+      `drawing_spec`（重算声明）与 `drawing_dxf`（重跑出图），其余（BOM/成本）必须在
+      调用引擎**之前**被点名拒掉——拿一次注定失败的尝试去烧配额，等于让引擎替我们把
+      "这格还没接执行器"伪装成"返工失败了三次"。
     - **成功只由执行器说**：`rework_fn` 的返回值来自重算结论（unchanged / rewrote /
       file_restored 才算成），gap 一律假。引擎随后才 bump 版本、关 stale。
     - **backoff 未到不算红**：`pending` 且带 `backoff_until` 是引擎的合法中间态，
@@ -163,8 +163,19 @@ def cmd_truth_rework(args):
     if err is not None:
         return err
 
+    from aipd_os.cad.dxf_rework import SUPPORTED_ARTIFACT as DXF_ARTIFACT
+    from aipd_os.cad.dxf_rework import rework_dxf_artifact
     from aipd_os.cad.spec_rework import SUPPORTED_ARTIFACT, artifact_kind, rework_artifact
+    from aipd_os.cli.commands_drawing import render_dxf_from_record
     from aipd_os.product_truth.propagation import PropagationEngine, ReworkExhaustedError
+
+    supported = [SUPPORTED_ARTIFACT, DXF_ARTIFACT]
+
+    def run_executor(kind: str, truth_id: str) -> dict:
+        if kind == DXF_ARTIFACT:
+            return rework_dxf_artifact(store, truth_id,
+                                       render=render_dxf_from_record)
+        return rework_artifact(store, truth_id)
 
     engine = PropagationEngine(store)
     if args.task:
@@ -184,16 +195,17 @@ def cmd_truth_rework(args):
                             "reason": f"任务读不到：{type(exc).__name__}: {exc}"})
             continue
         kind = artifact_kind(store, task.truth_id)
-        if kind != SUPPORTED_ARTIFACT:
+        if kind not in supported:
             refused.append({"task_id": task_id, "truth_id": task.truth_id,
                             "artifact_kind": kind,
-                            "reason": "本执行器只认 drawing_spec；不烧 attempts，"
-                                      "这条任务仍是 pending 并如实点名"})
+                            "reason": f"本执行器只认 {' / '.join(supported)}；"
+                                      "不烧 attempts，这条任务仍是 pending 并如实点名"})
             continue
         detail: dict[str, Any] = {}
 
-        def rework_fn(truth_id: str, _detail: dict[str, Any] = detail) -> bool:
-            outcome = rework_artifact(store, truth_id)
+        def rework_fn(truth_id: str, _detail: dict[str, Any] = detail,
+                      _kind: str = kind) -> bool:
+            outcome = run_executor(_kind, truth_id)
             _detail.clear()
             _detail.update(outcome)
             return outcome["ok"] is True
@@ -216,11 +228,11 @@ def cmd_truth_rework(args):
     result = {"command": "truth rework", "ok": not pending,
               "selected": wanted, "results": results, "refused": refused,
               "still_open": [r["task_id"] for r in unresolved],
-              "supported_artifact": SUPPORTED_ARTIFACT}
+              "supported_artifacts": supported}
 
     def prose():
         print(f"返工执行 {len(wanted)} 条（执行器认的制品："
-              f"{SUPPORTED_ARTIFACT}）")
+              f"{', '.join(supported)}）")
         for r in results:
             task = (r["engine"] or {}).get("task") or {}
             ex = r["executor"] or {}
@@ -229,7 +241,8 @@ def cmd_truth_rework(args):
                   f"任务状态 {task.get('status', '?')} "
                   f"已试 {task.get('attempts', '?')}/{task.get('max_attempts', '?')}")
             if ex.get("path"):
-                print(f"      产物 {ex['path']} 哈希 {str(ex.get('spec_sha256'))[:16]}"
+                digest = ex.get("spec_sha256") or ex.get("dxf_sha256")
+                print(f"      产物 {ex['path']} 哈希 {str(digest)[:16]}"
                       f" 边 {ex.get('edges', 0)} 条 文件写入 {ex.get('file_written')}")
             if r["engine"].get("exhausted"):
                 print(f"      已达上限：{r['engine']['message']}")

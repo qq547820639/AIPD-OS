@@ -112,9 +112,12 @@ E9/E10 是补完输入键之后新立的两支：各自抽掉一类输入，只�
 ## 七、仍然没接上的（是读数，不是完成度）
 
 - **BOM / 成本那一支没有血缘生产者**：`add_edge` 调用点普查里仍没有它们。
-- **DXF 这一跳只有边、没有返工执行器**：`spec_rework.artifact_kind` 只认 `drawing_spec`，
-  落到 `drawing_dxf` 的任务仍走「烧 attempts 之前逐条点名拒掉」那条路——
-  这是刻意保持可见的缺口，不是漏接。
+- **（本节写于第 46 片；该缺口已由第 47 片闭合）DXF 这一跳当时只有边、没有返工执行器**：
+  `spec_rework.artifact_kind` 只认 `drawing_spec`，落到 `drawing_dxf` 的任务仍走
+  「烧 attempts 之前逐条点名拒掉」那条路——那是本片刻意保持可见的缺口，不是漏接。
+  现由 `src/aipd_os/cad/dxf_rework.py` + `tests/test_dxf_rework.py`（F-REWORK-DXF 第 47 片）闭合：
+  图纸任务改由 `aipd truth rework` 按记录的输入集合重跑出图收口，
+  「不认识的制品点名拒」这条纪律留给 BOM/成本。
 - 图纸被外部 CAD 改动后重新出图会命中同一条记录（签名相同）而只更新 `dxf_sha256` 观测，
   本轮不做「磁盘图与记录不符」的常驻判定。
 

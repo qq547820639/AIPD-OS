@@ -209,6 +209,7 @@ aipd drawing generate --out out/bracket.dxf --part bracket --views TOP --spec to
 #     ——同输入重跑命中同一条记录，换声明才另起新版并把同路径旧版标 superseded。
 #     于是 `aipd truth propagate` 的第三跳到得了：改一条 CTQ ⇒ 声明标 stale ⇒ 这张图也 stale。
 #     没给 --db 是明说的跳过（图照出、返回 0）；血缘写不进去判未收口（4）且 `--json` 的 ok 同向。
+#     改完声明后 `aipd truth rework` 会把这张图按新声明重画一次（第 47 片）：重跑走的就是本命令，先出到暂存目录，只有判收口（退码 0）才替换正式图纸。
 aipd drawing generate --out out/bracket.dxf --part bracket --views FRONT,TOP --section Y=0
 #   ↑ 剖视是真做的布尔切割：`--section X|Y|Z=偏移` 保留 ≥ 偏移的一侧，切出的材料面
 #     用 DXF `HATCH`（ANSI31 图案线）填剖面线，`material_area_mm2` 由内核量得；

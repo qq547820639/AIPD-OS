@@ -201,6 +201,7 @@ class TestProducerRatchet:
         "src/aipd_os/cad/spec_lineage.py",              # 第 43 片：CTQ → 图纸声明
         "src/aipd_os/cad/spec_rework.py",               # 第 45 片：返工重算后补同一类边
         "src/aipd_os/cad/dxf_lineage.py",               # 第 46 片：图纸声明 → DXF 制品
+        "src/aipd_os/cad/dxf_rework.py",                # 第 47 片：图纸返工后补同一条边
         "src/aipd_os/product_intelligence/gate.py",     # PI 需求/Feature → truth
         "src/aipd_os/product_truth/lineage.py",         # 自身：canonical 镜像
         "src/aipd_os/idea/decomposer.py",               # 以下三处写 canonical，

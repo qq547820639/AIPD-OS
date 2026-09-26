@@ -951,6 +951,36 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-REWORK-DXF 第 47 片：图纸这一跳从「只有边」补成「边 + 执行器」**：
+  第 46 片把 `声明 → 图纸` 的边接上之后，`truth propagate` 才真的开始生成 `drawing_dxf`
+  的返工任务，而那些任务的处置是「在烧 attempts 之前逐条点名拒掉」——缺口从理论变成日常。
+  本轮新增 `src/aipd_os/cad/dxf_rework.py`（`rework_dxf_artifact`）并把 `truth rework`
+  改成按制品分派（`drawing_spec` 重算声明、`drawing_dxf` 重跑出图，其余仍点名拒），
+  `--json` 的 `supported_artifact` 单值随之变 `supported_artifacts` 列表。四条判据：
+  ① **重跑走的是 `aipd drawing generate` 那条生产路径**，不复制第二份投影代码
+     （`render` 由调用面注入 ⇒ `cad` 层不 import CLI 层，执行器又能拿假 renderer 单测）；
+     判据形状本轮实读 FreeCAD TechDraw 文档——视图靠 `Source` 挂在实体上，
+     模型变了要显式 `doc.recompute()` 才更新，即"派生物 + 显式重算"这一步；
+     「要不要重算按输入签名判」沿用第 46 片实读的 Bazel action key 取舍。
+  ② **只认退码 0**：退码 4 的含义是「图出来了但判未收口」（合格域冲突等），
+     把它记成返工成功等于让引擎替我们把一条未收口的事实 bump 成新版本；
+  ③ **先出到暂存目录，确认收口才替换正式产物**——一次失败的返工不许顺手毁掉现状
+     （②③ 各配一条注入臂：E7 放宽退码、E8 去掉暂存，两条都只打中同一条用例的 different 断言）；
+  ④ **返工不新增版本记录**：引擎 bump 的是这一条，所以执行器演进它本身并把边改挂到
+     **当前**那份声明记录上（生产面「换输入另起一版 + 旧版 superseded」的规则不适用，两边刻意不同）。
+  还有一条防"猜一次重画"的纪律：第 46 片之前写的记录里没有 `model_*`/`material`/`sections`/`details`，
+  那些记录**重建不出同一次出图**，执行器一律 `missing_inputs` 点名拒，而不是拿默认值猜——
+  猜出来的图会被记成"按当前声明重算过"。
+  常驻用例 **12 条**（`tests/test_dxf_rework.py`，其中 3 条真跑 CAD 出图）；
+  变异电池 **9 条：杀 9 / 活 0 / 注入无效 0**（对照臂 rc=0）。
+  电池又一次教自己：E9「rewrote 之后不把边连到当前声明记录」**首版存活**——
+  补边这条事实当时只写在模块 docstring 里，没有任何用例的断言指向它；
+  补上「边必须改挂新声明记录（并先断言声明记录确实有两条，免得前提塌了断言变空）」才杀得动。
+  登记与镜像：`registry_data` 两行、`truth_architecture` §二/§七、README 出图例、
+  生产者棘轮登记 `dxf_rework.py`、第 46 片取证文档 §七 那句现在时措辞就地更正。
+  全量收集数 2329 → 2341。仍未接上：**BOM / 成本那一支既没有血缘生产者也没有返工执行器**。
+  证据见 `docs/audit/DXF_REWORK_F-REWORK-DXF_2026-09-26.md`。
+
 - **v5.12 F-LINEAGE-DXF 第 46 片：把血缘链的第三跳接上——「图纸声明 → DXF 制品」现在有生产者**：
   第 43 片接 CTQ→声明、第 45 片给声明接执行器之后，`truth propagate` 仍打不到那张图：
   改了 CTQ 只会把声明标 stale，按旧声明画出来的 DXF 不受影响，而读的人看到「下游已处理」
