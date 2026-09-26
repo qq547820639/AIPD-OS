@@ -98,6 +98,8 @@ R6 半径 2 属正确——同一条判据（签名吃不吃声明）由第 46 �
 - `quote_applied_rows` 与旧的內联推导**没有**抽成"两边各自复刻"：投影只有一份，
   这本身就是 R2 那条注入能被抓住的前提。若将来有人为了「让某条对照单独开火」而复刻它，
   要连带把 R2 换成不对称的两份投影才行——先问谁拥有这条对照。
+- §终读数 第一稿把两个提交号凭记忆写错（把「修正」那次当成 HEAD、又编出一个不存在的
+  `b3d53a5`）：`git log --oneline` 现读后已改。落盘的提交号一律由命令取，不背。
 
 ## 六、真库读数（第 50 片留下的 `/tmp/s50/state.db` 副本，项目 `D50`）
 
@@ -130,6 +132,26 @@ should_be_stale：T-004（quote_batch，仍 active）
 
 ## 终读数
 
-@@FINAL@@
+- 提交链（由 `git log --oneline` 现读，不是记忆）：`efd8e48`（本片代码 + 文档）→
+  `e331a13`（重锚矩阵/清单/证据）→ `623ca95`（绑定报告，**漏旗子的那一次**）→
+  `526ba23`（修正绑定旗子）→ 本小节所在提交。
+- **干净 worktree 复算**：`git worktree add --detach /tmp/s52b HEAD`，
+  `PYTHONPATH=/tmp/s52b/src:/tmp/s52b/scripts AIPD_SOURCE_COMMIT=<tag SHA>`，
+  `2395 passed, 3 skipped in 234.24s`，collected **2398**（2391 → 2398，+7），rc=0。
+- **绑定前的 18 道前提**（`/tmp/s52/verify_report.py`）全 [OK] 才 mint；
+  这把尺子自己也被证过会开火——同一份脚本喂第 51 片那份报告，
+  报 **11 条前提不成立、禁止绑定**（root 不是本片树、collected 2391≠2398、
+  两份文件条数各差 2/5、七条新用例一条都点不到）。
+- `production_release_gate --release-ready --tag v5.6.0`：**8/8、rc=0**。
+- `audit_repo.py --strict`：**rc=1**，且只有一条红，是设计如此的那条——
+  `✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=526ba233f06c…`
+  （SOURCE_MANIFEST 刻意钉在 tag SHA，不跟 HEAD 重锚）。
+- 撤改电池 **7/7 杀掉**（对照臂 rc=0；一臂一原告；R6 半径 2 是两名合法原告）。
+- **本轮被门禁抓住的一次流程错**（记下来，别靠记忆修）：绑定那一次只给了
+  `--test-report`、漏了 `--source-commit`，`release_evidence.py` 就把 source_commit
+  默认成当时 HEAD ⇒ `commit_matches_head` 判红、gate rc=2、7/8。
+  两个旗子必须在**同一次调用**里给（单给 `--source-commit` 会解绑报告）。
+  修法是再跑一次带两个旗子的调用并另开一个提交，不 amend。
+
 
 
