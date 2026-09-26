@@ -172,6 +172,21 @@ def test_inverted_limits_are_refused(env):
     assert _ctqs(db) == []
 
 
+def test_degenerate_domain_is_refused(env, capsys):
+    """上下限相等（一个点）不是合格域。这一条是给电池 C2 臂当原告的：
+    只删「下限<上限」那道守卫时，`标称落在 [下,上] 内` 会替它挡住倒置用例（两条守卫互相遮蔽），
+    只有这个退化区间能单独证明它有自己的牙。"""
+    _, db = env
+    rc = main(["ctq", "add", "--db", str(db), "--project", P,
+               "--feature", "pin_Ø5", "--drawing-feature", "TOP.pin",
+               "--nominal", "8.0", "--lower", "8.0", "--upper", "8.0",
+               "--inspection", "CMM", "--by", "潘工"])
+    out = capsys.readouterr().out
+    assert rc == 2, "上下限相等的『公差』会把任何实测值都判不合格，也不能当合格域登记"
+    assert "下限" in out, out
+    assert _ctqs(db) == []
+
+
 def test_unparsable_number_names_the_field(env, capsys):
     """数值校验留在 declare_ctq 一处（argparse 不转 float），所以错误文案必须是 ours。"""
     _, db = env
