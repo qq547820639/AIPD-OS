@@ -451,6 +451,10 @@ aipd truth drift --db state.db --project P                                   # �
 #     （`src/aipd_os/product_truth/drift.py` 分四态：一致 / 漂移 / 不可判 / 没有可比对的键）。
 #     不新建基线：记录里本来就存着自己那份键，每次拿当前世界重算再比（dbt 那套要比上一份 manifest，基线自己也会过期）。
 #     拿不齐输入的记录单列「不可判」，既不折成没漂也不折成漂了；本命令一个字都不写，有漂移即 exit 4。
+#     五类制品各有 resolver；`quote_batch` 那份与登记侧**共用同一个投影**
+#     （`quote_applied_rows`，按记录里的 quote_ids 读当前报价事实）——键不靠报价文件重算：
+#     quote_id/version 是 apply 时按库内版本号现铸的，文件里没有；只有事实态会变，
+#     所以「当初那批报价被后来的报价转 R」这格只有这么算才看得见（第 52 片）。
 #   ↑ 执行器今天认三类制品：drawing_spec（重算声明）、drawing_dxf（第 47 片：重跑出图）、
 #     bom_cost（第 49 片：按记录里的 BOM 与口径五项重跑核算）。不认识的（如 artifact=bom）
 #     在烧 attempts 之前逐条点名拒，记录不会被打成 blocked。

@@ -92,14 +92,25 @@ def _quote_apply(args: Any) -> int:
     lineage_skip_reason = None
     if getattr(args, "truth_lineage", False):
         from aipd_os.product_truth import ProductTruthStore
-        from aipd_os.supply_chain.quote_lineage import quote_input_signature, record_quote_lineage
+        from aipd_os.supply_chain.quote_lineage import (
+            quote_applied_rows,
+            quote_input_signature,
+            record_quote_lineage,
+        )
 
-        applied = [{"quote_id": q.quote_id, "supplier": q.supplier,
-                    "part": str(q.data.get("part") or q.part),
-                    "version": q.version, "status": q.status,
-                    "unit_price": (q.data or {}).get("unit_price"),
-                    "currency": currency} for q in quotes]
+        # 行的唯一来源是**库里刚落到那个状态的报价事实**，不是解析出来的对象：
+        # 漂移扫描（`truth drift`）将来只能按同一份投影重算，两边共用 `quote_applied_rows`
+        # 才有可比性；而从事实读回的 status 已经是本次 `retire_stale_officials` 之后的
+        # 态，所以「这一批被后来的报价转 R」下一次扫描就读得出来。
         try:
+            batch_ids = sorted({str(q.quote_id) for q in quotes})
+            applied = quote_applied_rows(supply.load_quotes(pid), currency=currency,
+                                         quote_ids=batch_ids)
+            if len(applied) != len(batch_ids):
+                # 少一行就是签名少算几笔报价，而这正是本条边要防的那类静默
+                raise ValueError(
+                    f"{len(batch_ids) - len(applied)} 条报价事实读不回来，"
+                    "签名会少算，不登记血缘")
             truth = ProductTruthStore(str(args.db), tenant_id=DEFAULT_TENANT,
                                       project_id=pid)
             sig = quote_input_signature(currency=currency, applied=applied)

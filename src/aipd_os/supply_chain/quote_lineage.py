@@ -25,8 +25,10 @@ import hashlib
 import json
 from typing import Any
 
-__all__ = ["ARTIFACT_QUOTE", "quote_input_signature", "record_quote_lineage",
-           "version_content"]
+from aipd_os.supply_chain.apply import QUOTE_STATUS_VERIFIED
+
+__all__ = ["ARTIFACT_QUOTE", "quote_applied_rows", "quote_input_signature",
+           "record_quote_lineage", "version_content"]
 
 ARTIFACT_QUOTE = "quote_batch"
 
@@ -35,6 +37,51 @@ def _canonical_sha256(obj: Any) -> str:
     return hashlib.sha256(
         json.dumps(obj, sort_keys=True, ensure_ascii=False,
                    separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def quote_applied_rows(facts: Any, *, currency: str,
+                       quote_ids: Any) -> list[dict[str, Any]]:
+    """把**库里的报价事实**投影成签名吃的那几行；生产侧与漂移侧必须共用这一份映射。
+
+    为什么不从报价文件重算：`quote_id` 与 `version` 是 `quote apply` 时按库内当前
+    官方版现铸的（`commands_supply.py:55-76`），文件里没有这两样；而签名要是改成
+    「拿记录里存的 applied 再算一遍」，那就是记录自己的副本，恒等 ⇒ 恒真的尺子。
+
+    `status` 一律用**事实状态字母**（V/R/P）而不是文件里的 `official`：
+    文件态 → 事实态的映射（`persistence._QUOTE_FACT_STATUS`）对未知态是
+    ``.get(status, "P")``，反向映射有损；用字母做键才不会被"映射不一致"冒充成"漂了"。
+    更要紧的是**只有事实态会变**：后来的报价把这批转成 R 是本判据要抓的那件事，
+    文件态是解析观测，它永远不动 ⇒ 这条 resolver 会退化成恒真。
+    """
+    want = {str(i) for i in quote_ids}
+    rows: list[dict[str, Any]] = []
+    for fact in facts:
+        value = fact.get("value")
+        if not isinstance(value, dict):
+            continue
+        quote_id = str(value.get("quote_id") or "")
+        if quote_id not in want:
+            continue
+        data = value.get("data")
+        rows.append({
+            "quote_id": quote_id,
+            "supplier": str(value.get("supplier")),
+            "part": str(value.get("part")),
+            "version": value.get("version"),
+            "status": str(fact.get("status")),
+            "unit_price": data.get("unit_price") if isinstance(data, dict) else None,
+            "currency": str(currency)})
+    return rows
+
+
+def missing_quote_facts(facts: Any, quote_ids: Any) -> list[str]:
+    """记录里点名的报价事实，如今库里读不到哪几条（漂移扫描要回「不可判」的那半边）。"""
+    seen = set()
+    for fact in facts:
+        value = fact.get("value")
+        if isinstance(value, dict):
+            seen.add(str(value.get("quote_id") or ""))
+    return sorted(str(i) for i in quote_ids if str(i) not in seen)
 
 
 def quote_input_signature(*, currency: str,
@@ -47,7 +94,7 @@ def quote_input_signature(*, currency: str,
     第 46 片同形：DXF 自己的 sha256 与 `$TDCREATE` 都不进签名，只当观测。
     """
     return _canonical_sha256({
-        "kind": ARTIFACT_QUOTE, "currency": currency,
+        "kind": ARTIFACT_QUOTE, "currency": str(currency),
         "applied": sorted(
             ({"quote_id": str(a.get("quote_id")), "supplier": str(a.get("supplier")),
               "part": str(a.get("part")), "version": a.get("version"),
@@ -89,7 +136,8 @@ def record_quote_lineage(store: Any, *, signature: str, source: str,
                 "records": 0, "edges": 0,
                 "quote_record_id": None, "bom_record_id": None}
 
-    official = [a for a in applied if str(a.get("status")) == "official"]
+    official = [a for a in applied
+                if str(a.get("status")) == QUOTE_STATUS_VERIFIED]
     detail = (f"quotes={len(applied)} official={len(official)} "
               f"parts={len({str(a.get('part')) for a in official})}")
     content = version_content(signature=signature, detail=detail)
@@ -107,6 +155,9 @@ def record_quote_lineage(store: Any, *, signature: str, source: str,
                         metadata={"artifact": ARTIFACT_QUOTE, "source": source,
                                   "currency": currency,
                                   "input_signature": signature,
+                                  # 键的算法基准：漂移扫描靠这一格分辨「第 50 片那批
+                                  # 按文件态算的键」，那批不能按事实态重算（会假红）。
+                                  "rows_from": "fact_status",
                                   "quotes": len(applied),
                                   "official": len(official),
                                   "quote_ids": sorted(str(a.get("quote_id"))

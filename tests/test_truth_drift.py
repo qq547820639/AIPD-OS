@@ -239,6 +239,75 @@ def test_drift_is_read_only_even_when_it_finds_drift(env, capsys):
     assert snapshot() == before, "只读扫描却改了记录（content/status/version/metadata 任一）"
 
 
+def test_scan_does_not_create_a_bom_store_when_the_sidecar_is_gone(env, capsys):
+    """「一个字都不写」得读到**文件面**：同目录没有 bom.db 时判不可判，且不许建库。
+
+    `BomStore.__init__` 会建库建表（`bom/store.py:87-89` 明写过这条约束），
+    于是「没接线」会被一次只读扫描改成「接了但是空的」——
+    记录面确实没动，但世界的形状动了。第 52 片在真库副本上撞出来的。
+    """
+    from aipd_os.cli.commands_manufacturing import _bom_store_path
+
+    tmp_path, db = env
+    _add_line(db, "bracket", cost=12.5)
+    _calc(db, capsys)
+    bom_db = _bom_store_path(str(db))
+    assert bom_db.is_file()
+    bom_db.unlink()
+
+    rc, p = _drift(db, capsys)
+    hits = [r for r in p["undecidable_items"]
+            if r["artifact"] in ("bom", "bom_cost")]
+    assert len(hits) == 2, p["undecidable_items"]
+    assert all("没有 BOM 库文件" in r["reason"] for r in hits), hits
+    assert p["counts"]["in_sync"] == 0, p["counts"]
+    assert not bom_db.exists(), "只读扫描却建出了 BOM 库"
+
+
+def test_generated_drawing_drift_is_discovered_on_a_real_record(tmp_path, capsys):
+    """四类 resolver 里只有 `drawing_dxf` 那支此前没有真库端到端断言
+    （第 51 片 §六 自记的缺口）。
+
+    这条同时是第 46 片「签名要吃全出图输入」的一条独立回归：
+    签名漏吃某一项时，这里会读成「没漂」，而第 46 片那批用例照样全绿——
+    它们盯的是"另起新版"，这里盯的是"能不能被发现"。
+    """
+    from aipd_os.product_truth import ProductTruthStore, TruthRecord
+
+    db = tmp_path / "state.db"
+    state = AIPDStateDB(db)
+    state.ensure_default_tenant()
+    state.init_project(T, "DRIFT-DXF", "drift dxf 真库", "evidence")
+    store = ProductTruthStore(str(db), tenant_id=T, project_id="DRIFT-DXF")
+    # 窗口取自实测：golden 支架 TOP 视图四个孔拟合直径 8.0mm（第 46 片同一条）
+    store.add(TruthRecord(record_type="ctq", content="CTQ hole_Ø8", trust_level="verified",
+                          metadata={"feature": "hole_Ø8", "drawing_feature": "TOP.hole_1",
+                                    "nominal": 8.0, "lower_limit": 7.95,
+                                    "upper_limit": 8.05, "inspection_method": "CMM"}),
+              tenant_id=T, project_id="DRIFT-DXF")
+    spec = tmp_path / "spec.json"
+    assert main(["drawing", "spec", "--db", str(db), "--project", "DRIFT-DXF",
+                 "--out", str(spec), "--json"]) == 0
+    dxf = tmp_path / "bracket.dxf"
+    assert main(["drawing", "generate", "--out", str(dxf), "--part", "bracket",
+                 "--views", "TOP", "--spec", str(spec), "--db", str(db),
+                 "--project", "DRIFT-DXF", "--json"]) == 0
+    rows = [r for r in store.query(record_type="artifact_version", tenant_id=T,
+                                   project_id="DRIFT-DXF")
+            if (r.metadata or {}).get("artifact") == "drawing_dxf"]
+    assert len(rows) == 1, rows
+
+    resolvers = build_resolvers(str(db), "DRIFT-DXF")
+    resolver = resolvers["drawing_dxf"]
+    first = classify_record(rows[0], resolver)
+    assert first["state"] == IN_SYNC, first
+
+    spec.write_text(spec.read_text(encoding="utf-8").replace("8.05", "8.06"),
+                    encoding="utf-8")
+    second = classify_record(store.get(rows[0].record_id), resolver)
+    assert second["state"] == DRIFTED, second
+
+
 def test_missing_db_is_usage_error_not_drift(env, tmp_path):
     rc = main(["truth", "drift", "--db", str(tmp_path / "nope.db"), "--project", P])
     assert rc == 2, rc

@@ -4,7 +4,7 @@
 **每类制品怎么从当前世界把键重算出来**——它要知道 `bom.db` 在哪、声明文件在哪个路径、
 模型是黄金件还是 STEP，这些都不该漏进 `product_truth` 层。
 
-四类键的两端（实测得到，不是设定的）：
+五类键的两端（实测得到，不是设定的）：
 
 | 制品 | 记录里存的那份 → 当前怎么重算 |
 |---|---|
@@ -16,9 +16,12 @@
   → `bom_input_signature(当前 header + 当前行)` |
 | `bom_cost` | `metadata.input_signature`（第 48 片）
   → `cost_input_signature(当前 BOM 签名 + 记录里的口径五项)` |
+| `quote_batch` | `metadata.input_signature`（第 50 片，第 52 片换基）
+  → `quote_input_signature(批次币种 + 按记录里 quote_ids 读回的当前报价事实)` |
 
 拿不齐输入的，一律回 `(None, 原因)` 让上层判「不可判」——
-第 46 片之前的 DXF、第 48 片那批没存口径值的 `bom_cost` 就落在这一档。
+第 46 片之前的 DXF、第 48 片那批没存口径值的 `bom_cost`、
+以及第 50 片那批按**文件态**算键的 `quote_batch` 就落在这一档。
 """
 from __future__ import annotations
 
@@ -89,22 +92,27 @@ def _dxf_signature_resolver() -> Resolver:
     return resolve
 
 
-def _bom_resolvers(db_path: str, project_id: str) -> dict[str, Resolver]:
+def _bom_resolvers(db_path: str, project_id: str,
+                   tenant: str) -> dict[str, Resolver]:
     """`bom` 与 `bom_cost` 共用一次「读当前 BOM」的开销。"""
     from aipd_os.bom import BomStore
     from aipd_os.bom.cost_lineage import bom_input_signature, cost_input_signature
-    from aipd_os.cli._helpers import DEFAULT_TENANT
     from aipd_os.cli.commands_manufacturing import _bom_store_path
 
     CALIBER = ("tooling_fee", "target_quantity", "amortize_over", "nre",
                "margin_pct")
 
     def _current_bom_signature() -> tuple[str | None, str | None]:
-        store = BomStore(str(_bom_store_path(db_path)))
-        header = store.get_bom(DEFAULT_TENANT, project_id)
+        bom_path = Path(_bom_store_path(db_path))
+        if not bom_path.is_file():
+            # BomStore.__init__ 会建库建表：只读扫描里构造它，等于把「没接线」
+            # 改成「接了但是空的」（store.py:87-89 明写过这条约束）
+            return None, f"同目录没有 BOM 库文件：{bom_path}"
+        store = BomStore(str(bom_path))
+        header = store.get_bom(tenant, project_id)
         if header is None:
             return None, "项目当前没有 BOM 头，无从重算 BOM 版本签名"
-        lines = store.list_lines(DEFAULT_TENANT, project_id, bom_id=header.bom_id)
+        lines = store.list_lines(tenant, project_id, bom_id=header.bom_id)
         if not lines:
             return None, "当前 BOM 没有任何行"
         return bom_input_signature(bom_id=header.bom_id,
@@ -137,11 +145,62 @@ def _bom_resolvers(db_path: str, project_id: str) -> dict[str, Resolver]:
     return {"bom": bom, "bom_cost": bom_cost}
 
 
-def build_resolvers(db_path: str, project_id: str) -> dict[str, Resolver]:
+def _quote_resolver(db_path: str, project_id: str, tenant: str) -> Resolver:
+    """报价批次：键按**库里当前的报价事实**重算，所以「这批被后来的报价转 R」读得出来。
+
+    第 52 片定论（不是没做，是不该按别的东西做）：不重解析报价文件、不反查 `source` 路径。
+    两条都在实测面前站不住——
+    ① `quote_id`/`version` 是 `quote apply` 时按库内当前官方版现铸的，文件里没有；
+    ② 文件态 → 事实态的映射对未知态一律落 P（`persistence._QUOTE_FACT_STATUS`），
+       反查是有损的，会把「映射不一致」冒充成「漂了」。
+    所以生产侧与扫描侧共用 `quote_applied_rows` 这一份投影；两边同源 ⇒ 不会有第二种映射。
+    """
+    from aipd_os.state.db import AIPDStateDB
+    from aipd_os.supply_chain.persistence import SupplyChainStore
+    from aipd_os.supply_chain.quote_lineage import (
+        missing_quote_facts,
+        quote_applied_rows,
+        quote_input_signature,
+    )
+
+    cache: dict[str, list] = {}
+
+    def facts() -> list:
+        if "rows" not in cache:
+            cache["rows"] = SupplyChainStore(
+                AIPDStateDB(db_path), tenant).load_quotes(project_id)
+        return cache["rows"]
+
+    def resolve(meta: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
+        stored = meta.get("input_signature")
+        if str(meta.get("rows_from") or "") != "fact_status":
+            return None, stored, ("这批记录当初按报价文件里的态算键（第 50 片），"
+                                  "与现在的事实态投影不同基准，不许换基准重算")
+        ids = [str(i) for i in (meta.get("quote_ids") or []) if str(i)]
+        currency = str(meta.get("currency") or "")
+        if not ids:
+            return None, stored, "记录里没写 quote_ids，认不出当初那批是哪几笔报价"
+        if not currency:
+            return None, stored, "记录里没写批次币种，签名少一项输入"
+        lost = missing_quote_facts(facts(), ids)
+        if lost:
+            return None, stored, (f"{len(lost)} 条报价事实已不在本项目里，"
+                                  "重建不出当初那批：" + "、".join(lost[:5]))
+        current = quote_input_signature(
+            currency=currency,
+            applied=quote_applied_rows(facts(), currency=currency, quote_ids=ids))
+        return current, stored, None
+
+    return resolve
+
+
+def build_resolvers(db_path: str, project_id: str,
+                    tenant: str = "default") -> dict[str, Resolver]:
     resolvers: dict[str, Resolver] = {
         "drawing_spec": _spec_signature_resolver(),
-        "drawing_dxf": _dxf_signature_resolver()}
-    resolvers.update(_bom_resolvers(db_path, project_id))
+        "drawing_dxf": _dxf_signature_resolver(),
+        "quote_batch": _quote_resolver(db_path, project_id, tenant)}
+    resolvers.update(_bom_resolvers(db_path, project_id, tenant))
     return resolvers
 
 
@@ -167,7 +226,7 @@ def cmd_truth_drift(args: Any) -> int:
         print(f"错误：{exc}")
         return 1
     store = ProductTruthStore(str(db), tenant_id=tenant, project_id=pid)
-    report = scan_drift(store, resolvers=build_resolvers(str(db), pid),
+    report = scan_drift(store, resolvers=build_resolvers(str(db), pid, tenant),
                         tenant_id=tenant, project_id=pid)
     counts = report["counts"]
     payload = {"command": "truth drift", "ok": report["clean"],

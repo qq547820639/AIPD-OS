@@ -12,6 +12,11 @@
 2. 身份按输入签名：同文件重放命中同一条；只有单价/币种/版本变了才另起一版；
 3. 项目里还没有 BOM 版本记录时：**记录照写、边数 0、点名原因**，不静默、也不算失败；
 4. 没给旗子是**明说的跳过**；给了却写不进去判**未收口**（退码 4 且 `ok` 同向）。
+
+第 52 片在这上面加钉一条：键的那几行**只能由库里的事实投影出来**
+（`quote_applied_rows`，生产侧与漂移扫描侧共用同一份），于是
+`truth drift` 看得见「当初那批报价已经被后来的报价转成 R」——
+按报价文件的态算键时这一格永远看不出来（文件态是解析观测，不会自己变）。
 """
 from __future__ import annotations
 
@@ -20,8 +25,10 @@ from pathlib import Path
 
 import pytest
 
+from aipd_os.cli.commands_drift import build_resolvers
 from aipd_os.cli.main import main
 from aipd_os.product_truth import LineageGraph, ProductTruthStore
+from aipd_os.product_truth.drift import IN_SYNC, UNDECIDABLE, classify_record
 from aipd_os.product_truth.propagation import PropagationEngine
 from aipd_os.state.db import AIPDStateDB
 from aipd_os.supply_chain.quote_lineage import quote_input_signature
@@ -34,7 +41,7 @@ P = "QUOTE-LINEAGE"
 def _sig(**over) -> str:
     base = {"currency": "CNY",
             "applied": [{"quote_id": "亚明五金-支架-v1", "supplier": "亚明五金",
-                         "part": "支架", "version": 1, "status": "official",
+                         "part": "支架", "version": 1, "status": "V",
                          "unit_price": "12.5", "currency": "CNY"}]}
     base.update(over)
     return quote_input_signature(**base)
@@ -220,30 +227,30 @@ def test_signature_covers_every_declared_input():
         "换币种": {"currency": "USD"},
         "只换某一行的币种": {"applied": [
             {"quote_id": "亚明五金-支架-v1", "supplier": "亚明五金", "part": "支架",
-             "version": 1, "status": "official", "unit_price": "12.5",
+             "version": 1, "status": "V", "unit_price": "12.5",
              "currency": "USD"}]},
         "换单价": {"applied": [{"quote_id": "亚明五金-支架-v1",
                                "supplier": "亚明五金", "part": "支架",
-                               "version": 1, "status": "official",
+                               "version": 1, "status": "V",
                                "unit_price": "19.9", "currency": "CNY"}]},
         "换状态": {"applied": [{"quote_id": "亚明五金-支架-v1",
                               "supplier": "亚明五金", "part": "支架",
-                              "version": 1, "status": "draft",
+                              "version": 1, "status": "P",
                               "unit_price": "12.5", "currency": "CNY"}]},
         "换版本": {"applied": [{"quote_id": "亚明五金-支架-v2",
                               "supplier": "亚明五金", "part": "支架",
-                              "version": 2, "status": "official",
+                              "version": 2, "status": "V",
                               "unit_price": "12.5", "currency": "CNY"}]},
         "换供应商": {"applied": [{"quote_id": "德邦-支架-v1",
                                "supplier": "德邦", "part": "支架",
-                               "version": 1, "status": "official",
+                               "version": 1, "status": "V",
                                "unit_price": "12.5", "currency": "CNY"}]},
         "多一条报价": {"applied": [
             {"quote_id": "亚明五金-支架-v1", "supplier": "亚明五金", "part": "支架",
-             "version": 1, "status": "official", "unit_price": "12.5",
+             "version": 1, "status": "V", "unit_price": "12.5",
              "currency": "CNY"},
             {"quote_id": "亚明五金-底板-v1", "supplier": "亚明五金", "part": "底板",
-             "version": 1, "status": "official", "unit_price": "7",
+             "version": 1, "status": "V", "unit_price": "7",
              "currency": "CNY"}]},
     }
     seen: dict[str, list[str]] = {}
@@ -270,3 +277,90 @@ def test_lineage_producer_is_registered():
     """新生产者写 truth_lineage ⇒ 必须进 AST 两向棘轮的登记（漏登记当场红）。"""
     src = (ROOT / "tests/test_drawing_spec_lineage.py").read_text(encoding="utf-8")
     assert "src/aipd_os/supply_chain/quote_lineage.py" in src
+
+
+# ---------- 六、漂移扫描：报价换过了要看得见（F-DRIFT-2 第 52 片） ----------
+
+def _drift(db, capsys):
+    rc = main(["truth", "drift", "--db", str(db), "--project", P, "--json"])
+    payload = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    return rc, payload
+
+
+def test_quote_key_is_recomputable_from_the_library_alone(env, capsys):
+    """生产侧与扫描侧共用一份投影 ⇒ 刚登记完的报价批次，扫描必须读成「一致」。
+
+    这条是防「两边各写一遍映射」那道闸：任何一侧单独改投影（状态字母、少读一列、
+    币种算错、把 unit_price 换个数源），这里立刻从 in_sync 翻成 drifted。
+    它同时也是第 52 片那个定论的落地证明：键**不靠报价文件**重算。
+    """
+    tmp_path, db = env
+    _priced_bom(db, capsys, tmp_path)
+    rec = _rows(db, "quote_batch")[0]
+    verdict = classify_record(rec, build_resolvers(str(db), P)["quote_batch"])
+    assert verdict["state"] == IN_SYNC, verdict
+
+
+def test_a_later_quote_retiring_the_batch_is_discovered_by_the_scan(env, capsys):
+    """本片的效力：后来的报价把这批转 R，`truth drift` 要能点名那条旧记录。
+
+    第 50 片只有「再跑一次 quote apply 时才顺带传播」；按文件态算键的写法在这里
+    永远读成「一致」——文件里的 `official` 不会自己变。
+    """
+    tmp_path, db = env
+    _priced_bom(db, capsys, tmp_path)
+    first = _rows(db, "quote_batch")[0].record_id
+    rc, p = _apply(db, _quote_csv(tmp_path, "q2.csv", unit_price="19.9"), capsys)
+    assert rc == 0, p
+    rc, p = _drift(db, capsys)
+    assert rc == 4, p
+    assert first in {r["record_id"] for r in p["should_be_stale"]}, p["should_be_stale"]
+
+
+def test_quote_record_on_the_old_file_status_basis_is_undecidable(env, capsys):
+    """第 50 片那批按文件态算的键：不许换基准读成「漂了」，也不许读成「一致」。"""
+    tmp_path, db = env
+    _priced_bom(db, capsys, tmp_path)
+    store = _store(db)
+    rec = _rows(db, "quote_batch")[0]
+    meta = dict(rec.metadata or {})
+    meta.pop("rows_from", None)
+    store.update(rec.record_id, metadata=meta)
+
+    rc, p = _drift(db, capsys)
+    hits = [r for r in p["undecidable_items"] if r["record_id"] == rec.record_id]
+    assert hits and "第 50 片" in hits[0]["reason"], p["undecidable_items"]
+    assert rec.record_id not in {r["record_id"] for r in p["should_be_stale"]}
+    assert p["counts"][UNDECIDABLE] >= 1, p["counts"]
+
+
+def test_quote_record_naming_vanished_facts_is_undecidable(env, capsys):
+    """事实读不回来 ≠ 漂了：签名少几笔报价时只能报「不可判 + 点名是哪几条」。"""
+    tmp_path, db = env
+    _priced_bom(db, capsys, tmp_path)
+    store = _store(db)
+    rec = _rows(db, "quote_batch")[0]
+    meta = dict(rec.metadata or {})
+    meta["quote_ids"] = ["幽灵五金-支架-v9"]
+    store.update(rec.record_id, metadata=meta)
+
+    rc, p = _drift(db, capsys)
+    hits = [r for r in p["undecidable_items"] if r["record_id"] == rec.record_id]
+    assert hits and "已不在本项目里" in hits[0]["reason"], p["undecidable_items"]
+    assert hits[0]["reason"].count("幽灵五金-支架-v9") == 1, hits[0]["reason"]
+
+
+def test_a_quote_fact_that_will_not_read_back_holds_the_command(env, capsys,
+                                                                monkeypatch):
+    """登记时少读回一条事实 ⇒ 签名会少算，判未收口，不许写一条「少一笔」的记录。"""
+    tmp_path, db = env
+    _priced_bom(db, capsys, tmp_path)
+    import aipd_os.supply_chain.quote_lineage as ql
+
+    monkeypatch.setattr(ql, "quote_applied_rows", lambda *a, **k: [])
+    rc, p = _apply(db, _quote_csv(tmp_path, "short.csv", unit_price="22"), capsys)
+    assert rc == 4, p
+    assert p["ok"] is False
+    assert "读不回来" in p["lineage_error"], p
+    assert len(_rows(db, "quote_batch")) == 1, "少算的那次不该留下新记录"
+
