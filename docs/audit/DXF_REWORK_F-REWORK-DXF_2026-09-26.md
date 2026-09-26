@@ -1,7 +1,7 @@
 # F-REWORK-DXF 第 47 片：给 `drawing_dxf` 接上返工执行器
 
 日期：2026-09-26 归属：Product Truth 返工闭环 / CAD 出图链路
-状态：已闭（执行器 + 命令面分派 + 常驻 12 条 + 电池 9 条 + 三处极性改判）
+状态：已闭（执行器 + 命令面分派 + 常驻 14 条 + 电池 9 条 + 四处极性改判 + 一道参数面门禁）
 落点：`src/aipd_os/cad/dxf_rework.py`、`src/aipd_os/cli/commands_truth.py`、
 `src/aipd_os/cli/commands_drawing.py`（`render_dxf_from_record`）
 用例：`tests/test_dxf_rework.py`
@@ -25,14 +25,19 @@
 | Nix fixed-output / content-addressed derivation | **上一轮未读到**（`nix.dev/concepts` 无相关内容、manual 路径 404），本轮也没再查 | —— | 不引用 |
 
 最终形状：执行器**只负责判定与记账**，真正出图由调用面注入的 `render` 完成，
-默认实现 `render_dxf_from_record` 就是调 `aipd drawing generate`（不带 `--db`，
-走第 46 片写下的「明说的跳过」分支）。这样 `cad` 层不 import CLI 层，
+默认实现 `render_dxf_from_record` 调的就是 `drawing generate` 的 handler `cmd_drawing`
+（不带 `--db`，走第 46 片写下的「明说的跳过」分支）。**为什么不调 `cli.main`**：
+`main → commands → commands_truth → commands_drawing → main` 会成环，
+`tests/test_import_cycles.py` 在本轮 886s 的全量里真翻过一次红。
+代价是参数面要手工还原成 `argparse.Namespace`，因此补了 `TestRenderArgumentSurface`：
+按 AST 从 subparser 反查 `drawing generate` 的旗子清单，还原器漏一个就红。这样 `cad` 层不 import CLI 层，
 而失败类判据又能拿假 renderer 在秒级内逐条验。
 
 ## 三、四条判据与一条前置纪律
 
-1. **重跑走生产路径**：`render` 内就是 `main(["drawing","generate",…])`，参数全部来自版本记录的
-   metadata（模型来源按记录的 `model_kind`/`model_source` 还原）。
+1. **重跑走生产路径**：`render` 内就是 `cmd_drawing(dxf_render_namespace(meta, staged))`，
+   参数全部来自版本记录的 metadata（模型来源按记录的 `model_kind`/`model_source` 还原），
+   参数面的完整性由 `TestRenderArgumentSurface` 对照 subparser 钉。
 2. **只认退码 0**：退码 4 = 图出来了但判未收口（如 `ctq_window_violation`）。把它记成返工成功，
    等于让引擎替我们把一条未收口的事实 bump 成新版本。
 3. **先出到暂存目录，确认收口才替换正式产物**：一次失败的返工不许顺手毁掉现状。
@@ -71,7 +76,7 @@
 `当前声明记录 → 图纸记录` 这条边；并先断言"声明改了确实产生了两条 spec 版本记录"，
 否则这条断言会因为前提塌掉而空转（这正是 [[feedback-instrument-validation]] 说的恒真集合）。
 
-## 五、本轮自己撞出来的一条判据
+## 五、本轮自己撞出来的三件事（都不是被测代码的错）
 
 `test_a_drawing_that_does_not_hold_is_not_a_successful_rework` 不是设计出来的，是写
 "声明变了要重画"这条用例时踩到的：我最初把 CTQ 窗口挪到**不含实测 8.0** 的位置
@@ -79,6 +84,16 @@
 当时的第一反应是"用例前提错了"，改完就该走人；但停一下想"那真实场景里 CTQ 改到图不达要求怎么办"——
 答案就是这条判据：**未收口的重跑既不是返工成功，也不许覆盖现状**。它现在有两个专属断言
 （退码原因里点名 `ctq_window_violation`、磁盘哈希前后一致）和两支注入臂（E7/E8）。
+
+另两件是自家量具/结构的问题，都在收口过程中被常驻门禁抓到：
+
+- `test_import_cycles` 在 886s 的全量里翻红：render 里`from aipd_os.cli.main import main` 构成了
+  `main → commands → commands_truth → commands_drawing → main` 的闭环。这不是「测试太严」，而是这条边
+  确实是新耦合：CLI 模块之间可以互调 handler，但没有一个模块该回头调 `main`。改法即 §二 末段：
+  直接调同模块的 `cmd_drawing`，代价（手工还原 Namespace）由新增的门禁补回。
+- `TestRenderArgumentSurface` 的提取器第一轮按「子命令名叫 generate」找，撞上 `manual generate` 的 18 个旗子——
+  非空前提照样成立，断言却指向一条与本片无关的命令。补的前提：分母必须含`--step/--views/--section`
+  且不含 `--prompt/--output-dir`，并要求父子链解析出的目标恰好一个。
 
 ## 六、镜像同步与极性改判（一起走，不留半截）
 

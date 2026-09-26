@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -377,22 +378,53 @@ def _rework_failure_reason(stdout_text: str) -> str:
     return tail[0][:200] if tail else "（无输出）"
 
 
+def dxf_render_namespace(meta: dict, out_path: Path) -> argparse.Namespace:
+    """把版本记录里那份输入还原成 `drawing generate` 的参数对象。
+
+    刻意不 import `aipd_os.cli.main`：`main -> commands -> commands_truth -> 本模块 -> main`
+    会成环（`tests/test_import_cycles.py` 常驻钉着，本轮实测翻过一次红），
+    所以这里直接调**同一个模块**里的 `cmd_drawing` —— 仍然是同一份实现，没有第二套投影代码。
+    参数面由 `tests/test_dxf_rework.py::TestRenderArgumentSurface` 对照 subparser 的
+    `add_argument` 清单反查：以后给 `drawing generate` 新加一个旗子而这里没跟上就要红。
+    """
+    kind = str(meta.get("model_kind") or "")
+    source = str(meta.get("model_source") or "")
+    return argparse.Namespace(
+        step=source if kind == "step" else None,
+        native=source if kind == "native" else None,
+        out=str(out_path),
+        part=str(meta["part"]),
+        revision=str(meta["revision"]),
+        views=",".join(str(v) for v in meta["views"]),
+        scale=float(meta["scale"]),
+        material=str(meta.get("material") or "-"),
+        sheet=str(meta["sheet"]),
+        section=list(meta.get("sections") or []) or None,
+        detail=list(meta.get("details") or []) or None,
+        spec=str(meta["spec_path"]) if meta.get("spec_path") else None,
+        db=None,          # 明说的跳过：血缘由返工执行器更新「这一条」记录
+        tenant=None,      # db=None ⇒ 这两个作用域名不参与
+        project=None,
+        json=True,
+        drawing_cmd="generate")
+
+
 def render_dxf_from_record(meta: dict) -> str:
     """按版本记录里那份输入集合**重跑一次出图**，返回产物 sha256。
 
-    刻意走 `aipd drawing generate` 这条生产路径，而不是复制第二份投影代码——
-    两份实现一旦对默认值/参数处理有差异，"返工重画出来的图"和"人跑出来的图"
-    就会在同一条记录下不同形。
+    刻意复用 `cmd_drawing`（`aipd drawing generate` 那条生产路径本身），
+    不复制第二份投影代码：两份实现一旦对默认值/参数处理有差异，
+    "返工重画出来的图"和"人跑出来的图"就会在同一条记录下不同形。
 
     刻意**不带 `--db`**：返工更新的是「这一条」记录（引擎随后 bump 版本、关 stale），
     生产面那条「换输入 ⇒ 另起一版、旧版标 superseded」的规则不适用于返工；
-    不带 --db 走的就是第 46 片写下的「明说的跳过」分支。
+    不给 db 走的就是第 46 片写下的「明说的跳过」分支。
 
-    先出到暂存目录，**确认收口之后**才替换正式产物：未收口的重跑不许把磁盘上
-    那份还能用的图覆盖掉，否则一次失败的返工反而毁掉现状。
+    先出到暂存目录，**确认收口之后**才替换正式产物与证据侧车：
+    一次失败的返工不许把磁盘上那份还能用的图覆盖掉。
 
     只认退码 0。4 的含义是「图出来了但判未收口」（合格域冲突等），
-    这时候把返工记成成功，等于让引擎替我们把一条没收口的事实 bump 成新版本。
+    这时候把返工记成成功，等于让引擎替我们把一条未收口的事实 bump 成新版本。
     """
     import contextlib
     import hashlib
@@ -400,34 +432,16 @@ def render_dxf_from_record(meta: dict) -> str:
     import shutil
     import tempfile
 
-    from aipd_os.cli.main import main
-
     final = Path(str(meta["path"]))
     staging = Path(tempfile.mkdtemp(prefix="dxf-rework-"))
     staged = staging / final.name
-    argv = ["drawing", "generate", "--out", str(staged),
-            "--part", str(meta["part"]), "--revision", str(meta["revision"]),
-            "--views", ",".join(str(v) for v in meta["views"]),
-            "--scale", str(meta["scale"]), "--sheet", str(meta["sheet"]),
-            "--material", str(meta.get("material") or "-"), "--json"]
-    kind = str(meta.get("model_kind") or "")
-    source = str(meta.get("model_source") or "")
-    if kind in ("step", "native"):
-        argv += ["--step" if kind == "step" else "--native", source]
-    if meta.get("spec_path"):
-        argv += ["--spec", str(meta["spec_path"])]
-    for section in meta.get("sections") or []:
-        argv += ["--section", str(section)]
-    for detail in meta.get("details") or []:
-        argv += ["--detail", str(detail)]
-
     captured = io.StringIO()
     try:
         with contextlib.redirect_stdout(captured):
-            rc = main(argv)
+            rc = cmd_drawing(dxf_render_namespace(meta, staged))
         if rc != 0:
             raise RuntimeError(
-                f"aipd drawing generate 退码 {rc}："
+                f"drawing generate 退码 {rc}："
                 f"{_rework_failure_reason(captured.getvalue())}"
                 "（暂存产物已丢弃，正式图纸未动）")
         final.parent.mkdir(parents=True, exist_ok=True)
@@ -439,7 +453,6 @@ def render_dxf_from_record(meta: dict) -> str:
         return hashlib.sha256(final.read_bytes()).hexdigest()
     finally:
         shutil.rmtree(staging, ignore_errors=True)
-
 
 def _bom_lines_or_none(args):
     """``--db`` + ``--bom`` 那一接线：返回 ``(bom_lines, rc)``，rc 非 None 就直接返回。

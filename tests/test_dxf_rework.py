@@ -355,6 +355,94 @@ def test_rework_never_leaves_a_second_active_version_on_one_path(env, capsys):
 
 # ---------------------------------------------------------------- 命令面极性
 
+
+class TestRenderArgumentSurface:
+    """`dxf_render_namespace` 必须覆盖 `drawing generate` 的全部参数面。
+
+    render 不能 import `cli.main`（会成环，`tests/test_import_cycles.py` 本轮实测钉过），
+    所以它手工还原一个 `argparse.Namespace` —— 这个类就是那件手工活的门禁：
+    以后给 `drawing generate` 加旗子而还原器没跟上，这里要红，而不是到返工时才发现少一个参数。
+    """
+
+    ROOT = Path(__file__).resolve().parents[1]
+
+    def _generate_dests(self) -> set[str]:
+        """按「父解析器 = `drawing`」这条链定位 `drawing generate` 的参数面。
+
+        只按命令名 `add_parser("generate")` 找会抓到 `manual generate`（同名子命令），
+        那会让分母非空的前提照样成立、却把断言指向另一个命令 —— 所以父子链必须一起解。
+        """
+        import ast
+
+        tree = ast.parse((self.ROOT / "src" / "aipd_os" / "cli"
+                          / "main.py").read_text(encoding="utf-8"))
+        sub_of: dict[str, str] = {}      # 子解析器容器变量 -> 它所属的命令变量
+        cmd_of: dict[str, tuple[str, str]] = {}   # 子命令变量 -> (容器变量, 命令名)
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Assign)
+                    and isinstance(node.targets[0], ast.Name)
+                    and isinstance(node.value, ast.Call)
+                    and isinstance(node.value.func, ast.Attribute)
+                    and isinstance(node.value.func.value, ast.Name)):
+                continue
+            var, attr, parent = (node.targets[0].id, node.value.func.attr,
+                                 node.value.func.value.id)
+            if attr == "add_subparsers":
+                sub_of[var] = parent
+            elif attr == "add_parser" and node.value.args:
+                name = getattr(node.value.args[0], "value", None)
+                if isinstance(name, str):
+                    cmd_of[var] = (parent, name)
+
+        def command_of(container: str) -> str | None:
+            # 容器变量本身也是某个子命令（如 p_drawing）时，返回它的命令名
+            return cmd_of[container][1] if container in cmd_of else None
+
+        targets = [var for var, (parent, name) in cmd_of.items()
+                   if name == "generate" and sub_of.get(parent) is not None
+                   and command_of(sub_of[parent]) == "drawing"]
+        assert len(targets) == 1, f"定位 `drawing generate` 失败：{targets}"
+        var = targets[0]
+
+        dests = set()
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "add_argument"
+                    and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id == var and node.args
+                    and isinstance(node.args[0], ast.Constant)):
+                flag = str(node.args[0].value)
+                if flag.startswith("--"):
+                    dests.add(flag[2:].replace("-", "_"))
+        return dests
+
+    def test_extractor_finds_the_drawing_generate_flags(self):
+        """前提断言：分母必须是 `drawing generate` 那一组，不是同名的 `manual generate`。"""
+        dests = self._generate_dests()
+        assert {"step", "native", "views", "section", "detail", "spec", "db"} <= dests, \
+            sorted(dests)
+        assert "prompt" not in dests and "output_dir" not in dests, \
+            f"抓到别的命令的参数面了：{sorted(dests)}"
+        assert len(dests) >= 14, sorted(dests)
+
+    def test_namespace_covers_every_parser_flag(self):
+        import ast
+
+        dests = self._generate_dests()
+        # 分母非空前提：提取器读空会让下面那条 ⊇ 断言变成空转的恒真
+        assert dests, "参数面读空，下面的覆盖断言不作数"
+        tree = ast.parse((self.ROOT / "src" / "aipd_os" / "cli" / "commands_drawing.py")
+                         .read_text(encoding="utf-8"))
+        fn = next(n for n in ast.walk(tree)
+                  if isinstance(n, ast.FunctionDef)
+                  and n.name == "dxf_render_namespace")
+        keys = {kw.arg for n in ast.walk(fn) if isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Attribute) and n.func.attr == "Namespace"
+                for kw in n.keywords}
+        missing = dests - keys
+        assert not missing, f"`drawing generate` 新增旗子而返工还原器没跟上：{sorted(missing)}"
+
+
 def test_rework_cli_now_supports_both_artifacts_and_still_refuses_bom(env, capsys):
     """`supported_artifact` 单值变 `supported_artifacts` 列表；BOM 仍在烧 attempts 前拒。"""
     tmp_path, db = env

@@ -957,8 +957,15 @@
   本轮新增 `src/aipd_os/cad/dxf_rework.py`（`rework_dxf_artifact`）并把 `truth rework`
   改成按制品分派（`drawing_spec` 重算声明、`drawing_dxf` 重跑出图，其余仍点名拒），
   `--json` 的 `supported_artifact` 单值随之变 `supported_artifacts` 列表。四条判据：
-  ① **重跑走的是 `aipd drawing generate` 那条生产路径**，不复制第二份投影代码
-     （`render` 由调用面注入 ⇒ `cad` 层不 import CLI 层，执行器又能拿假 renderer 单测）；
+  ① **重跑调的就是 `drawing generate` 那个 handler（`cmd_drawing`）**，不复制第二份投影代码
+     （`render` 由调用面注入 ⇒ `cad` 层不 import CLI 层，执行器能拿假 renderer 单测；
+     刻意不绕 `cli.main`：`main → commands → commands_truth → commands_drawing → main` 会成环，
+     `tests/test_import_cycles.py` 在本轮全量里真翻过一次红）；
+     代价是参数得手工还原成 `argparse.Namespace`，于是加了一道门禁：
+     `TestRenderArgumentSurface` 按 AST 从 subparser 反查 `drawing generate` 的旗子清单，
+     还原器漏一个就红——它第一轮还抓到提取器自己认错命令（按名字找 `generate` 会撞上
+     `manual generate` 的 18 个旗子，分母非空照样成立），于是补了「分母必须含 --step/--views
+     且不含 --prompt/--output-dir」这条前提断言；
      判据形状本轮实读 FreeCAD TechDraw 文档——视图靠 `Source` 挂在实体上，
      模型变了要显式 `doc.recompute()` 才更新，即"派生物 + 显式重算"这一步；
      「要不要重算按输入签名判」沿用第 46 片实读的 Bazel action key 取舍。
@@ -971,14 +978,14 @@
   还有一条防"猜一次重画"的纪律：第 46 片之前写的记录里没有 `model_*`/`material`/`sections`/`details`，
   那些记录**重建不出同一次出图**，执行器一律 `missing_inputs` 点名拒，而不是拿默认值猜——
   猜出来的图会被记成"按当前声明重算过"。
-  常驻用例 **12 条**（`tests/test_dxf_rework.py`，其中 3 条真跑 CAD 出图）；
+  常驻用例 **14 条**（`tests/test_dxf_rework.py`，其中 3 条真跑 CAD 出图）；
   变异电池 **9 条：杀 9 / 活 0 / 注入无效 0**（对照臂 rc=0）。
   电池又一次教自己：E9「rewrote 之后不把边连到当前声明记录」**首版存活**——
   补边这条事实当时只写在模块 docstring 里，没有任何用例的断言指向它；
   补上「边必须改挂新声明记录（并先断言声明记录确实有两条，免得前提塌了断言变空）」才杀得动。
   登记与镜像：`registry_data` 两行、`truth_architecture` §二/§七、README 出图例、
   生产者棘轮登记 `dxf_rework.py`、第 46 片取证文档 §七 那句现在时措辞就地更正。
-  全量收集数 2329 → 2341。仍未接上：**BOM / 成本那一支既没有血缘生产者也没有返工执行器**。
+  全量收集数 2329 → 2343。仍未接上：**BOM / 成本那一支既没有血缘生产者也没有返工执行器**。
   证据见 `docs/audit/DXF_REWORK_F-REWORK-DXF_2026-09-26.md`。
 
 - **v5.12 F-LINEAGE-DXF 第 46 片：把血缘链的第三跳接上——「图纸声明 → DXF 制品」现在有生产者**：
