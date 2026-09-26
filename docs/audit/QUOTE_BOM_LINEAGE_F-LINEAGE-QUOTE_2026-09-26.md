@@ -112,4 +112,31 @@ Reproducible Builds、dbt `state:modified`、FreeCAD TechDraw）。
 
 ## 八、终读数
 
-（收尾复算后填）
+绑定前照例过报告前置校验（`/tmp/s50/verify_report.py`，11 条前提全成立才 mint）：
+`root=/private/tmp/s50b`、`exitcode=0`、逐条 outcome 无 `failed/error/x*/rerun`、
+`summary.collected == len(tests) == 2378`、`passed+skipped == collected`、
+`source_commit == tag SHA`、`tests/test_quote_lineage.py` 恰 10 条且全 passed、
+attested HEAD == 主仓 HEAD。这把尺子在绑定前先拿上一片的旧报告开过火
+（5 条前提判红、4 条真成立的判绿），所以它的绿不是恒绿。
+
+| 项 | 读数 |
+|---|---|
+| 全量（干净 worktree @a85869a） | **2375 passed / 3 skipped / 0 failed**，231.47s，rc=0 |
+| 报告 | `docs/audit/pytest-report-v5.6.0.json`，sha256 `9a674f7052d59720…`，`source_commit` = tag SHA |
+| 清单 | 648 → **650**（+`supply_chain/quote_lineage.py`、+`tests/test_quote_lineage.py`）；两份清单的 `source_commit` 都保持在 tag SHA |
+| `production_release_gate --release-ready --tag v5.6.0` | **8/8 passed，rc=0，`release_ready: true`** |
+| `audit_repo --strict` | rc=1，**恰好 1 条 ✗**：`Provenance source commit mismatch`（按设计） |
+| 撤改电池 | **9 杀 / 0 活 / 0 注入无效**（对照臂 rc=0，见 §五） |
+| 镜像后受影响常驻用例 | 96 passed（quote lineage / quote→cost chain / 命令面 census / 能力面 / 矩阵 / 文档引用普查 / registry 导出 / SKILL 命令面 / 生产者棘轮 / cost lineage / cost rework / import 环） |
+| lint（CI 口径 `ruff check src tests`） | All checks passed |
+
+一条**归因未定**的读数，登记不解释：本轮全量墙钟 231.47s，前两轮是 968.74s / 1012.36s，
+快了约 4 倍。查过它不是「跑得快=跑漏了」：逐条 `call` 时长之和 176.5s，加收集开销对得上墙钟；
+2378 条的 nodeid 与 outcome 全在，CAD 各套用例数一件不少
+（`test_cad_assembly_bom_link` 40、`test_cad_dfm` 38、`test_cad_assembly_balloons` 28、
+`test_release_manifest_assembly_step` 23 等）。时长不参与任何门禁判据，所以不影响结论，
+但成因（宿主负载/缓存）**本轮没有取证**，留在这里当下一轮的对照点。
+
+另一条自查：§四 那次「换文件名重放」的 smoke 里 `ok=false`，
+原因不是血缘而是那个裸库里没有对应 BOM 行、报价全部 unmatched——
+「没连上下游」与「报价本身没落地」两件事在用例里是分开的两条断言，不能混着报。
