@@ -118,4 +118,23 @@ Bazel action key + Reproducible Builds 时间戳（第 46 片）。
 
 ## 八、终读数
 
-（收尾复算后填）
+绑定前同样过那道自建报告校验（`/tmp/s49/verify_report.py`，11 条前提全成立才 mint）：
+`root=/private/tmp/s49b`、`exitcode=0`、逐条 outcome 无坏项、
+`summary.collected == len(tests) == 2368`、`passed+skipped == collected`、
+报告内 `source_commit == tag SHA`、`tests/test_cost_rework.py` 恰 15 条且全 passed、
+attested HEAD == 主仓 HEAD。这把尺子本轮先拿上一片的旧报告开过火
+（旧报告 5 条前提判红、3 条真成立的判绿），所以它的绿不是恒绿。
+
+| 项 | 读数 |
+|---|---|
+| 全量（干净 worktree @eea61c8） | **2365 passed / 3 skipped / 0 failed**，968.74s，rc=0 |
+| 报告 | `docs/audit/pytest-report-v5.6.0.json`，sha256 `97573ec8717bf5a6…`，`source_commit` = tag SHA |
+| 清单 | 646 → **648**（+`src/aipd_os/bom/cost_rework.py`、+`tests/test_cost_rework.py`）；两份清单的 `source_commit` 都保持在 tag SHA |
+| `production_release_gate --release-ready --tag v5.6.0` | **8/8 passed，rc=0，`release_ready: true`**（一次就绿：绑定会连带重写 `SOURCE_MANIFEST`，这次与 `PROVENANCE`、报告同一次暂存） |
+| `audit_repo --strict` | rc=1，**恰好 1 条 ✗**：`Provenance source commit mismatch: manifest=a66040520139… vs HEAD=13456f35c95d…`（按设计） |
+| 撤改电池 | **11 杀 / 0 活 / 0 注入无效**（对照臂 rc=0，见 §六） |
+| 镜像后受影响常驻用例 | 92 passed（cost rework/lineage、dxf rework、truth rework CLI、生产者棘轮、命令面 census、能力面/矩阵、文档引用普查、registry 导出、SKILL 命令面、import 环） |
+| lint（CI 口径 `ruff check src tests`） | All checks passed |
+
+改判记录（不是放宽）：`tests/test_dxf_rework.py` 那条「supported 清单两类」的常驻断言
+按 §五 改判为三类，`artifact=bom` 仍被拒的后半段一字未动。
