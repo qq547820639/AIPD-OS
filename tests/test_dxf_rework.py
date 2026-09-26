@@ -443,8 +443,14 @@ class TestRenderArgumentSurface:
         assert not missing, f"`drawing generate` 新增旗子而返工还原器没跟上：{sorted(missing)}"
 
 
-def test_rework_cli_now_supports_both_artifacts_and_still_refuses_bom(env, capsys):
-    """`supported_artifact` 单值变 `supported_artifacts` 列表；BOM 仍在烧 attempts 前拒。"""
+def test_rework_cli_supports_three_artifacts_and_still_refuses_bom_version(
+        env, capsys):
+    """`supported_artifacts` 由第 47 片的两个变三个（第 49 片接上 bom_cost）。
+
+    这条断言原本钉的是「BOM 那一支**没有**执行器」——第 49 片把成本结论接上之后，
+    该改判的是**清单**，不是那条 BOM 版本记录：`artifact=bom` 到今天仍没有执行器，
+    所以后半段（点名拒、不烧 attempts、记录不许被打成 blocked）原样保留。
+    """
     tmp_path, db = env
     store = _store(db)
     bom = store.add(TruthRecord(record_type="artifact_version", content="bom row",
@@ -457,6 +463,7 @@ def test_rework_cli_now_supports_both_artifacts_and_still_refuses_bom(env, capsy
     assert main(["truth", "rework", "--db", str(db), "--project", P,
                  "--task", task_id, "--json"]) == 4
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
-    assert sorted(out["supported_artifacts"]) == ["drawing_dxf", "drawing_spec"]
+    assert sorted(out["supported_artifacts"]) == ["bom_cost", "drawing_dxf",
+                                                  "drawing_spec"]
     assert out["refused"][0]["artifact_kind"] == "bom"
     assert store.get(bom).status == "active", "拒掉不是失败，不该把记录打成 blocked"

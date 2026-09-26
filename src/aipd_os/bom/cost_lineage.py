@@ -148,7 +148,13 @@ def record_cost_lineage(store: Any, *, header: Any, lines: list[Any],
                   "total_cost": total,
                   "currency": (cost.to_dict() or {}).get("currency"),
                   "cost_complete": bool(getattr(cost, "cost_complete", False)),
-                  "line_ids": [row["line_id"] for row in fact_keys]},
+                  "line_ids": [row["line_id"] for row in fact_keys],
+                  # 口径五项的**值**也要落地：只有哈希的记录重建不出同一次核算，
+                  # 返工执行器就只能拿默认值猜（第 47 片对缺输入的旧记录是点名拒，不是猜）。
+                  "tooling_fee": inputs.tooling_fee,
+                  "target_quantity": inputs.target_quantity,
+                  "amortize_over": inputs.amortize_over,
+                  "nre": inputs.nre, "margin_pct": inputs.margin_pct},
         tenant_id=tenant_id, project_id=project_id)
 
     graph = LineageGraph(store, tenant_id=tenant_id or store.tenant_id,

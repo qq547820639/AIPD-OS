@@ -951,6 +951,45 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-REWORK-COST 第 49 片：成本结论这一支从「只有边」补成「边 + 执行器」**：
+  第 48 片收尾那句「`bom` / `bom_cost` 两类制品没有返工执行器」本轮翻转一半——
+  `bom_cost` 接上了，`artifact=bom` 那条仍没有。接之前先读码发现一条更硬的前提：
+  `bom_cost` 记录的 metadata 里**只有输入签名的哈希、没有口径五项的值**，
+  光加分派分支根本重算不出同一次核算 ⇒ 本片第一步是补生产者、第二步才是执行器。
+  新增 `src/aipd_os/bom/cost_rework.py`（`rework_cost_artifact`）+
+  `cli/commands_manufacturing.py` 的共用入口 `calc_current_cost`（`cmd_cost` 与重算器同一条路，
+  不复制第二份「怎么取行、怎么装 CostInputs」）+ `truth rework` 的三类制品分派。
+  两条纪律值得单列：① **执行器不走生产面的写版本路径**——`propagation.run_rework` 成功时是
+  对**这一条**记录 `bump_version` 并关 stale，所以这里用 `store.update` 演进它本身；
+  若改调 `record_cost_lineage`，BOM 真动时它会另起新版并把旧版标 superseded，
+  引擎随后 bump 的就是那条被 superseded 的记录，收口等于没发生；
+  ② **缺输入的旧记录点名拒，不猜口径**（第 48 片那批记录没有口径值，
+  拿 `--tooling 0` 猜一遍会得到一条「按当前 BOM 重算过」的假结论）。
+  另外三种「不算收口」也各自钉住：重算器抛异常、回得不全、核算不完整（缺供应商/单价），
+  外加两条一致性拒绝——结论挂的 BOM 已不是当前那份、签名没变而金额变了。
+  真实 CLI 全程走一遍：`unchanged` 一支 `total=63500.0`、任务 succeeded、记录仍是同一条
+  （`T-002` v1→v2）；改 BOM 行后**不重跑 cost calc** 走 `recomputed` 一支，
+  `total=69900.0`、边重挂到当前 BOM 记录、有效记录**仍是 2 条**（`T-002` v2→v3，
+  正文变成 `bom_cost BOM-001 inputs=531cab84… total=69900.0`）。
+  常驻用例 **15 条**（`tests/test_cost_rework.py`，每条拒绝用例都整表复读「拒跑不许写坏记录」）；
+  撤改电池 **11 条：杀 11 / 活 0 / 注入无效 0**（对照臂 rc=0），其中 R9 特意写成
+  「多 add 一条重复记录」这种能跑通的错实现，好让「返工不新增版本记录」那条断言真被打红
+  而不是记成一次崩溃杀。
+  一条常驻断言按新事实**改判**：第 47 片钉的「supported 清单只有两类」翻红后只改清单那一行，
+  后半段（`artifact=bom` 仍点名拒、不烧 attempts、记录不许被打成 blocked）原样保留。
+  参数面门禁自己被抓到一次 over-collection：`cli/main.py` 里 `cp` 被赋值过三次
+  （cad preflight / cad build / cost calc），只按变量名收旗子会把 `--manifest`、`--target` 收进来；
+  且 `ast.walk` 是广度优先，按源码顺序推状态机不成立 ⇒ 改成按赋值行号切范围，
+  并补一条「坏旗子出现即判范围切错」的反向对照（原来的 `dests ⊇ {tooling,quantity}` 那种
+  「好东西够多」式前提断言，塞进垃圾时照样成立）。
+  登记与镜像：`registry_data` 四处、`truth_architecture` 两处、README 速查三类制品、
+  第 48 片取证文档 §七 那句在原行内标注被推翻一半、生产者棘轮登记 `cost_rework.py`。
+  未新增命令也未新增旗子 ⇒ 命令面计数与 census 分母不动。全量收集数 2353 → 2368。
+  仍未接上：`artifact=bom` 那条版本记录没有执行器；没有任何生产者往它连**入边**
+  （所以「改一条 CTQ 打到成本」仍不成立）；触发仍靠人给 `--upstream`；
+  执行器不刷新 `facts.cost.total`，返工后会有「结论已收口、fact 还是旧数」的两态。
+  证据见 `docs/audit/COST_REWORK_F-REWORK-COST_2026-09-26.md`。
+
 - **v5.12 F-LINEAGE-COST 第 48 片：把「BOM 版本 → 成本结论」这一支接上血缘生产者**：
   第 47 片收尾那句「仍未接上：BOM / 成本那一支既没有血缘生产者也没有返工执行器」本轮**翻转一半**——
   生产者接上了，执行器仍没有。改前的断法是实证的：成本只写进 `facts.cost.total`，

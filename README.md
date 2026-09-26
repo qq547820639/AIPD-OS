@@ -446,6 +446,9 @@ aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷
 #     引擎只判 blocked，绝不伪造成功。
 aipd truth tasks --db state.db --project P [--status pending]     # 只读列返工待办
 aipd truth rework --db state.db --project P (--task RW-001 | --all-pending)   # 跑一次真实返工
+#   ↑ 执行器今天认三类制品：drawing_spec（重算声明）、drawing_dxf（第 47 片：重跑出图）、
+#     bom_cost（第 49 片：按记录里的 BOM 与口径五项重跑核算）。不认识的（如 artifact=bom）
+#     在烧 attempts 之前逐条点名拒，记录不会被打成 blocked。
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据
 aipd validate --manifest manifest.json --target C5    # 验证是否达到目标成熟度
 #   ↑ 门里凡是「引用一个文件」的键（drawings / step_assemblies / step_parts / bom /

@@ -184,24 +184,79 @@ def _bom_add(args: Any) -> int:
     return 0
 
 
-def cmd_cost(args: Any) -> int:
-    """cost 命令分发（calc）。"""
-    if args.cost_cmd != "calc":
-        raise ValueError(f"unknown cost subcommand: {args.cost_cmd}")
+def calc_current_cost(db_path: str, project_id: str | None, *, tooling_fee: Any,
+                      target_quantity: Any, amortize_over: Any, nre: Any,
+                      margin_pct: Any) -> dict[str, Any]:
+    """按给定口径读**项目当前那份 BOM** 算一次成本；不写任何事实。
+
+    `cmd_cost` 与返工执行器共用这一个入口：两边各留一份「怎么取行、怎么装 CostInputs」
+    迟早会与实现漂移（第 47 片对出图走的是同一条纪律）。
+    """
     from aipd_os.bom import BomStore, CostInputs, compute_bom_cost
     from aipd_os.state.db import AIPDStateDB
 
-    db = AIPDStateDB(args.db)
-    pid = _resolve_project(db, getattr(args, "project", None))
-    store = BomStore(str(_bom_store_path(args.db)))
+    db = AIPDStateDB(db_path)
+    pid = _resolve_project(db, project_id)
+    store = BomStore(str(_bom_store_path(db_path)))
     header = store.get_bom(DEFAULT_TENANT, pid)
     lines = store.list_lines(DEFAULT_TENANT, pid,
                              bom_id=header.bom_id if header else None)
     inputs = CostInputs(
-        tooling_fee=float(args.tooling), target_quantity=int(args.quantity),
-        amortize_over=int(args.amortize_over) if args.amortize_over else None,
-        nre=float(args.nre), margin_pct=float(args.margin))
-    cost = compute_bom_cost(lines, inputs)
+        tooling_fee=float(tooling_fee), target_quantity=int(target_quantity),
+        amortize_over=int(amortize_over) if amortize_over else None,
+        nre=float(nre), margin_pct=float(margin_pct))
+    return {"project": pid, "header": header, "lines": lines,
+            "inputs": inputs, "cost": compute_bom_cost(lines, inputs)}
+
+
+def recalc_cost_from_record(meta: dict[str, Any], *, db_path: str,
+                            project_id: str | None) -> dict[str, Any]:
+    """返工执行器的重算器：按记录里那份口径对**当前** BOM 再算一遍，回报判定所需字段。
+
+    刻意**不**走 `cmd_cost` 的 `--truth-lineage` 分支：那条路在 BOM 真的动了时会另起
+    一对新版本并标旧版 superseded，而引擎要的是「演进这一条」。
+    """
+    from aipd_os.bom.cost_lineage import bom_input_signature, cost_input_signature
+
+    out = calc_current_cost(
+        db_path, project_id,
+        tooling_fee=meta.get("tooling_fee"),
+        target_quantity=meta.get("target_quantity"),
+        amortize_over=meta.get("amortize_over"),
+        nre=meta.get("nre"), margin_pct=meta.get("margin_pct"))
+    header, lines, inputs, cost = (out["header"], out["lines"], out["inputs"],
+                                   out["cost"])
+    if header is None or not lines:
+        raise ValueError(f"BOM 读不到行（project={out['project']}）："
+                         "空 BOM 上没有可重算的成本结论")
+    cd = cost.to_dict() or {}
+    bom_sig = bom_input_signature(bom_id=header.bom_id,
+                                  revision=str(header.revision),
+                                  version_no=header.version_no, lines=lines)
+    cost_sig = cost_input_signature(
+        bom_signature=bom_sig, tooling_fee=inputs.tooling_fee,
+        target_quantity=inputs.target_quantity, amortize_over=inputs.amortize_over,
+        nre=inputs.nre, margin_pct=inputs.margin_pct)
+    return {"bom_id": str(header.bom_id), "bom_signature": bom_sig,
+            "cost_signature": cost_sig, "total_cost": cd.get("total_cost"),
+            "currency": cd.get("currency"),
+            "cost_complete": bool(getattr(cost, "cost_complete", False))}
+
+
+def cmd_cost(args: Any) -> int:
+    """cost 命令分发（calc）。"""
+    if args.cost_cmd != "calc":
+        raise ValueError(f"unknown cost subcommand: {args.cost_cmd}")
+    from aipd_os.state.db import AIPDStateDB
+
+    db = AIPDStateDB(args.db)
+    pid = _resolve_project(db, getattr(args, "project", None))
+    calculated = calc_current_cost(
+        args.db, pid, tooling_fee=args.tooling, target_quantity=args.quantity,
+        amortize_over=args.amortize_over, nre=args.nre, margin_pct=args.margin)
+    header, lines, inputs, cost = (calculated["header"], calculated["lines"],
+                                   calculated["inputs"], calculated["cost"])
+
     # 血缘：opt-in。给了 --truth-lineage 才登记「BOM 版本 → 成本结论」；
     # 没给是**明说的跳过**，写不进去则判未收口（图纸那一跳同一条纪律）。
     lineage = None

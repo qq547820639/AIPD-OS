@@ -124,7 +124,7 @@
 
 ## 七、仍然没接上的（是读数，不是完成度）
 
-- **`bom` / `bom_cost` 两类制品没有返工执行器**：第 6 步实测拒跑，任务停在 pending。
+- **`bom` / `bom_cost` 两类制品没有返工执行器**：第 6 步实测拒跑，任务停在 pending。（**本条已被第 49 片推翻一半**：`bom_cost` 今天有执行器了，见`docs/audit/COST_REWORK_F-REWORK-COST_2026-09-26.md`；仍没有的是 `artifact=bom` 那一条。本节下方「缺口径五项的值」那条读数是第 49 片的第一步前提，仍然成立。）
   收口那条 stale 今天只能靠再跑一次 `cost calc --truth-lineage`。
   而且这不是「只差接线」：`bom_cost` 记录的 metadata 今天只存了
   `input_signature`（哈希）、`total_cost`、`currency`、`line_ids`、`bom_record_id`，

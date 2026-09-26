@@ -163,18 +163,29 @@ def cmd_truth_rework(args):
     if err is not None:
         return err
 
+    from aipd_os.bom.cost_rework import SUPPORTED_ARTIFACT as COST_ARTIFACT
+    from aipd_os.bom.cost_rework import rework_cost_artifact
     from aipd_os.cad.dxf_rework import SUPPORTED_ARTIFACT as DXF_ARTIFACT
     from aipd_os.cad.dxf_rework import rework_dxf_artifact
     from aipd_os.cad.spec_rework import SUPPORTED_ARTIFACT, artifact_kind, rework_artifact
     from aipd_os.cli.commands_drawing import render_dxf_from_record
+    from aipd_os.cli.commands_manufacturing import recalc_cost_from_record
     from aipd_os.product_truth.propagation import PropagationEngine, ReworkExhaustedError
 
-    supported = [SUPPORTED_ARTIFACT, DXF_ARTIFACT]
+    supported = [SUPPORTED_ARTIFACT, DXF_ARTIFACT, COST_ARTIFACT]
+    rework_db_path = str(args.db)
+    rework_project = (getattr(args, "project", None)
+                      or getattr(store, "project_id", None))
 
     def run_executor(kind: str, truth_id: str) -> dict:
         if kind == DXF_ARTIFACT:
             return rework_dxf_artifact(store, truth_id,
                                        render=render_dxf_from_record)
+        if kind == COST_ARTIFACT:
+            return rework_cost_artifact(
+                store, truth_id,
+                recalc=lambda meta: recalc_cost_from_record(
+                    meta, db_path=rework_db_path, project_id=rework_project))
         return rework_artifact(store, truth_id)
 
     engine = PropagationEngine(store)
@@ -244,6 +255,10 @@ def cmd_truth_rework(args):
                 digest = ex.get("spec_sha256") or ex.get("dxf_sha256")
                 print(f"      产物 {ex['path']} 哈希 {str(digest)[:16]}"
                       f" 边 {ex.get('edges', 0)} 条 文件写入 {ex.get('file_written')}")
+            if ex.get("total_cost") is not None:
+                print(f"      重算后总成本 {ex['total_cost']}"
+                      f"（输入签名 {str(ex.get('input_signature') or '')[:16]}"
+                      f" 边 {ex.get('edges', 0)} 条）")
             if r["engine"].get("exhausted"):
                 print(f"      已达上限：{r['engine']['message']}")
             if task.get("status") == "pending" and task.get("backoff_until"):
