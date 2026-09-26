@@ -192,7 +192,55 @@ real = **2.44 / 2.18 / 1.73 s**；`pytest tests/test_doc_command_census.py` 整�
 
 ## 七、终读数
 
-@FINAL@
+绑定链（每个数都从命令输出取，不从上一节抄）：
+
+- **干净检出 attestation**：`git worktree add --detach /tmp/s60a HEAD` @ `2275e267310a`，
+  `pytest --json-report` 读数 `2490 passed, 3 skipped`，`summary.collected == len(tests) == 2493`，
+  `exitcode=0`，`root='/private/tmp/s60a'`，`duration=258.67 s`，
+  `source_commit=a66040520139405095648461f7144d4f00629924`（由 `AIPD_SOURCE_COMMIT` 显式给，
+  不是 `git rev-parse HEAD` 顺出来的）。
+- **验签**：`/tmp/s60/verify_report.py` **26 条前提全 [OK]**（条数由 `grep -c "^\[OK\]"` 现算）。
+  对第 59 片那份已提交报告的自测**仍然拒签：14 条不成立**，且这 14 条构成能点名
+  （`collected=2482 ≠ 2493` 1 条、`root` 不含本片检出 1 条、11 条新用例逐条缺席、
+  报告早于本片检出 1 条）——不是"随便什么都拒"，也不是"改严之后把真报告也拒了"。
+  绑定前验签器自己被抓到一次假绿形状：注入探针原来只喂一行速查语料 ⇒ `judging_face_empty`
+  先把退码定成 2，"注入到底开没开火"就看不见；改成三档都非空并补一条**合规侧必须退 0**的对照。
+  这就是 §六 第 1、2 条教训长在我自己尺子上的样子。
+- **发布门禁**：`production_release_gate.py --release-ready --tag v5.6.0` → **8/8、rc=0**、
+  `release_ready: true`。逐条：`workspace_clean=clean`、`commit_matches_head`、
+  两份清单 `zero diff`、`test_numbers_from_report=['passed=2490 failed=0 total=2493
+  source_commit=a6604052…']`、`signature_verifiable=['Ed25519 signature verified']`、
+  `no_secrets`、`no_unacknowledged_cve`。
+  **`no_unacknowledged_cve` 本轮先红后绿**：承认集合 28 条 / 今天命中 30 条。逐条查 OSV 后
+  分开处置（提交 `b5b0355`）——`PYSEC-2026-3625`（msgpack 1.1.2）与表里已有的
+  `GHSA-6v7p-g79w-8964` 是**同一条** `CVE-2026-57585` 换了告警号，门禁按号承认所以读成"新增"；
+  `PYSEC-2026-3721`（pip 26.0.1→26.2）是真新告警，修复版 `requires_python` 由 PyPI JSON
+  一手实测为 `>=3.10` ⇒ 本仓 3.9 装不上，按"根因"节同一处置。
+  顺带改掉该文档一句**没有实现支撑的承诺**（原文写门禁"校验本文件的哈希与 CVE 清单一致"，
+  读 `documented_ids()` 后确认它只是把文档里的号逐条 `--ignore-vuln` 传入并要求 pip-audit 退 0）。
+  这条与本片的病**同族**：文档承诺了代码没做的事——差别只在它是被**门禁变红**抓的，不是被我的尺子抓的。
+- **仓库审计**：`audit_repo.py --strict` → **rc=1，唯一一条 ✗**
+  `Provenance source commit mismatch: manifest=a66040520139… vs HEAD=8d742bd0299a…`（设计内：
+  清单钉 tag SHA、不跟 HEAD 重锚）；两份清单 `hash_mismatch_count` 均为 **0**。
+- **静态门禁**：`ruff check src tests state_service` → All checks passed；
+  `mypy src` → `Success: no issues found in 245 source files`。
+- **量具终态读数**（`--json`，收口时重跑）：权威面 **88 条路径 / 15 个组名**；
+  判红面 **84 段 / 90 行 / 210 处**（另 **5 处**带否定标记走只报）；
+  只报面 **908 处**（全量扫描 **1239** 处）；只报面里点到未注册命令 **5 个名字**
+  （`aipd ctq list` 21、`aipd truth show` 23、`aipd truth ctq` 7、`aipd ctq listy` 3、
+  `aipd ghost cmd` 2）；**现状面缺陷 0 条**，退码 0。
+  与 §三 的差（只报面 883→908、名字 4→5）就是"本轮自己往文档里写了幻影名的引述"造成的，
+  已在那节末尾写明这是设计使然而非漂移。
+- **同族尺子一起复算**：`doc_reference_census` 现状面 **0 缺陷**（文档 164 份、代码引用 4159 处），
+  本轮新写的文本没有引入任何 `missing/line_beyond_eof`（19 条命中全在历史面与产物名上）；
+  `command_surface_census` 仍是 **72 条 cli / 低于 cli 档 0 条**。
+- **被哈希文件**：661 → **663**（本片新增 `scripts/doc_command_census.py` 与
+  `tests/test_doc_command_census.py`；`RELEASE_MANIFEST.json 已刷新：663 个文件，version=5.6.0`）。
+- **常驻用例**：2482 → **2493**（+11），全量 `passed=2490 / skipped=3 / failed=0`。
+  3 条 skip 逐条点名（都不与本片相关，且各有明确前提缺失）：
+  `tests/test_mail_protocol.py:201` 与 `:239`（`AIPD_MAILPIT_*` 未配置 ⇒ 走 HOLD 断言，
+  需要本地 mailpit 实例）、`tests/test_researchstudio_provider.py:233`
+  （`integration: requires internet`，需 `AIPD_RESEARCHSTUDIO_INTEGRATION=1`）。
 
 ## 八、遗留
 
