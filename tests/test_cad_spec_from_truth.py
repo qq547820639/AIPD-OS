@@ -221,8 +221,15 @@ class TestCliProducerAndGate:
         assert not out.exists()
         assert "drawing_feature" in capsys.readouterr().out
 
-    def test_inactive_records_are_not_declared(self, tmp_path, db):
-        """已作废的 CTQ 不能继续往图纸上贴公差。"""
+    def test_inactive_records_are_not_declared(self, tmp_path, db, capsys):
+        """已作废的 CTQ 不能继续往图纸上贴公差。
+
+        第 56 片改判的是这一格的**收口方式**，不是它的原意：以前写一份
+        `features: []` 的声明并退 0，现在空声明判未收口（退 4，文件与血缘都不写）。
+        理由：那份空 spec 照样能被 `aipd drawing generate --spec` 接受，
+        把"没有要求剩下"写成"声明已完成"，正是要防的那类读数。
+        原意图仍然成立且更强——文件根本不落，那条作废的公差无处可贴。
+        """
         from aipd_os.cli.main import main
 
         store = ProductTruthStore(str(db), tenant_id=T, project_id=P)
@@ -230,8 +237,12 @@ class TestCliProducerAndGate:
         store.update(rid, tenant_id=T, project_id=P, status="superseded")
         out = tmp_path / "stale.json"
         assert main(["drawing", "spec", "--db", str(db), "--project", P,
-                     "--out", str(out), "--json"]) == 0
-        assert json.loads(out.read_text("utf-8"))["features"] == []
+                     "--out", str(out), "--json"]) == 4
+        assert not out.exists(), "空声明不该落成一份看起来完成的交付物"
+        payload = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+        assert payload["empty_declaration"] is True and payload["out"] is None
+        assert payload["ctq_records"] == 0, (
+            "分母只取 active：作废的那条不该被算成还在声明，也不该被静默忘掉")
 
     def test_a_window_violation_holds_the_drawing_command(self, tmp_path, capsys):
         """声明写全了、但模型实测落在合格域外 ⇒ 出图命令拦下来，不是照出无误图纸。"""

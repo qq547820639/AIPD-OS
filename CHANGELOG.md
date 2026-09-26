@@ -969,6 +969,10 @@
   顺手补一个实测到的洞：库里 0 条 active CTQ 时 `aipd drawing spec` 旧行为是写一份
   `features: []` 的声明 + 落一条无引用的血缘记录 + `ok:true` 退 0（本轮真跑出来的读数），
   现在判未收口（退 4、文件与血缘都不写、payload 多一格 `empty_declaration`）。
+  一处既有断言同批改判：`tests/test_cad_spec_from_truth.py::`
+  `TestCliProducerAndGate::test_inactive_records_are_not_declared` 原本钉的是
+  「只有一条 superseded CTQ 时写一份 `features: []` 并退 0」，现钉「不写文件、退 4、
+  `empty_declaration` 为真」——原意（作废的 CTQ 不许再贴公差）仍然成立且更强。
   一条实测把边界钉住：**改了 CTQ 的限值，`truth drift` 与 `truth sweep` 都看不见**——
   `drawing_spec` 的身份键是声明文件的哈希，不是来源的哈希（先按"应该能发现"写断言，它红了，
   才改成钉缺席）；修法（复合身份键 + 旧记录按 undecidable 点名）记为第 57 片。

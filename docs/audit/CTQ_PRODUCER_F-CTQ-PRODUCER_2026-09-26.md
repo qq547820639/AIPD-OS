@@ -51,6 +51,13 @@ constraints / definition_status / epistemic_status / lifecycle_status`——**�
 `aipd drawing spec` 旧行为是写一份 `features: []` 的声明 + 落一条 `ctq_refs: []` 的血缘记录
 + `ok:true` 退 0；现在判未收口（退 4，文件与血缘都不写，payload 多一格 `empty_declaration`）。
 
+一处既有断言随之改判：`tests/test_cad_spec_from_truth.py::TestCliProducerAndGate::`
+`test_inactive_records_are_not_declared` 原钉的是「库里只剩一条 superseded CTQ 时
+写一份 `features: []` 并退 0」，现钉「不写文件、退 4、`empty_declaration` 为真」；
+它的原意（作废的 CTQ 不许再往图纸上贴公差）仍然成立，而且更强——文件根本不存在。
+这条复算是被干净树跑批抓出来的：第一轮 attestation `1 failed, 2448 passed`，
+红的就是它，说明这条旧断言钉的是缺省保证而不是应然。
+
 ## 五、真库读数（生产 CLI 自己造出来的库，`/tmp/s56/state2.db`，项目 `CTQ-CHAIN2`）
 
 ```
