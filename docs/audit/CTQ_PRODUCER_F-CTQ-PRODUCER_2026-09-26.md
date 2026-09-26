@@ -98,7 +98,30 @@ C7 空声明恢复旧行为、C8 `--by` 给机器缺省、C9 README 镜像缺一
 
 ## 八、终读数
 
-@@FINAL@@
+commit 链（每步一个动作，证据件与代码不同 commit）：
+`d8cb35c` 功能 → `755a94c` 叙述+用例 → `336441e` 退化区间用例（电池 C2 原告）→
+`c5464ea` 立本取证文档 → `bdecc0f` 重锚矩阵与清单 → `58549b4` 改判那条旧断言 →
+`244107d` 改判后再锚 → `5c6a8c7` 绑定终读数。
+
+| 量具 | 命令 | 读数 |
+| --- | --- | --- |
+| 收集数 | `pytest --collect-only -q tests \| tail -1`（主仓 @ `244107d`） | `2452 tests collected`（第 55 片末 2431 → 本片 +21） |
+|  attestation | 干净 worktree `/tmp/s56w` 检出 `244107d` + `PYTHONPATH=<wt>/src` + `AIPD_SOURCE_COMMIT=<tag SHA>` | `2449 passed, 3 skipped, 95 warnings in 178.44s`，rc=0 |
+| 第一轮 attestation | 同法，检出 `bdecc0f` | `1 failed, 2448 passed … in 230.58s`——红的正是 §六 那条旧断言，改判后闭 |
+| 验签器 | `/tmp/s56/verify_report.py --report /tmp/s56/report2.json` | 16 条前提全 `[OK]`、rc=0；同一把尺子对已提交的第 55 片报告自测读到「拒签成立：4 条前提不成立」 |
+| 发布门 | `production_release_gate.py --release-ready --tag v5.6.0` | 8/8 `passed: true`、0 false、rc=0 |
+| 存量审计 | `audit_repo.py --strict` | rc=1，仅 1 条 ✗：`Provenance source commit mismatch: manifest=a66040520139… vs HEAD=5c6a8c789d2f…`（刻意保留：清单绑 tag SHA，不跟 HEAD 重锚） |
+| 发布清单 | `SOURCE_MANIFEST.json` `files` 长度 | 657 → **659**（新增 `src/aipd_os/product_truth/ctq.py`、`tests/test_truth_ctq_add.py`） |
+| lint | `ruff check src tests state_service`（CI 同范围） | rc=0 `All checks passed!` |
+| 类型 | `mypy src` | rc=0，`no issues found in 245 source files` |
+| 镜像 | 公开命令 / 普查分母 / 登记表行数 | 59 → **60**；69 → **70**；83 → **84**（`registry_data.CAPABILITIES` 现算） |
+
+一处不算红的红要写清：`ruff check scripts/c6_coverage.py` 报 2 条 E501。`scripts/` 不在 CI lint
+范围内，且这 2 条在第 55 片的树上同样存在（`git show 71be330:scripts/c6_coverage.py` 复算，同 2 条、
+同行号形状），本轮把"56 条"写死数改成现算没有新增超长行（新句落在 `:101`，<100 列）。
+
+`capability_matrix.py` 没有 `--check` 旗（我这次敲 `--check` 得到 rc=2 `unrecognized arguments`，
+是用法错、不是门禁红）；它的真强制点是常驻用例 + 本轮 `--pin-commit <tag SHA>` 产出的 `244107d` 那次重锚。
 
 ## 九、遗留
 
