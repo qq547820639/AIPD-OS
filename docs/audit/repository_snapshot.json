@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-26T21:27:03",
+  "generated_at": "2026-09-26T22:02:12",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -116,57 +116,51 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 650,
-    "hash_matches": 642,
-    "hash_mismatch_count": 8,
+    "total_files": 653,
+    "hash_matches": 646,
+    "hash_mismatch_count": 7,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "55801ccdc96ed23a42ddd7c82bcfc5e3a95adf610043830a1bad1c529ef02fd7",
-        "actual": "a801006f28218af8df5da7f8e1d927538e01be5c41d6e74f5bdd8f91c29e013a"
+        "expected": "a801006f28218af8df5da7f8e1d927538e01be5c41d6e74f5bdd8f91c29e013a",
+        "actual": "1aee9d3d2b299dd845479291cec0aacb3877b2cb484043c33a0321bf5ab20e9e"
       },
       {
         "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "ce67e20e28bc361e9f5cd2e33e79ce892229066a083eb38f5e17bb016db4a969",
-        "actual": "1ee6609fcbc2e9db26f8f72d97bc4d95f851412502e7f3dde0a96e75038366f9"
+        "expected": "1ee6609fcbc2e9db26f8f72d97bc4d95f851412502e7f3dde0a96e75038366f9",
+        "actual": "53e5908edf2080bcc250b1ffca9d62fc3c6b7aeebbd16ea74c88a3bcf7022e72"
       },
       {
-        "path": "SKILL.md",
+        "path": "src/aipd_os/cli/commands_drift.py",
         "reason": "hash_mismatch",
-        "expected": "b99e2ba700a529dd7956f91f27376c280939a5d95f2655696e3e9a5acc499d36",
-        "actual": "b38c1d0009e321c677c87b3e3a81e104df246da534d4e499ef9a6ac761176532"
+        "expected": "8fadf47cc81e0fa7cfc5d5dfb93c04a4e2ea0ae1e6cbb29894e0bc35fedf989b",
+        "actual": "c97f333afd9d1de3f10a422b8c3fe695cf2b639a6434e6d1e0fe9f98dfcb7f08"
       },
       {
-        "path": "src/aipd_os/cli/command_contract.py",
+        "path": "src/aipd_os/cli/commands_supply.py",
         "reason": "hash_mismatch",
-        "expected": "a9723f4c56d315db30681a4e197184bfee6a8b3eaa03d8829a3c28e94ff76748",
-        "actual": "a8c5e41e7e9ce6275580fb2adc240ca7f52ec65ba3d6aab24f12f6d0f824ff20"
+        "expected": "c06f60ea83b2a48f33e2b853131b227e54fed7af0463502c2568bbb42446f0df",
+        "actual": "1a3139af6c562a123bacec897f4e1289c5f31eb285dc0bf0a1cf21e3b802a942"
       },
       {
-        "path": "src/aipd_os/cli/commands.py",
+        "path": "src/aipd_os/supply_chain/quote_lineage.py",
         "reason": "hash_mismatch",
-        "expected": "9a461c2ce42bf2d5075651ee878c73b759b03f3a8b8f79976de9a3eff1f6ddc7",
-        "actual": "0e5a8056060e996a0f25c485b89264e86f90e50148e2d6b2bda04601164d461c"
+        "expected": "878e748adfb323189281b13f0c87423303b6dad888d86775c203ac023b52625a",
+        "actual": "c355de6022fdc1cf20f9354a4383254695431c03cbac45633a0c8240874ab653"
       },
       {
-        "path": "src/aipd_os/cli/main.py",
+        "path": "tests/test_quote_lineage.py",
         "reason": "hash_mismatch",
-        "expected": "779cea3d60548be7ea65bc5009715fd675ed816c88ef476f2a72ddb2b8641974",
-        "actual": "9cb026c104448debf68ee03c7a690e9025189cca10d9e0f7e18e5cd11df0a727"
+        "expected": "01adfefe497cafed8e19b50699f7fd6d1eb9bf1a698fc253d28b5a0b96d082dc",
+        "actual": "d969687d3fc01c78a87b511420cd0a66dd3acbd236195710e115090c71bd8688"
       },
       {
-        "path": "src/aipd_os/registry_data.py",
+        "path": "tests/test_truth_drift.py",
         "reason": "hash_mismatch",
-        "expected": "6f2031e0547a7cfdbd00ec590257021f9db4732eedd1f5806475c4e88d3ff336",
-        "actual": "a3afe8ac417c392c2328d2f332568586a41789dcdb94dba0f8c0d09757e10676"
-      },
-      {
-        "path": "tests/test_command_surface_census.py",
-        "reason": "hash_mismatch",
-        "expected": "f081feb388915b0b202dd89929b1b957bab3b3a867b03fc19dffa5ee9d4d1d10",
-        "actual": "dff8f6a0796160295f3a4d3e52159a8adb4e12bb10866f19c50cbc6584a30a17"
+        "expected": "eefcd609ca4c81365e5b17f6fab651aed0dc1e6841fbf9e44db533b8ebbca2b0",
+        "actual": "38a55a09e435e9a7c783e5e14b3fbc47151f3bd9b361e531e63b6334d3a31587"
       }
     ]
   },
