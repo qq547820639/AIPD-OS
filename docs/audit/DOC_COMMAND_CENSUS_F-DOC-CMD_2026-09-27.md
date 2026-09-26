@@ -262,3 +262,21 @@ real = **2.44 / 2.18 / 1.73 s**；`pytest tests/test_doc_command_census.py` 整�
   在能力登记表与架构文档里**都不存在**，
   读者只能从 CHANGELOG 倒推它们存在。本片没有破坏这个性质（同族同形），但也不该假装它是对的：
   要么给"质量量具"开一档登记，要么在 `docs/architecture/` 立一张表，二选一都归后续裁决。
+- **两处盲区：绑定之后由一次独立只读普查提出，我用我自己的夹具重跑证实**（都是本片这把尺子的
+  **判据缺口**，不是今天的假绿；下一轮要补的是判据，不是文案）：
+  1. **登记表里 `run_command` 之外的字段完全不可见**——三档的排除规则在这一行上叠加成双重盲：
+     档 ① 只读 `run_command` 一个键；档 ③ 显式跳过 `REGISTRY_FILES`；只报面又按
+     "该行已被判红面吃过"做减法。夹具（`/tmp/s60/probe_neg|pos|pos2`，三份只差
+     `current_limitation` 的文案）读数：即便写成**正向断言**「先跑 `aipd ghostly cmd` 再导出结果」，
+     仍是 `violations=[]`、`report_only_unmatched=[]`、`corpus={run_command:1, prose:3, report_only:0}`。
+     registry 今天那一行是合法否定句（「没有 `aipd ctq list`」）⇒ **现状没有假绿**，
+     但"登记表说：跑 X"这类错误可以藏在非 `run_command` 字段里而零信号。
+     电池为什么没抓到：我没有"撤掉 registry 其余字段的判读"这一臂——**盲区不在设想的臂里，
+     就不会被设想的臂打死**，这是本片电池覆盖面的真实边界。
+  2. **`.trae/specs/**` 与 `.github/workflows/*` 不在任何一档的遍历面上**：
+     `REPORT_ONLY_DIRS = (docs, src, tests, scripts, state_service, templates, agents, evals)`，
+     两个都不在其中（我把整份 JSON 报告序列化成字符串搜 `.trae` ⇒ False）。
+     我亲手数 `.trae`：**46 处提及、21 个 md**。这两类文本是**会被真的执行**的
+     （工程师/agent 照 spec 跑、CI 照 yml 跑），语义上恰恰最该判红；今天命中 0 个幻影，
+     明天写错没人抓。附带一条：`git ls-files` 里没有 Makefile／`*.sh`／`*.html`（分母 0），
+     而档 ③ 只 glob `*.py` ⇒ 将来引入 shell 脚本时它会落进只报面、永不判红。
