@@ -129,5 +129,25 @@ PYTHONPATH=src:scripts .venv/bin/python -m pytest tests/test_dxf_rework.py \
 
 ## 九、终读数
 
-（收口链跑完后填：全量通过数与耗时、干净 worktree SHA、发布门禁 8/8、
-audit_repo 单条按设计红、清单文件数、普查读数。）
+命令现场产出（2026-09-26；被背书的树 = HEAD `cba042f`，attestation worktree 检出 `c468a13`）。
+本文件不参与发布哈希，绝对数写在这里而不写进 CHANGELOG。
+
+| 项 | 读数 | 产出命令 |
+| --- | --- | --- |
+| 本片常驻用例 | 14 passed（21.14s） | `pytest tests/test_dxf_rework.py -q` |
+| 邻接面（血缘 / 返工 / 命令面 / C6 / 能力矩阵 / 导入环） | 90 passed（60.13s） | `pytest tests/test_dxf_rework.py tests/test_drawing_dxf_lineage.py tests/test_drawing_spec_lineage.py tests/test_truth_rework_cli.py tests/test_truth_propagate_cli.py tests/test_command_surface_census.py tests/test_c6_coverage.py tests/test_capability_matrix.py tests/test_registry_export.py tests/test_import_cycles.py -q` |
+| 变异电池 | 9 条：杀 9 / 存活 0 / 注入无效 0；对照臂 rc=0；render 重写为直调 handler 后**复跑仍 9/9** | `.venv/bin/python /tmp/s47/battery.py` |
+| 全量复算（背书用） | **2340 passed / 3 skipped / 0 failed**，1009.15s，total 2343 | 干净 worktree `/tmp/s47b` @`c468a13`，带 `AIPD_SOURCE_COMMIT=<tag>` 与 `--json-report` |
+| 全量复算（过程读数，不背书） | 2337 passed / **1 failed**：`test_import_cycles`（render 回头 import `cli.main` 成环，真红） | 修之前那一遍 @`b30a221`，886.09s |
+| 发布清单 | `RELEASE_MANIFEST.json` 644 个文件（642 → 644，version 5.6.0） | `scripts/regenerate_release_manifest.py` |
+| 溯源锚 | `SOURCE_MANIFEST`/`PROVENANCE` 的 `source_commit` = `a66040520139…`（tag SHA，不跟 HEAD）；`test_report.present=true`、`total=2343`、`passed=2340`、`failed=0`，报告 sha256 前缀 `e3eda6a19f81bb4a` | `scripts/release_evidence.py --source-commit <tag> --test-report docs/audit/pytest-report-v5.6.0.json` |
+| 生产发布门禁 | `rc=0`、`release_ready=true`、8/8 checks `passed=true` | `PATH="$PWD/.venv/bin:$PATH" .venv/bin/python scripts/production_release_gate.py --release-ready --tag v5.6.0` |
+| 严格审计 | `rc=1`、`✗` 恰好 1 条（`Provenance source commit mismatch: manifest=a66040520139… vs HEAD=cba042ff647d…`，按设计）；该量具不输出 `✓`（计数 0 是它的形状） | `scripts/audit_repo.py --strict` |
+| 文档引用普查 | 文档 151 份 / 代码引用 3693 处 / **现状面缺陷 0 条** / 历史面 128 条（只报不判） | `scripts/doc_reference_census.py` |
+| 命令面真调 | 已注册 67 条全在 `cli` 档、低于 cli 档 0 条（读过的测试文件 189 个；本片没加新命令，只给 `truth rework` 换制品分派） | `scripts/command_surface_census.py` |
+| SKILL 自审 / lint | 0 警告 0 失败 / `ruff check src tests` All checks passed | `scripts/skill_quality_audit.py`、`.venv/bin/ruff` |
+
+**没跑 / 没覆盖的**：外部 CAD 查看器的渲染一致性仍未验；`drawing assembly`、`drawing dfm`
+这些产物的返工执行器不在本片范围（`dxf_render_namespace` 只还原 `drawing generate` 的参数面）；
+BOM / 成本的血缘生产者与执行器仍未接；`unchanged` 路径不重跑 render，
+所以「记录说未变但上游声明文件其实被换成了另一份同哈希内容」这种碰撞不在判据里（哈希相同即视为同一份）。
