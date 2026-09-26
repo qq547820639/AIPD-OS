@@ -168,7 +168,41 @@ worktree 同步到 `094926f`）：
 
 ## 七、终读数
 
-@@FINAL@@
+全部为本轮（2026-09-26 ~ 09-27 凌晨）实跑回显；终态树 = `71be330`。
+
+- **提交链**：`4ccbcbe`（形状门禁 + 趋势档）→ `f8b57ca`（比值档 3.0→1.5）→
+  `094926f`（1.5→2.0）→ `4f6ee4a`（本取证文档）→ `3a7ce27`（registry 行）→
+  `e3e6443`（矩阵/清单重锚）→ `fcf88c6`（首次绑定报告）→ `9676c59`（措辞按安静机器改准 +
+  基线重锚 + 趋势报告刷新）→ `71be330`（绑定最终复算报告）。
+- **静态门禁**：`ruff check src tests state_service` → `All checks passed!`（rc=0）；
+  `mypy src` → `Success: no issues found in 244 source files`（rc=0）。
+- **干净树复算**：`git worktree add --detach /tmp/s55w 9676c59`（tree clean，
+  `PYTHONPATH=/tmp/s55w/src:/tmp/s55w/scripts`、`AIPD_SOURCE_COMMIT=a660405…`）→
+  `2428 passed, 3 skipped, 95 warnings in 234.36s (0:03:54)`，`suite rc=0`；
+  分母比第 54 片（2428）+3，正是 `TestDriftScanScaling` 那三条。
+  在此之前同一分支还跑过一趟（`e3e6443`，298.45 s，同样 0 failed），
+  但那一趟之后内容提交又变了（措辞与基线），所以终读数只认 `9676c59` 这一趟——
+  "绿"必须晚于它所证明的那棵树。
+- **报告校验器**（`/tmp/s55/verify_report.py`）：15 条前提全 `[OK]`、rc=0；
+  自测（`--self-test`，拿第 54 片那份已入库的报告喂它）读出
+  `RESULT(自测) 拒签成立：6 条前提不成立`（root 不含 s55w、collected 2428≠2431、
+  该文件 10 条≠13 条、三条新用例各读到 0 条）⇒ 这把尺子会红。
+- **趋势量具全量**：`scripts/state_perf_gate.py --rounds 5 --json docs/audit/state_perf_report.json`
+  → 15 条场景全出，`性能门禁：PASS`（rc=0）。
+  `drift_scan_us_per_record` 在安静机器（load 5.6~6.1）读到 median 59.81 / 60.55 µs，
+  基线由负载下采的 131.24 重锚为 69.25；`drift_scan_scaling_ratio` median 0.7336~0.7998。
+- **发布门禁**：`production_release_gate.py --release-ready --tag v5.6.0` →
+  `checks 8 passed 8`，rc=0。
+- **仓库审计**：`audit_repo.py --strict` → rc=1，`✗` 计数 1，且就是设计上该红的那条：
+  `✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=71be3307bae3…`。
+- **清单规模**：`SOURCE_MANIFEST.json` 参与哈希 **657 份，与第 54 片持平**
+  （本轮新增的都在已计数的文件里：新常驻用例在既有 `tests/test_state_perf_gates.py`，
+  新场景在既有 `scripts/state_perf_gate.py`，取证文档在 `docs/audit/`——不参与哈希）。
+- **一次外部中断**：本机 09-27 01:19 左右重启，`/tmp` 被清空，
+  第 54/55 片的量具脚本与 v1 电池日志一并丢失。处理：量具与校验器**重写后重跑**
+  （§三 的形状读数、§六 的 6 条臂都是重启后重跑的读数），
+  重启前的 CLI 三档读数保留并在 §八 标明其测量条件；已入库的 `docs/audit/pytest-report-v5.6.0.json`
+  未受影响（它在 git 里）。
 
 ## 八、遗留与未证
 
