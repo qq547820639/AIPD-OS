@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T02:30:23",
+  "generated_at": "2026-09-27T02:36:43",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -116,81 +116,21 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 657,
-    "hash_matches": 645,
-    "hash_mismatch_count": 12,
+    "total_files": 659,
+    "hash_matches": 657,
+    "hash_mismatch_count": 2,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "7f6c93ffcf9807bcefaa7e70ad151bdb697ec86b7145e7dbfb8848954e92216f",
-        "actual": "41f8536493966b10c9bbb6b254a4c53880e5b7407b60d0e2c4f089ea76a93f26"
+        "expected": "41f8536493966b10c9bbb6b254a4c53880e5b7407b60d0e2c4f089ea76a93f26",
+        "actual": "b5286a863727b143f3bfdc92e1d4531cfaaa8d09e72ee8aff8fd802b36fd69fa"
       },
       {
-        "path": "README.md",
+        "path": "tests/test_cad_spec_from_truth.py",
         "reason": "hash_mismatch",
-        "expected": "a19afeb51c76fe42912ad632c8d889fdbe70d6c2f8d4178576ca3bc445ceda6f",
-        "actual": "fbd4de3ecd9ae907aadecb4ea564b33610eebfbb798bc7f28642485df72e3a41"
-      },
-      {
-        "path": "SKILL.md",
-        "reason": "hash_mismatch",
-        "expected": "e757a5c30c219ba8d721a7549ff3b14ac3339e4d94dedee4910a68da4d33e5f6",
-        "actual": "e2e8b17a49cee87ccbeef5891c1cb0f827e8c74868e2720d96129646cad042e9"
-      },
-      {
-        "path": "docs/architecture/truth_architecture.md",
-        "reason": "hash_mismatch",
-        "expected": "c265c688d44b17ffc653f98b48b4e39bc0ae3a9553e340c73c95c602e184326f",
-        "actual": "0137d5aec78fce306302d6cd027d935bd11a8976778d071bb88e1f084502593f"
-      },
-      {
-        "path": "scripts/c6_coverage.py",
-        "reason": "hash_mismatch",
-        "expected": "029ad6d72fb667e000a6999addac3d2d5b02c23b79b374ca187b57f6f166e220",
-        "actual": "aaafb05dd194e87e8675e1eb841822d549b0dbf7db70510f35afc96220505f8c"
-      },
-      {
-        "path": "src/aipd_os/cli/command_contract.py",
-        "reason": "hash_mismatch",
-        "expected": "68352f32b0732f70b0ff10607cd4d2744baee517fa3808b73a8615193ae15b6f",
-        "actual": "6b31def5892da917ea7c1d5e7d8772dce71c30e3c8e1087be4f01a78129c8665"
-      },
-      {
-        "path": "src/aipd_os/cli/commands.py",
-        "reason": "hash_mismatch",
-        "expected": "076c3238aa34f750d56c7bbc55898e6f3c954ec2c6ba2f2391ed1019bf741de2",
-        "actual": "2505fd2335ecbfaef23981a95804cb0cd864077313fd73d5d8e4ee3b66e42490"
-      },
-      {
-        "path": "src/aipd_os/cli/commands_drawing.py",
-        "reason": "hash_mismatch",
-        "expected": "4bfb8b8e8053d9a8ec2446e622d0e1cb2332aa1254fda45191b823cda9992078",
-        "actual": "3cef38da2fac67c7392927b2c49d349a8679a8b287d9321bc74be432e71e10fe"
-      },
-      {
-        "path": "src/aipd_os/cli/commands_truth.py",
-        "reason": "hash_mismatch",
-        "expected": "c0535170ba155a632d79ff36ba951349768316c66ce91185b9f81e93f94814bf",
-        "actual": "2540d7a3c585ca8edd35c9393e56d751686033719d6c6e4d2fc2ce06a2510952"
-      },
-      {
-        "path": "src/aipd_os/cli/main.py",
-        "reason": "hash_mismatch",
-        "expected": "23c38717bb94a40b878730ae361fcfe44643c879cbc7ec97699f73a5787afb8f",
-        "actual": "73442681f869ee3c281090f7198753f46b290583aaaa8498de8ed83653fd52f3"
-      },
-      {
-        "path": "src/aipd_os/registry_data.py",
-        "reason": "hash_mismatch",
-        "expected": "5f40bb78f8e1ac77df41f190c4fd5d5abf016106c9bd6b3c1c5bfd3b4b092a76",
-        "actual": "4af17623db320252c459c0e93102fb546bab8064b3d09263807a568e7a2b1c58"
-      },
-      {
-        "path": "tests/test_command_surface_census.py",
-        "reason": "hash_mismatch",
-        "expected": "fc6e24e5ba38dca252851470a6d306ee67e2df2f8d266f6677f0ac6988fa0ece",
-        "actual": "2fee001146b53bb48ac0acfaead36ee0cc20d50a16d445de47b7c735a791d3a5"
+        "expected": "39a2bc5123c19a3685ea4775c9f85f1f4661f65ad7da634be7084dd5f7ef4dfa",
+        "actual": "513d44a06b80d5b831d57e60ee47d5e7bb55877d4b729975dec0e86dd7463014"
       }
     ]
   },

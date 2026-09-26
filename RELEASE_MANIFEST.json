@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 232902,
-      "sha256": "41f8536493966b10c9bbb6b254a4c53880e5b7407b60d0e2c4f089ea76a93f26"
+      "size": 233272,
+      "sha256": "b5286a863727b143f3bfdc92e1d4531cfaaa8d09e72ee8aff8fd802b36fd69fa"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -2457,8 +2457,8 @@
     },
     {
       "path": "tests/test_cad_spec_from_truth.py",
-      "size": 23500,
-      "sha256": "39a2bc5123c19a3685ea4775c9f85f1f4661f65ad7da634be7084dd5f7ef4dfa"
+      "size": 24337,
+      "sha256": "513d44a06b80d5b831d57e60ee47d5e7bb55877d4b729975dec0e86dd7463014"
     },
     {
       "path": "tests/test_cad_stackup.py",
