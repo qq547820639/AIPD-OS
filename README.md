@@ -461,7 +461,10 @@ aipd validate --manifest manifest.json --target C5    # 验证是否达到目标
 aipd bom add --db state.db --part 外壳 --material ABS --process "注塑" --quantity 1
 aipd quote apply --db state.db --file quotes.csv      # 报价 → quote.* 事实 → 该行单价
 aipd bom show --db state.db --tooling 50000 --quantity 1000 --margin 20   # 汇总 + 发布检查
-aipd cost calc --db state.db --tooling 50000 --quantity 1000 --margin 20   # 成本核算
+aipd cost calc --db state.db --tooling 50000 --quantity 1000 --margin 20 --truth-lineage   # 成本核算
+#   ↑ 带 --truth-lineage 时另登记「BOM 版本 → 成本结论」血缘（`src/aipd_os/bom/cost_lineage.py`）：
+#     制品身份按输入签名（BOM 身份 + 参与行集合；成本那条再叠口径五项--tooling/--quantity/--amortize-over/--nre/--margin），同输入重跑命中同一条记录、换 BOM 或换口径才另起新版并把旧版标 superseded。
+#     于是 `aipd truth propagate` 改得动那笔成本结论；不给旗子是明说的跳过（成本照算、返回 0），血缘写不进去判未收口（4）且 `--json` 的 ok 同向。
 aipd bom release --db state.db                        # 清单全过才置 released，否则 exit 4
 ```
 

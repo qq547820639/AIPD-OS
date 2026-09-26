@@ -72,8 +72,7 @@ trust_level / effective_at / expires_at / version / status / metadata），
 只有 2 行不同，差的是 `$TDCREATE` / `$TDUPDATE` 那一对儒略日时间戳——按字节哈希会把
 时间戳读成一次工程变更；DXF 自己的 sha256 仍作为**观测**留在 metadata 里。同一产物路径
 只留一版有效，新版落下时把旧版标 `superseded`，否则一张图改十次就有十条永久的下游。
-仍未接上的一段：**BOM / 成本那一支既没有血缘生产者也没有返工执行器**
-（它们的任务仍走「不认识的制品在烧 attempts 之前逐条点名拒掉」那条路）。图纸这一跳在第 47 片两头都接上了：`aipd truth rework` 会按记录里的输入集合重跑出图，并且**不新增版本记录**——引擎 bump 的是这一条；「换输入另起一版 + 旧版标 superseded」只是生产面（`aipd drawing generate`）的规则。
+BOM / 成本那一支的血缘生产者已在第 48 片接上（`aipd cost calc --truth-lineage` → `src/aipd_os/bom/cost_lineage.py`：按「BOM 身份 + 参与行集合」写 `artifact=bom` 版本记录，按「BOM 签名 + 口径五项（tooling_fee/target_quantity/amortize_over/nre/margin_pct）」写 `artifact=bom_cost` 成本结论记录，连 `bom → cost` 的 `affects` 边；同作用域只留一版有效、旧版标 `superseded`；BOM 为空什么都不写），于是改一行 BOM 再跑 `aipd truth propagate` 就能把那笔成本结论标 stale；**这两条新记录仍没有返工执行器**（它们的任务仍走「不认识的制品在烧 attempts 之前逐条点名拒掉」那条路）。图纸这一跳在第 47 片两头都接上了：`aipd truth rework` 会按记录里的输入集合重跑出图，并且**不新增版本记录**——引擎 bump 的是这一条；「换输入另起一版 + 旧版标 superseded」只是生产面（`aipd drawing generate`）的规则。
 生产者集合由
 `tests/test_drawing_spec_lineage.py::TestProducerRatchet` 按 AST 两向钉住——
 多一个未登记的 `add_edge` 调用点要红，把本轮这个删掉也要红。

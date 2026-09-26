@@ -202,6 +202,25 @@ def cmd_cost(args: Any) -> int:
         amortize_over=int(args.amortize_over) if args.amortize_over else None,
         nre=float(args.nre), margin_pct=float(args.margin))
     cost = compute_bom_cost(lines, inputs)
+    # 血缘：opt-in。给了 --truth-lineage 才登记「BOM 版本 → 成本结论」；
+    # 没给是**明说的跳过**，写不进去则判未收口（图纸那一跳同一条纪律）。
+    lineage = None
+    lineage_error = None
+    lineage_skip_reason = None
+    if getattr(args, "truth_lineage", False):
+        from aipd_os.bom.cost_lineage import record_cost_lineage
+        from aipd_os.product_truth import ProductTruthStore
+
+        try:
+            truth = ProductTruthStore(args.db, tenant_id=DEFAULT_TENANT,
+                                      project_id=pid)
+            lineage = record_cost_lineage(
+                truth, header=header, lines=lines, inputs=inputs, cost=cost,
+                tenant_id=DEFAULT_TENANT, project_id=pid)
+        except Exception as exc:  # noqa: BLE001 - 下面判未收口，不静默
+            lineage_error = f"{type(exc).__name__}: {exc}"
+    else:
+        lineage_skip_reason = "未给 --truth-lineage ⇒ 不登记「BOM → 成本」血缘"
     # 写回 Product Truth（status C=Calculation，来源可追溯）
     fact_id = None
     if header is not None and lines:
@@ -219,7 +238,11 @@ def cmd_cost(args: Any) -> int:
                   "amortize_over": inputs.amortize_quantity(),
                   "nre": inputs.nre, "margin_pct": inputs.margin_pct,
               },
-              "cost": cost.to_dict(), "fact_id": fact_id}
+              "cost": cost.to_dict(), "fact_id": fact_id,
+              "lineage": lineage, "lineage_error": lineage_error,
+              "lineage_skipped": lineage_skip_reason}
+    if lineage_error:
+        result["ok"] = False
 
     def prose():
         if not lines:
@@ -236,8 +259,20 @@ def cmd_cost(args: Any) -> int:
             print("  成本不完整（以下行缺供应商/单位成本，未计入）：" +
                   "，".join(d["missing_cost_lines"]))
         print(f"  已写回 Product Truth（fact {fact_id}，status C）")
+        if lineage is not None:
+            if lineage.get("written"):
+                print(f"  血缘：BOM 版本 {lineage['bom']['record_id']} → 成本结论 "
+                      f"{lineage['cost']['record_id']}（边 {lineage['edges']} 条，"
+                      f"签名 {lineage['cost_signature'][:16]}"
+                      f"{'，新建' if lineage['cost']['created'] else '，同输入命中已有记录'}）")
+            else:
+                print(f"  血缘：未登记（{lineage['reason']}）")
+        elif lineage_error:
+            print(f"  血缘未落库：{lineage_error}（结论已算出，但传播到不了它 ⇒ 判未收口）")
+        else:
+            print(f"  血缘：{lineage_skip_reason}")
     _emit(args, result, prose)
-    return 0
+    return 4 if lineage_error else 0
 
 
 __all__ = ["cmd_bom", "cmd_cost"]

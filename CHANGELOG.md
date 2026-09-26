@@ -951,6 +951,40 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.12 F-LINEAGE-COST 第 48 片：把「BOM 版本 → 成本结论」这一支接上血缘生产者**：
+  第 47 片收尾那句「仍未接上：BOM / 成本那一支既没有血缘生产者也没有返工执行器」本轮**翻转一半**——
+  生产者接上了，执行器仍没有。改前的断法是实证的：成本只写进 `facts.cost.total`，
+  `conditions` 是一句 `bom=BOM-001 qty=… tooling=…` 的**拼串**（拼串不是键，改一行 BOM 就连不回去），
+  且 AST 普查里 `bom/` 与 `supply_chain/` 两个目录**一处 `add_edge` 都没有**。
+  新增 `src/aipd_os/bom/cost_lineage.py`（`record_cost_lineage`）并给 `aipd cost calc` 加旗子
+  `--truth-lineage`：写两条 `artifact_version`（`bom` / `bom_cost`）+ 一条 `bom → cost` 的 `affects` 边。
+  四条判据：① **身份按输入签名**，沿用第 46 片实读 Bazel action key 定下的取舍（本轮不做外部检索，
+  理由与签名集合写在取证文档 §二：新的只是「BOM 与成本各自吃哪些输入」，答案在本仓 `CostInputs`/`BOMLine` 里）；
+  ② **BOM 签名吃全行事实、成本签名再叠口径五项**（`tooling_fee`/`target_quantity`/`amortize_over`/`nre`/`margin_pct`），
+  于是「只改毛利率」只另起成本版、BOM 版不动——这一条正是把「只记 bom_id 的实现」照出来的那一条；
+  ③ **同作用域只留一版有效**，新版落下把旧版标 `superseded`，否则一次改 BOM 会把历史成本全打成待返工；
+  ④ **空 BOM 什么都不写**，不给旗子是**明说的跳过**（`lineage_skipped` 说出不登记的缘由），
+  给了却写不进去判**未收口**（退码 4 且 `--json` 的 `ok` 同向）。
+  全程用真实 CLI 取一遍证（`.venv/bin/aipd`，可编辑安装确认跑的是本树 `src/`）：
+  同输入两次 `cost calc` 命中 `T-001`/`T-002` 且 `created=false`；加一行 BOM 后另起 `T-003`/`T-004`；
+  `truth propagate --upstream T-001` ⇒ `T-002` 转 **stale** 并生成任务 `RW-001`（rc=4、`pending_rework=true`）；
+  `truth rework --task RW-001` ⇒ 按制品点名**拒**（`artifact_kind: bom_cost`，`supported_artifacts` 仍只有图纸两类）
+  且 `attempts` 保持 0、任务仍 pending——登记里那句「保持 pending 或被拒」由此有了读数。
+  常驻用例 **10 条**（`tests/test_cost_lineage.py`）；变异电池 **8 条：杀 8 / 活 0 / 注入无效 0**（对照臂 rc=0），
+  其中 E1（命令面不调生产者）一注入打下 6 条，说明这 10 条几乎全挂在接线上而不是各自独立成立。
+  两条电池/量具自己的收获：退码最初带 `| tail -3` 读成 rc=0，那是 `tail` 的退码不是 CLI 的（去掉管道重测为 4）；
+  `truth_lineage` 只有 2 行而 `sqlite_sequence.seq=4`，成因是 `add_edge` 的 `INSERT OR IGNORE` 配 AUTOINCREMENT
+  **被忽略的插入照样消耗序列号**，已用「行数不变、seq 随 calc 次数 1:1 递增」对上，不是丢边。
+  登记与镜像：`registry_data` 三处（生产者计数三→四、`industrialize.quote_to_bom_cost` 的 limitation、
+  unit_test 列表）、`truth_architecture` §二那句旧否定句就地更正、README 成本核算速查行；
+  生产者棘轮登记 `bom/cost_lineage.py`（同一次普查 11 处 `add_edge` 全部在册）；
+  第 47 片漏改的那句「BOM/成本那一支仍没有血缘生产者」在原行内清掉。
+  **只给既有命令加旗子、未新增命令** ⇒ 命令面计数与 census 分母不动。
+  全量收集数 2343 → 2353。仍未接上：`bom` / `bom_cost` 两类制品**没有返工执行器**；
+  且没有任何生产者往 `artifact=bom` 那条记录**连入边**（`quote apply` 写的是 `quote.*` fact），
+  所以「改一条 CTQ 会打到成本」仍不成立——本轮那条链是从 BOM 版本记录起算的，触发也仍靠人给 `--upstream`。
+  证据见 `docs/audit/BOM_COST_LINEAGE_F-LINEAGE-COST_2026-09-26.md`。
+
 - **v5.12 F-REWORK-DXF 第 47 片：图纸这一跳从「只有边」补成「边 + 执行器」**：
   第 46 片把 `声明 → 图纸` 的边接上之后，`truth propagate` 才真的开始生成 `drawing_dxf`
   的返工任务，而那些任务的处置是「在烧 attempts 之前逐条点名拒掉」——缺口从理论变成日常。

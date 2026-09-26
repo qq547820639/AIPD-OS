@@ -833,6 +833,10 @@ def build_parser() -> argparse.ArgumentParser:
     cp.add_argument("--amortize-over", type=int, help="模具/NRE 摊销数量（缺省=quantity）")
     cp.add_argument("--nre", type=float, default=0.0, help="一次性工程费 NRE")
     cp.add_argument("--margin", type=float, default=0.0, help="毛利百分比（如 20）")
+    cp.add_argument("--truth-lineage", action="store_true",
+                    help="把这次核算登记成 Product Truth 血缘：「BOM 版本记录 → 成本结论记录」"
+                         "（两条 artifact_version + 一条 affects 边，身份按输入签名）。"
+                         "不给就明说不登记；给了却写不进去判未收口（退出码 4）。")
     cp.add_argument("--json", action="store_true")
     cp.set_defaults(func=COMMAND_FUNCS["cost calc"])
 
