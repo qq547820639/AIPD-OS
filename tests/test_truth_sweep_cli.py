@@ -77,6 +77,12 @@ def _pending(db):
         status="pending")]
 
 
+def _rows(db, artifact):
+    return [r for r in _store(db).query(record_type="artifact_version",
+                                        tenant_id=T, project_id=P)
+            if (r.metadata or {}).get("artifact") == artifact]
+
+
 # ---------- 一、纯计划：不碰数据库 ----------
 
 def test_plan_skips_records_that_are_not_active():
@@ -296,6 +302,58 @@ def test_two_blades_on_one_record_create_two_tasks(env, capsys):
         for t in one["tasks"]:
             per_truth[t["truth_id"]] = per_truth.get(t["truth_id"], 0) + 1
     assert per_truth.get(bom_id) == 2, (per_truth, p["targets"])
+
+
+def test_hand_edited_spec_sweeps_to_the_ctq_and_rework_writes_the_file_back(env, capsys):
+    """**blast radius 的常驻读数**：人改生成物 ⇒ sweep 的落刀对象是 CTQ，
+    而下一步 `truth rework` 会按 CTQ 把那个文件重算覆盖回去。
+
+    这不是 sweep 新造的语义（`truth propagate` + 第 45 片的 spec 执行器一直如此），
+    但 sweep 把它变成"一条命令就会走到"，所以必须有一条用例把整条链钉住：
+    手改声明文件 → 发现漂移 → 落刀到 CTQ（不是"没人管"）→ 返工真的覆盖文件。
+    """
+    from aipd_os.product_truth.models import TruthRecord
+
+    tmp_path, db = env
+    store = _store(db)
+    ctq = store.add(TruthRecord(
+        record_type="ctq", content="CTQ hole_Ø8", trust_level="verified",
+        metadata={"feature": "hole_Ø8", "drawing_feature": "TOP.hole_1",
+                  "nominal": 8.0, "lower_limit": 7.95, "upper_limit": 8.05,
+                  "inspection_method": "CMM"}), tenant_id=T, project_id=P)
+    spec = tmp_path / "spec.json"
+    assert main(["drawing", "spec", "--db", str(db), "--project", P,
+                 "--out", str(spec), "--json"]) == 0
+    capsys.readouterr()
+    spec_rows = _rows(db, "drawing_spec")
+    assert len(spec_rows) == 1, spec_rows
+    spec_id = str(spec_rows[0].record_id)
+
+    spec.write_text(spec.read_text(encoding="utf-8").replace("8.05", "8.06"),
+                    encoding="utf-8")
+
+    rc, p = _sweep(db, capsys, dry=True)
+    assert rc == 4, p
+    assert [t["upstream_id"] for t in p["targets"]] == [str(ctq)], p["targets"]
+    assert p["orphaned"] == [], p["orphaned"]
+    assert p["targets"][0]["triggered_by"][0]["record_id"] == spec_id, p
+
+    rc, p = _sweep(db, capsys)
+    assert rc == 4 and p["targets"], p
+    assert _store(db).get(spec_id).status == "stale", p
+    assert any(t["truth_id"] == spec_id for t in _pending(db)), _pending(db)
+
+    # 返工真的执行时，被覆盖的是**人刚改过的那个文件**——这一步是整条链的代价面
+    edited = spec.read_text(encoding="utf-8")
+    assert "8.06" in edited and "8.05" not in edited
+    rc = main(["truth", "rework", "--db", str(db), "--project", P,
+               "--all-pending", "--json"])
+    payload = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    assert rc == 0, payload
+    back = spec.read_text(encoding="utf-8")
+    assert "8.05" in back and "8.06" not in back, \
+        "返工没有按 CTQ 覆盖人改过的声明文件——那这条链的代价面与本用例断言的不一致"
+    assert _store(db).get(spec_id).status == "active", payload
 
 
 def test_sweep_missing_db_is_usage_error(env, tmp_path):
