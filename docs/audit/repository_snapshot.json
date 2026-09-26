@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-26T19:32:39",
+  "generated_at": "2026-09-26T20:19:06",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 197
+      "tests": 198
     }
   },
   "tags": [
@@ -116,51 +116,63 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 644,
+    "total_files": 646,
     "hash_matches": 637,
-    "hash_mismatch_count": 7,
+    "hash_mismatch_count": 9,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "6b53800f4bffd3d858077ccc2a801745067abfd271e078c6e040420c50b6ac3c",
-        "actual": "be3fba458aff0ad26e19ff60069932dbe93a6cbb20c25ca7a7b141379c1980f9"
+        "expected": "be3fba458aff0ad26e19ff60069932dbe93a6cbb20c25ca7a7b141379c1980f9",
+        "actual": "ffeeadb852e0413390734a563a87ea593c6d93d48abbdabf9d593bcd966b7aa7"
       },
       {
         "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "59707f3ca8fdb0daa23c109d175abcf60a2f1394fae30059f7091e9956bbdeda",
-        "actual": "94457a1ca0fbc5d777f9187acb42b0831671450e33f0a8f58fa033c6a43b3ddc"
+        "expected": "94457a1ca0fbc5d777f9187acb42b0831671450e33f0a8f58fa033c6a43b3ddc",
+        "actual": "1f90404ef53c553549342b10ba7219fc55c75a763ed45f69aacd68094daee09f"
       },
       {
         "path": "docs/architecture/truth_architecture.md",
         "reason": "hash_mismatch",
-        "expected": "c9adc9a9d2ae2f2a164fb8a3c7c7769b4286c235b9b6eb93f709ec99c1d087ed",
-        "actual": "e067b453d644ecc1baa6e957b834600378b35ffec91b744af46d3ed4be98dcca"
+        "expected": "e067b453d644ecc1baa6e957b834600378b35ffec91b744af46d3ed4be98dcca",
+        "actual": "9e7402e520ce440a4bffdf5f954066704fe7f4f424bd0a1fee29e8aec3810d3b"
+      },
+      {
+        "path": "src/aipd_os/bom/cost_lineage.py",
+        "reason": "hash_mismatch",
+        "expected": "2ffd4c85659840e007d4483535ab8d2a9c2835f761eae958b9406f5e432d1833",
+        "actual": "a1dcca0e635d2ad4fc3be335c291d6e983df7b63c9c304c42f1b4a222179381a"
       },
       {
         "path": "src/aipd_os/cli/commands_manufacturing.py",
         "reason": "hash_mismatch",
-        "expected": "ed6e05302c12688ae978aeacc6d9b2921dcffce476255370bb9182ddc70129a9",
-        "actual": "78723d24ee3e65203ba6844fea2e359d9b054d2e5a600406dbb9642a91af102d"
+        "expected": "78723d24ee3e65203ba6844fea2e359d9b054d2e5a600406dbb9642a91af102d",
+        "actual": "879b22b6bd0d6d06bbb03f17511729de9495eb1b1ec162a541527da1249e1a9d"
       },
       {
-        "path": "src/aipd_os/cli/main.py",
+        "path": "src/aipd_os/cli/commands_truth.py",
         "reason": "hash_mismatch",
-        "expected": "eb3327a2855fdaca40a4cab334fb0564b3ac7ba4e51ece70dba11356bceebb40",
-        "actual": "d64621f8e714795f82b455adfd7d03ac272a246d28270a7067773703c0bfa97e"
+        "expected": "b192444f5c26619a68248e681606281aa1bfb4e7514c074871a599ba1bbe5ed1",
+        "actual": "336fecc1785e1e48154e6fd4f0c1caf4313a9bde48d7287e76fb9040c0b4623c"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "6a3fd98afcc7a3a053968d31cb50db4a6ffd202816655908a1be3a482cfed572",
-        "actual": "87910197947e76c86200e40c30a1934e9c0cddffe101ca9e46d68c684ff4b719"
+        "expected": "87910197947e76c86200e40c30a1934e9c0cddffe101ca9e46d68c684ff4b719",
+        "actual": "7590c180eebf341717204097f37ffb7e9be6b0bf2e12738330b5a13ab0ad30e2"
       },
       {
         "path": "tests/test_drawing_spec_lineage.py",
         "reason": "hash_mismatch",
-        "expected": "8e33fa1dd4acd3f5b57f59129eff3564389f9387b2642b42ea6aa39ca945c206",
-        "actual": "d8b7a143043e122bf27fe11c57c81e2cb23de53623b22fa331cafd93d3d1fa5e"
+        "expected": "d8b7a143043e122bf27fe11c57c81e2cb23de53623b22fa331cafd93d3d1fa5e",
+        "actual": "ad452d3242dc4d65c8f28e9146981ef5b4d04827b4a67bb5e40e3a80de259f6c"
+      },
+      {
+        "path": "tests/test_dxf_rework.py",
+        "reason": "hash_mismatch",
+        "expected": "4ab62f7a79361d2e58352bd9aec38f91f8ab02190fa11a5ffe3d3bd9d8c846b5",
+        "actual": "86b4440d44b6425792de5eb812c6b8c8e2fd67bba4d0339240b3b2c64ca6d739"
       }
     ]
   },

@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 204715,
-      "sha256": "be3fba458aff0ad26e19ff60069932dbe93a6cbb20c25ca7a7b141379c1980f9"
+      "size": 208632,
+      "sha256": "ffeeadb852e0413390734a563a87ea593c6d93d48abbdabf9d593bcd966b7aa7"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 46351,
-      "sha256": "94457a1ca0fbc5d777f9187acb42b0831671450e33f0a8f58fa033c6a43b3ddc"
+      "size": 46668,
+      "sha256": "1f90404ef53c553549342b10ba7219fc55c75a763ed45f69aacd68094daee09f"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 10238,
-      "sha256": "e067b453d644ecc1baa6e957b834600378b35ffec91b744af46d3ed4be98dcca"
+      "size": 11023,
+      "sha256": "9e7402e520ce440a4bffdf5f954066704fe7f4f424bd0a1fee29e8aec3810d3b"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -962,8 +962,13 @@
     },
     {
       "path": "src/aipd_os/bom/cost_lineage.py",
-      "size": 8744,
-      "sha256": "2ffd4c85659840e007d4483535ab8d2a9c2835f761eae958b9406f5e432d1833"
+      "size": 9221,
+      "sha256": "a1dcca0e635d2ad4fc3be335c291d6e983df7b63c9c304c42f1b4a222179381a"
+    },
+    {
+      "path": "src/aipd_os/bom/cost_rework.py",
+      "size": 8769,
+      "sha256": "fc67dbf8e1b1fa2bba64f515094285866705d8814e8bee5242063d3b0ac7ca95"
     },
     {
       "path": "src/aipd_os/bom/models.py",
@@ -1127,8 +1132,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_manufacturing.py",
-      "size": 12864,
-      "sha256": "78723d24ee3e65203ba6844fea2e359d9b054d2e5a600406dbb9642a91af102d"
+      "size": 15779,
+      "sha256": "879b22b6bd0d6d06bbb03f17511729de9495eb1b1ec162a541527da1249e1a9d"
     },
     {
       "path": "src/aipd_os/cli/commands_outbox.py",
@@ -1152,8 +1157,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_truth.py",
-      "size": 12558,
-      "sha256": "b192444f5c26619a68248e681606281aa1bfb4e7514c074871a599ba1bbe5ed1"
+      "size": 13442,
+      "sha256": "336fecc1785e1e48154e6fd4f0c1caf4313a9bde48d7287e76fb9040c0b4623c"
     },
     {
       "path": "src/aipd_os/cli/commands_validation.py",
@@ -1657,8 +1662,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 94010,
-      "sha256": "87910197947e76c86200e40c30a1934e9c0cddffe101ca9e46d68c684ff4b719"
+      "size": 94766,
+      "sha256": "7590c180eebf341717204097f37ffb7e9be6b0bf2e12738330b5a13ab0ad30e2"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2511,6 +2516,11 @@
       "sha256": "59604deb3c3a059c1c79771729bb44c4f65921cb374f4381761be9be301c7894"
     },
     {
+      "path": "tests/test_cost_rework.py",
+      "size": 17592,
+      "sha256": "17a90e4fb32e16c91bf49bfe6cbb543d6d0e8e5693723e681c5ae58c384b4a55"
+    },
+    {
       "path": "tests/test_credibility.py",
       "size": 2361,
       "sha256": "ebd6dc00b69843ae994e1a862834f9168d448218c6dacd75b3ef84fdf7e1423d"
@@ -2557,13 +2567,13 @@
     },
     {
       "path": "tests/test_drawing_spec_lineage.py",
-      "size": 12772,
-      "sha256": "d8b7a143043e122bf27fe11c57c81e2cb23de53623b22fa331cafd93d3d1fa5e"
+      "size": 12876,
+      "sha256": "ad452d3242dc4d65c8f28e9146981ef5b4d04827b4a67bb5e40e3a80de259f6c"
     },
     {
       "path": "tests/test_dxf_rework.py",
-      "size": 22106,
-      "sha256": "4ab62f7a79361d2e58352bd9aec38f91f8ab02190fa11a5ffe3d3bd9d8c846b5"
+      "size": 22507,
+      "sha256": "86b4440d44b6425792de5eb812c6b8c8e2fd67bba4d0339240b3b2c64ca6d739"
     },
     {
       "path": "tests/test_encryption_key_policy.py",
