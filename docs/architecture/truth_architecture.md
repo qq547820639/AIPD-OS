@@ -65,8 +65,7 @@ trust_level / effective_at / expires_at / version / status / metadata），
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的
 `ctq_ref` 写一条 `artifact_version` 记录，并给每条参与 CTQ 连一条 `affects` 边；
 有 gap 时文件与血缘都不写），以及 `aipd drawing generate --db`
-（`src/aipd_os/cad/dxf_lineage.py`：按**输入签名**——声明内容哈希 + part/revision/views/
-scale/sheet——写图纸的 `artifact_version`，并连「声明记录 → 图纸记录」的边）。
+（`src/aipd_os/cad/dxf_lineage.py`：按**输入签名**——模型摘要 + 声明内容哈希 + 全部出图参数（part/revision/views/scale/sheet/material/剖切/放大）——写图纸的 `artifact_version`，并连「声明记录 → 图纸记录」的边）。
 于是链条的**第二跳 CTQ → 图纸声明**与**第三跳 图纸声明 → DXF 制品**今天都传播得到：
 改一条 CTQ 再跑 `aipd truth propagate`，那份声明**和按它画出来的那张图**一起被标 stale
 并各自生成返工任务。身份取输入签名而不取 DXF 字节是实测决定的：同输入连跑两次，两份 `.dxf` 的 13170 行里

@@ -5,8 +5,10 @@
 
 1. `aipd drawing generate --db` 出图后写一条 `drawing_dxf` 版本记录，
    并连 `声明记录 → 图纸记录` 的边；**传播第三跳真的到得了**（第 1 条用例）；
-2. 制品身份按**输入签名**（声明内容哈希 + 出图参数），不按 DXF 字节——
-   同样输入重跑必须命中同一条记录（第 3 条），换声明才另起一版（第 4 条）；
+2. 制品身份按**输入签名**（模型摘要 + 声明内容哈希 + 全部出图参数：part/revision/
+   views/scale/sheet/material/剖切/放大），不按 DXF 字节——同样输入重跑必须命中同一条
+   记录（第 3 条），换声明才另起一版（第 4 条），**换模型也必须另起一版**（第 4b 条，
+   签名漏吃模型是先复现后修的）；
 3. 上游连不上时记录照写、边数为 0 且**写明原因**（第 5 条）：
    "没有可连的上游"与"上游没参与"不是一回事；
 4. 没给 `--db` 是**明说的跳过**，不是静默；血缘写不进去则判未收口且 `ok` 与退码同向。
@@ -210,6 +212,51 @@ def test_missing_database_is_not_read_as_no_lineage(env, capsys):
                "--db", str(tmp_path / "nope.db"), "--project", P])
     assert rc == 2
     assert "状态库不存在" in capsys.readouterr().out
+
+
+GOLD = (ROOT / "releases" / "golden-projects" / "B-cad-engineering-change")
+
+
+def test_a_different_model_starts_a_new_version_not_a_reuse(env, capsys):
+    """签名必须吃模型：换一份 STEP 还命中同一条记录，等于两张图被记成一版。
+
+    这条是先复现后修的：修之前同一 --out、同一参数分别用 bracket.step 与
+    bracket_v2.step 出图，记录数仍是 1、两次落库的 inputs= 前缀一模一样
+    （`/tmp/s46/sig_gap.py` 实测）。
+    """
+    tmp_path, db = env
+    _seed(db)
+    out = tmp_path / "bracket.dxf"
+    for step in ("bracket.step", "bracket_v2.step"):
+        rc = main(["drawing", "generate", "--step", str(GOLD / step),
+                   "--out", str(out), "--part", "bracket", "--views", "TOP",
+                   "--db", str(db), "--project", P, "--json"])
+        capsys.readouterr()
+        assert rc in (0, 4), rc  # 4 只允许来自合格域判定，血缘在退码判定之前已写
+    rows = _rows(db, "drawing_dxf")
+    assert len(rows) == 2, [r.content for r in rows]
+    assert len({r.metadata["model_digest"] for r in rows}) == 2
+    assert len({r.metadata["input_signature"] for r in rows}) == 2
+
+
+def test_signature_covers_every_declared_input():
+    """输入键的适用域：每个出图输入单独变都要翻签名，全同则必须稳定。"""
+    from aipd_os.cad.dxf_lineage import dxf_input_signature
+
+    base = {"spec_sha256": "s", "part": "bracket", "revision": "A",
+            "views": ["TOP"], "scale": 1.0, "sheet": "A3", "material": "AL",
+            "sections": [], "details": [],
+            "model": {"kind": "golden_default", "source": "golden_default",
+                      "digest": "d"}}
+    same = dxf_input_signature(**base)
+    assert dxf_input_signature(**base) == same, "同输入必须命中同一签名"
+    for field, value in (("material", "SS"),
+                         ("sections", ["Y=0"]),
+                         ("details", ["TOP@(-30,0)/12=2"]),
+                         ("spec_sha256", "other"),
+                         ("model", {**base["model"], "digest": "other"})):
+        assert dxf_input_signature(**{**base, field: value}) != same, (
+            f"{field} 变了签名却没变——它没进输入键")
 
 
 def test_producer_is_wired_into_the_generate_path():

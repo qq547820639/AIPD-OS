@@ -12,8 +12,11 @@
 1. **制品身份按输入签名，不按 DXF 输出字节。** 实测同一输入连跑两次出图：两份文件
    13170 行里只有 2 行不同，差的是 `$TDCREATE` / `$TDUPDATE` 那几个儒略日时间戳——
    按字节哈希会让"同样输入重跑一次"每次都另起一版，那是把时间戳当成工程变更。
-   签名取输入（声明内容哈希 + part/revision/views/scale/sheet），
-   与第 45 片借来的 dbt「比内容签名而不是比字节」、BitBake「比任务输入校验和」同形。
+   签名取**全部出图输入**（模型摘要 + 声明内容哈希 + part/revision/views/scale/
+   sheet/material/剖切/放大），与第 45 片借来的 dbt「比内容签名而不是比字节」、
+   BitBake「比任务输入校验和」同形。模型摘要漏进键里是本轮实测抓出来的缺陷：
+   同一 `--out`、同一参数分别用两个不同 STEP 出图，两次落在**同一条**版本记录上
+   （两张图被记成一版），见 `model_input_digest`。
    DXF 自己的 sha256 仍然记进 metadata，作为**观测**而不是键。
 2. **同一产物路径只留一版有效**：写入新版时把该路径上更早的那条标 `superseded`
    （第 44 片之后 `superseded` 在发布证据里是"可见但不算未收口"），
@@ -31,7 +34,8 @@ from typing import Any
 
 from aipd_os.cad.spec_lineage import spec_digest
 
-__all__ = ["dxf_input_signature", "find_artifact_record", "record_dxf_lineage"]
+__all__ = ["dxf_input_signature", "find_artifact_record", "model_input_digest",
+           "record_dxf_lineage"]
 
 
 def _canonical_sha256(payload: Any) -> str:
@@ -40,12 +44,40 @@ def _canonical_sha256(payload: Any) -> str:
     ).hexdigest()
 
 
-def dxf_input_signature(*, spec_sha256: str | None, part: str, revision: str,
-                        views: list[str], scale: float, sheet: str) -> str:
+def model_input_digest(*, step: str | None, native: str | None) -> dict[str, str]:
+    """出图输入里「模型」那一份的摘要。
+
+    身份键**必须**吃它：实测同一 `--out`、同一参数分别用两个不同的 STEP 出图，
+    不吃模型时两次落在同一条版本记录上（两张图被记成一版）。
+    给了源文件按文件内容摘要；都没给则按内置黄金模型的名字与参数规范哈希
+    ——那是「同一个输入」的可复算定义，不是文件名。
+    """
+    for kind, value in (("step", step), ("native", native)):
+        if value:
+            path = Path(value)
+            return {"kind": kind, "source": str(path),
+                    "digest": hashlib.sha256(path.read_bytes()).hexdigest()}
+    from aipd_os.cad.backends import CadQueryBackend
+
+    model = CadQueryBackend().load_native_model(None)
+    digest = _canonical_sha256({"kind": "golden_default",
+                                "name": model.get("name"),
+                                "parameters": model.get("parameters")})
+    return {"kind": "golden_default", "source": "golden_default",
+            "digest": digest}
+
+
+def dxf_input_signature(*, spec_sha256: str | None, model: dict[str, str],
+                        part: str, revision: str, views: list[str], scale: float,
+                        sheet: str, material: str, sections: list[str],
+                        details: list[str]) -> str:
     return _canonical_sha256({"kind": "drawing_dxf", "spec_sha256": spec_sha256,
+                              "model_digest": model["digest"],
                               "part": part, "revision": revision,
                               "views": list(views), "scale": scale,
-                              "sheet": sheet})
+                              "sheet": sheet, "material": material,
+                              "sections": list(sections),
+                              "details": list(details)})
 
 
 def spec_file_digest(path: Path) -> str | None:
@@ -70,7 +102,10 @@ def find_artifact_record(store: Any, *, artifact: str, path: Path,
 
 def record_dxf_lineage(store: Any, *, dxf_path: Path, spec_path: Path | None,
                        part: str, revision: str, views: list[str],
-                       scale: float, sheet: str, relation: str = "affects",
+                       scale: float, sheet: str, model: dict[str, str],
+                       material: str = "-", sections: list[str] | None = None,
+                       details: list[str] | None = None,
+                       relation: str = "affects",
                        dxf_sha256: str | None = None,
                        tenant_id: str | None = None,
                        project_id: str | None = None) -> dict[str, Any]:
@@ -79,10 +114,13 @@ def record_dxf_lineage(store: Any, *, dxf_path: Path, spec_path: Path | None,
     from aipd_os.product_truth.models import SourceRef, TruthRecord
 
     dxf = Path(dxf_path)
+    sections = list(sections or [])
+    details = list(details or [])
     spec_sha = spec_file_digest(spec_path) if spec_path else None
-    signature = dxf_input_signature(spec_sha256=spec_sha, part=part,
-                                    revision=revision, views=views,
-                                    scale=scale, sheet=sheet)
+    signature = dxf_input_signature(spec_sha256=spec_sha, model=model, part=part,
+                                    revision=revision, views=views, scale=scale,
+                                    sheet=sheet, material=material,
+                                    sections=sections, details=details)
     spec_tag = (spec_sha[:16] if spec_sha else "未知")
     content = (f"drawing dxf {dxf.name} inputs={signature[:16]} ← spec {spec_tag}")
 
@@ -99,8 +137,12 @@ def record_dxf_lineage(store: Any, *, dxf_path: Path, spec_path: Path | None,
     metadata = {"artifact": "drawing_dxf", "path": str(dxf),
                 "input_signature": signature, "spec_path": str(spec_path or ""),
                 "spec_sha256": spec_sha, "spec_record_id": upstream,
+                "model_kind": model["kind"], "model_source": model["source"],
+                "model_digest": model["digest"],
                 "part": part, "revision": revision, "views": list(views),
-                "scale": scale, "sheet": sheet, "dxf_sha256": dxf_sha256}
+                "scale": scale, "sheet": sheet, "material": material,
+                "sections": sections, "details": details,
+                "dxf_sha256": dxf_sha256}
 
     existing = store.find_id_by_type_and_content(
         "artifact_version", content, tenant_id=tenant_id, project_id=project_id)

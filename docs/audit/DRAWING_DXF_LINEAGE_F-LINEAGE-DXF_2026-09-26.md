@@ -1,7 +1,7 @@
 # F-LINEAGE-DXF 第 46 片：给「图纸声明 → DXF 制品」补血缘生产者
 
 日期：2026-09-26 归属：Product Truth 血缘链 / CAD 出图命令面
-状态：已闭（生产者接线 + 常驻 8 条 + 电池 8 条 + 夹具窗口按实测更正）
+状态：已闭（生产者接线 + 常驻 10 条 + 电池 10 条 + 夹具窗口与输入键两处按实测补漏）
 落点：`src/aipd_os/cad/dxf_lineage.py`、`src/aipd_os/cli/commands_drawing.py`
 用例：`tests/test_drawing_dxf_lineage.py`
 
@@ -32,8 +32,20 @@
 两份 `.dxf` 各 13170 行、**只有 2 行不同**，差的是 `$TDCREATE` / `$TDUPDATE` 那一对儒略日时间戳
 （`855ce37c…` vs `d643913f…`）。所以 A 会把「什么都没变」读成「出了一版新图」，
 而库里一版图纸对应一次真实工程变更这件事，是第 44/45 片整套返工与发布证据的前提。
-选 B：签名 = 声明内容哈希 + 出图参数，DXF 自己的 sha256 仍写进 `metadata.dxf_sha256`
-当**观测**（图有没有被人动过，靠它判），但不当键。
+选 B：签名 = **全部出图输入**（模型摘要 + 声明内容哈希 + part/revision/views/scale/
+sheet/material/剖切/放大），DXF 自己的 sha256 仍写进 `metadata.dxf_sha256` 当**观测**
+（图有没有被人动过，靠它判），但不当键。
+
+**「出图参数」那一半起初是漏的，收口前实测复现出来的**（`/tmp/s46/sig_gap.py`）：
+同一 `--out`、同一参数，分别用仓库里两个真不同的 STEP
+（`releases/golden-projects/B-cad-engineering-change/bracket.step` 摘要 `4efdb74a…`、
+`bracket_v2.step` 摘要 `09fe94e0…`）各出一次图——
+* 修之前：两次落库的 `inputs=` 前缀**一模一样**（`30599f43…`），图纸记录数 1，
+  也就是**两张图被记成一版**；
+* 修之后：记录数 2、签名分别是 `29c694b8…` / `22f16d04…`。
+模型摘要的取法（`model_input_digest`）：给了 `--step`/`--native` 按源文件内容摘要；
+都没给则按内置黄金模型的 `{name, parameters}` 规范哈希——那是「同一个输入」的
+可复算定义，不是文件名。
 
 ## 三、四条判据
 
@@ -49,7 +61,7 @@
    图照出、返回 0；血缘写失败 ⇒ 判未收口，`--json` 的 `ok=false` 与退码 4 同向
    （与第 43 片同一条纪律：机器面和终端面不许各说一套）。
 
-## 四、撤改电池（`/tmp/s46/battery.py`，8 条：杀 8 / 存活 0 / 注入无效 0）
+## 四、撤改电池（`/tmp/s46/battery.py`，10 条：杀 10 / 存活 0 / 注入无效 0）
 
 对照臂（未注入）rc=0 先立。靶：`test_drawing_dxf_lineage.py` +
 `test_drawing_spec_lineage.py` + `test_truth_rework_cli.py`。
@@ -64,16 +76,20 @@
 | E6 连不上上游时不写原因 | KILLED | `test_hand_written_spec_records_the_drawing_with_zero_edges` |
 | E7 状态库读不到当成「没有血缘」 | KILLED | `test_missing_database_is_not_read_as_no_lineage` |
 | E8 键改成吃 DXF 字节 | KILLED | `test_same_inputs_hit_one_record_and_stay_idempotent` |
+| E9 键里抽掉模型摘要 | KILLED | `test_a_different_model_starts_a_new_version_not_a_reuse` |
+| E10 键里抽掉 material/剖切/放大 | KILLED | `test_signature_covers_every_declared_input` |
 
 **E4 首版存活，是一次有用的反证**：只把签名里的 `spec_sha256` 置 None 时全绿——
 身份键 `content` 里声明哈希写了**两遍**（`inputs=<签名前 16 位>` 与 `← spec <声明哈希前 16 位>`），
 关掉一处另一处仍会翻版。补成同时关掉两处才翻红。这条结构事实记在这里：
 「换声明才另起一版」在实现上是双保险，不是单点；要改这个键的人得同时知道两处。
 E8 则是对 §二 那条选择的正向证明：把键换成按字节，幂等用例真的会红。
+E9/E10 是补完输入键之后新立的两支：各自抽掉一类输入，只打中对应那一条用例——
+说明这些输入是**真在键上**，不是碰巧和别的字段一起变。
 
 ## 五、本轮自己踩到的一处夹具错（差点造成一条恒真用例）
 
-新用例最初把 CTQ 写成 `nominal 6.0 / 5.95–6.05`，而 golden 支架 TOP 视图四个孔
+新用例最初把 CTQ 写成 `nominal 6.0 / 5.95–6.05`（这是第一处），而 golden 支架 TOP 视图四个孔
 **实测直径全部 8.0mm**（`generate_drawing` 直接量，`/tmp/s46/probe3.log`）。
 于是每次出图都因 `ctq_window_violation` 返回 4：`test_third_hop…` 与幂等用例红，
 而 `test_lineage_failure_holds_the_command_and_agrees_with_ok` **看着是绿的**——
@@ -81,13 +97,15 @@ E8 则是对 §二 那条选择的正向证明：把键换成按字节，幂等�
 按实测把窗口改成 8.0 / 7.95–8.05 后，那条用例的 4 才归因到血缘写失败。
 这也是本轮把「测试夹具的合格域必须来自实测几何」写进注释的原因。
 
+第二处是自家人抓自家事：签名初版只吃「声明 + 六个参数」，把「出图参数」写窄了，**模型本身不在键里**。这条不是被用例发现的，是收口前专门去复现「同一命令还能不能被另一个模型复用」时发现的（见 §二 末），补完才补上 E9/E10 两支注入。
+
 ## 六、镜像同步清单（改公开命令能力行的固定一圈）
 
 `src/aipd_os/registry_data.py` 两行（`product_truth.impact_propagation`：生产者由两改三、
 写明第三跳到得了 + DXF 仍无执行器；`cad.2d_drawings`：`--db` 血缘 opt-in 与其边界）；
 `README.md` 命令速查补 `drawing generate … --db`；`docs/architecture/truth_architecture.md`
 §二 现状段改写；`tests/test_drawing_spec_lineage.py::TestProducerRatchet` 登记
-`dxf_lineage.py`；`docs/audit/capability_matrix.{md,json}` + `repository_snapshot.json`
+`dxf_lineage.py`；输入键的适用域另由 `test_signature_covers_every_declared_input` 钉（每个输入单独变都要翻签名，全同必须稳定）；`docs/audit/capability_matrix.{md,json}` + `repository_snapshot.json`
 由 `scripts/capability_matrix.py --pin-commit <tag SHA>` 重生成。
 顺带清掉登记里一处上一轮拼接残留：「血缘边的生产者今天有两个」被写了两遍。
 
@@ -108,6 +126,7 @@ PYTHONPATH=src:scripts .venv/bin/python -m pytest tests/test_drawing_dxf_lineage
   tests/test_drawing_spec_lineage.py tests/test_truth_rework_cli.py -q
 .venv/bin/python /tmp/s46/battery.py          # 电池（8 条）
 .venv/bin/python /tmp/s46/bytes_probe.py      # DXF 字节漂移实测
+.venv/bin/python /tmp/s46/sig_gap.py          # 换模型是否复用同一条记录（修前后各跑一遍）
 .venv/bin/ruff check src tests
 ```
 

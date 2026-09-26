@@ -214,7 +214,7 @@ def cmd_drawing(args):
     if db_arg:
         import hashlib
 
-        from aipd_os.cad.dxf_lineage import record_dxf_lineage
+        from aipd_os.cad.dxf_lineage import model_input_digest, record_dxf_lineage
         from aipd_os.product_truth.store import ProductTruthStore
 
         db = Path(db_arg)
@@ -227,9 +227,13 @@ def cmd_drawing(args):
             lineage = record_dxf_lineage(
                 store, dxf_path=out,
                 spec_path=Path(spec_arg) if spec_arg else None,
+                model=model_input_digest(step=args.step, native=args.native),
                 part=args.part, revision=args.revision,
                 views=[v.strip() for v in args.views.split(",") if v.strip()],
                 scale=args.scale, sheet=args.sheet,
+                material=args.material,
+                sections=list(getattr(args, "section", None) or ()),
+                details=list(getattr(args, "detail", None) or ()),
                 dxf_sha256=hashlib.sha256(out.read_bytes()).hexdigest(),
                 tenant_id=args.tenant, project_id=args.project)
         except Exception as exc:      # noqa: BLE001 - 下面判未收口，不静默

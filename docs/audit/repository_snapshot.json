@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-26T17:11:02",
+  "generated_at": "2026-09-26T17:26:43",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -116,51 +116,51 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 640,
-    "hash_matches": 633,
+    "total_files": 642,
+    "hash_matches": 635,
     "hash_mismatch_count": 7,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "9eff487a805989c35e6326d08d43d5c6393a2324f1d52809ab84a316a22599d1",
-        "actual": "0b9df10c5b94c9a047bb9c5a5113955095b40665f2e7af686e0845c527bc93bf"
+        "expected": "0b9df10c5b94c9a047bb9c5a5113955095b40665f2e7af686e0845c527bc93bf",
+        "actual": "04b5ab1f3d77478dc297fbc02f6661b31b0ba389f6197524aa175780f3d37448"
       },
       {
         "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "f9062f65a6d8114d049e76cbbf869a266db1e188dabde36d907db0529cf666c6",
-        "actual": "2f0c945b85d2d0ab2d99fc01464f3d9f257ee9a23c33d581804162bd2e39ff88"
+        "expected": "2f0c945b85d2d0ab2d99fc01464f3d9f257ee9a23c33d581804162bd2e39ff88",
+        "actual": "7b9d8c2fac9265528125719d7a5c6b71f353ccb14d8dd78bface7b70f7e8262a"
       },
       {
         "path": "docs/architecture/truth_architecture.md",
         "reason": "hash_mismatch",
-        "expected": "93e55332e47543f5dca19cbed0104f4fb4c1c1471d3db81025591f0519fc7057",
-        "actual": "1d90cdbd1b1ce8afea0a5b8dfdc8db9eccb96de39005aaf1c8459dc7e0afc015"
+        "expected": "1d90cdbd1b1ce8afea0a5b8dfdc8db9eccb96de39005aaf1c8459dc7e0afc015",
+        "actual": "ecacbfe52de891bada9efebebf0a2a9bb90a861193a75c0c3fc025377889e12d"
+      },
+      {
+        "path": "src/aipd_os/cad/dxf_lineage.py",
+        "reason": "hash_mismatch",
+        "expected": "d7620b73547d54ef71548026efe6f29c25f1f9b641cb7aaeaa9d8d7187b211a4",
+        "actual": "930c24c96eacb90c07cdeb36154395a071caf6e9acb3db136fb611aba4d5f2cf"
       },
       {
         "path": "src/aipd_os/cli/commands_drawing.py",
         "reason": "hash_mismatch",
-        "expected": "4b963bc19560cab14110915af4e55b3a9a70d4a644586b1002ca8fb5e0832e65",
-        "actual": "719b12eb06c8b858ce0e32ecd274de71ba5a72d4c9be8a351a33634fd70d0efe"
-      },
-      {
-        "path": "src/aipd_os/cli/main.py",
-        "reason": "hash_mismatch",
-        "expected": "661774b192e1128e4de93b2ffe4b6af5b1530d2caadaae995784809a551f81b0",
-        "actual": "eb3327a2855fdaca40a4cab334fb0564b3ac7ba4e51ece70dba11356bceebb40"
+        "expected": "719b12eb06c8b858ce0e32ecd274de71ba5a72d4c9be8a351a33634fd70d0efe",
+        "actual": "5cbb34dbd245acefa0230ab6607bc034f43d5a6fc261727725b887ac9f58c9d8"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "ce9b99f400e083c1f4d5ecf383270b329d1a70e0e01e08cc890af88372812b9a",
-        "actual": "b5a6dc439b24a3b8eb8ef9ac748ad479cc6ed75b0ff1f512575de310ededf735"
+        "expected": "b5a6dc439b24a3b8eb8ef9ac748ad479cc6ed75b0ff1f512575de310ededf735",
+        "actual": "1ab237a1c97fa7da134dbb516a29eb5c11daadb924e89445aabba7d786bb9e2d"
       },
       {
-        "path": "tests/test_drawing_spec_lineage.py",
+        "path": "tests/test_drawing_dxf_lineage.py",
         "reason": "hash_mismatch",
-        "expected": "5179d8624d7a4e69e3723b4c97f9cf778310f823240ce6a0a014f7ff477d2211",
-        "actual": "9090bf842de1daed48919fbe598b3e189058c8d88d6827d493db0aaab7e5d961"
+        "expected": "d1dd745d0d35fce08f09c2273e80dd31d26ea401323ae8620962f4ced82299b5",
+        "actual": "c343f233d9ed90b36a5e24abca9d51123c900795ea15370cce2da9e97b43f579"
       }
     ]
   },
@@ -168,16 +168,11 @@
     " M CHANGELOG.md",
     " M README.md",
     " M docs/architecture/truth_architecture.md",
-    " M docs/audit/capability_matrix.json",
-    " M docs/audit/capability_matrix.md",
-    " M docs/audit/repository_snapshot.json",
+    " M docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md",
+    " M src/aipd_os/cad/dxf_lineage.py",
     " M src/aipd_os/cli/commands_drawing.py",
-    " M src/aipd_os/cli/main.py",
     " M src/aipd_os/registry_data.py",
-    " M tests/test_drawing_spec_lineage.py",
-    "?? docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md",
-    "?? src/aipd_os/cad/dxf_lineage.py",
-    "?? tests/test_drawing_dxf_lineage.py",
+    " M tests/test_drawing_dxf_lineage.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

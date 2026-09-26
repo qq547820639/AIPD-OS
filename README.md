@@ -205,7 +205,7 @@ aipd drawing generate --native bracket.py --out out/bracket.dxf --part bracket -
 #     基准解析不到、特征不存在或类型不认识即判未收口（4），不画半截框。
 aipd drawing generate --out out/bracket.dxf --part bracket --views TOP --spec tolerances.json --db state.db --project P
 #   ↑ 带 --db 时出图后登记「声明 → 图纸」血缘（`src/aipd_os/cad/dxf_lineage.py`）：
-#     制品身份按**输入签名**（声明内容哈希 + part/revision/views/scale/sheet），不按 DXF 字节
+#     制品身份按**输入签名**（模型摘要 + 声明内容哈希 + 全部出图参数：part/revision/views/scale/sheet/material/剖切/放大），不按 DXF 字节
 #     ——同输入重跑命中同一条记录，换声明才另起新版并把同路径旧版标 superseded。
 #     于是 `aipd truth propagate` 的第三跳到得了：改一条 CTQ ⇒ 声明标 stale ⇒ 这张图也 stale。
 #     没给 --db 是明说的跳过（图照出、返回 0）；血缘写不进去判未收口（4）且 `--json` 的 ok 同向。
