@@ -75,6 +75,35 @@ issues kinds:   ['no_drawings', 'bom_db_missing']
 
 ## 七、终读数
 
-- 全量：待本轮收尾（预期 2308 passed / 3 skipped，collected 2311）
-- `production_release_gate --release-ready --tag v5.6.0`：待填
-- `audit_repo --strict`：待填
+收尾链：`d9eae00`（代码 + 清单重锚 637→638）→ 全量 → `d2a2dbf`（绑证据 + 报告入库）→ 门禁。
+
+- **全量**：**2308 passed / 3 skipped / 0 failed**，440.86s，跑在 `d9eae00` 的
+  `git worktree` 干净签出里（`PYTHONPATH` 指向该签出的 `src`，`AIPD_SOURCE_COMMIT` = tag SHA）。
+  报告 sha256 `e00df22d2b8a2dbb…`，已入库并绑进 `PROVENANCE.test_report`
+  （passed 2308 / failed 0 / total 2311）。
+- 连带面复算（`-k "release or gate or golden or capabilit or registry or truth or evidence"`）
+  一度 **4 failed**：3 条是 `capability_matrix.*` 工件在 registry 语法坏掉那一次没能重生成，
+  1 条是 `test_release_manifest_hashes_match_disk` 等本轮重锚。两者都不是行为变更——
+  **CTQ 判据收紧的实际波及面为 0**（金项目与全部常驻夹具里的 CTQ 都是 active），
+  重生成矩阵后该选面 607 passed / 0 failed。
+- **`production_release_gate --release-ready --tag v5.6.0`**：**8/8 PASS，rc=0**。
+- **`audit_repo --strict`**：rc=1，唯一一条 ✗ 是按设计保留的 tag 锚点项
+  （`manifest=a66040520139… vs HEAD=d2a2dbf2c344…`），两份清单 `hash_mismatch_count` 均为 0。
+- **文档引用普查（开发树，写本节时测）**：148 份文档 / 3595 处引用，
+  `resolved` 2878 / `missing` 136 / `multi` 429 / `external` 81 / `elided` 61 /
+  `line_beyond_eof` 10（Σ == 分母 ✓），**现状面 0 条**、历史面 123 条。
+  绝对数是开发树读数，且本节写完还会再漂一次（第 41 片 §二 的漂移规则），
+  所以被钉住的只有"现状面 0"这一格。
+
+## 八、过程事实（不进 CHANGELOG 的那类）
+
+1. 往 `registry_data.py` 那行超长 dict 字面量里追加中文散文时带了半角双引号
+   （`status="active"`、`doc["ctq"]`、`"缩水必须可见"`），字符串被就地截断成**语法错**。
+   第一信号不是"引号错了"，而是 `-k` 选面里 **9 条无关用例红**——我差点把它读成
+   "CTQ 判据收紧的波及面"。第二次修（只改前两处）仍漏了第三处，而且我第一次的
+   就地替换把句子咬成了重复括号。教训落成两条：
+   ① 改完被大量用例 import 的数据文件，**先 `python -c "import …"` 或 ruff，再跑测试**；
+   ② 追加进代码字面量的中文文案一律用「」，且修文案要用"定位 marker + 断言命中 1 次 +
+   整段重写"的脚本，不要在残缺片段上做多次局部补丁式 Edit。
+2. `tests/test_release_evidence_ctq_status.py` 初稿也在断言消息里写了半角引号，
+   被同一条纪律挡住（改成「」）——写测试时先想"这段文本会不会经过解析器"。
