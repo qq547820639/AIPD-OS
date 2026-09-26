@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 11931,
-      "sha256": "3922c5722d02b32edf2f3900a7b8de97e563081c1acfc16ad104aa98b1926674"
+      "size": 14453,
+      "sha256": "7855ff3ead03da965cf3886f6229ff1d4f9fc7360a1429e9250a0a806fe74014"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
