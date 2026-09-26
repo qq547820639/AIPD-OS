@@ -457,9 +457,11 @@ SCENARIOS: list[Scenario] = [
              sc_drift_scan_us_per_record, tolerance_pct=60.0,
              note="200 条有效制品版本记录的漂移扫描，摊到每条的 µs"),
     Scenario("drift_scan_scaling_ratio", "comparative", "ratio",
-             sc_drift_scan_scaling_ratio, require_ratio=1.5,
-             note="记录 20→200 时单条成本的比值（干净库实测 0.79~0.90、逐轮最高 1.10；"
-                  "注入 N+1 实测 2.94 ⇒ 阈值取 1.5 落在两侧中间）"),
+             sc_drift_scan_scaling_ratio, require_ratio=2.0,
+             note="记录 20→200 时单条成本的比值。两侧实测：干净库 median 0.76~0.90"
+                  "（重启后负载下有单轮冲到 6.44 的离群，但判决取 median）；"
+                  "注入 N+1 median 2.94 / 3.23 ⇒ 阈值 2.0 落在两侧中间，"
+                  "两侧各有一条电池臂钉着（D4 开火 / D4b 不开火）"),
 ]
 
 
