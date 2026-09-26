@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T02:36:43",
+  "generated_at": "2026-09-27T03:50:14",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 203
+      "tests": 204
     }
   },
   "tags": [
@@ -117,20 +117,68 @@
     "version": "5.6.0",
     "parsed": true,
     "total_files": 659,
-    "hash_matches": 657,
-    "hash_mismatch_count": 2,
+    "hash_matches": 649,
+    "hash_mismatch_count": 10,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "41f8536493966b10c9bbb6b254a4c53880e5b7407b60d0e2c4f089ea76a93f26",
-        "actual": "b5286a863727b143f3bfdc92e1d4531cfaaa8d09e72ee8aff8fd802b36fd69fa"
+        "expected": "b5286a863727b143f3bfdc92e1d4531cfaaa8d09e72ee8aff8fd802b36fd69fa",
+        "actual": "a8fb060af6fea955e4578d52db38731687150447622b8d1e46b3dadce3e66422"
       },
       {
-        "path": "tests/test_cad_spec_from_truth.py",
+        "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "39a2bc5123c19a3685ea4775c9f85f1f4661f65ad7da634be7084dd5f7ef4dfa",
-        "actual": "513d44a06b80d5b831d57e60ee47d5e7bb55877d4b729975dec0e86dd7463014"
+        "expected": "fbd4de3ecd9ae907aadecb4ea564b33610eebfbb798bc7f28642485df72e3a41",
+        "actual": "6e203662f0c1b7da9b18e5f029d87b94119ea1524b6c9fcf8f63f0747bcf1b07"
+      },
+      {
+        "path": "docs/architecture/truth_architecture.md",
+        "reason": "hash_mismatch",
+        "expected": "0137d5aec78fce306302d6cd027d935bd11a8976778d071bb88e1f084502593f",
+        "actual": "8aa3cc7d30c56768b2bc174ffcc4359573a8b0d0cdb950a3b9f3c61b830817ca"
+      },
+      {
+        "path": "scripts/state_perf_gate.py",
+        "reason": "hash_mismatch",
+        "expected": "5d45c881548643d5d08f066a93a9a8ae5b7c2a13958732bb50a43ca6c92355ee",
+        "actual": "2b43071a8fa9c40db8d5a215b69455c17af17fb9ce6995e9eb63e5cf97215c94"
+      },
+      {
+        "path": "src/aipd_os/cli/commands_drift.py",
+        "reason": "hash_mismatch",
+        "expected": "c97f333afd9d1de3f10a422b8c3fe695cf2b639a6434e6d1e0fe9f98dfcb7f08",
+        "actual": "9519cc73fe7c3d0438d6a1d38fc3f85bb74f2148fc25e2ce57b42c86cd9c4bc2"
+      },
+      {
+        "path": "src/aipd_os/product_truth/drift.py",
+        "reason": "hash_mismatch",
+        "expected": "160500bd83e724adb8d6b64d7d8131476776d9443c652be12776f0fa4d3f3675",
+        "actual": "26ac8ec9ea8392694b0e245d7e48b327daa102fa589eb47db6818ef05e36584d"
+      },
+      {
+        "path": "src/aipd_os/registry_data.py",
+        "reason": "hash_mismatch",
+        "expected": "4af17623db320252c459c0e93102fb546bab8064b3d09263807a568e7a2b1c58",
+        "actual": "d2a62944444429c84684ee44a41c9dd23dd53f42aa9c9268417e7daf92ef4350"
+      },
+      {
+        "path": "tests/test_state_perf_gates.py",
+        "reason": "hash_mismatch",
+        "expected": "f32fbe50dae699941164523a204c3409a5d23495437e44a6044ba54c9e4e437b",
+        "actual": "be4cfe3ac191b34a7444935ca5a357f5d05a0ba602f86eb98ffb059b91f25ff5"
+      },
+      {
+        "path": "tests/test_truth_ctq_add.py",
+        "reason": "hash_mismatch",
+        "expected": "914c7db7739ab0c9212ac5b1d97d2b5992694c734b97b5d72e147fcbaa37a222",
+        "actual": "dcfdebfdbf27d308328f903843bee00853cceba18833d19c3409cabeec5f7660"
+      },
+      {
+        "path": "tests/test_truth_drift.py",
+        "reason": "hash_mismatch",
+        "expected": "38a55a09e435e9a7c783e5e14b3fbc47151f3bd9b361e531e63b6334d3a31587",
+        "actual": "9da50e964c1f24e5b36169738bc6f145b6d381c35c63607c1095fa8395e70184"
       }
     ]
   },
