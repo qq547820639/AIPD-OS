@@ -81,6 +81,17 @@ trust_level / effective_at / expires_at / version / status / metadata），
 `test_hand_edited_spec_sweeps_to_the_ctq_and_rework_writes_the_file_back`）：
 人手工改生成出来的声明文件 ⇒ sweep 落刀到那条 CTQ ⇒ `truth rework` 按 CTQ 把人改的文件覆盖回去。
 这条语义不是 sweep 造的（propagate + 第 45 片执行器一直如此），但"一条命令就会走到"是本轮开始的。
+
+**扫描成本现状（2026-09-26 量，F-DRIFT-4 第 55 片）**：`truth drift` / `truth sweep` 是这条链上
+唯一会随交付物数量长期变大的读路径，所以它的成本形状被钉成两层。进程内实测：
+5/20/100/300 条有效制品版本记录，`scan_drift` 走的 **SQL 条数恒为 1**（一条 SELECT 取全集），
+声明文件**每条恰好读一次**，单条成本约 95~131 µs（`scripts/state_perf_gate.py` 的两个
+`drift_scan_*` 场景，趋势棘轮）；两条线性度都由常驻用例钉死
+（`tests/test_state_perf_gates.py::TestDriftScanScaling`，与机器无关，抓 N+1 与重复读）。
+CLI 侧另测三档（4/13/33 条记录 × 两遍 × 7 次重复）：一趟命令墙钟 1.31~1.42 s，
+**几乎全是解释器启动与 import**，扫描本体约 10 ms 量级、落在两遍读数的散布之内
+（同机负载 5~11 时首趟还读到 4.2 s 的冷启动）。结论是不给产品面加 per-resolver 计时字段：
+被启动开销淹没的读数没有读者，而"该不该担心扫描成本"这件事现在由门禁而不是由感觉回答。
 另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片）：血缘边有**三个**生产者——
 `product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）、
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的

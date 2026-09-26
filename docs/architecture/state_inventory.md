@@ -46,10 +46,10 @@
 
 | 资产 | 位置 | 作用 |
 |------|------|------|
-| 性能量具 | `scripts/state_perf_gate.py` | 12 个场景 × N 轮，min/median/mean/max/stdev + 相对阈值棘轮门禁 |
+| 性能量具 | `scripts/state_perf_gate.py` | 场景数由 `SCENARIOS` 现算（本表不抄数字，抄一次就漂一次）× N 轮，min/median/mean/max/stdev + 相对阈值棘轮门禁；第 55 片起含 `drift_scan_us_per_record`（200 条制品记录的漂移扫描单条 µs）与 `drift_scan_scaling_ratio`（记录 20→200 时单条成本的轮内比值） |
 | 基线 | `docs/audit/state_perf_baseline.json` | 提交进仓的 median 基线；`--update-baseline` 采集（`data/` 是 gitignore 的运行时目录，不能放契约） |
 | 报告 | `docs/audit/state_perf_report.json` | 最近一次完整测量输出 |
-| 确定性门禁 | `tests/test_state_perf_gates.py` | EXPLAIN QUERY PLAN、连接复用计数、claim 互斥、语句数线性度 |
+| 确定性门禁 | `tests/test_state_perf_gates.py` | EXPLAIN QUERY PLAN、连接复用计数、claim 互斥、语句数线性度、漂移扫描的 SQL 条数与声明文件读取次数线性度 |
 
 Schema 版本：HEAD = **v22**。真值是 `state/migrations/definitions.py` 的
 `MIGRATIONS` 末项（不是本表）；`tests/test_migration.py` 与

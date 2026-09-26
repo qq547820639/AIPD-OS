@@ -951,6 +951,26 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.16 F-DRIFT-4 第 55 片：漂移扫描的成本形状被量出来并钉成门禁——「要不要担心它」不再靠感觉**：
+  `truth drift` / `truth sweep` 是这条链上唯一随交付物数量长期变大的读路径（第 51~54 片只钉了
+  判决形状，没钉成本形状）。外部检索真做了并**改变了落地位置**：亲开 dbt《Run results JSON file》
+  （同页字段原文 `elapsed_time`「Total invocation time in seconds.」/ 每节点 `execution_time`
+  「Total time spent executing this node」/ `timing`「Array that breaks down execution time into
+  steps」，配 `started_at`/`completed_at`）与 Bazel《JSON trace profile》
+  （每条记录带 `ph`/`ts`/`dur`（微秒）/`name`/`pid`/`tid`，读法是按 `dur` 找慢项，且极短的连续
+  事件会被自动合并、需 `--noslim_profile` 关掉）。六维对比后择一：**借语义、不引依赖**——
+  取它「整次 + 每条」两层读数的形状，接进仓内既有量具 `scripts/state_perf_gate.py`
+  （该文件已明确对齐 pytest-benchmark 思路、零新增依赖；`opentelemetry` 本机未装，
+  给一条 CLI 命令挂 span 没有读者）。**不加** per-resolver 计时字段：实测一趟 CLI 墙钟
+  1.31~1.42 s 里扫描本体只有约 10 ms（33 条 × ~95 µs/条），其余是解释器启动与 import，
+  被淹没的读数只会造出一格没人读的字段。实测：进程内 5/20/100/300 条记录时 `scan_drift`
+  走的 **SQL 条数恒为 1**、声明文件**每条恰好读一次**；趋势档 `drift_scan_us_per_record`
+  median 95.2 µs（另一趟 131.2 µs，跨趟 38% ⇒ 绝对档容差放到 60% 才不假红）、
+  `drift_scan_scaling_ratio` median 0.79~0.90（min 0.40 / max 1.10），要求 ≤3。
+  硬门禁放在常驻用例（与机器无关）：`tests/test_state_perf_gates.py::TestDriftScanScaling`
+  三条——干净库前提（四态必须全 `in_sync`，否则成本读数量的不是那条分支）、
+  语句数不随记录增长（实测边际 0.00，阈值 0.1）、每条记录只读一次声明文件。
+  取证见 `docs/audit/DRIFT_SCAN_COST_F-DRIFT-4_2026-09-26.md`。
 - **v5.15 F-SWEEP 第 54 片：新公开命令 `aipd truth sweep`——发现漂移之后，落刀不再靠人抄 record id**：
   第 51/52/53 三片的 §六 都留着同一句：扫描能点名、返工收得了口，但**要不要 propagate 仍由人决定**。
   选型本轮真做了外部检索并**改变了形状**：亲开 OpenTofu《cli/commands/plan》

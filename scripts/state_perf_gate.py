@@ -457,8 +457,9 @@ SCENARIOS: list[Scenario] = [
              sc_drift_scan_us_per_record, tolerance_pct=60.0,
              note="200 条有效制品版本记录的漂移扫描，摊到每条的 µs"),
     Scenario("drift_scan_scaling_ratio", "comparative", "ratio",
-             sc_drift_scan_scaling_ratio, require_ratio=3.0,
-             note="记录 20→200 时单条成本的比值（>3 即出现按记录放大的贵操作）"),
+             sc_drift_scan_scaling_ratio, require_ratio=1.5,
+             note="记录 20→200 时单条成本的比值（干净库实测 0.79~0.90、逐轮最高 1.10；"
+                  "注入 N+1 实测 2.94 ⇒ 阈值取 1.5 落在两侧中间）"),
 ]
 
 
