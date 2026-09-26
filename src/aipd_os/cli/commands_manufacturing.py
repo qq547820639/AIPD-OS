@@ -184,15 +184,13 @@ def _bom_add(args: Any) -> int:
     return 0
 
 
-def calc_current_cost(db_path: str, project_id: str | None, *, tooling_fee: Any,
-                      target_quantity: Any, amortize_over: Any, nre: Any,
-                      margin_pct: Any) -> dict[str, Any]:
-    """按给定口径读**项目当前那份 BOM** 算一次成本；不写任何事实。
+def read_current_bom(db_path: str, project_id: str | None) -> dict[str, Any]:
+    """读**项目当前那份 BOM** 的 header 与行；不写任何东西。
 
-    `cmd_cost` 与返工执行器共用这一个入口：两边各留一份「怎么取行、怎么装 CostInputs」
-    迟早会与实现漂移（第 47 片对出图走的是同一条纪律）。
+    `calc_current_cost` 与两条返工执行器（成本、BOM 版本）共用这一份「怎么取行」：
+    各留一份迟早会与实现漂移（第 47/52 片同一条纪律）。
     """
-    from aipd_os.bom import BomStore, CostInputs, compute_bom_cost
+    from aipd_os.bom import BomStore
     from aipd_os.state.db import AIPDStateDB
 
     db = AIPDStateDB(db_path)
@@ -201,12 +199,49 @@ def calc_current_cost(db_path: str, project_id: str | None, *, tooling_fee: Any,
     header = store.get_bom(DEFAULT_TENANT, pid)
     lines = store.list_lines(DEFAULT_TENANT, pid,
                              bom_id=header.bom_id if header else None)
+    return {"project": pid, "header": header, "lines": lines}
+
+
+def calc_current_cost(db_path: str, project_id: str | None, *, tooling_fee: Any,
+                      target_quantity: Any, amortize_over: Any, nre: Any,
+                      margin_pct: Any) -> dict[str, Any]:
+    """按给定口径读**项目当前那份 BOM** 算一次成本；不写任何事实。
+
+    `cmd_cost` 与返工执行器共用这一个入口：两边各留一份「怎么取行、怎么装 CostInputs」
+    迟早会与实现漂移（第 47 片对出图走的是同一条纪律）。
+    """
+    from aipd_os.bom import CostInputs, compute_bom_cost
+
+    out = read_current_bom(db_path, project_id)
+    header, lines = out["header"], out["lines"]
     inputs = CostInputs(
         tooling_fee=float(tooling_fee), target_quantity=int(target_quantity),
         amortize_over=int(amortize_over) if amortize_over else None,
         nre=float(nre), margin_pct=float(margin_pct))
-    return {"project": pid, "header": header, "lines": lines,
+    return {"project": out["project"], "header": header, "lines": lines,
             "inputs": inputs, "cost": compute_bom_cost(lines, inputs)}
+
+
+def bom_from_record(meta: dict[str, Any], *, db_path: str,
+                    project_id: str | None) -> dict[str, Any]:
+    """BOM 版本记录的重算器：只读当前 BOM 表，回报判定与投影所需字段。
+
+    刻意**不**走 `cost calc --truth-lineage`：那条路会另起新版本并把旧版标 superseded，
+    而引擎要的是「演进这一条」（同 `recalc_cost_from_record` 的理由）。
+    """
+    from aipd_os.bom.cost_lineage import bom_input_signature
+
+    out = read_current_bom(db_path, project_id)
+    header, lines = out["header"], out["lines"]
+    if header is None:
+        raise ValueError(f"项目 {out['project']} 当前没有 BOM 头，"
+                         "重建不出这条记录描述的那张 BOM")
+    return {"bom_id": str(header.bom_id),
+            "bom_signature": bom_input_signature(
+                bom_id=header.bom_id, revision=str(header.revision),
+                version_no=header.version_no, lines=lines),
+            "revision": str(header.revision), "version_no": header.version_no,
+            "line_count": len(lines), "header": header, "lines": lines}
 
 
 def recalc_cost_from_record(meta: dict[str, Any], *, db_path: str,

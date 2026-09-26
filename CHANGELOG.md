@@ -951,6 +951,42 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.14 F-REWORK-BOM 第 53 片：`artifact=bom` 第一次有返工执行器——发现之后收得了口**：
+  第 51/52 片的 §六 都留了同一格：`truth rework` 只认三类制品
+  （`commands_truth.py:175` 的 `supported` 实测是 `[drawing_spec, drawing_dxf, bom_cost]`），
+  而 `artifact=bom` 的任务在烧 attempts 之前被点名拒 ⇒ 扫描能点名、没人收口。
+  新增 `src/aipd_os/bom/bom_rework.py`（形状照第 49 片：就地演进这一条记录、
+  绝不走生产面的写版本路径，因为引擎 `run_rework` 是对**同一条** `bump_version`）：
+  结果分档 `unchanged / recomputed`，拒绝面
+  `missing_record / unsupported_artifact / missing_inputs / recalc_failed /
+  recalc_incomplete_result / bom_moved / empty_bom / recalc_disagrees` 各一种子，
+  每种子都跑「快照逐字段不变」。
+  两处**只留一份映射**的重构是本片的核心动作，不是整洁性修饰：
+  ① 正文与 metadata 抽成 `cost_lineage.bom_version_fields()`，生产者与执行器共用
+  （两边各写一遍时「签名相同、正文不同」谁都不会红——第 52 片 R2 抓的是同一族病灶）；
+  ② 「怎么取当前 BOM 行」抽成 `commands_manufacturing.read_current_bom()`，
+  `calc_current_cost` 与新的 `bom_from_record()` 都调它。
+  与成本那一支的真实差别写进判据：**当前 BOM 没有行 ⇒ 不算收口**
+  （版本记录描述的是「那张 BOM 的那些行」，拿 0 行演进等于把「行被删光了」写成正常返工）。
+  三条钉「缺省保证」的常驻用例同批改判（宿主从 `bom` 换成 `quote_batch`，否则拒绝路径失去主人）：
+  `test_truth_rework_cli.py` 两条 + `test_dxf_rework.py::..._supports_four_artifacts_and_still_refuses_quote_batch`；
+  镜像面 `README.md` 与 `registry_data.py` 的 `product_truth.impact_propagation`
+  （`current_limitation` 五处措辞 + `unit_test` 名单）。
+  常驻用例 **2398 → 2413**（新文件 `tests/test_bom_rework.py` 15 条，含一条绝对断言
+  「演进后的键 == 按当前 BOM 行现算的签名」与一条把第 52 片发现接到本片收口的 `in_sync`）。
+  真库读数（第 50/52 片那份 `D50` 副本，带齐 `state.db`+`bom.db`）：
+  `truth rework --all-pending` 把 `RW-001/T-001` 收掉——
+  `executor.outcome=recomputed`、`engine.status=succeeded`、`new_version=2`、
+  `4f9f3f81cf… → ac62f93e56…`，**同一条记录被就地演进、没有新增版本记录**，退码 0。
+  撤改电池 `/tmp/s53/battery.py` 7 臂：**杀 5 / 活 0 / 注入无效 2**——
+  BR2/BR3 在电池那一跑读到 `rc=2 / 收集期 1 error`，同一条注入单独复现是
+  `rc=1` 且只有被告那一条红，故按「量具相关、归因未定」记，不折成杀掉也不折成判据没主
+  （两份日志留在 `/tmp/s53/battery4.log`、`/tmp/s53/br2iso.log`）。
+  本轮**不做新的外部检索**：执行器形状四条判据在第 45/47/49 片已定，本片落到第四类制品。
+  仍未接上：`quote_batch` 无执行器（刻意）；扫描 ≠ 触发（漂移清单→建返工任务靠人）；
+  BOM/成本反向影响 CTQ 没有路；开发库存量分布未量。
+  证据见 `docs/audit/BOM_VERSION_REWORK_F-REWORK-BOM_2026-09-26.md`。
+
 - **v5.13 F-DRIFT-2 第 52 片：报价批次的漂移键改由「库里的事实」投影，出图漂移补真库端到端断言**：
   第 51 片 §六 自记两格，本轮各自读到证据再落笔。
   ① `quote_batch` 到底能不能接 resolver——**读到的代码事实否掉了最自然的那条路**：

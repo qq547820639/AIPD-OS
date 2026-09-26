@@ -455,8 +455,9 @@ aipd truth drift --db state.db --project P                                   # �
 #     （`quote_applied_rows`，按记录里的 quote_ids 读当前报价事实）——键不靠报价文件重算：
 #     quote_id/version 是 apply 时按库内版本号现铸的，文件里没有；只有事实态会变，
 #     所以「当初那批报价被后来的报价转 R」这格只有这么算才看得见（第 52 片）。
-#   ↑ 执行器今天认三类制品：drawing_spec（重算声明）、drawing_dxf（第 47 片：重跑出图）、
-#     bom_cost（第 49 片：按记录里的 BOM 与口径五项重跑核算）。不认识的（如 artifact=bom）
+#   ↑ 执行器今天认四类制品：drawing_spec（重算声明）、drawing_dxf（第 47 片：重跑出图）、
+#     bom（第 53 片：按当前 BOM 行演进这一条版本记录，正文与 metadata 走生产面那份投影）、
+#     bom_cost（第 49 片：按记录里的 BOM 与口径五项重跑核算）。不认识的（如 artifact=quote_batch）
 #     在烧 attempts 之前逐条点名拒，记录不会被打成 blocked。
 aipd industrialize --db state.db                      # 登记报价/供应商/实验数据
 aipd validate --manifest manifest.json --target C5    # 验证是否达到目标成熟度

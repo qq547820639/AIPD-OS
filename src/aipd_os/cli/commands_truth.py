@@ -148,7 +148,8 @@ def cmd_truth_rework(args):
     三条不退让的判据：
 
     - **不认识就不烧 attempts**：`--all-pending` 会扫到别的制品类型。今天有执行器的是
-      `drawing_spec`（重算声明）与 `drawing_dxf`（重跑出图），其余（BOM/成本）必须在
+      `drawing_spec`（重算声明）、`drawing_dxf`（重跑出图）、`bom`（第 53 片：按当前 BOM
+      行演进这一条版本记录）与 `bom_cost`（第 49 片：重跑核算），其余（`quote_batch`）必须在
       调用引擎**之前**被点名拒掉——拿一次注定失败的尝试去烧配额，等于让引擎替我们把
       "这格还没接执行器"伪装成"返工失败了三次"。
     - **成功只由执行器说**：`rework_fn` 的返回值来自重算结论（unchanged / rewrote /
@@ -163,16 +164,18 @@ def cmd_truth_rework(args):
     if err is not None:
         return err
 
+    from aipd_os.bom.bom_rework import SUPPORTED_ARTIFACT as BOM_ARTIFACT
+    from aipd_os.bom.bom_rework import rework_bom_artifact
     from aipd_os.bom.cost_rework import SUPPORTED_ARTIFACT as COST_ARTIFACT
     from aipd_os.bom.cost_rework import rework_cost_artifact
     from aipd_os.cad.dxf_rework import SUPPORTED_ARTIFACT as DXF_ARTIFACT
     from aipd_os.cad.dxf_rework import rework_dxf_artifact
     from aipd_os.cad.spec_rework import SUPPORTED_ARTIFACT, artifact_kind, rework_artifact
     from aipd_os.cli.commands_drawing import render_dxf_from_record
-    from aipd_os.cli.commands_manufacturing import recalc_cost_from_record
+    from aipd_os.cli.commands_manufacturing import bom_from_record, recalc_cost_from_record
     from aipd_os.product_truth.propagation import PropagationEngine, ReworkExhaustedError
 
-    supported = [SUPPORTED_ARTIFACT, DXF_ARTIFACT, COST_ARTIFACT]
+    supported = [SUPPORTED_ARTIFACT, DXF_ARTIFACT, BOM_ARTIFACT, COST_ARTIFACT]
     rework_db_path = str(args.db)
     rework_project = (getattr(args, "project", None)
                       or getattr(store, "project_id", None))
@@ -181,6 +184,11 @@ def cmd_truth_rework(args):
         if kind == DXF_ARTIFACT:
             return rework_dxf_artifact(store, truth_id,
                                        render=render_dxf_from_record)
+        if kind == BOM_ARTIFACT:
+            return rework_bom_artifact(
+                store, truth_id,
+                recalc=lambda meta: bom_from_record(
+                    meta, db_path=rework_db_path, project_id=rework_project))
         if kind == COST_ARTIFACT:
             return rework_cost_artifact(
                 store, truth_id,

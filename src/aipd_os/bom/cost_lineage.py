@@ -73,6 +73,23 @@ def version_content(*, artifact: str, bom_id: str, signature: str,
     return f"{artifact} {bom_id} inputs={signature[:16]} {detail}"
 
 
+def bom_version_fields(header: Any, lines: list[Any], *,
+                       signature: str) -> dict[str, Any]:
+    """BOM 版本记录的「正文 detail + metadata」由这一份投影给出（第 53 片抽出）。
+
+    生产者（`cost calc --truth-lineage`）与返工执行器（`bom/bom_rework.py`）必须共用：
+    两边各写一遍映射时，返工后的记录会与生产者的形状悄悄分叉，而**签名相同、正文不同**
+    这种读数两边都看不见（第 52 片同一格教训）。
+    """
+    fact_keys = _line_facts(lines)
+    return {"detail": f"lines={len(fact_keys)} rev={header.revision}",
+            "metadata": {"artifact": ARTIFACT_BOM, "bom_id": header.bom_id,
+                         "name": header.name, "revision": str(header.revision),
+                         "bom_status": str(header.status),
+                         "version_no": header.version_no,
+                         "input_signature": signature, "lines": fact_keys}}
+
+
 def _find_current(store: Any, *, artifact: str, bom_id: str) -> str | None:
     """同 artifact + 同 bom_id 的**有效**（active/stale）记录号；没有就 None。"""
     for rec in store.query(record_type="artifact_version"):
@@ -124,14 +141,10 @@ def record_cost_lineage(store: Any, *, header: Any, lines: list[Any],
                                  revision=str(header.revision),
                                  version_no=header.version_no, lines=lines)
     fact_keys = _line_facts(lines)
+    bom_fields = bom_version_fields(header, lines, signature=bom_sig)
     bom_out = _add_or_reuse(
         store, artifact=ARTIFACT_BOM, bom_id=header.bom_id, signature=bom_sig,
-        detail=f"lines={len(fact_keys)} rev={header.revision}",
-        metadata={"artifact": ARTIFACT_BOM, "bom_id": header.bom_id,
-                  "name": header.name, "revision": str(header.revision),
-                  "bom_status": str(header.status),
-                  "version_no": header.version_no,
-                  "input_signature": bom_sig, "lines": fact_keys},
+        detail=bom_fields["detail"], metadata=bom_fields["metadata"],
         tenant_id=tenant_id, project_id=project_id)
     cost_sig = cost_input_signature(bom_signature=bom_sig,
                                     tooling_fee=inputs.tooling_fee,

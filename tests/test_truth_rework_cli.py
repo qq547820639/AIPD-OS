@@ -179,13 +179,18 @@ def test_gap_in_recomputation_is_a_failure_not_a_success(env):
 
 
 def test_unknown_artifact_is_refused_before_consuming_attempts(env):
-    """执行器不认识的制品：不烧配额、不假装失败三次，但要逐条点名。"""
+    """执行器不认识的制品：不烧配额、不假装失败三次，但要逐条点名。
+
+    宿主制品第 53 片换过一次：`artifact=bom` 已有执行器（再拿它当「不认识」的样本，
+    读到的是 `missing_inputs` ⇒ 烧 attempts、打成 blocked），
+    现在没有执行器的那一格是 `quote_batch`。
+    """
     tmp_path, db = env
     store = _store(db)
     other = store.add(TruthRecord(
-        record_type="artifact_version", content="BOM v1 sha256=deadbeef",
+        record_type="artifact_version", content="报价批次 v1 sha256=deadbeef",
         trust_level="high",
-        metadata={"artifact": "bom", "path": str(tmp_path / "bom.json")}),
+        metadata={"artifact": "quote_batch", "path": str(tmp_path / "quote.json")}),
         tenant_id=T, project_id=P)
     from aipd_os.product_truth.propagation import PropagationEngine
 
@@ -210,7 +215,7 @@ def test_refusals_are_visible_in_the_json_payload(env, capsys):
     store = _store(db)
     other = store.add(TruthRecord(
         record_type="fact", content="某条 fact 记录",
-        trust_level="high", metadata={"artifact": "bom"}),
+        trust_level="high", metadata={"artifact": "quote_batch"}),
         tenant_id=T, project_id=P)
     from aipd_os.product_truth.propagation import PropagationEngine
 
@@ -223,7 +228,7 @@ def test_refusals_are_visible_in_the_json_payload(env, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["ok"] is False
     assert [r["task_id"] for r in payload["refused"]] == [task_id]
-    assert payload["refused"][0]["artifact_kind"] == "bom"
+    assert payload["refused"][0]["artifact_kind"] == "quote_batch"
     assert payload["results"] == []
 
 

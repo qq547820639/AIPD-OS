@@ -11,7 +11,8 @@
    上游声明文件读不到、模型源文件读不到、`render` 抛异常、`render` 回的哈希与磁盘不符
    ——一律 `ok=False` 交回引擎的有界退避，绝不记成"返工完成"；
 4. **文件被删/被手改要补回来**（`file_restored`）；
-5. 命令面：`truth rework` 现在认两种制品，其余（BOM/成本）仍在烧 attempts 之前点名拒掉。
+5. 命令面：`truth rework` 认四类制品（图纸两类 + `bom` 第 53 片 + `bom_cost` 第 49 片），
+   其余（`quote_batch`）仍在烧 attempts 之前点名拒掉。
 
 失败类判据用注入的假 `render`（不碰 CAD 内核，秒级）；两条真跑的用例走真出图，
 证明默认 `render` 接的确实是 `aipd drawing generate` 那条生产路径而不是另一份实现。
@@ -443,27 +444,28 @@ class TestRenderArgumentSurface:
         assert not missing, f"`drawing generate` 新增旗子而返工还原器没跟上：{sorted(missing)}"
 
 
-def test_rework_cli_supports_three_artifacts_and_still_refuses_bom_version(
+def test_rework_cli_supports_four_artifacts_and_still_refuses_quote_batch(
         env, capsys):
-    """`supported_artifacts` 由第 47 片的两个变三个（第 49 片接上 bom_cost）。
+    """`supported_artifacts` 由第 49 片的三个变四个（第 53 片接上 `artifact=bom`）。
 
-    这条断言原本钉的是「BOM 那一支**没有**执行器」——第 49 片把成本结论接上之后，
-    该改判的是**清单**，不是那条 BOM 版本记录：`artifact=bom` 到今天仍没有执行器，
-    所以后半段（点名拒、不烧 attempts、记录不许被打成 blocked）原样保留。
+    这条断言原本钉的是「BOM 那一支**没有**执行器」——第 53 片把它接上了，
+    于是「没有执行器 ⇒ 点名拒、不烧 attempts、记录不许被打成 blocked」这半段换了宿主：
+    `artifact=quote_batch` 到今天仍没有执行器（报价批次的返工是「重新 apply 一次」，
+    那是生产面的动作，不该由返工执行器代做）。
     """
     tmp_path, db = env
     store = _store(db)
-    bom = store.add(TruthRecord(record_type="artifact_version", content="bom row",
-                                trust_level="high",
-                                metadata={"artifact": "bom"}),
-                   tenant_id=T, project_id=P)
+    quote = store.add(TruthRecord(record_type="artifact_version",
+                                  content="quote row", trust_level="high",
+                                  metadata={"artifact": "quote_batch"}),
+                     tenant_id=T, project_id=P)
     engine = PropagationEngine(store)
-    engine._create_rework(bom, "验证命令面制品清单", 3)  # noqa: SLF001
+    engine._create_rework(quote, "验证命令面制品清单", 3)  # noqa: SLF001
     task_id = engine.list_tasks(status="pending")[0].to_dict()["task_id"]
     assert main(["truth", "rework", "--db", str(db), "--project", P,
                  "--task", task_id, "--json"]) == 4
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
-    assert sorted(out["supported_artifacts"]) == ["bom_cost", "drawing_dxf",
+    assert sorted(out["supported_artifacts"]) == ["bom", "bom_cost", "drawing_dxf",
                                                   "drawing_spec"]
-    assert out["refused"][0]["artifact_kind"] == "bom"
-    assert store.get(bom).status == "active", "拒掉不是失败，不该把记录打成 blocked"
+    assert out["refused"][0]["artifact_kind"] == "quote_batch"
+    assert store.get(quote).status == "active", "拒掉不是失败，不该把记录打成 blocked"
