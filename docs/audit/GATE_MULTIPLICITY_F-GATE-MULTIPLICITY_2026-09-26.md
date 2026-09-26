@@ -67,18 +67,50 @@
   它上面那条 `test_the_whole_chain_needs_no_hand_written_spec_to_pass_the_gate`（单条 CTQ 全绿）
   就是这条的对照，两条一起才说明"红是因为少了一条覆盖，不是因为链跑不通"。
 
-@@TESTS@@
+跑完（含三份夹具补齐后）受影响面的读数：`tests/test_production_release_gate.py` 27 passed
+（原 24 条 + 新 3 条）、`tests/test_cad_spec_from_truth.py` 32 passed（+1）、
+`tests/test_cli.py` 与 `tests/test_production_release_gate_file_lists.py` 全绿
+（首轮那 3 条红按 §六 归因为夹具形状，不是行为回归）。
 
-## 八、变异电池（`/tmp/s58/battery.py`，worktree `/tmp/s58w`）
+## 八、变异电池（`/tmp/s58/battery.py`，worktree `/tmp/s58w @ 63f7a9d`）
 
 五条臂：B1 退回按名字集合求差、B2 缺记录号不 fail-closed、B3 覆盖集合改回读特征名、
-B4 理由不点名记录号、B5 生产者不再写 `ctq_record_id`（写侧撤镜像）。
+B4 理由不点名记录号、B5 生产者不再写 `ctq_record_id`（写侧撤镜像）。对照臂（未注入）rc=0。
 
-@@BATTERY@@
+| 臂 | 注入 | 原告 | 结果 |
+| --- | --- | --- | --- |
+| B1 | `uncovered` 改回「名字集合差」 | `test_two_ctq_records_sharing_a_feature_label_are_not_masked` | KILLED |
+| B2 | `if '' in labeled:` 短路掉 | `test_ctq_entry_without_record_id_fails_closed` | KILLED |
+| B3 | `covered` 改读 `g["feature"]` | `test_every_record_covered_is_green_even_with_shared_labels` | KILLED |
+| B4 | 理由里去掉未覆盖清单 | 链上真数据那条 `..._is_not_masked` | KILLED |
+| B5 | 生产者 `gdt.append` 不再写 `ctq_record_id` | `test_the_whole_chain_needs_no_hand_written_spec_to_pass_the_gate` | KILLED |
 
-@@FINAL@@
+**5 KILLED / 0 SURVIVED / 0 注入无效**，跑完 `git status --short` 为空（原文 `/tmp/s58/battery3.log`）。
 
-## 九、遗留
+第一轮 B3 报「注入无效（一条没红）」，成因与第 57 片 A5 **不同**：不是原告到不了那一行，
+而是原告在**新旧两种判据下同判红**——`test_gdt_not_covering_ctq_fails` 的夹具里 `gdt` 的名字
+（`slot_b`）与记录号（`T-009`）都不匹配 `ctq`，两种判据都判"未覆盖"，分不开对错。
+换成名字与记录号**真正 disagree** 的那条（两条同名记录各自都有凭据 ⇒ 新判据绿、旧判据红）
+才分辨得开。教训：**变异臂的原告必须能区分新旧两个判据；"会红"本身不是充分条件**
+（第 57 片那条只说了"要红"与"到不到得了那行"，这一例补上第三种成因）。
+
+## 九、终读数
+
+commit 链：`63829c6` 判据 + 三份夹具 + 4 条用例 + 三处镜像 → `63f7a9d` 重锚矩阵与清单 →
+`50f158e` 绑定 attestation → 本节。
+
+| 量具 | 读数 |
+| --- | --- |
+| 收集数 | `2468 collected`（第 57 片末 2464 → +4） |
+| attestation（干净 worktree @ `63f7a9d`） | `2465 passed, 3 skipped, 97 warnings in 194.42s`，rc=0 |
+| 验签器 | `/tmp/s58/verify_report.py` **20 条前提全 `[OK]`**；`--self-test` 对第 57 片已提交报告读「拒签成立：7 条前提不成立」 |
+| 发布门 | `production_release_gate.py --release-ready --tag v5.6.0` 8/8 `"passed": true`、rc=0 |
+| 存量审计 | `audit_repo.py --strict` rc=1、恰好 1 条 ✗（`Provenance source commit mismatch`，按设计保留） |
+| 发布清单 | 660 个文件（与第 57 片末同数——本轮只改内容、不加被哈希的文件） |
+| lint / 类型 | `ruff check src tests state_service` `All checks passed!`；`mypy src` 245 文件 0 错；`ruff check scripts/production_release_gate.py` 改动前后同为 9 条（`scripts/` 不在 CI 口径，本轮未新增） |
+| 电池 | 5/5 KILLED、0 存活、0 注入无效 |
+
+## 十、遗留
 
 - `doc["ctq"]` 为**空**（一条要求都没声明）时走 `else` 分支判"不可核"，本轮没有为这条路径
   新增正面用例——它现在只被"数据缺失即失败"这一族间接覆盖。**未实测的就是未证实的**。
