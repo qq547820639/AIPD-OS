@@ -116,4 +116,18 @@ rc=4
 
 ## 七、终读数
 
-（收尾复算后填）
+| 项 | 读数 |
+|---|---|
+| 全量（干净 worktree @f6106c5，第二趟） | **2388 passed / 3 skipped / 0 failed**，194.59s，rc=0 |
+| 报告 | `docs/audit/pytest-report-v5.6.0.json`，sha256 `61cb9037c56666cc…`，`source_commit` = tag SHA |
+| 清单 | **653** 个文件（`§五点五` 记了上一条提交信息把它写成 652 的错）；两份清单的 `source_commit` 都保持在 tag SHA |
+| 第一趟全量（@cabc7c2） | **1 failed / 2390**，前置校验 `VERIFY_RC=1` ⇒ **拒绝绑定、没有 mint 任何证据**；失败面见 §五点五 |
+| `production_release_gate --release-ready --tag v5.6.0` | **8/8 passed，rc=0，`release_ready: true`** |
+| `audit_repo --strict` | rc=1，**恰好 1 条 ✗**：`Provenance source commit mismatch`（按设计） |
+| 撤改电池 | **7 杀 / 0 活 / 0 注入无效**（对照臂 rc=0，见 §五） |
+| 常驻新用例 | `tests/test_truth_drift.py` **13 条**全绿；改判加强的 `test_truth_propagate_cli` 那条也绿 |
+| lint（CI 口径 `ruff check src tests`） | All checks passed |
+
+绑定用的 11 条前置校验本轮**真的开过一次火**：第一趟它报
+`exitcode=1`、`出现坏 outcome：{'failed': 1}`、`passed+skipped=2390 != collected=2391`
+三条同时红并拒绝绑定——这把尺子不是恒绿的，它的红与绿都在同一棵树上量过。
