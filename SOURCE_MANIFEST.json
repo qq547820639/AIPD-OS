@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-26T14:08:03+00:00",
+  "generated_at": "2026-09-26T14:58:59+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 220003,
-      "sha256": "1aee9d3d2b299dd845479291cec0aacb3877b2cb484043c33a0321bf5ab20e9e"
+      "size": 223314,
+      "sha256": "9e271547b02e8ba610dfb409a4ba8cace743f675ab0344b65446bf6c1ca184aa"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 48377,
-      "sha256": "53e5908edf2080bcc250b1ffca9d62fc3c6b7aeebbd16ea74c88a3bcf7022e72"
+      "size": 48507,
+      "sha256": "7e1774bdbadd04318f8c21a6547660ef4d81fec947b9b69931168fd7c44d0465"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -956,14 +956,19 @@
       "sha256": "8559da031c8aa85ec9890bf220a7a9dd5cbad15eb2fc448d05236f6ec7ed1c0f"
     },
     {
+      "path": "src/aipd_os/bom/bom_rework.py",
+      "size": 8172,
+      "sha256": "65a78c9d62b5317ad7a0c659f49fa52a6cf5d063e17d5afa60321b816b41fd7e"
+    },
+    {
       "path": "src/aipd_os/bom/cost.py",
       "size": 4796,
       "sha256": "bb74159eaaf923e39a282f4e0b72a0d0f957744e773eb3615362619e34090fae"
     },
     {
       "path": "src/aipd_os/bom/cost_lineage.py",
-      "size": 9221,
-      "sha256": "a1dcca0e635d2ad4fc3be335c291d6e983df7b63c9c304c42f1b4a222179381a"
+      "size": 9972,
+      "sha256": "2c510e79023b9883b6a8e859ff7ad2e5f7b4f70dafa37363324325fcd01f2630"
     },
     {
       "path": "src/aipd_os/bom/cost_rework.py",
@@ -1137,8 +1142,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_manufacturing.py",
-      "size": 15779,
-      "sha256": "879b22b6bd0d6d06bbb03f17511729de9495eb1b1ec162a541527da1249e1a9d"
+      "size": 17464,
+      "sha256": "b5b67fb868dbc4969d2c9789c1f64b61026a6f42b3479dff78b74ba563d7c00e"
     },
     {
       "path": "src/aipd_os/cli/commands_outbox.py",
@@ -1162,8 +1167,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_truth.py",
-      "size": 13442,
-      "sha256": "336fecc1785e1e48154e6fd4f0c1caf4313a9bde48d7287e76fb9040c0b4623c"
+      "size": 13967,
+      "sha256": "341ce720251ea417735ed1de4f5d79ecccdcc159e960a63d5b4de8328bf9baea"
     },
     {
       "path": "src/aipd_os/cli/commands_validation.py",
@@ -1672,8 +1677,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 95937,
-      "sha256": "a3afe8ac417c392c2328d2f332568586a41789dcdb94dba0f8c0d09757e10676"
+      "size": 96645,
+      "sha256": "3ff992712cd111768876c35a092b560386f0a3962463b57a0aeae101cd1ce519"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2336,6 +2341,11 @@
       "sha256": "e2ce466a85c723813163d9ce7fa1615d91a6588f10550c3b3e56e346fca4640a"
     },
     {
+      "path": "tests/test_bom_rework.py",
+      "size": 16171,
+      "sha256": "b8d31112b81ddd8b40a85fcd826f2fec87e4d975f39300356a3d878fe3539178"
+    },
+    {
       "path": "tests/test_c6_coverage.py",
       "size": 5509,
       "sha256": "dc11a5a28874c4270705024a9d9b54b7e003a09a34fed4f1cb02fc1eb736f0c0"
@@ -2532,8 +2542,8 @@
     },
     {
       "path": "tests/test_cost_rework.py",
-      "size": 17592,
-      "sha256": "17a90e4fb32e16c91bf49bfe6cbb543d6d0e8e5693723e681c5ae58c384b4a55"
+      "size": 17599,
+      "sha256": "4441b5f2c01f5a36fbf44058d41d6234b7ff77e022c1069ff52da41b0706ae01"
     },
     {
       "path": "tests/test_credibility.py",
@@ -2587,8 +2597,8 @@
     },
     {
       "path": "tests/test_dxf_rework.py",
-      "size": 22507,
-      "sha256": "86b4440d44b6425792de5eb812c6b8c8e2fd67bba4d0339240b3b2c64ca6d739"
+      "size": 22687,
+      "sha256": "aa930b31a1adcd6b4d6a31f73d958970e9cda86ce853277b227dd38a2665934c"
     },
     {
       "path": "tests/test_encryption_key_policy.py",
@@ -3237,8 +3247,8 @@
     },
     {
       "path": "tests/test_truth_rework_cli.py",
-      "size": 10513,
-      "sha256": "0ed1a2fea5d3e99bd3493fcef64bed42ea9d15b1ccb0e47022e829f5a5b12934"
+      "size": 10800,
+      "sha256": "d8974c60de9fcdcaa1aecff768076adffae1c7ba6db23e1fa24d7bcdd0cfb1b5"
     },
     {
       "path": "tests/test_validation_domain.py",
