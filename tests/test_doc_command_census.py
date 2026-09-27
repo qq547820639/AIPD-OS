@@ -118,6 +118,9 @@ def test_real_repo_clean_and_all_three_judging_faces_live() -> None:
     assert c["report_only_mentions"] + c["report_record_mentions"] == \
         c["report_total_mentions"], c
     assert set(c["report_record_dirs"]) == {"CHANGELOG.md", "docs/audit", "tests", ".trae"}, c
+    # 第 82 片新格的真仓库读数：今天必须 0（不是"看不见"——同一把尺在历史原件上开火，
+    # 见 test_broken_continuation_fires_on_the_real_historical_shape）
+    assert c["continuation_breaks"] == 0, c
 
 
 def test_injected_phantoms_fire_on_all_three_judging_faces(tmp_path: Path,
@@ -152,6 +155,58 @@ def test_compliant_side_does_not_fire(tmp_path: Path, tmp_scope) -> None:
     # 去重真生效：三档判红面覆盖的行不许再被只报面数一遍（prose 数 2 处，全被判红面吃过）
     assert c["prose_mentions"] == 2, c
     assert c["report_only_mentions"] == 0, c
+
+
+def _readme_at(rev: str) -> list[str]:
+    """从 git 取某一版 README 的逐行原文：夹具的必开火形状不许我手写。"""
+    proc = subprocess.run(["git", "-C", str(ROOT), "show", f"{rev}:README.md"],
+                          capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr[-300:]
+    return proc.stdout.splitlines()
+
+
+def _pair(lines: list[str], want_next_command: bool) -> tuple[str, str]:
+    """找"一行以 `\\` 收尾"的第一处，返回它和下一行；`want_next_command` 决定要哪种下一行。"""
+    for i in range(len(lines) - 1):
+        if not lines[i].rstrip().endswith("\\"):
+            continue
+        nxt = lines[i + 1].strip().lstrip("#").strip()
+        if nxt.startswith("aipd ") is want_next_command:
+            return lines[i], lines[i + 1]
+    raise AssertionError(f"语料里没有『下一行是另一条命令={want_next_command}』的续行形状")
+
+
+def test_broken_continuation_fires_on_the_real_historical_shape(tmp_path: Path,
+                                                               tmp_scope) -> None:
+    """判据的原告是**真的坏过那一次**：`3784a0a` 之前 README 里的断续行。
+
+    第 81 片把 README 那三条示例拆开了（补丁脚本把上一行的 `\\` 直接接上另一条命令，
+    照抄的人只会跑到半条命令）。夹具从那次提交的 README 里取**逐字**相邻两行，
+    所以判据的必开火形状与本仓文档的后续改写无关——本仓 README 再怎么改，历史那份不会变。
+    """
+    old = _readme_at("3784a0a")
+    broken, following = _pair(old, want_next_command=True)
+    assert broken.rstrip().endswith("\\") and following.strip().startswith("aipd ")
+    write_tree(tmp_path, GOOD_README + broken + "\n" + following + "\n", GOOD_REGISTRY,
+               code='GOOD = "先跑 aipd ctq add 再看"\n')
+    rep = census.audit(tmp_path)
+    assert fields(rep, broken.rstrip()) == {"续行"}, rep["violations"]
+    assert rep["corpus"]["continuation_breaks"] == 1, rep["corpus"]
+    # 下一行本身是真命令 ⇒ 它不许被名字档判成"权威面上没有"
+    assert "aipd drawing assembly-steps" not in {v["written"] for v in rep["violations"]}, \
+        rep["violations"]
+    assert census.main(["--repo", str(tmp_path)]) == 4
+
+
+def test_legal_continuation_does_not_fire(tmp_path: Path, tmp_scope) -> None:
+    """合规侧：续行的下一行是**旗子**时不开火（今天 README 就是这个形状）。"""
+    cur = _readme_at("HEAD")
+    cont, tail = _pair(cur, want_next_command=False)
+    assert not tail.strip().startswith("aipd "), tail
+    write_tree(tmp_path, GOOD_README + cont + "\n" + tail + "\n", GOOD_REGISTRY)
+    rep = census.audit(tmp_path)
+    assert rep["corpus"]["continuation_breaks"] == 0, rep["corpus"]
+    assert rep["violations"] == [], rep["violations"]
 
 
 def test_group_with_missing_subcommand_is_not_degraded_to_ok(tmp_path: Path,

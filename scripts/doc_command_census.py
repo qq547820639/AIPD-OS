@@ -19,6 +19,12 @@
   ① 登记表 `run_command` 字段里以 `aipd` 开头的每一段（AST 读常量，不靠 ±N 行窗口）；
   ② 文档里**行首**形如 `aipd …` 的可执行速查行（README / SKILL / QUICKSTART /
      `docs/architecture` / `docs/contracts` / `references`）；
+     ②b 同一份速查语料上的**断续行**（第 82 片）：一行以 `\\` 收尾、下一行却另起一条
+     `aipd` 命令 ⇒ 照抄只会跑到半条命令。这一格判的是"能不能照抄"，不是"名字存不存在"，
+     所以它不走 `record()` 的名字去重，直接进 `violations`（field 写「续行」）；
+     语料与 ② 同一份遍历（`quickref_corpus`），两档各走一遍迟早漂出两种"看得见"。
+     真仓库今天 **0** 处，而必开火夹具取自 `git show 3784a0a:README.md` 的逐字原件——
+     "0"与"看不见"的区别就在这条夹具上（见 `tests/test_doc_command_census.py`）。
   ③ 生产代码（`src/`、`scripts/`、`state_service/`）里的提及——代码写出来就是要跑的，
      第 60 片实测到 `ctq.py` 把一条不存在的命令烙进了**每条**产出记录，比文档里的错更贵。
      这一档带一条**否定例外**：同行有"没有/不存在/尚未…"时按只报处理，
@@ -232,29 +238,67 @@ def registry_run_commands(root: Path) -> tuple[list[tuple[str, int, str]], list[
     return out, problems
 
 
-def quickref_lines(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
-    """行首（可复制执行）的速查行：去掉 `#`/`-`/反引号/空白后以 `aipd ` 开头。"""
-    out: list[tuple[str, int, str]] = []
-    problems: list[str] = []
+def quickref_corpus(root: Path) -> tuple[list[tuple[str, list[str]]], list[str]]:
+    """速查语料的**同一份遍历**（相对路径 + 行）。判红面 ② 与"续行断裂"那一格共用。
+
+    分两次各走一遍是本项目记过的老坑：两次的排除档一漂，同一份文件就出现"一档看得见、
+    一档看不见"的读数。所以新格一律从这里取语料，不许自己 rglob。
+    """
     targets = [root / rel for rel in QUICKREF_FILES if (root / rel).is_file()]
     for rel in QUICKREF_DIRS:
         base = root / rel
         if base.is_dir():
             targets += [f for f in sorted(base.rglob("*.md")) if f.is_file()]
-    if not targets:
-        problems.append("quickref_corpus_empty: 一个速查文件都没读到")
+    out: list[tuple[str, list[str]]] = []
+    problems: list[str] = []
     for path in targets:
         try:
-            lines = path.read_text(encoding="utf-8").splitlines()
+            out.append((str(path.relative_to(root)),
+                        path.read_text(encoding="utf-8").splitlines()))
         except (OSError, UnicodeDecodeError) as exc:
             problems.append(f"unreadable: {path.relative_to(root)}: {exc}")
-            continue
+    if not out:
+        problems.append("quickref_corpus_empty: 一个速查文件都没读到")
+    return out, problems
+
+
+def _quick_body(line: str) -> str:
+    """速查行的"正文形状"：去掉行首注释符、列表符、反引号与缩进。"""
+    body = line.strip().lstrip("#").strip()
+    while body.startswith(("-", "*", "`")):
+        body = body[1:].lstrip(" \t")
+    return body
+
+
+def continuation_breaks(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
+    """判红面 ②b（第 82 片）：以 `\\` 收尾的那一行，下一行却是**另一条** `aipd` 命令。
+
+    照抄的人只会跑到半条命令——第 81 片修掉的真实事故就是这个形状：
+    `git show 3784a0a:README.md:271` 以 `\\` 收尾，`:272` 是另一条
+    `aipd drawing assembly-steps …`，于是"上一行的续行反斜杠直接接了另一条命令"。
+    这一格**不判**"以 `\\` 收尾"本身（合法续行的下一行是旗子或参数，
+    今天 README:274→275 的 `  --db state.db --bom BOM-1` 就是合规侧），
+    只判"下一行以 `aipd ` 开头"。语料与判红面 ② 同一份遍历。
+    """
+    files, problems = quickref_corpus(root)
+    out: list[tuple[str, int, str]] = []
+    for rel, lines in files:
+        for idx in range(len(lines) - 1):
+            if (lines[idx].rstrip().endswith("\\")
+                    and _quick_body(lines[idx + 1]).startswith("aipd ")):
+                out.append((rel, idx + 1, lines[idx].rstrip()))
+    return out, problems
+
+
+def quickref_lines(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
+    """行首（可复制执行）的速查行：去掉 `#`/`-`/反引号/空白后以 `aipd ` 开头。"""
+    files, problems = quickref_corpus(root)
+    out: list[tuple[str, int, str]] = []
+    for rel, lines in files:
         for no, line in enumerate(lines, 1):
-            body = line.strip().lstrip("#").strip()
-            while body.startswith(("-", "*", "`")):
-                body = body[1:].lstrip(" \t")
+            body = _quick_body(line)
             if body.startswith("aipd ") or body.startswith("aipd\t"):
-                out.append((str(path.relative_to(root)), no, body))
+                out.append((rel, no, body))
     return out, problems
 
 
@@ -324,9 +368,10 @@ def audit(root: Path) -> dict[str, Any]:
 
     reg, p1 = registry_run_commands(root)
     quick, p2 = quickref_lines(root)
+    cont, p5 = continuation_breaks(root)
     code, code_neg, p4 = production_code_mentions(root)
     prose, p3 = prose_mentions(root)
-    problems += p1 + p2 + p3 + p4
+    problems += p1 + p2 + p3 + p4 + p5
 
     def record(kind: str, rel: str, no: int, seg: str) -> None:
         for first, second in _mentions(seg):
@@ -344,6 +389,10 @@ def audit(root: Path) -> dict[str, Any]:
         record("quickref", rel, no, seg)
     for rel, no, seg in code:
         record("code", rel, no, seg)
+    # 续行断裂不经过 record()：它判的不是"某个名字存不存在"，而是"这一行能不能照抄"，
+    # 所以直接进 violations，也别指望它给只报面去重（那按名字去重，形状不同）。
+    for rel, no, seg in cont:
+        judged.append(("续行", rel, no, seg))
 
     # 只报面 = 全量扫描里**未被按名判过**的提及，再补上"代码里带否定标记"那批中
     # 尚未被全量扫描覆盖的（今天 `CODE_DIRS ⊂ REPORT_ONLY_DIRS` 都含 src，五条全已被覆盖 ⇒
@@ -394,6 +443,7 @@ def audit(root: Path) -> dict[str, Any]:
         "authority_paths": len(paths),
         "authority_groups": len(groups),
         "corpus": {"run_command_segments": len(reg), "quickref_lines": len(quick),
+                   "continuation_breaks": len(cont),
                    "code_mentions": len(code), "code_negated": len(code_neg),
                    "prose_mentions": len(prose),
                    "report_only_mentions": len(live_rows),
@@ -418,13 +468,19 @@ def render(rep: dict[str, Any]) -> str:
     c = rep["corpus"]
     lines.append(f"判红面语料：run_command {c['run_command_segments']} 段 / "
                  f"速查行 {c['quickref_lines']} 行 / 生产代码 {c['code_mentions']} 处"
-                 f"（另有 {c['code_negated']} 处同行带否定标记 ⇒ 只报）")
+                 f"（另有 {c['code_negated']} 处同行带否定标记 ⇒ 只报）"
+                 f"；速查语料里断掉的续行 {c['continuation_breaks']} 处")
     lines.append(f"只报面（live，可行动）{c['report_only_mentions']} 处；"
                  f"记录性引述（只数不列名）{c['report_record_mentions']} 处 "
                  f"{c['report_record_dirs']}；全量扫描 {c['prose_mentions']} 处，"
                  f"live + record = {c['report_only_mentions'] + c['report_record_mentions']} 处"
                  "（与减去三档判红面覆盖后的行数同构）")
     for v in rep["violations"]:
+        if v["field"] == "续行":
+            lines.append(f"  ✗ {v['field']} {v['doc']}:{v['line']} 以 `\\` 收尾，而下一行是"
+                         "另一条 `aipd` 命令 ⇒ 照抄只会跑到半条命令（要么补完旗子，要么"
+                         "拆成两条各自完整的示例）")
+            continue
         lines.append(f"  ✗ {v['field']} {v['doc']}:{v['line']} 写了 `{v['written']}`"
                      " ⇒ 权威面上没有这条命令")
     for p in rep["problems"]:
@@ -472,9 +528,18 @@ def _self_test(tmp: Path) -> int:
                  f"`{ghost_bad}`/`{ghost_prose}` 这类组内假子命令与顶层不存在的 "
                  f"`zzzghostcmd zzz` 都不算）")
 
+    # 必开火夹具：下面两行是 `git show 3784a0a:README.md` 的 271/272 **逐字**搬来的
+    # （第 81 片真实的插坏形状，不是手写相似片段）——一行以 `\` 收尾、下一行另起一条命令。
+    broken = ("aipd drawing assembly-steps --manifest assembly.json --out assembly.md "
+              "--part ASSY-1 \\")
+    legal_tail = "  --db state.db --bom BOM-1"      # 当前 README:275 的合规形状
     (tmp / "README.md").write_text(
         "# t\naipd ctq add --db x --project p\naipd " + ghost_bad + " --db x\n"
-        "运行 `aipd usage` 列出全部命令\naipd <命令> --help\naipd-os 与 aipd_os 不算\n",
+        "运行 `aipd usage` 列出全部命令\naipd <命令> --help\naipd-os 与 aipd_os 不算\n"
+        + broken + "\n"
+        "aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part ASSY-1 "
+        "--pdf   # 顺带出 A4 图框矢量 PDF（中文可抽取）\\\n"
+        + legal_tail + "\n",
         encoding="utf-8")
     (tmp / "src/aipd_os").mkdir(parents=True, exist_ok=True)
     (tmp / "src/aipd_os/registry_data.py").write_text(
@@ -506,9 +571,13 @@ def _self_test(tmp: Path) -> int:
          globals_["CODE_DIRS"]) = saved
     bad = {(v["written"], v["field"]) for v in rep["violations"]}
     expect = {(f"aipd {ghost_bad}", "quickref"), (f"aipd {ghost_bad}", "run_command"),
-              (f"aipd {ghost_bad}", "code")}
+              (f"aipd {ghost_bad}", "code"), (broken, "续行")}
     assert bad == expect, (sorted(bad), sorted(expect))
-    _mark(marks, "三档判红面各抓到一条注入的假命令（速查行、run_command 段、生产代码）")
+    _mark(marks, "三档判红面各抓到一条注入的假命令（速查行、run_command 段、生产代码），"
+                 "断掉的续行那格抓到历史原件那一行")
+    assert rep["corpus"]["continuation_breaks"] == 1, rep["corpus"]
+    assert legal_tail.strip() not in {v["written"] for v in rep["violations"]}
+    _mark(marks, "合规侧同批存在：下一行是旗子（`  --db … --bom …`）的合法续行不开火")
     assert not any("aipd ctq add" in b or "aipd usage" in b or "aipd drawing spec" in b
                    for b, _f in bad), bad
     _mark(marks, "真命令与占位符/`aipd-os` 一律不开火（反证：合规侧同批存在）")
@@ -521,7 +590,7 @@ def _self_test(tmp: Path) -> int:
     _mark(marks, f"只报面记名而不判红（正文里合法写出的「没有 aipd {ghost_prose}」）")
     assert rep["ok"] is False, rep
     assert rep["corpus"]["run_command_segments"] == 3, rep["corpus"]
-    assert rep["corpus"]["quickref_lines"] == 3, rep["corpus"]
+    assert rep["corpus"]["quickref_lines"] == 5, rep["corpus"]
     assert rep["corpus"]["code_mentions"] == 2, rep["corpus"]
     _mark(marks, "分母自报且与语料一致（run_command 3 段、速查行 3 行、代码 2 处）")
     assert main(["--repo", str(tmp)]) == 4
