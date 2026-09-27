@@ -2382,8 +2382,8 @@
     },
     {
       "path": "tests/test_bom_rework.py",
-      "size": 16171,
-      "sha256": "b8d31112b81ddd8b40a85fcd826f2fec87e4d975f39300356a3d878fe3539178"
+      "size": 16339,
+      "sha256": "e7ee24ce65db416da927bfbb9342ed7921632f2301e5011d2c55c7578b279c22"
     },
     {
       "path": "tests/test_c6_coverage.py",
@@ -2647,8 +2647,8 @@
     },
     {
       "path": "tests/test_dxf_rework.py",
-      "size": 22794,
-      "sha256": "62c867b0168f5426c9b8382bd4f4179e0163bbfac0bb35c6b06fd17763c6f4e1"
+      "size": 22800,
+      "sha256": "2c09369f9691a944b4d751fe19e1d63fcc4a5c33194c301c2b42fe0afc0dea7e"
     },
     {
       "path": "tests/test_encryption_key_policy.py",
