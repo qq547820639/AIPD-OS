@@ -182,7 +182,7 @@ active 记录门口判 `ctq_missing_feature` 阻断、这里照样列出），�
 命令面镜像：契约 `cli/command_contract.py`（PUBLIC / 5.23）、README 速查行、SKILL 分组与
 "主线共 63 个"、registry 那一行、`tests/test_command_surface_census.py` 分母 72 → 73
 （数字一律现算，别抄这里）。钉子见 `tests/test_truth_ctq_list.py`（14 条：注册面 / 默认视图自报排除 / 投影同源 / `--json` 标签 / 空作用域 / 其他态按原样 / README 镜像 / 两层读失败 / 审计不写含反向对照 / 限值原样 / 计数守恒 / 口径注不说满 / 失败面不出成功件）。
-另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片；2026-09-27 第 66 片把计数改成现读）：血缘边有** 8 个**生产者（AST 现读，判据是 `scripts/absence_claim_census.py` 账本里的 PRODUCER-COUNT-ARCH 那一格；本节下面展开其中三处 —— gate / spec_lineage / dxf_lineage，另外五处见 cost_lineage、quote_lineage 与三处返工补边的执行器）——
+另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片；2026-09-27 第 66 片把计数改成现读）：血缘边有** 9 个**生产者（AST 现读，判据是 `scripts/absence_claim_census.py` 账本里的 PRODUCER-COUNT-ARCH 那一格；本节下面展开其中三处 —— gate / spec_lineage / dxf_lineage，另外六处见 cost_lineage、quote_lineage、supervisor/fact_lineage.py（第 70 片：执行证据 → 已批准的定义）与三处返工补边的执行器）——
 `product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）、
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的
 `ctq_ref` 写一条 `artifact_version` 记录，并给每条参与 CTQ 连一条 `affects` 边；

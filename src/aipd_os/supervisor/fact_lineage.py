@@ -6,7 +6,7 @@ r"""把一次执行的证据接进 `truth_lineage`（F-TRUTH-LINEAGE 第 70 片�
 
 上游怎么找（两条都要求身份**真实存在**，宁可报"连不上"也不猜）：
 
-1. `inputs["truth_refs"]`（显式声明，`aipd supervisor add-work --inputs-json` 就能给）：
+1. `inputs["truth_refs"]`（显式声明，走 `scripts/aipd_supervisor.py add-work --inputs-json`）：
    逐个回查 `product_truth` 记录，查不到的进 `unknown_refs` 并原样报出——
    静默丢掉一个错号等于让"声明过上游"这件事假绿。
 2. `inputs["idea_id"]`（idea 与 product 那一族调度器今天就在写这个键）：
