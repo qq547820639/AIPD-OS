@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-27T07:51:02+00:00",
+  "generated_at": "2026-09-27T07:57:08+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -1947,8 +1947,8 @@
     },
     {
       "path": "src/aipd_os/supervisor/fact_lineage.py",
-      "size": 6950,
-      "sha256": "299ab640c168e420770a3f99a0c9074b597357dba97d3f22378012f28acd617d"
+      "size": 6955,
+      "sha256": "f815581b8d997d505ee2e3984d0bbced0503fee2d02a0e17063887d6f298131c"
     },
     {
       "path": "src/aipd_os/supervisor/idea_capabilities.py",
