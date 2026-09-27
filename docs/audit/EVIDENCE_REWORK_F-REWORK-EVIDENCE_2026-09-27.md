@@ -44,7 +44,37 @@
   **保留**"quote_batch 仍逐条点名拒、不烧 attempts"那一半
 - 账本新增存在式 `EVIDENCE-REWORK-WIRED`（反证 = 执行器在生产面 0 处外部调用点）
 
-## 五、终局读数（占位）
+## 四之二、全量逮到的一处漏改（我的定点跑与电池都没覆盖它）
+
+第三处钉住"四类制品"的位置是 `tests/test_bom_rework.py:377`——它钉的是
+`assert "执行器今天认四类制品" in README.md`，即"README 与登记说的是同一份清单"。
+我改了登记表与 README（四→五），也改了另两个文件里钉**类别清单**的断言，
+却漏了这一处；而我的定点复算跑的是 `evidence_rework / absence / truth_propagate_cli /
+drawing_spec_lineage / supervisor_fact_writeback / architecture_contracts`，
+电池跑的是 `evidence_rework / dxf_rework / cost_rework`——**都不含 `test_bom_rework`**，
+所以直到干净检出的全量才红。
+
+两件事一起记：
+① "改口径要同批改所有钉住它的断言"这条，光靠 grep 关键字不够——
+   钉的方式可能是"某个短语在另一个文件里出现"，与被改的键不是同一个字面；
+   收口序列里的**全量**才是这条的兜底，定点跑与电池只是加速器，不能替代它。
+② 电池与定点跑的覆盖面要写清"没覆盖谁"，否则"7 臂全杀"会给人一种"改完都验过了"的错觉。
+   （本轮还把这条读法用在了自己写的读数脚本上：`terminal71.py` 只跑它列出的靶。）
+
+## 五、终局读数（由 `docs/audit/s71/terminal71.py` 从原件现跑生成，不手抄）
+
+- **签出那一跑**（`tmp/s71/final`，报告产出于提交 `4a61945`，主树当时 HEAD `a194aa7`）：`exitcode=0`、`collected=2587`、`passed=2584`、`skipped=3`、其余终态 `{'skipped': 3}`、用时 `256.1s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s71/final`、`source_commit=a66040520139`
+- **本片主角（真仓库终态）**：`rc=0`；语料：84 个能力，带否定词的句子 36 句；账本登记 13 条，未挂锚点 29 句（宽档，只报不判）；能力缺失句（窄档＝判据面）：16 句 = 登记 6 + 豁免 10 + **未处置 0**；判红 0 条：登记的 13 句「仍缺着」现在都还缺着
+- **`--self-test`**：`rc=0`，**23 条**合成读数全对上（含存在式登记、去处台账与 `table_ddl` 双向）
+- **常驻用例**：`pytest tests/test_evidence_rework.py tests/test_absence_claim_census.py -q` → `36 passed, 24 warnings in 16.94s`（rc=0）
+- **变异电池（入库副本现跑）**：`docs/audit/s71/battery71.py` → `rc=0`，合计 KILLED 7 / 其余 0
+- **两档分母现读**：宽档 36 句、窄档 16 句（差 20 句是谈判决/谈口径的假阳性）；登记表解析问题 `[]`；薄理由豁免 `[]`
+- **第 64 片那台收尾验签在本片树上**：`rc=0`；收尾验签（报告 ↔ 证据 ↔ 工作树）；读数：报告 2587 条 / 211 个文件，树 211 个文件 / 2501 个 def，终态 {'passed': 2584, 'skipped': 3}
+- **发布门禁**：`rc=0`、`"passed": true` 计 8 条、`release_ready` true
+- **本片新档的读数**：`external_callers` 对 `commit_approved` / `commit_snapshot` 判 HOLDS，正向对照 `record_dxf_lineage` 判 CONTRADICTED（同一函数换个名字就翻红 ⇒ 探针会开火；第一版这里用的是改口前的旧锚点，读出来是「账文脱钩」而不是「过期」，已更正）
+- **`audit_repo --strict`**：`rc=1`，恰 **1** 条 ✗（`✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=a1`）——设计内不修
+- **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag；被哈希文件数 `674`（本片**文件数不变**，只改内容）
+- **工作树**：`git status --porcelain` 输出 0 行
 
 ## 六、下一片入口
 
