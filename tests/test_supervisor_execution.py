@@ -6,7 +6,9 @@ import sqlite3
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT / "src"))
 
 from aipd_supervisor import Supervisor  # noqa: E402
 
@@ -89,3 +91,55 @@ def test_mark_stale_exact_dependency_match(tmp_path):
     stale = sup._mark_stale(w1)
     assert w2 in stale["stale"]
     assert w3 not in stale["stale"]
+
+
+def test_execution_suite_is_constructed_in_exactly_one_place():
+    """执行套件（registry → RunStore → router）在 `supervisor.py` 里只许有一处构造。
+
+    第 71 片为了接返工执行器把这三步抄了第二遍，第 72 片读回来时已经漂了两处
+    （日志器名、作用域来源）。这类"两处各写一遍"不会让任何现有用例变红，
+    所以用 AST 数构造点：多一处就红，且**少一处也红**（防止把共用口子删了还自绿）。
+    """
+    import ast
+
+    src = (ROOT / "src/aipd_os/supervisor/supervisor.py").read_text(encoding="utf-8")
+    tree = ast.parse(src)
+    routers = [n.lineno for n in ast.walk(tree)
+               if isinstance(n, ast.Call)
+               and ((isinstance(n.func, ast.Name) and n.func.id == "ExecutionRouter")
+                    or (isinstance(n.func, ast.Attribute)
+                        and n.func.attr == "ExecutionRouter"))]
+    registries = [n.lineno for n in ast.walk(tree)
+                  if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+                  and n.func.id == "build_registry"]
+    runs = [n.lineno for n in ast.walk(tree)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+            and n.func.attr == "run" and isinstance(n.func.value, ast.Name)
+            and n.func.value.id == "router"]
+    assert len(routers) == 1, f"ExecutionRouter 构造点应恰好一处：{routers}"
+    assert len(registries) == 1, f"build_registry 调用点应恰好一处：{registries}"
+    assert len(runs) == 1, f"router.run(...) 调用点应恰好一处（两处就有第二套 context）：{runs}"
+
+
+def test_rerun_uses_the_work_items_own_scope(tmp_path, monkeypatch):
+    """重跑一条别的项目的工作项 ⇒ run 记在项目自己的作用域，不是 Supervisor 构造参数那个。
+
+    这是第 72 片顺手改掉的作用域 bug 的反证：旧写法用 `self.project_id()`，
+    CLI 传进来的 project 与工作项不一致时，会把证据与 run 记到错的项目下。
+    """
+    monkeypatch.setenv("AIPD_OUTPUT_DIR", str(tmp_path))
+    sup_owner = _make_sup(tmp_path)                     # 项目 P1
+    wid = sup_owner.add_work(
+        "S2_product_definition", "doc", "t", "o",
+        capability_floor="doc.generate",
+        inputs={"title": "T", "sections": [{"heading": "H", "body": "b"}]})
+    sup_other = _make_sup_other_project(tmp_path)       # 构造参数指向别的项目
+    out = sup_other.rerun_for_rework(wid)
+    assert out is not None, "重跑应当成功"
+    assert out["record"].project_id == "P1", out["record"].project_id
+    assert out["record"].run_id, out["record"]
+
+
+def _make_sup_other_project(tmp_path):
+    """同一个库，但 Supervisor 的默认项目指向一个不存在的工作项项目。"""
+    return Supervisor(str(tmp_path / "sup.db"), project_id="P-ZZZ")

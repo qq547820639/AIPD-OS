@@ -556,6 +556,38 @@ class Supervisor:
                            "error=%s", wid, evidence_id, exc)
             return {"lineage": {"edges": 0, "skipped": [], "error": str(exc)}}
 
+    def _execution_suite(self, adapter_registry=None, router=None):
+        """整套执行套件只有这一处构造：registry(带状态库) → RunStore → router。
+
+        第 71 片我为了接返工执行器复制了这三步，第 72 片读回来时已经漂了两处
+        （日志器名一个走 `get_logger("aipd.router")`、一个走模块级 logger；
+        项目作用域一个按工作项行解析、一个按构造参数）。
+        常驻用例 `test_execution_suite_is_constructed_in_exactly_one_place` 钉住这一点。
+        """
+        from aipd_os.execution.execution_router import ExecutionRouter
+        from aipd_os.execution.runs import RunStore
+        from aipd_os.logging_utils import get_logger
+        from aipd_os.tool_adapters.builtin import build_registry
+
+        if adapter_registry is None:
+            # 传状态库 ⇒ 外部副作用适配器把投递写成 outbox 事件（F-EXEC-02），
+            # 而不是在 router 里内联对外发送。
+            adapter_registry = build_registry(state_db=str(self.path))
+        if router is None:
+            router = ExecutionRouter(
+                RunStore(str(self.path.parent / "execution_runs.db")),
+                adapter_registry, get_logger("aipd.router"))
+        return adapter_registry, router
+
+    def _run_capability(self, wid, capability_floor, inputs, *, project_id,
+                        tenant_id, adapter_registry=None, router=None):
+        """执行一次能力（不动工作项状态）。`run_supervisor` 与返工重跑共用。"""
+        registry, router = self._execution_suite(adapter_registry, router)
+        out = router.run(wid, capability_floor, inputs,
+                         context={"work_id": wid, "project_id": project_id,
+                                  "tenant_id": tenant_id})
+        return out, registry
+
     def rerun_for_rework(self, wid, adapter_registry=None, router=None):
         """为「返工一条执行证据」把同一个工作项再执行一次，**不改工作项状态、不写新证据行**。
 
@@ -563,29 +595,21 @@ class Supervisor:
         免得这里长出第二条执行路径；证据行由 `evidence_rework` 就地演进。
         ⇒ 返回 None 表示这条工作项缺能力或缺输入，交调用方点名拒，不猜。
         """
-        from aipd_os.execution.execution_router import ExecutionRouter
-        from aipd_os.execution.runs import RunStore
-        from aipd_os.tool_adapters.builtin import build_registry
-
         with self.connect() as c:
             row = c.execute(
-                "SELECT capability_floor, inputs_json FROM supervisor_work_items "
-                "WHERE work_id=?", (wid,)).fetchone()
+                "SELECT capability_floor, inputs_json, project_id, tenant_id "
+                "FROM supervisor_work_items WHERE work_id=?", (wid,)).fetchone()
         if row is None or not row["capability_floor"]:
             return None
         try:
             inputs = json.loads(row["inputs_json"] or "{}")
         except (TypeError, ValueError):
             return None
-        if adapter_registry is None:
-            adapter_registry = build_registry(state_db=str(self.path))
-        if router is None:
-            router = ExecutionRouter(
-                RunStore(str(self.path.parent / "execution_runs.db")),
-                adapter_registry, logger)
-        out = router.run(wid, row["capability_floor"], inputs,
-                         context={"work_id": wid, "project_id": self.project_id(),
-                                  "tenant_id": self._tenant_id})
+        out, _registry = self._run_capability(
+            wid, row["capability_floor"], inputs,
+            project_id=row["project_id"] or self.project_id(),
+            tenant_id=row["tenant_id"] or self._tenant_id,
+            adapter_registry=adapter_registry, router=router)
         record = out["record"]
         gate = self._quality_gate(wid, record)
         return {"record": record, "gate": gate,
@@ -634,17 +658,8 @@ class Supervisor:
             build_decision_package,
             should_ask_decision,
         )
-        from aipd_os.execution.execution_router import ExecutionRouter
-        from aipd_os.execution.runs import RunStore
-        from aipd_os.tool_adapters.builtin import build_registry
-        if adapter_registry is None:
-            # 传状态库 ⇒ 外部副作用适配器把投递写成 outbox 事件（F-EXEC-02），
-            # 而不是在 router 里内联对外发送。
-            adapter_registry = build_registry(state_db=str(self.path))
-        if router is None:
-            _store = RunStore(str(self.path.parent / "execution_runs.db"))
-            router = ExecutionRouter(
-                _store, adapter_registry, get_logger("aipd.router"))
+        adapter_registry, router = self._execution_suite(
+            adapter_registry, router)
         if decision_policy is None:
             decision_policy = should_ask_decision
         pid = self._resolve_project_id(project_id)
@@ -698,9 +713,10 @@ class Supervisor:
             try:
                 steps_log += ["select_primary_tool", "execute",
                               "validate_result"]
-                out = router.run(wid, capability_floor, inputs,
-                                 context={"work_id": wid, "project_id": pid,
-                                          "tenant_id": self._tenant_id})
+                out, _registry = self._run_capability(
+                    wid, capability_floor, inputs, project_id=pid,
+                    tenant_id=self._tenant_id,
+                    adapter_registry=adapter_registry, router=router)
                 record = out["record"]
                 if record.status in ("succeeded", "fallback"):
                     self.complete(wid, outputs=out["result"])

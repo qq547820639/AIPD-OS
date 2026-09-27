@@ -951,6 +951,26 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.33 F-ONE-EXECUTION-SUITE 第 72 片：把第 71 片抄出来的第二套执行套件收回一处**：
+  上一轮为了接返工执行器，我在 `rerun_for_rework` 里把"构造 registry → RunStore → router →
+  `router.run(context=…)` → 独立质量门"这五步抄了第二遍。它不会让任何现有用例变红，
+  但这一轮读回来时已经**漂了两处**：日志器一个用 `get_logger("aipd.router")`、一个用模块级
+  `logger`；作用域一个按 `_resolve_project_id(project_id)`、一个用构造参数 `self.project_id()`
+  ——后者是真 bug：CLI 传的 project 与工作项自己的 project 不一致时，重跑会把 run 与证据
+  记到**错的项目**下（多项目库里的数据串台）。
+  收法：`Supervisor._execution_suite()`（唯一一处套件构造）+ `_run_capability()`
+  （唯一一处 `router.run`，context 只有一份），`run_supervisor` 与 `rerun_for_rework` 都走它；
+  重跑的作用域改成**从工作项那一行读**（`project_id`/`tenant_id` 列），与 `_mark_stale` 同一口径。
+  **守卫与它的两极**：`tests/test_supervisor_execution.py` 加两条——
+  ① AST 数构造点：`ExecutionRouter(`、`build_registry(`、`router.run(` 在 `supervisor.py` 里
+  各**恰好一处**，多一处红、少一处也红（第 71 片那种"抄第二遍"与"把共用口子拆掉"都拦得住）；
+  ② 跨项目重跑的功能断言（Supervisor 构造指向 P-ZZZ、工作项在 P1 ⇒ run 记在 P1）。
+  电池 `docs/audit/s72/battery72.py` **4 臂杀 4 活 0**（K1 再抄一遍、K2 拆掉口子、
+  K3 作用域退回构造参数、K4 第二处 `router.run`），其中 K2/K4 是专门用来证明守卫不是单向的。
+  行为面：无命令、无旗子、无登记文案变化（能力地板/质量门/血缘三步的语义完全不变），
+  只是把两处实现合成一处 + 修掉跨项目作用域；`tests/test_supervisor_execution.py` 4 → 6 条。
+  证据见 `docs/audit/ONE_EXECUTION_SUITE_F-ONE-EXECUTION-SUITE_2026-09-27.md`。
+
 - **v5.32 F-REWORK-EVIDENCE 第 71 片：执行证据这一类制品有了返工执行器（`aipd truth rework` 认五类）**：
   第 70 片让证据能被传播标 stale 之后，缺口从"连不上"变成"收不了口"——
   `artifact_kind()` 只看 `metadata["artifact"]`，证据行没有这个键，于是仍落在"点名拒"那一侧。
