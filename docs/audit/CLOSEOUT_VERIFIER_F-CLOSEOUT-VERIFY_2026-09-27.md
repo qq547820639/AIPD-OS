@@ -164,12 +164,24 @@
 - **内容一致性的替身**（C6 依赖的两条）：`[('tests/test_packaging.py::test_release_manifest_hashes_match_disk', 'passed'), ('tests/test_packaging.py::test_source_manifest_hashes_match_disk', 'passed')]` —— 两条都在名单里且 passed，
   这就是"测的就是这棵树"那句话目前的机械形状。
 
+**补记（同一格在最终 HEAD 上重取一次）**：上面那些读数取自绑定提交 `41c4b5a`；
+之后本文件又落了两个**只在 `docs/audit/` 内**的提交（不牵动清单哈希），最终 HEAD = `5326bf1`。
+在新检出 `tmp/s64e`（`git status --porcelain` 为空）上重跑：
+`closeout_verifier --tag v5.6.0 --expect-test tests/test_closeout_verifier.py --min-tests 2500`
+→ **rc=0，九格全绿**（`报告 2540 条 / 207 个文件，树 207 个文件 / 2457 个 def`，
+`report sha256=a4af8ba0b318` 与证据一致，锚点 `a66040520139` 是 HEAD `5326bf13` 的祖先）；
+`pytest tests/test_closeout_verifier.py` → `16 passed`；`--self-test` → `18 条合成读数全部对上`；
+`production_release_gate --release-ready --tag v5.6.0` → `rc=0`、`release_ready: true`、
+`"passed": true` 计 8 条；`audit_repo --strict` → `rc=1`，恰 1 条 ✗
+（`Provenance source commit mismatch: manifest=a66040520139… vs HEAD=5326bf134249…`）。
+顺序按 §八 那条纪律：验签先跑，门禁后跑。
+
 
 ## 九、记账脚本自己的一处错（按不 amend 的规矩记在这里）
 
 生成 §八 的那支 `tmp/s64/terminal64.py` 第一版把锚点只钉在**占位句**那一行，
 没吃掉它上面那行占位标题 `## 八、终局读数`，于是替换之后文档里出现**两个** §八 标题。
-写后的读回断言抓到了"异常"，但那条断言本身也是一处假红：它数的是**子串出现次数**，而我这段正文里backtick 引述了那个标题两次，于是 `count == 3`——结构上（按行首数）标题其实只有一个。**标题要按行首数，不能按子串数**（`text-face-gate-forms` 那一族的又一实例）。另一处流程病：这一提的 `git add && git commit` 与写盘脚本之间我用**换行**而不是 `&&` 串起来，于是断言非零退出也没能拦住提交——检查失败与提交动作之间必须有硬门。
+写后的读回断言抓到了"异常"，但那条断言本身也是一处假红：它数的是**子串出现次数**，而我这段正文里用 backtick 引述了那个标题两次，于是 `count == 3`——结构上（按行首数）标题其实只有一个。**标题要按行首数，不能按子串数**（`text-face-gate-forms` 那一族的又一实例）。另一处流程病：这一提的 `git add && git commit` 与写盘脚本之间我用**换行**而不是 `&&` 串起来，于是断言非零退出也没能拦住提交——检查失败与提交动作之间必须有硬门。
 定稿改法两条，都是本仓既有纪律的重述而非新规矩：
 ① 锚点吃掉**整块**占位（标题 + 占位句）；
 ② 断言移到**写盘之前**，对内存里算好的 `merged` 判，而不是对已落盘的字节判。并且判据形状改成**按行首数标题**（`sum(1 for ln in text.splitlines() if ln.startswith("## 八、")) == 1`），不按子串数——否则文档复述自己一次就把自己判红。
