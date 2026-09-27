@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 294470,
-      "sha256": "0f7cab4147eff7278d3099a92859d6e0cd2888e8961d154222382168bd92cf66"
+      "size": 296665,
+      "sha256": "827e8f9ea19524db52f027eaea0c824d0a73dc4493ed4c6e7ae5065f1d0d18e5"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -672,8 +672,8 @@
     },
     {
       "path": "scripts/absence_claim_census.py",
-      "size": 70140,
-      "sha256": "edadd51782f460df4f36d7bd696111b66d6f05cb400fd98821973f4c8649d343"
+      "size": 75639,
+      "sha256": "98688c5f82030770e24296daaca3af5d5172af02df3a6b72d193d06022c915c2"
     },
     {
       "path": "scripts/aipd_state.py",
@@ -2327,8 +2327,8 @@
     },
     {
       "path": "tests/test_absence_claim_census.py",
-      "size": 25758,
-      "sha256": "9d9a5b10577b849d5f9f7bd2b66b08b618e7acf8065039544c0c10904526c5da"
+      "size": 28078,
+      "sha256": "547fd8a68315023d59cee4a7a49949628dec0a3f6608889e4aef29c2c2ac12cd"
     },
     {
       "path": "tests/test_actor_columns_no_default.py",
