@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 296665,
-      "sha256": "827e8f9ea19524db52f027eaea0c824d0a73dc4493ed4c6e7ae5065f1d0d18e5"
+      "size": 298743,
+      "sha256": "1856566322e201c3383b0a279aa4cd50ff479ae90f092d5389f38f1b127fde01"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 59492,
-      "sha256": "e46af23ebbbbce5cfb64ef45b338318ac5218385f01aecbbd6795aaea4b61053"
+      "size": 59845,
+      "sha256": "514f2292d8c75eae594b61671d1648fde538a72c2e16652d7b5e5a5f8fdd64b3"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -672,8 +672,8 @@
     },
     {
       "path": "scripts/absence_claim_census.py",
-      "size": 75639,
-      "sha256": "98688c5f82030770e24296daaca3af5d5172af02df3a6b72d193d06022c915c2"
+      "size": 75417,
+      "sha256": "427eacd7912aef3f5391a2585a5fa6b2566801084c8217675576d7416c0edd7f"
     },
     {
       "path": "scripts/aipd_state.py",
@@ -762,8 +762,8 @@
     },
     {
       "path": "scripts/doc_command_census.py",
-      "size": 28022,
-      "sha256": "7bd50e2ad7fbd2080b0da03c6afb57349c6e0e489858d23327fae68991960986"
+      "size": 32406,
+      "sha256": "c801f70a635ae37dea46e016ab7b9b5ae66586a7bb3c81708d885ce8d4b59ee8"
     },
     {
       "path": "scripts/doc_reference_census.py",
@@ -2327,8 +2327,8 @@
     },
     {
       "path": "tests/test_absence_claim_census.py",
-      "size": 28078,
-      "sha256": "547fd8a68315023d59cee4a7a49949628dec0a3f6608889e4aef29c2c2ac12cd"
+      "size": 29283,
+      "sha256": "e6b5855e98e1c47dab7cd41f1881f6713b84649184fcac8cf460c919da3237b8"
     },
     {
       "path": "tests/test_actor_columns_no_default.py",
@@ -2627,8 +2627,8 @@
     },
     {
       "path": "tests/test_doc_command_census.py",
-      "size": 20801,
-      "sha256": "376aeaec024f9a5fe7c27720ef8827bea795e1b1855adf16401c8640d7836b7d"
+      "size": 22947,
+      "sha256": "26ba2f3d4dff384d2d59a43c863280731965fef9868d36237b47fb58faeec861"
     },
     {
       "path": "tests/test_doc_reference_census.py",
