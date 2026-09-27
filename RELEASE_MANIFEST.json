@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 281065,
-      "sha256": "7a9b380882414653386c149f289b66622c92f1be023adbf5c5da15041f1ed638"
+      "size": 284256,
+      "sha256": "226e46123299b311a18e143f4a22373ee21d160927f148d59ee6bc2ec3e75c89"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 59114,
-      "sha256": "9ab2b021af2e63663201806bade1c59b46d309791ccbeb811e289341e7f626d0"
+      "size": 59344,
+      "sha256": "89e003ab0f90546a3a242e96ad695179564881ad904b0dda364fb0a2e94be910"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -672,8 +672,8 @@
     },
     {
       "path": "scripts/absence_claim_census.py",
-      "size": 65015,
-      "sha256": "3c9253f5bfcb7918a0c06aa28a05b25cdc44bc3910525c6f7c06c0ec43eae883"
+      "size": 66008,
+      "sha256": "a4d7069781b5a828a3cb3eff52e39f0e98c41d5463d41959421a0cfa1374a2fe"
     },
     {
       "path": "scripts/aipd_state.py",
@@ -817,8 +817,8 @@
     },
     {
       "path": "scripts/product_capabilities_extra.py",
-      "size": 7596,
-      "sha256": "12b8c7dd8fe72ef71e79a915f1c8256236472d35600fd51cf824c070135b29e9"
+      "size": 7581,
+      "sha256": "217c4d8ca6c0a69a519218cdcf7fb661f0af22fb53866e7dec9cb7f470825c82"
     },
     {
       "path": "scripts/production_release_gate.py",
@@ -1192,13 +1192,13 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 62428,
-      "sha256": "87638cbd4b403106aff8ef4d13ad93f5447e85912e56309c33a1888a6babfef3"
+      "size": 62708,
+      "sha256": "dbcd13979e6dcda0d73f808bffcae8125872ad55fab86e42c68b5501b1bff6ed"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
-      "size": 8632,
-      "sha256": "f20dcb53f5b24edca5979e71b43b658199bd68562e7679aee6aa8268817ed23d"
+      "size": 9542,
+      "sha256": "ce6fca9387d2d262e69096bc55b3cca017f246896d6aad2f7d975c39105c6fad"
     },
     {
       "path": "src/aipd_os/config.py",
@@ -1702,8 +1702,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 105828,
-      "sha256": "16fa2dccfdad925b31b30bb61a461cca9f99a148a0234addc6fb8be04f6af1e0"
+      "size": 105813,
+      "sha256": "2303ff11b8c39b26db7ec0c83dd5bc668ded31ea0941d5acebf0100ee3a96462"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2317,8 +2317,8 @@
     },
     {
       "path": "tests/test_absence_claim_census.py",
-      "size": 24117,
-      "sha256": "6c11178a1528c2861a9c354d513b9b96ebdd24e1edd5d8a810d5272050f88531"
+      "size": 24286,
+      "sha256": "3318d853558ec099821cffbbfb67c458e149db8a612815954f28ca79716a87f9"
     },
     {
       "path": "tests/test_actor_columns_no_default.py",
@@ -2979,6 +2979,11 @@
       "path": "tests/test_product_definition_integrity.py",
       "size": 33399,
       "sha256": "855268985bd88810d45e3716d018e84d3695f74a8a649522947f19b6469374fe"
+    },
+    {
+      "path": "tests/test_product_gate_commit_cli.py",
+      "size": 6003,
+      "sha256": "75eeda996257014283fcf7a7a884e33bad6d9d213ff5ee82ddbcd5de5453d375"
     },
     {
       "path": "tests/test_product_intelligence.py",
