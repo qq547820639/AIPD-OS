@@ -74,7 +74,7 @@ def main() -> int:
     if rc2 != 0 or marks < 21:
         fails.append(f"--self-test rc={rc2} marks={marks}")
     rows.append(f"- **`--self-test`**：`rc={rc2}`，**{marks} 条**合成读数全对上"
-                "（本片未加合成读数；档位沿用第 71/72 片）")
+                "（条数由本次运行现数，不引用上一片的说法）")
 
     rc3, out3 = sh([PY, "-m", "pytest", "tests/test_absence_claim_census.py",
                     "tests/test_supervisor_execution.py", "-q"])
@@ -123,12 +123,17 @@ def main() -> int:
     rows.append(f"- **发布门禁**：`rc={rc6}`、`\"passed\": true` 计 {okn} 条、"
                 f"`release_ready` {ready}")
 
+    sample_problems_bad = len(acc.check_axis_samples(acc.absence_sentences(
+        acc.registry_strings(REPO)[0])))
     gate_claims = tuple(c for c in acc.CLAIMS
                         if c.get("check", {}).get("kind") == "external_callers")
     gate_ids = {str(c["id"]) for c in gate_claims}
     gate_verdicts = sorted({str(r["verdict"]) for r in acc.audit(REPO, gate_claims)["rows"]
                             if str(r["id"]) in gate_ids})
-    rows.append("- **沿第 71 片那条轴的读数（本片改的是粒度，未加新档）**：`external_callers` 对 "
+    rows.append("- **具名样本核对**：四档共 "
+                f"{sum(len(v) for v in acc.AXIS_SAMPLES.values())} 条，样本问题 {sample_problems_bad} 条；"
+                f"分档 {dict(axes)}")
+    rows.append("- **沿第 71 片那条轴的例行复算**：`external_callers` 对 "
                 "`commit_approved` / `commit_snapshot` 判 "
                 + ",".join(gate_verdicts) +
                 "，正向对照 `record_dxf_lineage` 判 "
