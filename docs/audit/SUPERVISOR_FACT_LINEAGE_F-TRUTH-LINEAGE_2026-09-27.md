@@ -39,7 +39,34 @@
 （登记表一条、架构文档一条）。两句就地改 9，并写明第 9 处是谁。
 这条值得记：判据的价值不在平时绿，而在你改实现的那一轮自动拦住"数没跟上"。
 
-## 五、终局读数（占位）
+## 五、终局读数（由 `docs/audit/s70/terminal70.py` 从原件现跑生成，不手抄）
+
+- **签出那一跑**（`tmp/s70/final`，报告产出于提交 `5efd9f2`，主树当时 HEAD `7fe4407`）：`exitcode=0`、`collected=2577`、`passed=2574`、`skipped=3`、其余终态 `{'skipped': 3}`、用时 `483.7s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s70/final`、`source_commit=a66040520139`
+- **本片主角（真仓库终态）**：`rc=0`；语料：84 个能力，带否定词的句子 36 句；账本登记 12 条，未挂锚点 29 句（宽档，只报不判）；能力缺失句（窄档＝判据面）：16 句 = 登记 6 + 豁免 10 + **未处置 0**；判红 0 条：登记的 12 句「仍缺着」现在都还缺着
+- **`--self-test`**：`rc=0`，**23 条**合成读数全对上（含存在式登记、去处台账与 `table_ddl` 双向）
+- **常驻用例**：`pytest tests/test_supervisor_fact_lineage.py tests/test_absence_claim_census.py -q` → `32 passed, 24 warnings in 14.91s`（rc=0）
+- **变异电池（入库副本现跑）**：`docs/audit/s70/battery70.py` → `rc=0`，合计 KILLED 5 / 其余 0
+- **两档分母现读**：宽档 36 句、窄档 16 句（差 20 句是谈判决/谈口径的假阳性）；登记表解析问题 `[]`；薄理由豁免 `[]`
+- **第 64 片那台收尾验签在本片树上**：`rc=0`；收尾验签（报告 ↔ 证据 ↔ 工作树）；读数：报告 2577 条 / 210 个文件，树 210 个文件 / 2494 个 def，终态 {'passed': 2574, 'skipped': 3}
+- **发布门禁**：`rc=0`、`"passed": true` 计 8 条、`release_ready` true
+- **本片新档的读数**：`external_callers` 对 `commit_approved` / `commit_snapshot` 判 HOLDS，正向对照 `record_dxf_lineage` 判 CLAIM_TEXT_ABSENT（探针会开火）
+- **`audit_repo --strict`**：`rc=1`，恰 **1** 条 ✗（`✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=7f`）——设计内不修
+- **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag；被哈希文件数 `672`（本片**文件数不变**，只改内容）
+- **工作树**：`git status --porcelain` 输出 0 行
+
+## 五之二、这一片的两次返工（都是我自己的错，被机器拦下）
+
+1. **`git add` 漏了 `docs/architecture`。** 我在那篇里把生产者计数从 8 改到 9，却没提交：
+   干净检出读到旧文本 ⇒ 第 66 片那两条 `producer_count` 判"账文脱钩"；
+   而清单哈希是在**含着未提交改动的树**上重算的 ⇒ `test_*_manifest_hashes_match_disk` 两条一起红。
+   一次全量暴露 5 条红。修：补提交 + 重算清单（`5efd9f2`）。
+   固定处置已进记忆：提交前看 `git status --short`，提交后用 `git show --stat` 跟"我改过哪些文件"逐条比。
+2. **新模块 docstring 写了不存在的命令** `aipd supervisor add-work`
+   （真入口是 `python scripts/aipd_supervisor.py add-work`）。第 60 片那把 `doc_command_census`
+   的判红面 ③ 当场点名 —— 这正是我上一片写进记忆的同一格（"新代码里不许写 `aipd <幻影>`"），
+   还是犯了：说明那条纪律得靠闸拦而不是靠我记，而它确实拦住了。
+
+终态：干净检出 `5efd9f2` 全量 **2574 passed / 3 skipped / 0 failed**，报告已绑定。
 
 ## 六、下一片入口
 
