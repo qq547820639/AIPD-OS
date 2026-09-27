@@ -82,7 +82,7 @@ assertion-in-prose 命中的是需求管理族与 doctest 族），如实记为�
 ## 五、抓到的过期话（开尺当天读数，判红面在真登记表上第一次开火）
 
 ```
-$ .venv/bin/python scripts/absence_claim_census.py --claims /Volumes/Extra/CodeProj/AI全链路自研/tmp/s65/before_claims.json
+$ .venv/bin/python scripts/absence_claim_census.py --claims docs/audit/s65/before_claims.json
 语料：84 个能力，带否定词的句子 48 句；账本登记 3 条，未挂锚点 38 句（只报，不判红）
   ✗ REWORK-EXECUTOR-BOM [CONTRADICTED] 锚点 current_limitation:71 | 反证位点 src/aipd_os/bom/bom_rework.py:32
   ✗ REWORK-EXECUTOR-SCOPE [CONTRADICTED] 锚点 current_limitation:77 | 反证位点 src/aipd_os/cad/dxf_rework.py:45
@@ -126,7 +126,9 @@ adapter——所以「未接入」是低报，准确说法是"只有 LLM 这一�
 
 ### 变异电池（11 臂，杀 11 / 活 0 / 锚点或落地问题 0）
 
-跑法：`/Volumes/Extra/CodeProj/AI全链路自研/tmp/s65/battery65.py`（每臂先断言 `old` 命中恰好 1 次、
+跑法：`docs/audit/s65/battery65.py`（**电池脚本已入库**——第 64 片的教训就是脚本留在临时目录里，
+宿主重启连同"当初为什么这么判"一起没了；`docs/audit/` 整体不参与发布哈希，实测两张清单里
+该前缀条目数为 0，所以入库不牵动锚点。每臂先断言 `old` 命中恰好 1 次、
 `new` 原本 0 次，落地后校验 sha 已变，跑靶，`finally` 还原并再校验 sha==基线 `32e8378ee394`）。
 
 | 臂 | 撤掉什么 | 结果 | 开火的靶 |
@@ -172,7 +174,7 @@ adapter——所以「未接入」是低报，准确说法是"只有 LLM 这一�
 3. 第 64 片留的 `doc_command_census` 只报面收窄（把 `tests/` 挡在语料外 + 单开"记录性引述"一桶）仍未做。
 
 
-## 八、终局读数（由 `tmp/s65/terminal65.py` 从原件现跑生成，不手抄）
+## 八、终局读数（由 `docs/audit/s65/terminal65.py` 从原件现跑生成，不手抄）
 
 - **签出那一跑的原件**（`tmp/s65/checkout`，HEAD `c831868`）：`exitcode=0`、`collected=2555`、`passed=2552`、`skipped=3`、其余终态 `{'skipped': 3}`、用时 `313.5s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s65/checkout`、`source_commit=a66040520139`
 - **收尾量具自证**：`scripts/absence_claim_census.py` → `rc=0`；语料：84 个能力，带否定词的句子 37 句；账本登记 5 条，未挂锚点 34 句（只报，不判红）；判红 0 条：登记的 5 句「仍缺着」现在都还缺着
