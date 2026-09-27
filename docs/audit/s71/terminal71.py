@@ -141,9 +141,25 @@ def main() -> int:
                 f"（`{bad[0][:70] if bad else '—'}`）——设计内不修")
 
     man = json.loads((REPO / "SOURCE_MANIFEST.json").read_text(encoding="utf-8"))
+    # 差集要现算，不能抄上一片的说法：第 71 片就是这么在读数里留下了一句
+    # "本片文件数不变"，而实际 +2（新实现 + 新常驻测试）。
+    tag_manifest = subprocess.run(["git", "show", "v5.6.0:SOURCE_MANIFEST.json"],
+                                  cwd=str(REPO), capture_output=True, text=True)
+    try:
+        tag_files = {str(e.get("path") or e.get("file"))
+                     for e in json.loads(tag_manifest.stdout)["files"]}
+    except (ValueError, KeyError):
+        tag_files = set()
+        rows.append("- **注意**：tag 的清单读不到 ⇒ 差集判不了（不当成 0 个新增）")
+    now_files = {str(e.get("path") or e.get("file")) for e in man["files"]}
+    added = sorted(now_files - tag_files)
+    gone = sorted(tag_files - now_files)
     rows.append(f"- **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = "
                 f"`{str(man['source_commit'])[:12]}` == tag；被哈希文件数 "
-                f"`{len(man['files'])}`（本片**文件数不变**，只改内容）")
+                f"`{len(man['files'])}`；相对 tag 的清单：新增 {len(added)} 个、"
+                f"消失 {len(gone)} 个")
+    if added:
+        rows.append("- **新增的被哈希文件**：" + "、".join(f"`{a}`" for a in added))
     dirty = git("status", "--porcelain")
     rows.append(f"- **工作树**：`git status --porcelain` 输出 {len(dirty.splitlines())} 行")
 
