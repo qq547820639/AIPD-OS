@@ -97,7 +97,19 @@ rc=0
 
 `--self-test` 17 条合成读数全对上；`pytest tests/test_absence_claim_census.py -q` 19 passed。
 
-## 六、终局读数（占位）
+## 六、终局读数（由 `docs/audit/s66/terminal66.py`（已入库）从原件现跑生成，不手抄）
+
+- **签出那一跑**（`tmp/s66/checkout`，报告产出于提交 `3892df4`，主树当时 HEAD `6fef864`）：`exitcode=0`、`collected=2559`、`passed=2556`、`skipped=3`、其余终态 `{'skipped': 3}`、用时 `423.9s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s66/checkout`、`source_commit=a66040520139`
+- **本片主角（终态）**：`absence_claim_census` → `rc=0`；语料：84 个能力，带否定词的句子 37 句；账本登记 7 条，未挂锚点 34 句（只报，不判红）<br>✓ PRODUCER-COUNT-REGISTRY [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:23 | 反证位点 现读 truth 生产者 = 8 个，句里写 8 个、src/aipd_os/bom/cost_lineage.py、src/aipd_os/bom/cost_rework.py<br>✓ PRODUCER-COUNT-ARCH [HOLDS] 锚点 docs/architecture/truth_architecture.md:text:185 | 反证位点 现读 truth 生产者 = 8 个，句里写 8 个、src/aipd_os/bom/cost_lineage.py、src/aipd_os/bom/cost_rework.py<br>判红 0 条：登记的 7 句「仍缺着」现在都还缺着
+- **`--self-test`**：`rc=0`，**17 条**合成读数全对上（含本片新增的 4 条计数档合成读数与 1 条「权威面空 ⇒ 不判」）
+- **常驻用例**：`pytest tests/test_absence_claim_census.py -q` → `19 passed in 6.45s`（rc=0）
+- **变异电池（入库副本现跑）**：`docs/audit/s66/battery66.py` → `rc=0`，合计 KILLED 6 / SURVIVED 0 / 电池自身问题 0
+- **权威面现读**（判决用的就是它）：truth `8` 个、canonical `3` 个、SQL 写入口 `1` 个、盲区 `[]`
+- **第 64 片那台收尾验签在本片树上**：`rc=0`；收尾验签（报告 ↔ 证据 ↔ 工作树）；读数：报告 2559 条 / 208 个文件，树 208 个文件 / 2476 个 def，终态 {'passed': 2556, 'skipped': 3}
+- **发布门禁**：`rc=0`、`"passed": true` 计 8 条、`release_ready` true
+- **`audit_repo --strict`**：`rc=1`，恰 **1** 条 ✗（`✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=6f`）——设计内不修
+- **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag；被哈希文件数 `669`（本片**文件数不变**，只改内容 ⇒ 与第 65 片同为 669）
+- **工作树**：`git status --porcelain` 输出 0 行
 
 ## 七、下一片入口
 
@@ -123,3 +135,9 @@ rc=0
    要么靠一个 0 命中的路径 join。真正的入口是先让**某个 producer** 把上游 truth 身份带进工作项，
    这一片没做那个动作，故登记为待做而不是硬做。
 4. 第 64 片留的 `doc_command_census` 只报面收窄仍未做。
+
+**脚本自己的两处小账**：① `terminal66.py` 第一版把"报告产出于哪个提交"印成**主树当时的 HEAD**
+（`git rev-parse HEAD` 在主树上跑，读的是主树，不是那份签出）——现改成从 worktree 里
+`git -C <checkout> rev-parse` 现读，两个号并排打出来，否则"测的是哪棵树"这句话又变成口头话；
+② 它第一版还差点把 `audit_repo` 那条设计内的 ✗ 当成红——那条判据在**门禁之后**跑，
+顺序照第 65 片：验签先跑、门禁后跑、`audit_repo` 只作读数不作闸门。
