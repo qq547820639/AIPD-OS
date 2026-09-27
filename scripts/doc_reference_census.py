@@ -196,6 +196,20 @@ def _classify(doc: str, target: str, line_no: int | None, ctx: str,
     return r
 
 
+def _defect_sort_key(key: tuple) -> tuple:
+    """给两档缺陷列表一个**全序**。
+
+    `Ref.key()` 的第三元素两种形状混在一起：没写行号 ⇒ `""`，写了 ⇒ `int`。
+    直接 `sorted()` 会在同一 (文档, 目标) 下拿 `""` 与 `455` 比大小而抛
+    `TypeError: '<' not supported between instances of 'int' and 'str'`——
+    第 81 片取证文档里既裸引又带行号引同一个仓外目标，整个普查连同它的 6 条
+    常驻用例一起崩掉。崩在排序上不是"这条引用有问题"，是量具自己没牙口，
+    所以修法是给序而不是降噪、也不改输出形状（`""` 与 `int` 照原样出）。
+    """
+    doc, target, line = key
+    return (doc, target, -1 if line == "" else int(line))
+
+
 def audit(root: Path) -> dict[str, Any]:
     docs = corpus(root)
     if not docs:
@@ -212,9 +226,11 @@ def audit(root: Path) -> dict[str, Any]:
 
     defect_kinds = ("missing", "line_beyond_eof")
     live_defects = sorted({r.key() for r in refs
-                           if r.klass in defect_kinds and _is_live(r.doc)})
+                           if r.klass in defect_kinds and _is_live(r.doc)},
+                          key=_defect_sort_key)
     history_defects = sorted({r.key() for r in refs
-                              if r.klass in defect_kinds and _is_history(r.doc)})
+                              if r.klass in defect_kinds and _is_history(r.doc)},
+                             key=_defect_sort_key)
     problems: list[str] = []
     if sum(buckets.values()) != len(refs):
         problems.append("Σ 分类 ≠ 引用总数：有引用没被归类，判据分母漏了")

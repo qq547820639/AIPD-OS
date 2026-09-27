@@ -269,8 +269,20 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     不自动求拆卸方向：文献那套（离散球面搜索 + 无碰撞路径校验）要装配约束与实体求交两样
 #     本仓没有的前提，硬算就是画一张没证过的装配顺序。位移与视线平行时告警「看不出分离」。
 aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part ASSY-1 \
-aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part ASSY-1 --pdf   # 顺带出 A4 图框矢量 PDF（中文可抽取）\
   --db state.db --bom BOM-1
+aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part ASSY-1 --pdf
+#   ↑ --pdf 顺带出 A4 图框矢量 PDF（中文用 reportlab 内置 CID 字体，文字可抽取——
+#     验收就是拿 pypdf 独立解码回来核，不看文件大小）。
+#     第 80 片这条示例被补丁脚本插坏了：上一行的续行反斜杠直接接了另一条命令，
+#     照着抄会得到一条不完整的命令，现已拆成三条各自完整的示例。
+aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part ASSY-1 --pdf --draw-image assy.png
+#   ↑ --draw-image 排的是**作者提供的**装配示意图。三条拒绝都在写任何产物之前：
+#     图文件不存在 ⇒ rc=2；给了空值 ⇒ rc=2（空值不等于没给，按没给处理就是把这张图静默丢掉）；
+#     只给 --draw-image 不给 --pdf ⇒ rc=2（Markdown 版式不嵌图，只给图就等于丢图）。
+#     图的 sha256、像素与字节数一起进证据侧车的 pdf.image；没给图时那个键写 None 而不是省掉，
+#     并且文档自己写明「本档没有装配示意图」——留一张空白占位图会被读成「有但没显示」。
+#     本仓不自动出装配图：没有 STEP → 栅格那条路，也没有装配约束与碰撞数据去证成一张
+#     自动生成的爆炸图（与 drawing assembly --explode 缺声明就拒画同一条裁决）。
 #   ↑ 装配步骤文档（C6「装配/维护」里**装配**那一半）：同一份清单多一段 "assembly_steps"：
 #     [{"no":1,"action":"支架贴基面，两颗 M5 先不拧紧","balloons":[1]}]——
 #     序号、动作原文、这一步动哪些球标都由你写。四件事它不做：不补号（没写 no / 重号 /

@@ -53,7 +53,11 @@ from typing import Any
 STEP_KEYS = ("no", "action", "balloons")
 
 # 顺序与措辞都是常驻用例钉住的（tests/test_cad_assembly_steps.py）。
-NOT_COVERED = ["维护指引", "工时与工序成本", "扭矩或拧紧值", "PDF/图框版式"]
+# 这条清单是"这份文档不承载什么"的唯一来源：Markdown 的「本文档不承载」段、PDF 首页
+# 图框标题栏、CLI 收尾那一行、证据侧车的 not_covered 都读它。第 80 片交付 PDF/图框版式后
+# 原文案里的「PDF/图框版式」就成了假话（每份带 PDF 的产物都在自称没有 PDF），
+# 第 81 片把它撤掉并补上图框标题栏一直在单独宣称的「检验点与点检项」。
+NOT_COVERED = ["维护指引", "工时与工序成本", "扭矩或拧紧值", "检验点与点检项"]
 
 _VALUE_COLUMNS = ["QTY", "UNIT", "MATERIAL", "PROCESS"]
 
@@ -220,7 +224,8 @@ def generate_assembly_steps(out_path: Path | str, *, manifest: str, part_name: s
                             revision: str = "A",
                             bom_lines: Sequence[Any] | None = None,
                             provenance: dict[str, Any] | None = None,
-                            pdf_path: Path | str | None = None) -> dict[str, Any]:
+                            pdf_path: Path | str | None = None,
+                            draw_image: Path | str | None = None) -> dict[str, Any]:
     """端到端出装配步骤文档：清单 -> 声明校验 -> Markdown -> ``.evidence.json``。
 
     这里**不做投影**（不需要几何），所以不 import CadQuery；STEP 文件存在性照样由
@@ -232,6 +237,12 @@ def generate_assembly_steps(out_path: Path | str, *, manifest: str, part_name: s
         parse_assembly_manifest,
         parts_list_rows,
     )
+
+    # 参数形状先判，判完才动盘：这条 raise 原先写在 Markdown 落盘之后，
+    # 于是"只给图不给 PDF"会留下一个没有 PDF 的孤儿 .md（同一条拒绝路径的另一半
+    # ——图文件不存在——是在 CLI 里落盘前就 rc=2 的，两条路径原本该同一个形状）。
+    if draw_image is not None and pdf_path is None:
+        raise ValueError("--draw-image 只在同时出 PDF 时有意义（Markdown 版式不嵌图）")
 
     path = Path(out_path)
     man = Path(manifest)
@@ -273,7 +284,7 @@ def generate_assembly_steps(out_path: Path | str, *, manifest: str, part_name: s
             pdf_path, part_name=part_name, revision=revision, manifest=str(man),
             columns=columns, table=table,
             plan={**plan, "not_covered": list(NOT_COVERED)},
-            bound=bom_evidence is not None)
+            bound=bom_evidence is not None, draw_image=draw_image)
     else:
         pdf = None
 

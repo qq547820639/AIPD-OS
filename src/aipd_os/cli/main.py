@@ -302,6 +302,8 @@ def build_parser() -> argparse.ArgumentParser:
     das.add_argument("--pdf", nargs="?", const="@AUTO@", metavar="PATH",
                    help="额外输出 A4 图框版 PDF（矢量中文、文字可抽取）；"
                         "不给 PATH 就落在 --out 同名 .pdf")
+    das.add_argument("--draw-image", metavar="PATH",
+                     help="把一张装配示意图排进 PDF 首页（图由作者提供；本仓不自动出装配图）")
     das.add_argument("--tenant", default="default", help="BOM 所属租户")
     das.add_argument("--project", default="default", help="BOM 所属项目")
     das.add_argument("--json", action="store_true")

@@ -951,6 +951,70 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.42 F-ASSEMBLY-PDF-IMAGE 第 81 片：PDF 加上图片层，并把两条"记账面"的静默损坏修了**：
+  `--draw-image PATH` 把**作者提供的**装配示意图排进 A4 图框版式：按容器等比缩放
+  （上限 78 mm 高）、放不下就整块换页、描边、下面两行说明（`IMAGE_CAPTION`「装配示意图（由作者提供）」
+  与文件名 + 字节数 + sha256 前 16 位）。证据侧车 `pdf.image = {path, sha256, pixels, bytes}`，
+  **没给图时写 `None` 而不是省键**（与第 80 片对 `pdf` 键同一条纪律：读者要能分"没要"与"要了没落地"）。
+  顺手删掉 `image_caption` 这个参数：没有任何调用方传它、没有任何用例走它——没人转的旋钮是假承诺。
+  **为什么不做自动取图（先查再定，每条带出处，见取证文档 §一 的六维表）**：本仓没有装配的
+  2D/轴测栅格化通路（`cad/assembly.py` 只出 STEP，`layout/renderer.py` 那套 PNG 是给手册页面的）。
+  实测到的硬事实是**装不上**：`cadquery@2.8.0` 的 `requires_python` 是 `>=3.11`、
+  `pyvista@0.49.0` 与 `trimesh@5.1.0` 与 `pillow@12.3.0` 都是 `>=3.10`，而本仓声明
+  `>=3.9,<3.13` 且本机 venv 是 `Python 3.9.6`；`pythonocc-core@0.16` 在 PyPI 上**连文件列表都是空的**
+  （`urls: null`，只能走 conda-forge）；`manifold3d@3.5.4` 的描述里 `STEP` 出现 0 次（不做 STEP 输入）。
+  即便升到 3.11：CadQuery 官方可视化页对截图功能挂着原话警告 "Intermittent issues were observed
+  with this functionality"，PyVista 的离屏配方要宿主机装 `libosmesa6`——那是把"能不能出图"
+  变成宿主问题；而真正的前置问题是"这张图凭什么算证据"：本仓既有裁决是**有一个零件没声明
+  explode 就 rc=2 拒画**，渲染器既没有装配约束也没有碰撞检查，画出来只会是一张看起来完整的示意图。
+  所以本片只做"有图就排、没图就声明没有"，借的是那条"缺前提就不画"的纪律，实现不引新依赖。
+  （派出去检索的子代理交回过一句"vis.py 里没有 `SetOffScreenRendering` 调用"，我重开
+  `cadquery/vis.py` 读到 `:450` 正是该调用——该句作废，结论不变但依据换成了"支持离屏却自带
+  bug 警告 + 装不进本仓 Python 下限"。）
+  **两层都要独立验**：正向断言 `page.images` 非空**且**文字仍抽得到；负向断言没给图时
+  **任何一页都没有图片对象**。负向那条第一版写成查 `/Contents` 字典里有没有 `image` 键——恒真的空话；
+  换掉之后用变异证明它有牙（电池 Y1：没图那条路也 `drawImage` 一张仓库自带的真 PNG ⇒ 用例红）。
+  **三条拒绝都在写任何产物之前**，其中两条是本轮补的时机/静默 bug：
+  ① 图文件不存在 ⇒ `rc=2`（断言 Markdown 也没落盘）；② `--draw-image` 给**空值** ⇒ `rc=2`
+  （原先 `if draw_image and …` 把空串读成"没给"，于是"作者明确要一张图"被静默降级成"没有图"，
+  照样 rc=0 出文档；这与 `_bom_lines_or_none` 那边"空值就是没给"是**刻意不同**的）；
+  ③ 只给 `--draw-image` 不给 `--pdf` ⇒ 拒绝——原先这条检查写在 `path.write_text()` **之后**，
+  一次被拒的调用仍然留下一个没有 PDF 的孤儿 `.md`，现在判完参数才动盘，用例除了断 raise
+  还断 `not out.exists()` 与侧车不存在。
+  **记账面第一次有常驻牙**：本轮把 v5.42 条目写进 `CHANGELOG.md` 时，那个一次性补丁脚本把 `CHANGELOG.md`
+  尾部的 **2074 行逐字节又贴了一遍**，接在 `- **v5.41 …第 80 片：` 那行标题的中间续上
+  （工作树 5121 行 vs HEAD 3027 行，
+  `git diff --numstat` 读成 `2094 0` 而正当增量只有 20 行）。`CHANGELOG.md` 参与发布哈希，
+  而上一轮 2622 条常驻用例没有一条为此翻红——损坏的是一份给人看的账，此前没有一条断言看过它的形状。
+  新增 `tests/test_changelog_integrity.py`（7 条，两把纯函数判据：连续 ≥6 行的重复块 +
+  条目记号三元组 `(vN.M, F-号, 第 N 片)` 唯一），分母现算钉住（3047 行 / 106 条目行 / 79 完整记号），
+  必开火侧跑三档规模（重贴 30 / 500 / 2074 行都开火），必不开火侧钉样板余量与互补性。
+  同一族形状在 **README 速查**里也有一份，而且是第 80 片留下的：`aipd drawing assembly-steps`
+  那段一条命令以续行反斜杠收尾、下一行却是另一条完整命令，第 81 片又往上叠了一行 `\ --pdf --draw-image`
+  ——已拆成三条各自完整的示例（第一遍普查我把 `rglob` 用在文件而不是目录上，读到 0 命中，
+  那是量具自己的盲区，重扫才拿到 2 处；`SKILL.md` 同判据是 0 处）。
+  **量具自己也会崩，而且崩得比缺陷安静**：本轮取证文档引用了一个仓外文件的三处行号与一处裸名，
+  `scripts/doc_reference_census.py` 的 `Ref.key()` 第三元素于是同时出现 `""`（没写行号）与 `int`（写了），
+  它内部那句 `sorted({r.key() …})` 直接抛 `TypeError: '<' not supported between instances of 'int' and 'str'`
+  ——整把尺子连同它的 **6 条常驻用例一起 ERROR**（不是 fail，是 setup 就崩）。
+  修的是序不是噪声：新增 `_defect_sort_key()` 给两档缺陷列表一个全序，输出元素形状不变
+  （`""` 与 `int` 照原样出，`for doc, target, line in report["live_defects"]` 那类消费方不动），
+  并加常驻用例 `test_history_face_sorts_when_line_shapes_mix`（合成语料同时喂裸引与带行号引同一个
+  指不回的目标，改前的实现在这条上抛 TypeError）。电池 **Y10** 就是把 `key=_defect_sort_key` 撤掉。
+  **第 80 片留下的两处不一致一并修**：① `NOT_COVERED` 里那句"PDF/图框版式"是假话——第 80 片
+  已经把 PDF 与图框交付了，而每一项都会印进 Markdown、PDF 正文、CLI 收尾行与证据侧车，
+  于是每份带 PDF 的产物都在自称没有 PDF；撤掉该项，并补上标题栏一直单独宣称的「检验点与点检项」。
+  ② 同一个边界事实在 `_frame()` 标题栏与正文两份清单里各写一遍（"工时、扭矩值、检验点、维护指引"
+  vs `NOT_COVERED` 四项），谁改了另一边都不会红；现在标题栏读调用方传进来的同一份 `not_covered`，
+  并新增 `test_the_frame_and_the_body_declare_one_boundary` 钉成断言。
+  `tests/test_cad_assembly_steps.py::TestEvidenceSidecar` 那条钉四项清单的断言同批翻，
+  配两条反向对照（旧那项不许出现在证据与 Markdown 里）。
+  常驻 `tests/test_assembly_steps_pdf.py` 6 → 13 条、`tests/test_changelog_integrity.py` 新 7 条、
+  `tests/test_doc_reference_census.py` 7 → 8 条；
+  `docs/audit/s81/battery81.py` **10 臂 KILLED 10 / 存活 0**（逐臂打出开火用例名，读数在 `battery81.log`；
+  Y3/Y4 还各自多打红一条普查的"落盘读数==内存读数"用例，那是同树耦合而不是判据串味，取证文档 §六 记了来处）。
+  证据见 `docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md`。
+
 - **v5.41 F-ASSEMBLY-PDF 第 80 片：装配步骤文档的 PDF 版式与图框补上（第 56 片那句"本轮不排"排上了）**：
   新实现 `src/aipd_os/cad/assembly_steps_pdf.py`：A4 矢量 PDF + 每页图框与标题栏
   （装配体代号 / 版本 / 页码 / "本文档不承载"清单），中文用 reportlab **内置 CID 字体

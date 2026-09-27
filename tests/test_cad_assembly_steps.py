@@ -265,12 +265,19 @@ class TestEvidenceSidecar:
         assert [s["no"] for s in disk["steps"]] == [1, 2]
 
     def test_evidence_names_what_the_document_does_not_carry(self, tmp_path):
-        """证据必须自己说清边界：这份骨架不是作业指导书全文（工时/扭矩/维护都没有）。"""
+        """证据必须自己说清边界：这份骨架不是作业指导书全文（工时/扭矩/维护都没有）。
+
+        第 81 片翻掉的一项：清单里原本还有「PDF/图框版式」，而第 80 片已经把 PDF 与图框
+        交付了——每份带 PDF 的产物都在自称没有 PDF。撤掉它，同时把 PDF 图框标题栏一直
+        单独宣称的「检验点与点检项」并进来（同一个事实只留一处来源）。
+        """
         md = tmp_path / "s.md"
         man = _manifest(tmp_path, _two_part_parts(), steps=_clean_steps())
         ev = generate_assembly_steps(md, manifest=str(man), part_name="ASSY-1")
         assert ev["not_covered"] == ["维护指引", "工时与工序成本", "扭矩或拧紧值",
-                                     "PDF/图框版式"]
+                                     "检验点与点检项"]
+        assert "PDF/图框版式" not in ev["not_covered"], ev["not_covered"]
+        assert "PDF/图框版式" not in md.read_text(encoding="utf-8")
 
     def test_uncovered_balloon_shows_up_in_evidence_and_markdown(self, tmp_path):
         md = tmp_path / "s.md"

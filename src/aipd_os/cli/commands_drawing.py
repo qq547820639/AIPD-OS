@@ -775,6 +775,19 @@ def cmd_drawing_assembly_steps(args):
     provenance = {"tool": "aipd_os.cad.assembly_steps（声明渲染，无几何投影）",
                   "model_source": str(manifest), "command": "drawing assembly-steps",
                   "ok": True, "status": "DONE"}
+    draw_image = getattr(args, "draw_image", None)
+    if draw_image is not None and not str(draw_image).strip():
+        # 与上面 --db/--bom 那条不同：那里"空值"就是没给，这里空值是"给了但没给对"。
+        # 按没给处理等于把作者要的图静默丢掉，本仓对这一类一律当场拒。
+        print("--draw-image 给了空值：要么给图片路径，要么别给这个旗子")
+        return 2
+    if draw_image is not None and not Path(draw_image).is_file():
+        print(f"--draw-image 指向的文件不存在：{draw_image}")
+        return 2
+    if draw_image is not None and not getattr(args, "pdf", None):
+        print("--draw-image 要和 --pdf 一起给：Markdown 版式不嵌图，"
+              "只给图就等于把这张图丢掉")
+        return 2
     pdf_arg = getattr(args, "pdf", None)
     pdf_path = None
     if pdf_arg:
@@ -782,7 +795,8 @@ def cmd_drawing_assembly_steps(args):
     try:
         evidence = generate_assembly_steps(
             out, manifest=str(manifest), part_name=args.part, revision=args.revision,
-            bom_lines=bom_lines, provenance=provenance, pdf_path=pdf_path)
+            bom_lines=bom_lines, provenance=provenance, pdf_path=pdf_path,
+            draw_image=draw_image)
     except ValueError as exc:
         print(f"装配步骤声明不合法：{exc}")
         return 2

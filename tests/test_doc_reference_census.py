@@ -97,3 +97,24 @@ def test_multi_and_missing_are_kept_apart(report) -> None:
     assert report["buckets"].get("multi", 0) > 50, "multi 档读空 ⇒ 简写全被判红了？"
     for doc, target, line in (tuple(x) for x in report["live_defects"]):
         assert target, (doc, line)
+
+
+def test_history_face_sorts_when_line_shapes_mix(tmp_path) -> None:
+    """同一个指不回的目标既被裸引又被带行号引 ⇒ 普查不许崩在排序上。
+
+    第 81 片的取证文档引用了一个仓外文件的三处行号与一处裸名，`Ref.key()` 的第三元素
+    于是同时出现 `""`（没写行号）与 `int`（写了），`sorted()` 直接抛
+    `TypeError: '<' not supported between instances of 'int' and 'str'`——
+    整个普查连同它的 6 条常驻用例一起 ERROR。这不是"那条引用有问题"，是量具自己没牙口，
+    所以这里钉的是**它能读完混合形状**，而两档输出的元素形状保持不变。
+    """
+    (tmp_path / "CHANGELOG.md").write_text(
+        "- 见 nonexistent_module.py 与 nonexistent_module.py:455 两处，"
+        "外加 nonexistent_module.py:9。\n", encoding="utf-8")
+    rep = census.audit(tmp_path)          # 改前的 sorted() 在这一行抛 TypeError
+    rows = [d for d in rep["history_defects"] if d[1] == "nonexistent_module.py"]
+    lines = [d[2] for d in rows]
+    assert "" in lines, f"没写行号那一档丢了 ⇒ 混合形状没被喂进来：{lines}"
+    assert 455 in lines and 9 in lines, lines
+    assert all(isinstance(x, (int, str)) for x in lines), lines
+    assert rep["live_defects"] == [], rep["live_defects"]
