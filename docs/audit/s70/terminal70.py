@@ -1,3 +1,5 @@
+# ruff: noqa: E501   # 长中文读数串，不为过 lint 而拆坏字面量
+
 """第 67 片收尾读数：从原件现跑生成《六、终局读数》，取不到就整轮拒写。"""
 from __future__ import annotations
 
