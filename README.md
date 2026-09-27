@@ -269,6 +269,7 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     不自动求拆卸方向：文献那套（离散球面搜索 + 无碰撞路径校验）要装配约束与实体求交两样
 #     本仓没有的前提，硬算就是画一张没证过的装配顺序。位移与视线平行时告警「看不出分离」。
 aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part ASSY-1 \
+aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part ASSY-1 --pdf   # 顺带出 A4 图框矢量 PDF（中文可抽取）\
   --db state.db --bom BOM-1
 #   ↑ 装配步骤文档（C6「装配/维护」里**装配**那一半）：同一份清单多一段 "assembly_steps"：
 #     [{"no":1,"action":"支架贴基面，两颗 M5 先不拧紧","balloons":[1]}]——

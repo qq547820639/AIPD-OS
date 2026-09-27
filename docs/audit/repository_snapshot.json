@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T20:40:26",
+  "generated_at": "2026-09-27T21:12:20",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 216
+      "tests": 217
     }
   },
   "tags": [
@@ -117,33 +117,52 @@
     "version": "5.6.0",
     "parsed": true,
     "total_files": 678,
-    "hash_matches": 675,
-    "hash_mismatch_count": 3,
+    "hash_matches": 673,
+    "hash_mismatch_count": 5,
     "mismatches": [
       {
-        "path": "src/aipd_os/research/__init__.py",
+        "path": "scripts/absence_claim_census.py",
         "reason": "hash_mismatch",
-        "expected": "4d845dd0a8da5e73c32e0a9f5d50e91a33bcf3d88196775391d1b0910661726f",
-        "actual": "68acf0613dfceecbbbd59d2f8da64e26dd7c7438f81c0c0406364a7ae5b6cc0c"
+        "expected": "a700336161fcf58d16b8bc1a4b70e0ade3894a7a4bbc26b84fd53a12baff493d",
+        "actual": "7d5ff4c7a5caed62dac16b06cb6fe9ca4aabb640d32a4253aa47a44b65dae238"
       },
       {
-        "path": "src/aipd_os/research/fulltext.py",
+        "path": "src/aipd_os/cad/assembly_steps.py",
         "reason": "hash_mismatch",
-        "expected": "cc5c9fdddcccbeefe8744748ec852dbae85a00ec52bc5e971c7f76819c804c80",
-        "actual": "bd89e44f22fdaa969f664fa2539a0fdda70bd2f6043992d10a0b2699e0201cca"
+        "expected": "85f2c5ac1a5e7f9dbfb076f6b55e7d5ea1a50ca1bf80bddc6a62961db1040ef3",
+        "actual": "864f744cc9420220a6e5f380c66ebe6b1b8eaa25039dad7deccfd1c9316e0eb7"
       },
       {
-        "path": "tests/test_research_fulltext_step.py",
+        "path": "src/aipd_os/cli/commands_drawing.py",
         "reason": "hash_mismatch",
-        "expected": "6648e0c937415781caf00cd3f00389a489790f7212fd4c096c6e1cbb440306af",
-        "actual": "99d3155f6e34a5c6d192f977cfd7e3fb8f119d8fe74d33462022552a3f98d0e1"
+        "expected": "3cef38da2fac67c7392927b2c49d349a8679a8b287d9321bc74be432e71e10fe",
+        "actual": "559dcde03d7a2d6302be5e9bf4037411772f6c3722fdef1f1ef108940bcd9e40"
+      },
+      {
+        "path": "src/aipd_os/cli/main.py",
+        "reason": "hash_mismatch",
+        "expected": "dbcd13979e6dcda0d73f808bffcae8125872ad55fab86e42c68b5501b1bff6ed",
+        "actual": "422252c3d2b17d980aa8084236df3367469250b05cdd5f68377646c958c06c8d"
+      },
+      {
+        "path": "src/aipd_os/registry_data.py",
+        "reason": "hash_mismatch",
+        "expected": "f7c8ea2b5d6d4d1429ba891b590fb5a127f41a9004b13163ef21b1eb99b8e33b",
+        "actual": "d24d3443dc9d35124da0b6772f268d51992583e0cd5fd94f663c0861d176ded4"
       }
     ]
   },
   "untracked_or_generated": [
-    " M src/aipd_os/research/__init__.py",
-    " M src/aipd_os/research/fulltext.py",
-    " M tests/test_research_fulltext_step.py",
+    " M docs/audit/capability_matrix.json",
+    " M docs/audit/capability_matrix.md",
+    " M docs/audit/repository_snapshot.json",
+    " M scripts/absence_claim_census.py",
+    " M src/aipd_os/cad/assembly_steps.py",
+    " M src/aipd_os/cli/commands_drawing.py",
+    " M src/aipd_os/cli/main.py",
+    " M src/aipd_os/registry_data.py",
+    "?? src/aipd_os/cad/assembly_steps_pdf.py",
+    "?? tests/test_assembly_steps_pdf.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

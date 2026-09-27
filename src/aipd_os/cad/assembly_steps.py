@@ -219,7 +219,8 @@ def _markdown(part_name: str, revision: str, manifest: Path, table: list[list[st
 def generate_assembly_steps(out_path: Path | str, *, manifest: str, part_name: str,
                             revision: str = "A",
                             bom_lines: Sequence[Any] | None = None,
-                            provenance: dict[str, Any] | None = None) -> dict[str, Any]:
+                            provenance: dict[str, Any] | None = None,
+                            pdf_path: Path | str | None = None) -> dict[str, Any]:
     """端到端出装配步骤文档：清单 -> 声明校验 -> Markdown -> ``.evidence.json``。
 
     这里**不做投影**（不需要几何），所以不 import CadQuery；STEP 文件存在性照样由
@@ -264,6 +265,18 @@ def generate_assembly_steps(out_path: Path | str, *, manifest: str, part_name: s
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
 
+    if pdf_path is not None:
+        # 同一份投影：零件行 / 列名 / 步骤计划都直接传过去，PDF 那边不再解析一遍清单
+        from aipd_os.cad.assembly_steps_pdf import render_assembly_steps_pdf
+
+        pdf = render_assembly_steps_pdf(
+            pdf_path, part_name=part_name, revision=revision, manifest=str(man),
+            columns=columns, table=table,
+            plan={**plan, "not_covered": list(NOT_COVERED)},
+            bound=bom_evidence is not None)
+    else:
+        pdf = None
+
     evidence: dict[str, Any] = {
         "document": "assembly_steps",
         "manifest": str(man),
@@ -279,6 +292,8 @@ def generate_assembly_steps(out_path: Path | str, *, manifest: str, part_name: s
         "parts_list": rows,
         "bom": bom_evidence,
         "not_covered": list(NOT_COVERED),
+        # PDF 不在时写 None 而不是省略这个键：读者/程序能区分"没要"与"要了但没生成"
+        "pdf": pdf,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     evidence.update(provenance or {})

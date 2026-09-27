@@ -299,6 +299,9 @@ def build_parser() -> argparse.ArgumentParser:
     das.add_argument("--revision", default="A", help="文档版本号")
     das.add_argument("--db", help="状态库路径（与 --bom 一起给）：给了零件清单才长数量/材料列")
     das.add_argument("--bom", help="BOM 编号：数量、单位、材料与工艺取自这张 BOM 的行")
+    das.add_argument("--pdf", nargs="?", const="@AUTO@", metavar="PATH",
+                   help="额外输出 A4 图框版 PDF（矢量中文、文字可抽取）；"
+                        "不给 PATH 就落在 --out 同名 .pdf")
     das.add_argument("--tenant", default="default", help="BOM 所属租户")
     das.add_argument("--project", default="default", help="BOM 所属项目")
     das.add_argument("--json", action="store_true")

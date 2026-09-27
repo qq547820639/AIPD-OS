@@ -951,6 +951,26 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.41 F-ASSEMBLY-PDF 第 80 片：装配步骤文档的 PDF 版式与图框补上（第 56 片那句"本轮不排"排上了）**：
+  新实现 `src/aipd_os/cad/assembly_steps_pdf.py`：A4 矢量 PDF + 每页图框与标题栏
+  （装配体代号 / 版本 / 页码 / "本文档不承载"清单），中文用 reportlab **内置 CID 字体
+  `STSong-Light`**——不需要字体文件、不依赖本机装了什么中文字体，而且**文字是可抽取的**。
+  这一点决定了验收方式：每条断言都用 **pypdf 独立解码**回来核（"每步动作一字不差出现在某一页某一行"、
+  "每页都有第 N 页"），而不是看文件存在或字节数——文件存在只证明写了字节，不证明写得对。
+  **投影只有一份**：`generate_assembly_steps` 把已经算好的 `columns/table/plan` 直接传给 PDF，
+  PDF 侧不重新解析清单；并有一条常驻用例专门比"Markdown 里的每条步骤都在 PDF 里出现"，
+  防的是两份投影各长一半还各自自洽（第 52/53 片同一格）。
+  `--pdf` 旗子：不给值就落在 `--out` 同名 `.pdf`，给值就按路径写；证据侧车新增 `pdf` 字段
+  （`{path, sha256, pages, chars}`），**没要 PDF 时显式写 `None`** 而不是省键——
+  读者要能区分"没要"与"要了但没生成"。
+  **判据跟着翻**：登记表那句"版式只有 Markdown，PDF/图框未做"一改，第 67 片那条
+  `ASSEMBLY-STEPS-PDF-LAYOUT` 缺席式登记立刻 `CLAIM_TEXT_ABSENT`，同批换成存在式
+  `ASSEMBLY-STEPS-PDF-WIRED`（反证 = 生产面里再没人调用 `render_assembly_steps_pdf`；
+  锚点取**消费方调用点**而不是新模块本身，正是第 65 片给 `fetch_fulltext` 记过的那种形状）。
+  登记表 `implementation_file`/`integration_test`/`input_output`/限制句、README 速查、矩阵同批改。
+  新常驻 `tests/test_assembly_steps_pdf.py`（6 条）；`docs/audit/s80/battery80.py` 见下。
+  证据见 `docs/audit/ASSEMBLY_PDF_F-ASSEMBLY-PDF_2026-09-27.md`。
+
 - **v5.40 F-PREFIX-SCOPED-TRUST 第 79 片：把开放来源的信任从"主机级"降到"主机 + 路径前缀"级**：
   第 78 片给 `OPEN_ACCESS_DOMAINS` 加了 `ebi.ac.uk` / `europepmc.org`，
   当时边界靠两句承诺：注释说"我们只构造 fullTextXML 路径"，用例说"只构造这一种 URL"。

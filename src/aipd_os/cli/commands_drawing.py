@@ -775,10 +775,14 @@ def cmd_drawing_assembly_steps(args):
     provenance = {"tool": "aipd_os.cad.assembly_steps（声明渲染，无几何投影）",
                   "model_source": str(manifest), "command": "drawing assembly-steps",
                   "ok": True, "status": "DONE"}
+    pdf_arg = getattr(args, "pdf", None)
+    pdf_path = None
+    if pdf_arg:
+        pdf_path = (out.with_suffix(".pdf") if pdf_arg == "@AUTO@" else Path(pdf_arg))
     try:
         evidence = generate_assembly_steps(
             out, manifest=str(manifest), part_name=args.part, revision=args.revision,
-            bom_lines=bom_lines, provenance=provenance)
+            bom_lines=bom_lines, provenance=provenance, pdf_path=pdf_path)
     except ValueError as exc:
         print(f"装配步骤声明不合法：{exc}")
         return 2
@@ -790,6 +794,9 @@ def cmd_drawing_assembly_steps(args):
         print(f"已出装配步骤文档：{out}（{evidence['assembly_steps']['step_count']} 步，"
               f"球标覆盖 {len(coverage['referenced'])}/{len(coverage['declared'])}，"
               f"清单 {manifest.name}）")
+        if evidence.get("pdf"):
+            print(f"  PDF：{evidence['pdf']['path']}"
+                  f"（{evidence['pdf']['pages']} 页，图框 + 标题栏，文字可抽取）")
         for step in evidence["steps"]:
             cited = "、".join(f"{c['balloon']}（{c['part']}）" for c in step["cited"])
             print(f"  步骤 {step['no']:>2d}  引用球标 {cited}：{step['action']}")
