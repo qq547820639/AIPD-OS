@@ -135,6 +135,47 @@
 `aipd truth show` 仍是不存在的命令——这一条被 `doc_command_census.py` 自己当"活例"写在 docstring 里，
 不许为了让清单变干净而把它改掉。
 
-## 八、终局读数
+## 八、终局读数（由 `tmp/s64/terminal64.py` 从原件现跑生成，不手抄）
 
-（在绑定提交之后的干净检出里现跑，随本轮最后一个提交落盘。）
+跑在绑定提交那棵干净检出 `s64d`（`git rev-parse HEAD` = `41c4b5a5a3ad`，
+主树 HEAD = `41c4b5a5a3ad`）；`git status --porcelain` 当时为空，所以 C7 是在**没有自造脏**的树上判的。
+
+- **收尾验签（本片的主角，第一次在自己该绿的树上跑）**：`rc=0`，
+  `9 / 9` 格绿、判红 0、前提塌 0；
+  读数 `report_entries=2540`、
+  `tree_files=207`、`tree_defs=2457`、
+  锚点 `a66040520139` ← HEAD `41c4b5a5a3ad`（祖先那一支同向），
+  `provenance_binds_report=True`，
+  `--expect-test tests/test_closeout_verifier.py` 命中且 passed（报告里那批用例
+  **16 条**，与常驻用例数一致）。`--min-tests 2500` 也过了。
+  这一行是本片真正的验收：一台每轮替我签字的机器，先要能在签出树上退 0。
+- **发布门禁**：`production_release_gate --release-ready --tag v5.6.0` → `rc=0`、
+  `release_ready: true`、逐项 `8 / 8` 通过。
+- **`audit_repo --strict`**：`rc=1`，恰 **1** 条 ✗（`✗ Provenance source commit mismatch: manifest=a66040520139… …`），
+  这条按设计不修——发布锚点不许重锚到 HEAD（见项目记忆「每轮收口的重锚配方」）。
+- **两张普查**：`doc_command_census` `rc=0`（现状面 0 缺陷），
+  `command_surface_census` `rc=0`。现读的分母：
+  `权威面：90 条 argparse 路径（契约 deprecated 别名不并进权威面，由 alias_unregistered 单独核），15 个组名`；`[cli] 74 条`；`低于 cli 档合计：0 条`。
+- **签出那一跑的原件**：`exitcode=0`、`collected=2540`、
+  `passed=2537`、`skipped=3`、
+  其余终态 `{}`、
+  用时 `332.5s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/tmp/s64b`、
+  `source_commit=a66040520139`。
+- **内容一致性的替身**（C6 依赖的两条）：`[('tests/test_packaging.py::test_release_manifest_hashes_match_disk', 'passed'), ('tests/test_packaging.py::test_source_manifest_hashes_match_disk', 'passed')]` —— 两条都在名单里且 passed，
+  这就是"测的就是这棵树"那句话目前的机械形状。
+
+
+## 九、记账脚本自己的一处错（按不 amend 的规矩记在这里）
+
+生成 §八 的那支 `tmp/s64/terminal64.py` 第一版把锚点只钉在**占位句**那一行，
+没吃掉它上面那行占位标题 `## 八、终局读数`，于是替换之后文档里出现**两个** §八 标题。
+写后的读回断言（`back.count("## 八、") == 1`）抓到了它，但抓到得太晚——文件已经落盘。
+定稿改法两条，都是本仓既有纪律的重述而非新规矩：
+① 锚点吃掉**整块**占位（标题 + 占位句）；
+② 断言移到**写盘之前**，对内存里算好的 `merged` 判，而不是对已落盘的字节判。
+（见技能 `anchor-scripted-doc-patch` 与 `ledger-splice-hygiene`：闸门必须在写之前。）
+
+另记一件与本篇同类但更贵的事：本轮三次把"允许缺哪几格"写死（写成"差额为空"、
+写成"除 C7 外全绿"），三次都被**换一棵树**打回（工作树 → 干净签出）。
+教训是本片 §四 第 4 条：这类每轮跑一次的机器，输入在配方中途是不变量最少的时刻，
+所以"允许缺什么"必须由版本控制现算，或把输入自造到终态形状。
