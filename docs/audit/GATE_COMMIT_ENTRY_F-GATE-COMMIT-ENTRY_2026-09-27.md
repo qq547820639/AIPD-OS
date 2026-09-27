@@ -69,4 +69,26 @@ authorization + eligibility）"——**没撒谎，但少写了一格**：读者
 2. 第 64 片留的 `doc_command_census` 只报面收窄仍未做。
 3. 窄档两个手写词表仍无自证（第 67 片 §七.3）。
 
-## 六、终局读数（占位）
+## 六、终局读数（由 `docs/audit/s68/terminal68.py` 从原件现跑生成，不手抄）
+
+- **签出那一跑**（`tmp/s67/checkout`，报告产出于提交 `06f9133`，主树当时 HEAD `03859f7`）：`exitcode=0`、`collected=2566`、`passed=2563`、`skipped=3`、其余终态 `{'skipped': 3}`、用时 `296.8s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s68/checkout`、`source_commit=a66040520139`
+- **本片主角（真仓库终态）**：`rc=0`；语料：84 个能力，带否定词的句子 39 句；账本登记 13 条，未挂锚点 29 句（宽档，只报不判）；能力缺失句（窄档＝判据面）：19 句 = 登记 9 + 豁免 10 + **未处置 0**；判红 0 条：登记的 13 句「仍缺着」现在都还缺着
+- **`--self-test`**：`rc=0`，**22 条**合成读数全对上（含四档去处判决与 `table_ddl` 双向）
+- **常驻用例**：`pytest tests/test_absence_claim_census.py -q` → `26 passed in 11.77s`（rc=0）
+- **变异电池（入库副本现跑）**：`docs/audit/s68/battery68.py` → `rc=0`，合计 KILLED 4 / 其余 0
+- **两档分母现读**：宽档 39 句、窄档 19 句（差 20 句是谈判决/谈口径的假阳性）；登记表解析问题 `[]`；薄理由豁免 `[]`
+- **第 64 片那台收尾验签在本片树上**：`rc=0`；收尾验签（报告 ↔ 证据 ↔ 工作树）；读数：报告 2566 条 / 208 个文件，树 208 个文件 / 2483 个 def，终态 {'passed': 2563, 'skipped': 3}
+- **发布门禁**：`rc=0`、`"passed": true` 计 8 条、`release_ready` true
+- **本片新档的读数**：`external_callers` 对 `commit_approved` / `commit_snapshot` 各判 HOLDS,UNACCOUNTED，正向对照 `record_dxf_lineage` 判 CONTRADICTED（探针会开火）
+- **`audit_repo --strict`**：`rc=1`，恰 **1** 条 ✗（`✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=03`）——设计内不修
+- **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag；被哈希文件数 `669`（本片**文件数不变**，只改内容）
+- **工作树**：`git status --porcelain` 输出 0 行
+
+**这一节的读数被闸拒了三次才写成，三次都是闸对、脚本错**（记下来，因为它同时证了三件事）：
+① 第一次 `closeout_verifier rc=4 / gate rc=2`：那时我还有未提交的改动 —— 验签打印的是
+`worktree_clean：工作树有 1 处未提交改动：['M docs/audit/s68/terminal68.py']`，
+门禁同一口径，两把都没被我"顺手放宽"；
+② `battery rc=2` 的真相是脚本里路径写成 `docs/audit/s67/battery68.py`（我生成 terminal68 时
+只替了 `battery67.py` 文件名、没替目录）——**第一版的失败消息不带输出尾，只能猜**，
+补上 `输出尾：…can't open file…` 才一次定位；
+③ 修完路径重跑，工作树干净 → 全绿（上面那串读数）。
