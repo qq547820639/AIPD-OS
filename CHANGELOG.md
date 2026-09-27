@@ -951,6 +951,56 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.25 F-CLOSEOUT-VERIFY 第 64 片：新常驻量具 `scripts/closeout_verifier.py`——每轮手写的收尾验签提成机器**：
+  起因不是缺口而是成本。第 62/63 片的收尾验签是每轮现写的 `/tmp/s6x/verify6x.py`（后者 25 条 `[OK]`），
+  宿主重启把 `/tmp` 清掉之后，下一轮只能从提交摘要重推配方，于是同一格里连踩两次**已有记录**的红
+  （`AIPD_SOURCE_COMMIT` 传成本轮 HEAD ⇒ gate 判 STALE；PATH 缺 `.venv/bin` ⇒ `pip-audit` fail-closed 假红），
+  各多烧一整套全量。这台机器判九格，三格是主线结构上看不见的：
+  ① **报告字节 ↔ 证据**——`release_evidence.py:236-278` 早把报告 `sha256` 写进 `PROVENANCE`，
+  却没人事后重算（C1）；② **汇总数是不是现数的**——`production_release_gate._check_test_report`（`:503-542`）
+  只读 provenance 里抄过去的三个数字，而其中 `failed` 是 `total - passed - skipped` **推导**的，
+  于是「summary 被改过」与「`tests[]` 被截断而 summary 留着」今天无人可见（C2 由 `tests[]` 现数直方图，
+  再与 `summary` 和 `PROVENANCE` 两处副本对账，缺键按 0 读）；③ **名单 ↔ 树**——树上测试文件与
+  名单文件双向求差、每文件「名单 ≥ 树上 def 数」、重复 nodeid 单列（C4：少跑一个文件今天读成
+  「2512 条全绿」）。另加终局干净（含 setup/call/teardown 相位）、锚点绑定（含「锚点是工作树 HEAD 的祖先」）、
+  两条清单哈希用例在场且 passed 当作「测的就是这棵树」的替身、工作树干净、本轮原告点名 `--expect-test`、
+  `--min-tests` 下界，共九格。退码 0/4/2 沿用本仓形状，**空名单、缺锚点、报告读不出都算前提塌（退 2）**，
+  不折算成「零违规」；没给锚点就**不判 STALE**——"默认取 HEAD"正是第 62 片真犯的那个错。
+  **选型**（原件本轮重开）：借 `dorny/test-reporter`（MIT）的 `fail-on-empty` 与 passed/failed/skipped
+  词汇，但把「空就红」升成前提档；不引依赖（那是 GitHub Action，要 Node 与 Actions 运行时，
+  本仓收尾复算跑在本地 detached 检出里，接不上）。明确否掉两条：把这套检查塞进
+  `production_release_gate`（门的契约是八个布尔 + `--release-ready`，收尾每轮都要跑且需要
+  file 级前提失败与 `--self-test` 反证，两档粒度混一格谁也读不清）；以及原计划里的「镜像锚点检查」——
+  `doc_command_census.py`（三档判红面）与 `command_surface_census.py`（七档覆盖桶）已占那两面，
+  再加一份就是第三份手抄，正是那两把尺子要防的事。未检索到第三个同轴候选
+  （搜「报告名单与树上 def 求差」只命中 pytest-json-report 本体、教程与 coverage 类的 `diff-cover`），
+  如实记为未找到。
+  **两处形状是夹具第一轮试跑实测出来的**：名单文件面必须同时吃 `test_*.py` 与 `*_test.py`
+  （pytest 默认两个模式，只 glob 前者会把 `tests/maturity_consistency_test.py` 读成幻影文件，
+  而判决看起来完全自洽）；roster 的键必须按 **rootdir 相对**（nodeid 就这么写），按 tests 目录相对
+  会让双向差集两边都非空。第三条是旧账复发：`summary` 的 `failed`/`error` 键在计数为 0 时**不存在**，
+  必须读成 0——第 63 片记过一次，本轮在 C2 上又差点重犯。
+  **电池**：`--self-test` **17 臂**合成读数（分母前提 1 + 合规对照 1 + 逐格注入 12 + 前提退 2 共 3，
+  每臂断言「开火的判据集合恰等于该开的那一格」）；常驻真件变异电池 **7 臂 7 KILLED / 0 SURVIVED /
+  0 注入无效**（A1 只吃 `test_*.py`、A2 缺键不读 0、A3 去掉祖先那一支、A4 没锚点默认取 HEAD、
+  A5 C1 无条件绿、A6 `--expect-test` 不执行、A7 空名单读成绿），对照臂先跑（`14 passed`），
+  每臂证 sha 落地再还原，终局源文件 sha `76605b6a4d9e` 复原且复跑 rc=0。电池里自己踩的两笔：
+  A4 锚点缩进写错命中 0 条——脚本在写盘**之前**就 assert 崩，源文件未动；夹具的证据文件当初落在
+  工作树**里面**，让对照组先红在 C7 上，以及一臂没复位上一臂留下的 `failed` 终态（同一类坑第三次露头）。
+  常驻用例 **14 条**（`tests/test_closeout_verifier.py`：`--self-test` 被真 spawn / 九格名字面 /
+  真语料除「本轮未提交」外全绿 / 名单缺口必须与工作区未提交文件**逐文件相等**（写「差额为空」本轮必红、
+  写「差额随便」即恒真）/ 锚点传 HEAD 只多点亮那一格 / 整文件抽掉一条常驻用例只点亮名单格而**不**牵连
+  汇总格 / 两条替身 nodeid 还长在 `tests/test_packaging.py` 上（AST 反查：替身被删则 C6 永不开火）/
+  默认从 PROVENANCE 取报告路径那条面（`--self-test` 每臂都显式传 `--report`，不另开用例就是死码）/
+  空名单与缺锚点与缺目录都退 2 / 缺席原告 / `--min-tests` 是 opt-in / 退 2 与退 4 不互相折算 /
+  被绑的那份才是权威 / README 行首镜像）。
+  **命令面镜像**：本片不加 `aipd` 命令——74 条注册命令、64 条 PUBLIC 契约、90 条 argparse 路径三张分母
+  都不动；动的是量具目录，`scripts/` 常驻件 40 → 41，README 加一行行首可执行写法（含「锚点不许传 HEAD」）。
+  顺手量清的一件事：`doc_command_census` 只报面点到的 10 个未注册名里**今天 0 条是活缺口**
+  （8 个是 `zzz-`/`ghost` 夹具名、2 个是 `aipd truth show` 与 `aipd truth ctq` 的记录性引述），
+  于是那件「只报面该把 `tests/` 挡在语料外」的小活被精确成呈现问题而不是判据盲区。
+  证据见 `docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md`。
+
 - **v5.24 F-AUDIT-READER 第 63 片：新公开命令 `aipd truth history`——把 `audit_log` 变成问得出来的东西**：
   缺口不在写侧。`AIPDStateDB.add_audit` 有多个写入点（CTQ 修订/停用、血缘加边、返工与备份、
   邮件客户端），缺的是读面：`list_audit(limit=100)` **不分 tenant/project**、默认 100 条
