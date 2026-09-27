@@ -225,7 +225,8 @@ def test_pmc_source_is_preferred_over_the_pdf_copy() -> None:
 
 
 def test_pmcid_is_recognised_from_the_oa_url_too() -> None:
-    assert ff._pmcid_of({"oa_url": "https://europepmc.org/articles/PMC8783953?pdf=render"}) == "PMC8783953"
+    rendered = {"oa_url": "https://europepmc.org/articles/PMC8783953?pdf=render"}
+    assert ff._pmcid_of(rendered) == "PMC8783953", rendered
     assert ff._pmcid_of({"pmc": "PMC1"}) == "PMC1"
     assert ff._pmcid_of({"oa_url": "https://arxiv.org/pdf/2401.04398"}) == ""
 
@@ -291,3 +292,27 @@ def test_the_two_new_open_access_hosts_are_the_europe_pmc_ones() -> None:
     for not_open in ("https://publisher.org/x.pdf", "https://researchgate.net/x.pdf",
                      "https://example.com/ebiac.uk/x"):
         assert not is_open_access_url(not_open), not_open
+
+
+def test_no_request_is_made_when_the_policy_says_no_even_for_a_chosen_url() -> None:
+    """挑出了 URL 不等于可以拿：策略说不行时一次请求都不该发。
+
+    第 78 片第一版只测了"没有开放副本"那条（根本不会走到策略判定），
+    电池臂 V3（把策略判定改成永远开放）因此存活——补上这条才打在它身上。
+    """
+    calls: list[str] = []
+
+    def spy(url: str) -> bytes:
+        calls.append(url)
+        return JATS
+
+    items = [{"source": "other", "is_oa": True, "title": "标了开放但域名不在白名单",
+              "oa_url": "https://paywalled.example.org/a.xml"}]
+    rep = ff.fetch_all(items, getter=spy)
+    assert calls == [], calls
+    assert rep["access_counts"].get("restricted") == 1, rep
+    assert rep["full_texts"] == 0, rep
+    # 同一份字节换成 Europe PMC 的端点就该真去取
+    rep2 = ff.fetch_all([{"source": "open_alex", "pmcid": "PMC1234567", "title": "T"}],
+                        getter=spy)
+    assert len(calls) == 1 and rep2["full_texts"] == 1, (calls, rep2)
