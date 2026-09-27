@@ -121,16 +121,15 @@ CLAIMS: tuple[dict[str, Any], ...] = (
         "why": "折算要么显式名要么汇率字段名；两者都不在时拒绝折算才是真的没做",
     },
     {
-        "id": "RESEARCH-CONNECTOR-FULLTEXT",
+        "id": "FULLTEXT-STEP-WIRED",
         "capability": "research.fulltext_fetch",
         "field": "current_limitation",
-        "anchor": "各连接器当前仅取摘要",
-        "check": {"kind": "identifier", "paths": ["scripts/research"],
-                  "symbols": ["fetch_fulltext"]},
-        "why": "库里有 `src/aipd_os/research/fulltext.py`，但这句话判的是**连接器消费不消费它**——"
-               "锚点取在连接器目录，取在库里会把自己判红（第 65 片实测的窄法）",
+        "anchor": "是库里 fetch_fulltext 的消费者",
+        "check": {"kind": "external_callers", "symbol": "fetch_fulltext",
+                  "expect": "present"},
+        "why": "第 65 片那条缺席式登记（「没有一个连接器消费它」）在第 76 片被接上 ⇒ 同批撤掉；"
+               "换成存在式：反证 = 生产面里再没人调用 `fetch_fulltext`（库里的定义不算调用点）",
     },
-    # ---- 第 66 片新增：计数叙述档（"有 N 个生产者"必须等于 AST 现读）----
     {
         "id": "PRODUCER-COUNT-REGISTRY",
         "capability": "product_truth.impact_propagation",
@@ -298,7 +297,7 @@ AXIS_SAMPLES: dict[str, tuple[str, ...]] = {
     "narrow": ("仍没有执行器的是 quote_batch",
                "BOM/成本变动要反向影响 CTQ 结论"),
     "no-predicate": ("内置族为常用成年男女/儿童百分位示例",
-                     "库里有 src/aipd_os/research/fulltext.py"),
+                     "尺寸实测值是否落在 CTQ 合格域内由图纸侧判"),
     "no-noun": ("项目里还没有 BOM 版本记录时记录照写",
                 "条目里仍不写 drawing_feature"),
     "non-claim": ("圆内没有图线即判未收口",
@@ -882,6 +881,13 @@ def audit(root: Path, claims: tuple[dict[str, Any], ...]) -> dict[str, Any]:
                      "anchor_at": f"{file}:{field}:{lineno}",
                      "detail": str(claim.get("why", ""))})
 
+    claim_ids = [str(c.get("id")) for c in claims]
+    dupes = sorted({i for i in claim_ids if claim_ids.count(i) > 1})
+    if dupes:
+        # 第 76 片我自己踩出来的：一次 index 切片替换写反了区间，
+        # 把四块登记复制了一份。id 重复不会改变任何一条判决（同一句被同一规则判两次），
+        # 所以只能在这里显式红——否则账本会悄悄长出一批没人维护的僵尸条目。
+        problems.append(f"duplicate_claim_id: 账本里这些 id 出现了不止一次：{dupes}")
     sentences = absence_sentences(corpus)
     anchored = {_norm(str(c.get("anchor"))) for c in claims if c.get("anchor")}
     wide_unanchored = [s for s in sentences
@@ -1309,7 +1315,7 @@ def _self_test(tmp: Path) -> int:
         ("有缺失谓词但没有能力名词 ⇒ 不算能力缺失",
          "项目里还没有 BOM 版本记录时记录照写", "no-noun"),
         ("没有缺失谓词（只是陈述范围）⇒ 不算",
-         "内置族为常用成年男女/儿童百分位示例，覆盖有限", "no-predicate"),
+         "内置族为常用成年男女/儿童百分位示例，未覆盖全部人群数据库", "no-predicate"),
     )
     for label, body, want in cases:
         assert classify_absence(body)[0] == want, (label, classify_absence(body), want)

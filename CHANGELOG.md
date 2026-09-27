@@ -951,6 +951,39 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.37 F-FULLTEXT-STEP 第 76 片：全文获取那一步终于有了消费者（`scripts/research/fetch_fulltexts.py`）**：
+  第 65 片登记的原话是"库里有一个**完全没被任何连接器消费**的 `fetch_fulltext`"。
+  这一步就是那个消费者，而且**不重新实现下载与分类**——只做连接器侧的两件事实：
+  这条记录有没有合法的开放副本、该用哪个 URL 去取。
+  选路只用来源自己返回的字段：arXiv 按 `arxiv_id` 推官方 PDF 直链；
+  OpenAlex 用 `is_oa` + `oa_url`（`best_oa_location.pdf_url` 优先）与它给的 `license`；
+  其余来源只认记录里已有的 `oa_url`；**没标开放访问就按拿不到处理，不去 scrape 出版商页面**。
+  顺带修一个数据缺口：OpenAlex 连接器原先把 API 已经返回的 `open_access`/`best_oa_location`
+  **整个丢掉**了——所以"全文获取"即使想接也只能猜 URL，而猜来的下载可能撞 robots
+  也可能只拿到付费墙 HTML。现在这两组字段随记录一起带出。
+  **选型（本轮做了外部检索前的对照，结论是零新依赖）**：开放副本的发现面有
+  ① OpenAlex `best_oa_location`/`open_access`（CC0 数据、无 key、我们本来就是六源之一）
+  ② Unpaywall（要 email 参数、非商用条款、为拿一个 OpenAlex 已经给的字段引入新外部依赖）
+  ③ Semantic Scholar `openAccessPdf`（部分字段要 key）④ 直接抓出版商页（版权/robots 不允许，
+  库里那份实现本来就拒绝）。选 ①，理由：功能等价而依赖为零。
+  **机器替我完成的两件事**（这条链是本轮真正的验收）：
+  ① 连接器一接上，第 65 片那条登记当场从 `HOLDS` 翻成 `CONTRADICTED`
+  （反证位点 `scripts/research/fetch_fulltexts.py:36`），要求我改口——判据在无人提醒下拦住"改了实现没说数"；
+  ② 改登记表文案时，第 74 片那条 `no-predicate` **具名样本**（原文就取自那句被改掉的话）
+  立刻报 `sample_missing`，逼我把样本换成仍在语料里的句子。
+  **两处我自己造出来的缺陷，都被自己的闸抓回**：
+  ① 账本换条时我用 `s[:i] + 新条 + s[j:]`，而 `j < i`（新条目的插入点在旧条目之后）
+  ⇒ 四块登记被复制一份。重复 id **不改变任何一条判决**，`rc` 照样 0；
+  于是新增 `duplicate_claim_id` 前提（账本里同一 id 出现两次即退 2）+ 常驻守卫用例；
+  ② `--offline` 那条用例第一版断言"没拿到全文"，电池臂 T4 摘掉 offline 判断后**仍然绿**
+  （真下载 arXiv PDF 会因二进制字节被库判 restricted，两种因果同一个读数）。
+  改成钉原因：离线模式**根本不许构造下载器**（`http_getter` 被调用即 AssertionError）。
+  常驻新增 `tests/test_research_fulltext_step.py`（6 条）与
+  `tests/test_research_fulltext_fetcher.py`（离线选路 4 条）；
+  `--self-test` 与两把尺子全绿，电池 `docs/audit/s76/battery76.py` **5 臂杀 5 活 0**。
+  登记表该行同步改口（`entry_point`/`run_command`/`unit_test`/`e2e_evidence`/限制句）
+  并重生成矩阵。证据见 `docs/audit/FULLTEXT_STEP_F-FULLTEXT-STEP_2026-09-27.md`。
+
 - **v5.36 F-LIVE-RECORD-SPLIT 第 75 片：把只报面拆成 live 与 record，未注册命令清单第一次变成空表**：
   第 60 片立"只报面"的理由是"判红面一宽就会惩罚把缺口写下来"，但另一半问题一直没解决：
   **可行动清单被记录性引述占满**。现读分布——全量扫描 1389 处 `aipd …` 提及里

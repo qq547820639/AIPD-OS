@@ -530,3 +530,19 @@ def test_dropping_a_narrow_sample_s_registration_shows_up_as_unaccounted() -> No
     # detail 只带 90 字（长限制句会被截），所以按能力名归因，不按整句子串
     assert any(str(r["id"]) == f"UNACCOUNTED:{owner['capability']}" for r in un), (key, un)
     assert rep["ok"] is False, rep
+
+
+def test_duplicate_claim_ids_are_a_precondition_not_a_quiet_state() -> None:
+    """账本里出现重复 id 必须是前提不成立（退 2），不许静静通过。
+
+    第 76 片我用 index 切片替换登记块时把区间方向写反，复制出四条重复条目；
+    重复 id 不改变任何一条判决（同一句被同一规则判两次），所以只有显式守卫能抓。
+    """
+    rep = acc.audit(ROOT, acc.CLAIMS)
+    assert not [x for x in rep["problems"] if str(x).startswith("duplicate_claim_id")], \
+        rep["problems"]
+    doubled = tuple(acc.CLAIMS) + (acc.CLAIMS[0],)
+    rep2 = acc.audit(ROOT, doubled)
+    assert any(str(x).startswith("duplicate_claim_id") for x in rep2["problems"]), \
+        rep2["problems"]
+    assert acc.main(["--claims", "", "--repo", str(ROOT)]) in (0, 2, 4)

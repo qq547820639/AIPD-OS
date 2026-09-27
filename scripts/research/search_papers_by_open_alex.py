@@ -54,6 +54,11 @@ def search_papers_by_open_alex(
             break
 
         for work in results:
+            # 开放访问信息必须一起带出去。第 76 片之前这两个字段被连接器丢掉，
+            # "全文获取"即使接上也只能猜 URL——猜来的下载可能撞 robots，
+            # 也可能只拿到付费墙 HTML。
+            oa = work.get("open_access") or {}
+            best_oa = work.get("best_oa_location") or {}
             papers.append({
                 "title": work.get("title", ""),
                 "authors": [
@@ -70,6 +75,9 @@ def search_papers_by_open_alex(
                 "source": "open_alex",
                 "doi": (work.get("doi") or "").replace("https://doi.org/", "") or None,
                 "arxiv_id": None,
+                "is_oa": bool(oa.get("is_oa")),
+                "oa_url": best_oa.get("pdf_url") or oa.get("oa_url") or "",
+                "oa_license": oa.get("license") or best_oa.get("license") or "",
             })
 
         page += 1
