@@ -97,16 +97,22 @@ rc=0
 
 `--self-test` 17 条合成读数全对上；`pytest tests/test_absence_claim_census.py -q` 19 passed。
 
-## 六、下一片入口
+## 六、终局读数（占位）
+
+## 七、下一片入口
 
 1. 第 65 片 §七 那格已闭合（原行内已改，不在这里重复）。
 2. 账本里还有 **34 句带否定词的句子没挂锚点**（`--json` 的 `sample_unanchored` 与 `corpus` 现读），
    其中"生产 Provider / 依赖外部数据源"这类条件句需要一个新的判据种类（条件式声明），
    不是加锚点就能吃下的——留给有一片专门处理"条件式现状句"的轮次。
-3. `supervisor.fact_writeback → truth_lineage` 那格**本片刻意不做**，原因写清楚：
-   我做了来源普查——`add_work` 在 `src/`+`scripts/` 的调用点里，`inputs=` 只带
-   `idea_id` / `claim_id` / CLI 手给的 `--inputs-json`（`supervisor.py:743`），
-   **没有任何在仓库里跑的 producer 会把一个 `T-NNN` 放进 inputs**；
+3. `supervisor.fact_writeback → truth_lineage` 那格**本片刻意不做**，原因写清楚。
+   「没有生产者」这类断言按**生产侧与测试侧各数一遍**才成立：
+   生产侧 `src/`+`scripts/` 的全部 `add_work` 调用点（`supervisor.py:743` 的 CLI `add-work`
+   与 `supervisor/idea_capabilities.py` 那十处）里，`inputs=` 只带
+   `idea_id` / `claim_id` / `tenant_id` / `project_id` / `actor` / `query` / `capability` /
+   `gap_reason`，或整份由 `--inputs-json` 手给；测试侧 `tests/` 的 **31 处** `add_work(`
+   调用点也是 0 处把 `T-NNN` 放进 inputs（`grep truth_id` 命中的全是
+   `rework_tasks` 的字段，不是工作项输入）；
    而 `ExecutionRecord.artifacts` / `evidence_references` 装的是适配器产出的文件路径
    （`document_adapter.py:60`、`local_brep_adapter.py:99`、`supplier_adapter.py:88` 等），
    与 `artifact_version` 记录的 `metadata["path"]`（`cad/dxf_lineage.py:99-108` 的
