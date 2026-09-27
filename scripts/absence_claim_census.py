@@ -200,15 +200,15 @@ CLAIMS: tuple[dict[str, Any], ...] = (
                "反证 = `commit_approved` 在生产面 0 处外部调用点 ⇒ 旗子被摘掉就翻红",
     },
     {
-        "id": "ASSEMBLY-STEPS-PDF-LAYOUT",
+        "id": "ASSEMBLY-STEPS-PDF-WIRED",
         "capability": "cad.assembly_instructions",
         "field": "current_limitation",
-        "anchor": "版式只有 Markdown，PDF/图框未做",
-        "check": {"kind": "identifier", "paths": ["src/aipd_os/cad"],
-                  "symbols": ["compose_pdf", "pdfgen", "to_pdf"]},
-        "why": "库里 `layout/composer.py` 确实用 reportlab 出手册 PDF——所以锚点必须取在"
-               "**装配步骤文档那一侧**（`src/aipd_os/cad`），取在库里会把这句真话判成过期"
-               "（第 67 片实测的第二条窄法，与 RESEARCH-CONNECTOR-FULLTEXT 同因）",
+        "anchor": "版式两条都在（第 80 片）",
+        "check": {"kind": "external_callers", "symbol": "render_assembly_steps_pdf",
+                  "expect": "present"},
+        "why": "第 56 片那句「PDF/图框未做」在第 80 片接上 ⇒ 同批把缺席式换成存在式。"
+               "锚点取**消费方**（装配步骤生成器里的调用点）而不是新模块本身：定义在库里却没人调用，"
+               "正是第 65 片给 fetch_fulltext 记过的那种形状（external_callers 天然排除定义所在文件）",
     },
 )
 
