@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import json
 import subprocess
-from collections import Counter
 import sys
+from collections import Counter
 from pathlib import Path
 
 REPO = Path("/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS")
