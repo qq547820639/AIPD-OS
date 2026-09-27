@@ -435,6 +435,8 @@ python scripts/research/fetch_fulltexts.py --input papers.json --out fulltexts.j
 #   ↑ 全文获取（第 76 片）：只走来源自己标为开放访问的副本（OpenAlex is_oa+oa_url；
 #     arXiv 用官方 PDF 直链），没标开放就按拿不到处理、不去 scrape 出版商页面；
 #     加 --offline 就只登记"可不可取"，不下载也不伪造全文。
+#     第 78 片再加一层：优先取**真文本源**（PMC 的 JATS XML、HTML），PDF 是退路；
+#     策略判定在下载之前做，抽到文本但策略不开放时结论词是 not_open_*。
 #     第 77 片补上"取到字节"与"抽出正文"的分别：开放副本实测都是 PDF，
 #     正文靠可选依赖 pypdf（BSD-3；PyMuPDF 是 AGPL，不兼容所以不用）；
 #     抽不出文本就报 pdf_without_text/pdf_extractor_unavailable，绝不记成 open。

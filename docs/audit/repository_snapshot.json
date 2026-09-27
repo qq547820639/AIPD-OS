@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T19:58:32",
+  "generated_at": "2026-09-27T20:24:52",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -116,56 +116,55 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 677,
-    "hash_matches": 671,
+    "total_files": 678,
+    "hash_matches": 672,
     "hash_mismatch_count": 6,
     "mismatches": [
       {
         "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "c66c799106237ee8387ca9cf54c1e126de645a339a711e5ffea01dc489c71689",
-        "actual": "00dce2ab8493f904e282ae802c65932ac82a48a50f30babc0d99cb3b737e383c"
-      },
-      {
-        "path": "pyproject.toml",
-        "reason": "hash_mismatch",
-        "expected": "93becd9738374e7a8b2bce419aa4489b5c2951156dcc7735a7ead2fbdd63a3b2",
-        "actual": "a20ebb027edaee80a6c13bbd4ccce78a210b5308e5f12619733baae6cc566377"
+        "expected": "00dce2ab8493f904e282ae802c65932ac82a48a50f30babc0d99cb3b737e383c",
+        "actual": "1cd6b45b85c05a5d64e52860c1d73c3262a3a9e554dedebecbf1a220f8f269af"
       },
       {
         "path": "scripts/research/fetch_fulltexts.py",
         "reason": "hash_mismatch",
-        "expected": "c78387ebda7c576092227cb28245a6be4a036aec636940513fe3f1928ff3eed1",
-        "actual": "6ce32f2ca847a064ef1dac6fb00cc65cee2eef60467cd44912d6aa010b3692c2"
+        "expected": "6ce32f2ca847a064ef1dac6fb00cc65cee2eef60467cd44912d6aa010b3692c2",
+        "actual": "a642434aa79e53063710a86e5c85c950c92303d1495a332a5c3fbc55f45a5fd2"
       },
       {
-        "path": "scripts/research/requirements.txt",
+        "path": "scripts/research/search_papers_by_open_alex.py",
         "reason": "hash_mismatch",
-        "expected": "bbc83f43851fd901e27a60d8d8239b81f8a0d505ed16a1b5b166c4cfcd8b087d",
-        "actual": "418d8a440def25369b4f21d41ddd9da9624199ea8a1369a313b1023e3aa4562b"
+        "expected": "330f744e04aa5feaf3d32f72825a5bf3690c19754ad43c3d6ddf9d05f1231c45",
+        "actual": "2550366afbdfaa87bbd054bd43b0c8abff0fac59abdc3692872ed5038543b628"
       },
       {
-        "path": "src/aipd_os/registry_data.py",
+        "path": "src/aipd_os/research/fulltext.py",
         "reason": "hash_mismatch",
-        "expected": "2f70aaa03a35e4e19059921f1b5e56d4acb01da1ce53fac94bded6870575c88b",
-        "actual": "0af4825e78d9e7d53a2906646ab35f47719e30a9b52ebd348b8da17750d2895e"
+        "expected": "ab2721fd91cf28ef250f67c000b62956175d4a7a9f6f79e369c01d20888d292e",
+        "actual": "cc5c9fdddcccbeefe8744748ec852dbae85a00ec52bc5e971c7f76819c804c80"
+      },
+      {
+        "path": "tests/test_research_fulltext_live.py",
+        "reason": "hash_mismatch",
+        "expected": "0f3955da65d3f6375543d828647bbd58b20b3335af4254dba383fdcfa5433561",
+        "actual": "f894cdf2af6f2cc9909fcc3abb2fc7b7c91ae067fbde65f7ea79947d82485c3f"
       },
       {
         "path": "tests/test_research_fulltext_step.py",
         "reason": "hash_mismatch",
-        "expected": "38cd920b7a1e454b929d08387c8bfd6af6aa5073b7ef0b78c33a371148364a91",
-        "actual": "be2cd4fd8ff76f099821e8f9dc1d48e8a3091c87140c4b6a545f9ab54c72d1c6"
+        "expected": "2c1a5b1f979faa868e03da8e77ffa6ea698a2f478cf60e28b9af3afa1cfd79ea",
+        "actual": "0582a68ea962dbbcbed26aae3696f76fedb154583c6883e48e8a2ba05867cee5"
       }
     ]
   },
   "untracked_or_generated": [
     " M README.md",
-    " M pyproject.toml",
     " M scripts/research/fetch_fulltexts.py",
-    " M scripts/research/requirements.txt",
-    " M src/aipd_os/registry_data.py",
+    " M scripts/research/search_papers_by_open_alex.py",
+    " M src/aipd_os/research/fulltext.py",
+    " M tests/test_research_fulltext_live.py",
     " M tests/test_research_fulltext_step.py",
-    "?? tests/test_research_fulltext_live.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

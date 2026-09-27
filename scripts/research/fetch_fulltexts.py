@@ -40,6 +40,7 @@ from aipd_os.research.fulltext import (  # noqa: E402
     ACCESS_OPEN,
     ACCESS_RESTRICTED,
     FullTextCache,
+    classify_access,
     fetch_fulltext,
     sha256_of,
     utc_now_iso,
@@ -48,9 +49,12 @@ from aipd_os.research.fulltext import (  # noqa: E402
 Getter = Callable[[str], bytes]
 
 ARXIV_PDF = "https://arxiv.org/pdf/{arxiv_id}"
+EUROPEPMC_XML = ("https://www.ebi.ac.uk/europepmc/webservices/rest/"
+                 "{pmcid}/fullTextXML")
 
 KIND_PDF = "pdf"
 KIND_HTML = "html"
+KIND_XML = "xml"
 KIND_TEXT = "text"
 KIND_UNKNOWN_BINARY = "unknown_binary"
 
@@ -69,6 +73,8 @@ def sniff_bytes(raw: bytes) -> str:
     if raw[:5] == b"%PDF-":
         return KIND_PDF
     head = raw[:512].lstrip().lower()
+    if head.startswith(b"<?xml") or b"<article" in head or b"<jats:" in head:
+        return KIND_XML
     if head.startswith(b"<") and (b"<html" in head or b"<!doctype" in head or b"<body" in head):
         return KIND_HTML
     try:
@@ -140,6 +146,24 @@ def pdf_to_text(raw: bytes) -> tuple[str, str]:
     return text, "extracted_pdf"
 
 
+def xml_to_text(raw: bytes) -> str:
+    """JATS/XML -> 文本：按文档顺序收集元素文本，标签本身不留痕。
+
+    第 78 片走 Europe PMC 的 `fullTextXML`（实测 200 + `application/xml`），
+    因为它是**真文本**：不用 PDF 抽取器就能拿到正文，也不会有"二进制当全文"的坑。
+    """
+    import xml.etree.ElementTree as ET
+
+    root = ET.fromstring(raw)
+    parts: list[str] = []
+    for elem in root.iter():
+        if elem.text and elem.text.strip():
+            parts.append(elem.text.strip())
+        if elem.tail and elem.tail.strip():
+            parts.append(elem.tail.strip())
+    return "\n".join(parts)
+
+
 def extract_text(raw: bytes, kind: str) -> tuple[str, str]:
     """⇒ (可拿去缓存的文本, 结论词)。结论词解释**为什么没文本**。"""
     if kind == KIND_PDF:
@@ -147,6 +171,12 @@ def extract_text(raw: bytes, kind: str) -> tuple[str, str]:
     if kind == KIND_HTML:
         text = html_to_text(raw)
         return (text, "extracted_html") if text.strip() else ("", "html_without_text")
+    if kind == KIND_XML:
+        try:
+            text = xml_to_text(raw)
+        except Exception as exc:  # noqa: BLE001 - 坏 XML 要留下原因，不能当"抽到了"
+            return "", f"xml_parse_failed:{type(exc).__name__}"
+        return (text, "extracted_xml") if text.strip() else ("", "xml_without_text")
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError:
@@ -154,10 +184,32 @@ def extract_text(raw: bytes, kind: str) -> tuple[str, str]:
     return (text, "extracted_text") if text.strip() else ("", "empty_payload")
 
 
+def _pmcid_of(item: dict[str, Any]) -> str:
+    r"""从记录里找 PMCID：显式字段优先，其次从任何 URL/ID 里认 `PMC\d+`。
+
+    只认显式给出的形态，不去猜编号前缀之外的东西。
+    """
+    for key in ("pmcid", "pmc_id", "pmc"):
+        val = str(item.get(key) or "").strip()
+        if val.upper().startswith("PMC"):
+            return val.upper()
+    for key in ("oa_url", "url", "fulltext_url", "pmc_url"):
+        m = re.search(r"PMC\d{4,}", str(item.get(key) or ""), re.I)
+        if m:
+            return m.group(0).upper()
+    return ""
+
+
 def pick_target(item: dict[str, Any]) -> dict[str, Any]:
     """这条记录该不该去取全文、取哪个 URL。返回 ``{url, license, reason}``（url 空 = 不取）。"""
     source = str(item.get("source") or "")
     arxiv_id = item.get("arxiv_id") or ""
+    pmcid = _pmcid_of(item)
+    if pmcid:
+        # PMC 给的是 JATS XML：同一篇文章"能抽文本的副本"优先于 PDF 直链，
+        # 否则第 77 片那个死路（开放、能下载、却没有抽取器就没正文）会长期占多数。
+        return {"url": EUROPEPMC_XML.format(pmcid=pmcid), "license": None,
+                "reason": f"PMC {pmcid} 的 JATS 全文 XML（优先于 PDF 副本）"}
     if source == "arxiv" and arxiv_id:
         return {"url": ARXIV_PDF.format(arxiv_id=str(arxiv_id).strip()),
                 "license": "arxiv", "reason": "arXiv 官方 PDF 直链"}
@@ -185,7 +237,8 @@ def http_getter(source: str = "fulltext") -> Getter:
 
 
 def fetch_all(items: list[dict[str, Any]], *, cache: FullTextCache | None = None,
-              getter: Getter | None = None) -> dict[str, Any]:
+              getter: Getter | None = None,
+              force_fetch: bool = False) -> dict[str, Any]:
     """逐条取全文并给出**分结果计数**；任何一条失败都不中断整步。
 
     结果词把两件以前混在一起的事分开：
@@ -212,6 +265,15 @@ def fetch_all(items: list[dict[str, Any]], *, cache: FullTextCache | None = None
             records.append({"title": title, "url": url, "access": "unfetched_offline",
                             "content_kind": "", "outcome": "offline", "chars": 0,
                             "sha256": "", "license": target["license"] or ""})
+            continue
+        # 先问"该不该拿"，再决定下不下载：第 78 片实测里，落地页 PDF 与 PMC XML
+        # 都是先下完字节、才被库里判成 restricted ⇒ 白下载一次，
+        # 而且 `outcome` 与 `access` 会互相打脸（第 77 片刚修过的那类错在另一条路上复发）。
+        pre = classify_access(url, license=target["license"])
+        if pre != ACCESS_OPEN and not force_fetch:
+            counts[pre] += 1
+            skipped.append({"title": title,
+                            "reason": f"策略判定为 {pre}，不发起下载"})
             continue
         try:
             raw = getter(url)
@@ -254,6 +316,8 @@ def fetch_all(items: list[dict[str, Any]], *, cache: FullTextCache | None = None
                             "reason": f"入库抛错：{type(exc).__name__}: {exc}"})
             continue
         counts[rec.access] += 1
+        if rec.access != ACCESS_OPEN:
+            outcome = f"not_open_{rec.access}"
         records.append({"title": title, "url": url, "access": rec.access,
                         "content_kind": kind, "outcome": outcome,
                         "chars": len(rec.text), "sha256": rec.sha256,

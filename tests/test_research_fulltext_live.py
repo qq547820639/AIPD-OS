@@ -37,3 +37,16 @@ def test_one_arxiv_pdf_yields_cached_text() -> None:
     assert row["chars"] >= 20000, row          # 实测 80991
     assert len(row["sha256"]) == 64, row
     assert row["bytes"] > 100000, row
+
+
+def test_one_pmc_article_yields_jats_text() -> None:
+    """第二个域：Europe PMC 的 JATS XML。它不需要 PDF 抽取器就能拿到正文。"""
+    items = [{"source": "open_alex", "pmcid": "PMC12900525",
+              "title": "integration probe (PMC)"}]
+    rep = ff.fetch_all(items, getter=ff.http_getter("europepmc"))
+    assert rep["access_counts"].get("error", 0) == 0, rep
+    assert rep["full_texts"] == 1, rep
+    row = rep["fetched"][0]
+    assert row["content_kind"] == "xml", row
+    assert row["outcome"] == "extracted_xml", row
+    assert row["chars"] >= 2000, row

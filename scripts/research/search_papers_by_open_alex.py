@@ -75,6 +75,9 @@ def search_papers_by_open_alex(
                 "source": "open_alex",
                 "doi": (work.get("doi") or "").replace("https://doi.org/", "") or None,
                 "arxiv_id": None,
+                # PMC id 是第 78 片的关键：拿到它就有 JATS 全文 XML（真文本），
+                # 不必等 PDF 抽取器；OpenAlex 把它放在 ids.pmc。
+                "pmcid": ((work.get("ids") or {}).get("pmc") or "").rsplit("/", 1)[-1] or "",
                 "is_oa": bool(oa.get("is_oa")),
                 "oa_url": best_oa.get("pdf_url") or oa.get("oa_url") or "",
                 "oa_license": oa.get("license") or best_oa.get("license") or "",

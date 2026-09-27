@@ -951,6 +951,30 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.39 F-TEXT-FIRST-SOURCES 第 78 片：全文获取改成"真文本源优先"，并把策略判定挪到下载之前**：
+  第 77 片留下的事实是：真实开放副本几乎全是 PDF，正文要靠可选抽取器。
+  这一轮先探明再动手（在线实测）：Europe PMC 的 REST
+  `/{PMCID}/fullTextXML` 对 OA 条目返回 **200 + application/xml 的 JATS 正文**
+  （非 OA 的那篇直接 500，带版本号的路径 404），也就是说不需要任何抽取器就能拿到文本。
+  **三处改动**：① 元数据 → 可抽文本源的映射：`_pmcid_of()`（显式 `pmcid/pmc_id/pmc`，
+  其次从 URL 里认 `PMC\d{4,}`），`pick_target()` 把 PMC 的 JATS XML **排在 PDF 直链之前**；
+  OpenAlex 连接器补带 `ids.pmc`（第 76/77 片"没正文"的一半原因就是这个字段被丢掉）。
+  ② `sniff_bytes()` 认 XML，新增 `xml_to_text()`（stdlib `ElementTree`，按文档顺序收元素文本）。
+  ③ **先判策略再决定下不下**：`classify_access()` 判不可拿就不发起请求；
+  抽到文本但策略不开放时结论词改成 `not_open_*`——这一条是在线实测逼出来的：
+  落地页与 PMC XML 一度同时出现 `outcome=extracted_xml` 与 `access=restricted`，
+  是第 77 片刚修过的"两个字段互相打脸"在另一条路径上复发。
+  **白名单放宽是有边界的**：给库里 `OPEN_ACCESS_DOMAINS` 只加 `ebi.ac.uk` / `europepmc.org`
+  两个主机，并在注释与常驻用例里写明"这份信任只作用在我们自己构造的 `/webservices/rest/PMC…/fullTextXML`
+  形态上"（`test_only_the_fullTextXML_path_is_ever_built_on_that_host`、
+  `test_the_two_new_open_access_hosts_are_the_europe_pmc_ones` 各钉一头）。
+  **在线读数**（`AIPD_RESEARCH_INTEGRATION=1`，两条都跑通）：
+  PMC12900525 → `content_kind=xml`、`extracted_xml`、37970 字；
+  arXiv 2401.04398 → `extracted_pdf`、80991 字；
+  从 `europepmc.org/articles/PMC8783953` 反推出 PMC id → 16136 字。三步都 `access=open`。
+  登记表该行 `input_output`/限制句、README 同步改口；矩阵重生成；
+  常驻新增 6 条（离线 5 + 在线 1）。证据见 `docs/audit/TEXT_FIRST_SOURCES_F-TEXT-FIRST-SOURCES_2026-09-27.md`。
+
 - **v5.38 F-FULLTEXT-EXTRACTION 第 77 片：把"取到字节"与"抽出正文"分成两件事，并顺手纠正上一片的一句假话**：
   先纠错：上一片我在证据栏写"**沙箱无出网**，联网端到端未跑"——**这是错的**，
   本机出网正常。真实跑过之后发现的不是"没验"，而是**能力名不副实**：

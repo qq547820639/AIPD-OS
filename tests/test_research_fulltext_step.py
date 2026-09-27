@@ -193,3 +193,101 @@ def test_pdf_that_yields_only_whitespace_hits_the_strip_guard(monkeypatch) -> No
     text, outcome = ff.pdf_to_text(b"%PDF-1.7 anything")
     assert text == "", text
     assert outcome == "pdf_without_text", outcome
+
+BODY = "".join(
+    f"<sec><title>第 {i} 节</title>"
+    f"<p>{'这是一段足够长的正文内容，用来真实越过全文长度下限。' * 12}</p></sec>"
+    for i in range(16))
+JATS = ('<?xml version="1.0" encoding="UTF-8"?><article xml:lang="en"><body>'
+        + BODY + "</body></article>").encode("utf-8")
+
+
+def test_jats_xml_is_extracted_as_real_text() -> None:
+    assert len(JATS) > 2000, "夹具得比全文下限长，否则测不到真实形态"
+    text = ff.xml_to_text(JATS)
+    assert "这是一段足够长的正文内容" in text, text[:120]
+    assert "<p>" not in text and "sec" not in text.split()[0], text[:80]
+    rep = ff.fetch_all([{"source": "open_alex", "title": "JATS 夹具",
+                         "pmcid": "PMC1234567"}], getter=lambda _u: JATS)
+    assert rep["full_texts"] == 1, rep
+    row = rep["fetched"][0]
+    assert row["content_kind"] == "xml" and row["outcome"] == "extracted_xml", row
+    assert row["chars"] > 2000, row
+
+
+def test_pmc_source_is_preferred_over_the_pdf_copy() -> None:
+    """同一篇文章：JATS XML（真文本）优先于 PDF 直链（要额外抽取器）。"""
+    target = ff.pick_target({"source": "open_alex", "is_oa": True,
+                            "oa_url": "https://publisher.org/x.pdf",
+                            "pmcid": "PMC1234567"})
+    assert target["url"].endswith("/PMC1234567/fullTextXML"), target
+    assert "ebi.ac.uk" in target["url"], target
+
+
+def test_pmcid_is_recognised_from_the_oa_url_too() -> None:
+    assert ff._pmcid_of({"oa_url": "https://europepmc.org/articles/PMC8783953?pdf=render"}) == "PMC8783953"
+    assert ff._pmcid_of({"pmc": "PMC1"}) == "PMC1"
+    assert ff._pmcid_of({"oa_url": "https://arxiv.org/pdf/2401.04398"}) == ""
+
+
+def test_only_the_fullTextXML_path_is_ever_built_on_that_host() -> None:
+    """加进开放来源白名单的是 Europe PMC 的 REST 全文端点，不是整台主机上的任何东西。
+
+    这条把"信任边界靠构造限定"这句话变成可判红的断言。
+    """
+    # 只看**我们自己构造**的 URL（带 pmcid 的那几条）；源里带来的 oa_url 是另一回事。
+    built = [ff.pick_target(item)["url"] for item in (
+        {"pmcid": "PMC1234567"}, {"pmcid": "PMC7654321", "source": "open_alex"},
+        {"oa_url": "https://europepmc.org/articles/PMC8783953"},
+    )]
+    assert len(built) == 3, built
+    for u in built:
+        assert u.startswith("https://www.ebi.ac.uk/europepmc/webservices/rest/PMC"), u
+        assert u.endswith("/fullTextXML"), u
+
+
+def test_policy_check_happens_before_the_download() -> None:
+    """判为不可拿的就不该发起请求（第 78 片实测：先下后判会白下载并让字段互相打脸）。"""
+    calls: list[str] = []
+
+    def spy(url: str) -> bytes:
+        calls.append(url)
+        return JATS
+
+    rep = ff.fetch_all([{"source": "other", "is_oa": False, "title": "没标开放",
+                         "url": "https://paywalled.example.org/paper"}], getter=spy)
+    assert calls == [], calls
+    assert rep["access_counts"].get("no_open_copy") == 1, rep
+
+
+def test_outcome_word_follows_the_final_access() -> None:
+    """抽到文本但策略判不可拿 ⇒ 结论词是 not_open_*，不许留在 extracted_*。"""
+    rep = ff.fetch_all([{"source": "other", "is_oa": True, "title": "付费墙上的 XML",
+                         "oa_url": "https://paywalled.example.org/a.xml"}],
+                       getter=lambda _u: JATS, force_fetch=True)
+    assert rep["full_texts"] == 0, rep
+    row = rep["fetched"][0]
+    assert row["access"] == "restricted", row
+    assert row["outcome"] == "not_open_restricted", row
+    # 同一份字节走合法开放端点时才是 extracted_xml
+    ok = ff.fetch_all([{"source": "open_alex", "pmcid": "PMC1234567", "title": "T"}],
+                      getter=lambda _u: JATS)
+    assert ok["fetched"][0]["outcome"] == "extracted_xml", ok
+
+
+def test_the_two_new_open_access_hosts_are_the_europe_pmc_ones() -> None:
+    """第 78 片给库的白名单加了两个主机：只该是 Europe PMC 那两个。
+
+    加白名单等于放宽"允许去拿全文"的范围，所以点名钉住加了谁、并确认没顺手放进别的站。
+    """
+    import sys
+    sys.path.insert(0, str(ROOT / "src"))
+    from aipd_os.research.fulltext import OPEN_ACCESS_DOMAINS, is_open_access_url
+
+    assert "ebi.ac.uk" in OPEN_ACCESS_DOMAINS and "europepmc.org" in OPEN_ACCESS_DOMAINS
+    OA_XML = ("https://www.ebi.ac.uk/europepmc/webservices/rest/"
+              "PMC12900525/fullTextXML")
+    assert is_open_access_url(OA_XML)
+    for not_open in ("https://publisher.org/x.pdf", "https://researchgate.net/x.pdf",
+                     "https://example.com/ebiac.uk/x"):
+        assert not is_open_access_url(not_open), not_open

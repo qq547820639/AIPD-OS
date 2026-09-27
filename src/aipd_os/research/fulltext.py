@@ -63,6 +63,12 @@ OPEN_ACCESS_DOMAINS = {
     "doabooks.org",
     "creativecommons.org",
     "zenodo.org",
+    # 第 78 片加：Europe PMC 的 REST `/{PMCID}/fullTextXML` 只对 OA 收藏里的文章返回正文
+    # （实测 OA 条目 200 + application/xml，非 OA 的 PMC8581587 直接 500、
+    #  版本化路径 404），所以这个信任面的边界由**我们自己只会构造这一种 URL** 来限定
+    # （见 `fetch_fulltexts.EUROPEPMC_XML`，另有常驻用例钉住"只构造 fullTextXML 路径"）。
+    "ebi.ac.uk",
+    "europepmc.org",
 }
 # 允许全文获取的开放许可
 OPEN_LICENSES = {"cc0", "cc-by", "cc-by-sa", "cc-by-nc", "public-domain", "open-access", "odc-by"}
