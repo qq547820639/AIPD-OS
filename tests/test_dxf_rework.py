@@ -11,7 +11,7 @@
    上游声明文件读不到、模型源文件读不到、`render` 抛异常、`render` 回的哈希与磁盘不符
    ——一律 `ok=False` 交回引擎的有界退避，绝不记成"返工完成"；
 4. **文件被删/被手改要补回来**（`file_restored`）；
-5. 命令面：`truth rework` 认四类制品（图纸两类 + `bom` 第 53 片 + `bom_cost` 第 49 片），
+5. 命令面：`truth rework` 认四类版本记录（图纸两类 + `bom` 第 53 片 + `bom_cost` 第 49 片），
    其余（`quote_batch`）仍在烧 attempts 之前点名拒掉。
 
 失败类判据用注入的假 `render`（不碰 CAD 内核，秒级）；两条真跑的用例走真出图，

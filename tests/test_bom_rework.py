@@ -374,5 +374,7 @@ def test_executor_is_wired_into_the_cli_and_readme_states_four_kinds():
     assert "bom_from_record" in names, "重算器没接进 CLI 就跑不到当前 BOM"
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "执行器今天认四类制品" in readme
+    # 第 71 片把这一类清单从四改五（登记表与 README 同步改口）；
+    # 钉的是「README 说的是同一份清单」，不是「停在四」。
+    assert "执行器今天认五类制品" in readme
     assert "执行器今天认三类制品" not in readme
