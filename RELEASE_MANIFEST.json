@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 258867,
-      "sha256": "cda063e57da4e55e870de8edec6227f4abd67691cde85a3378132a933cd7029d"
+      "size": 264836,
+      "sha256": "4010edad80cc4ce6a0065d84251f03a34a7309fc8e397e704dd71cb2146f9c97"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 54867,
-      "sha256": "92b7d30c0a07de6f81eb14d7b87a244515ed319e4bd086ca08a02b54cf214a96"
+      "size": 55902,
+      "sha256": "49b77749a29f3b31824a17734ca440a5b47e4bbc91ef7e4340148ca56709e48d"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -739,6 +739,11 @@
       "path": "scripts/claim_gate.py",
       "size": 1381,
       "sha256": "1036a4a24769dc1962ad5adc379188acd738e8682746aaf98790432d17428d56"
+    },
+    {
+      "path": "scripts/closeout_verifier.py",
+      "size": 31845,
+      "sha256": "76605b6a4d9e9bfc5150206c7f183a58bb7a13dde6eea9fb9bf9ae2f7ae79b86"
     },
     {
       "path": "scripts/command_surface_census.py",
@@ -2529,6 +2534,11 @@
       "path": "tests/test_cli_validation_surface.py",
       "size": 6488,
       "sha256": "3ee4cc0ff5374fbaf8f2cad8b65c0f3b64d2b3ea444af4e623e4c43a75f6efe5"
+    },
+    {
+      "path": "tests/test_closeout_verifier.py",
+      "size": 15423,
+      "sha256": "4749996e3ef7661f9862ecaf1d6e39810ca31bfc66870177f5e52f1b29fcdafd"
     },
     {
       "path": "tests/test_command_coverage.py",
