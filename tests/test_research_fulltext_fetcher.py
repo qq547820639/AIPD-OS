@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import sys
-import types
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent.parent / "scripts" / "research"
