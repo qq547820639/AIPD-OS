@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T11:04:42",
+  "generated_at": "2026-09-27T12:12:43",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
   "latest_commit_sha": "a66040520139405095648461f7144d4f00629924",
@@ -381,7 +381,7 @@
           "unit_test": "scripts/research/selftest_runtime.py",
           "integration_test": null,
           "e2e_evidence": "部分源可拉取内容",
-          "current_limitation": "各连接器当前仅取摘要，未实现全文获取与全文/摘要区分",
+          "current_limitation": "各连接器当前仅取摘要（scripts/research/）；库里有 src/aipd_os/research/fulltext.py（fetch_fulltext 与 classify_text 区分 metadata/abstract/full_text），但没有一个连接器消费它",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -1304,7 +1304,7 @@
           "unit_test": "tests/test_quote_to_cost_chain.py; tests/test_quote_lineage.py",
           "integration_test": null,
           "e2e_evidence": "真实 CLI 入口串联：quote apply → bom show(检查清单) → bom release(未过即 exit 4)；同文件重放为零新事实/零改价（TestProductPath、TestApplyIsReproducible）",
-          "current_limitation": "报价文件表头无币种列，币种必须由 --currency 显式声明并逐行核对；draft/superseded 报价与作废行一律拒绝改价；跨币种折算未实现；成本结论与 BOM 版本今天有血缘记录（aipd cost calc --truth-lineage 写两条 artifact_version + 一条边，身份按输入签名），成本结论已有返工执行器（第 49 片：aipd truth rework 按记录里的口径重跑核算并演进这一条记录），BOM 版本记录仍没有：那一条要收口还是得手工再跑一次 cost calc --truth-lineage",
+          "current_limitation": "报价文件表头无币种列，币种必须由 --currency 显式声明并逐行核对；draft/superseded 报价与作废行一律拒绝改价；跨币种折算未实现；成本结论与 BOM 版本今天有血缘记录（aipd cost calc --truth-lineage 写两条 artifact_version + 一条边，身份按输入签名），成本结论与 BOM 版本记录两类都已有返工执行器（第 49 片 src/aipd_os/bom/cost_rework.py；第 53 片 src/aipd_os/bom/bom_rework.py，按记录里的 BOM 身份重跑一次核算并就地演进那一条记录），两类都不必再手工补跑 cost calc --truth-lineage",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -1430,7 +1430,7 @@
           "unit_test": "tests/test_lab_impact_propagation.py",
           "integration_test": null,
           "e2e_evidence": "真实 CLI 两条路：validation import 与 industrialize --lab-data 都会把制品状态改到库里并留下 impact 事实（TestReachableFromProductPath、TestValidationSurface）；变异对照 M1/M2/M3 分别判红 4/1/2 条",
-          "current_limitation": "匹配按 BOM 行 item 归一化全等，不做子串或父子链推断；未关联 deliverable 的行只如实报告 unresolved（不代造制品），此时命令 exit 4 不静默通过；released/archived 制品不被回溯改写，返工范围由人决定；product_truth 的失效传播已从 aipd truth propagate / aipd truth tasks 可达（见 product_truth.impact_propagation)；返工的执行已接 aipd truth rework（执行器只认图纸声明这一类制品）；本条走的是 deliverable+fact 这条已接线的路",
+          "current_limitation": "匹配按 BOM 行 item 归一化全等，不做子串或父子链推断；未关联 deliverable 的行只如实报告 unresolved（不代造制品），此时命令 exit 4 不静默通过；released/archived 制品不被回溯改写，返工范围由人决定；product_truth 的失效传播已从 aipd truth propagate / aipd truth tasks 可达（见 product_truth.impact_propagation)；返工的执行已接 aipd truth rework（执行器今天认四类制品：drawing_spec / drawing_dxf / bom / bom_cost；quote_batch 仍逐条点名拒）；本条走的是 deliverable+fact 这条已接线的路",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -1713,7 +1713,7 @@
           "unit_test": "tests/test_product_definition_integrity.py; tests/test_product_intelligence.py",
           "integration_test": "tests/test_product_intelligence_golden_e2e.py",
           "e2e_evidence": "Runtime Golden E2E：Supervisor->Router->Adapter->Provider->Service 全链（FakeProvider，tests-only）",
-          "current_limitation": "生产 Provider 未接入；未配置时 discover.available=False -> probe EXTERNAL_DEPENDENCY，execute 写外部任务包（诚实不伪造）",
+          "current_limitation": "生产 Provider 今天只有 LLM 这一家（配了 AIPD_MODEL_API_KEY 与 AIPD_MODEL_BASE_URL 时由 runtime 装配 LlmProductIntelligenceProvider 注进这五个 adapter）；未配置时 discover.available=False -> probe EXTERNAL_DEPENDENCY，execute 写外部任务包（诚实不伪造）",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -1734,7 +1734,7 @@
           "unit_test": "tests/test_product_definition_integrity.py",
           "integration_test": "tests/test_product_intelligence_golden_e2e.py",
           "e2e_evidence": "Runtime Golden E2E",
-          "current_limitation": "生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY",
+          "current_limitation": "生产 Provider 今天只有 LLM 这一家（配了 AIPD_MODEL_API_KEY 与 AIPD_MODEL_BASE_URL 时由 runtime 装配 LlmProductIntelligenceProvider 注进这五个 adapter）；未配置时诚实 EXTERNAL_DEPENDENCY",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -1755,7 +1755,7 @@
           "unit_test": "tests/test_product_definition_integrity.py",
           "integration_test": "tests/test_product_intelligence_golden_e2e.py",
           "e2e_evidence": "Runtime Golden E2E",
-          "current_limitation": "生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY",
+          "current_limitation": "生产 Provider 今天只有 LLM 这一家（配了 AIPD_MODEL_API_KEY 与 AIPD_MODEL_BASE_URL 时由 runtime 装配 LlmProductIntelligenceProvider 注进这五个 adapter）；未配置时诚实 EXTERNAL_DEPENDENCY",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -1776,7 +1776,7 @@
           "unit_test": "tests/test_product_definition_integrity.py",
           "integration_test": "tests/test_product_intelligence_golden_e2e.py",
           "e2e_evidence": "Runtime Golden E2E",
-          "current_limitation": "生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY",
+          "current_limitation": "生产 Provider 今天只有 LLM 这一家（配了 AIPD_MODEL_API_KEY 与 AIPD_MODEL_BASE_URL 时由 runtime 装配 LlmProductIntelligenceProvider 注进这五个 adapter）；未配置时诚实 EXTERNAL_DEPENDENCY",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,
@@ -1797,7 +1797,7 @@
           "unit_test": "tests/test_product_definition_integrity.py",
           "integration_test": "tests/test_product_intelligence_golden_e2e.py",
           "e2e_evidence": "Runtime Golden E2E",
-          "current_limitation": "生产 Provider 未接入；未配置时诚实 EXTERNAL_DEPENDENCY",
+          "current_limitation": "生产 Provider 今天只有 LLM 这一家（配了 AIPD_MODEL_API_KEY 与 AIPD_MODEL_BASE_URL 时由 runtime 装配 LlmProductIntelligenceProvider 注进这五个 adapter）；未配置时诚实 EXTERNAL_DEPENDENCY",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,

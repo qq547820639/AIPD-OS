@@ -450,6 +450,17 @@ python scripts/closeout_verifier.py --tag v5.6.0 --expect-test tests/test_new_th
 #     这正是第 62 片真犯过的错。
 #     `--self-test` 是 18 臂合成电池（每臂只点亮自己那一格判决），常驻牙 16 条见
 #     `tests/test_closeout_verifier.py`。
+python scripts/absence_claim_census.py
+#   ↑ 登记表否定句对账（第 65 片）：`src/aipd_os/registry_data.py` 里每句「X 仍没有」都配一个
+#     **反证锚点**（哪个文件/符号一旦出现，这句话就算过期）。判决四档：成立、过期（判红）、
+#     账文脱钩（正文改了、账里还留着 ⇒ 判红）、前提不成立（锚点一跳解析不到 ⇒ 退 2，
+#     不折算成「这句话对」）。锚点绑 (能力 id, 字段) 不绑全文——登记表里有五条能力行
+#     共用同一句 provider 描述，只按子串找会一条改完五条读成都改完。
+#     散文面只报不红：带否定词的句子远多于登记的几条，而其中大量是合法写法
+#     （「不静默退回『没有基线』」这类谈设计的句子），判红面一宽就会惩罚"把缺口写下来"。
+#     退码 0 全部成立 / 4 有过期或悬空账 / 2 前提不成立。`--claims <json>` 换账本，
+#     常驻用例用它拿真语料做出判红那一跑。开尺当天的读数就是三句过期话（见
+#     `docs/audit/ABSENCE_CLAIM_CENSUS_F-STALE-ABSENCE_2026-09-27.md`）。
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"
 #   ↑ 失效传播：沿血缘把下游 truth 标 stale、生成有界返工任务（rework_tasks，默认上限 3 次），
 #     并给出 owner 可读的四段变更说明（改了什么/为何影响/修复计划/需要批准什么）。

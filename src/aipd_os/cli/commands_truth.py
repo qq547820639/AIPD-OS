@@ -105,7 +105,8 @@ def cmd_truth_propagate(args):
         if pending:
             print("未收口：有下游处于待返工状态。跑一次返工：aipd truth rework "
                   "--db <state.db> --project <p> --all-pending"
-                  "（执行器只认图纸声明这一类制品；没有真执行器时引擎只判 blocked，"
+                  "（执行器只认登记了 SUPPORTED_ARTIFACT 的那几类制品；"
+                  "没有真执行器时引擎只判 blocked，"
                   "绝不伪造成功）。")
     _emit(args, result, prose)
     return 4 if pending else 0

@@ -951,6 +951,58 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.26 F-STALE-ABSENCE 第 65 片：新常驻量具 `scripts/absence_claim_census.py`——登记表里每句「X 仍没有」都要配一个能推翻它的锚点**：
+  起因是一句漂了 12 片的假话。第 53 片接上 BOM 版本记录的返工执行器（`src/aipd_os/bom/bom_rework.py:32`
+  定义 `SUPPORTED_ARTIFACT = ARTIFACT_BOM`，`src/aipd_os/cli/commands_truth.py:188-195` 分派）之后，
+  `industrialize.quote_to_bom_cost` 那句「BOM 版本记录仍没有：那一条要收口还是得手工再跑一次」
+  一直留在登记表里，而**同一文件的另一行早就写着"执行器今天认四类制品"**——按哪一行决定下一片做什么，
+  结论相反。第 53 片的项目记忆明明记着「凡是"某类没有 X"的否定句，接上 X 的那一轮必须 grep 到它并原地改」，
+  第 54 片也靠 grep 抓到过一次同族：**两次都靠人**。这一片把它交给机器。
+  **四档判决**：`HOLDS`（原话在、反证锚点不在）／`CONTRADICTED`（原话在、锚点在 ⇒ 判红并带出
+  `文件:行`）／`CLAIM_TEXT_ABSENT`（账里有、正文里已无此句 ⇒ 判红，"删句不删账"必须响）／
+  `PRECONDITION`（锚点一跳解析不到 ⇒ 退 2，**绝不折算成"这句话是对的"**）。退码 0/4/2。
+  锚点种类两种，各配真语料双向对照：`artifact_executor`（扫模块级 `SUPPORTED_ARTIFACT`，字面量或
+  一跳常量，现读全表 `bom`/`bom_cost`/`drawing_dxf`/`drawing_spec`，盲区 0）与 `identifier`
+  （**只走 AST** 的 `Name`/`Attribute`/`def`/`class`/import——这些否定句自己就要在注释里写「不做 X」，
+  文本面会把"写清楚了没做"读成"做了"）。锚点绑 (能力 id, 字段) 不绑全文：登记表里五条 `product.*` 行
+  共用同一句 provider 描述，只按子串找会一条改完五条读成都改完。
+  **散文面只报不红**并公开覆盖率：15 个否定词打进登记表命中 37 句（现算值，随本轮修复从 48 降下来），
+  其中大量是合法写法（「不静默退回『没有基线』」「所以『没有执行器』不会被伪装成返工失败三次」），
+  判红面一宽就会惩罚"把缺口写下来"这件事——与第 60 片只报面同一条理由。
+  **开尺当天在真登记表上抓到 3 条锚点、覆盖 7 行**：`quote_to_bom_cost` 的 BOM 执行器那一句、
+  `physical_writeback` 的「执行器只认图纸声明这一类制品」、以及逐字出现 5 次的「生产 Provider 未接入」
+  （真相：`src/aipd_os/runtime.py:343-344` 配了 `AIPD_MODEL_API_KEY`+`AIPD_MODEL_BASE_URL` 就把
+  `LlmProductIntelligenceProvider` 注进这五个 adapter，`product_adapters.py:396-400`；
+  `src/` 里 `ProductIntelligenceProvider` 只有这一个子类，所以准确说法是"只有这一家，不配模型就没有"）。
+  `research.fulltext_fetch` 按**窄法**改写不删：库里有 `research/fulltext.py` 的 `fetch_fulltext`/`classify_text`，
+  但 `scripts/research/` 里 0 处引用 ⇒ 「各连接器当前仅取摘要」是真的，「未实现全文获取」是低报。
+  **本轮被自己的判据抓出来的第二件事**：改完 `registry_data.py` 后外部账本仍读 `CONTRADICTED`——
+  `product.*` 七行的**权威**在 `scripts/product_capabilities_extra.py`（`registry_data.py` 顶部就写着
+  "由生成脚本合并、勿手改本文件"），我改的是生成物那一侧。于是新增第四面 `duplicate_divergence`
+  （同一 id 同一字段两处文本不同 ⇒ 自己退 4），并按权威改 `product_capabilities_extra.py:11-15`
+  后重跑 `scripts/migrate_capability_registry.py` 生成 `registry_data.py`（84 项 = 77 核心 + 7 product）。
+  同一句假话还在产品代码的**用户可见输出**里：`src/aipd_os/cli/commands_truth.py:108` 的 `truth propagate`
+  提示语，一并改成不枚举制品类别的说法（枚举本身就是第三份手抄）。
+  **三处形状是被跑教出来的**：① 第一版把"有盲区"排在"锚点已在"之前，一个无关模块的一跳解析失败
+  把所有 `artifact_executor` 判决压成 `PRECONDITION`（合规臂第一轮就不绿）；② Python 3.9 的 `ast.alias`
+  没有 `lineno`，import 引用被读成 `runtime.py:0` 这种自洽的假位点；③ `--self-test` 的 stdout 里
+  原本只有 `✓立住` 叙述、没有四档档名，"真走过四种判决"这件事无法被常驻用例断言，补了一行 `render()`。
+  **还有一条方法论教训进了判据**：电池 A1 臂（放宽成全文子串找）第一轮**存活**——因为我的对抗夹具
+  写的是加了前缀的句子，放宽与不放宽读出同一个结果；换成逐字取自另一行的原话之后才杀掉。
+  产物：`scripts/absence_claim_census.py`（42 号常驻件）+ `tests/test_absence_claim_census.py`
+  常驻用例 **15 条**；`--self-test` **13 条**合成读数（四档判决各至少一臂 + Σ 分桶==分母 + 空账本退 2）；
+  变异电池 **11 臂：杀 11 / 活 0 / 锚点或落地问题 0**（基线 sha 每臂还原后校验同值）。
+  **选型**（原件本轮重开）：`doorstop@3.2`（PyPI 实测 LGPLv3、发版 2026-07-10；GHSA
+  `affects=doorstop` → 0 条，这条负读数由正向对照 `affects=pygments` 回 5 条撑着——同一端点的
+  `affected_package=` 写法会被静默忽略并返回未过滤清单，第一次就踩了）判的是 YAML item 间断链，
+  `pytest-doctestplus@1.7.1`/`doctest` 判的是正文里可执行 Python，`verdoc@1.0.2` 停在 2021-06-14，
+  `scriv@1.8.0` 是 changelog 工具（列出以免只挑好讲的）。**择一：借语义不引依赖**——借 doorstop 的
+  「引用必须落得住，悬空即判错」与 doctest 的「断言住在正文旁边」；硬约束是运行时零网络依赖 +
+  登记面是 Python 常量，用 LGPL 工具链去管 MIT 仓里的常量，改写代价大于它带来的判据。
+  也明确否掉"塞进 `doc_command_census.py`"：那会把两个不同问题压进同一张退码表。
+  未检索到"文档里的缺席承诺 vs 代码现状"这一轴的现成同类，如实记为未找到第二候选。
+  证据见 `docs/audit/ABSENCE_CLAIM_CENSUS_F-STALE-ABSENCE_2026-09-27.md`。
+
 - **v5.25 F-CLOSEOUT-VERIFY 第 64 片：新常驻量具 `scripts/closeout_verifier.py`——每轮手写的收尾验签提成机器**：
   起因不是缺口而是成本。第 62/63 片的收尾验签是每轮现写的 `/tmp/s6x/verify6x.py`（后者 25 条 `[OK]`），
   宿主重启把 `/tmp` 清掉之后，下一轮只能从提交摘要重推配方，于是同一格里连踩两次**已有记录**的红
