@@ -435,6 +435,9 @@ python scripts/research/fetch_fulltexts.py --input papers.json --out fulltexts.j
 #   ↑ 全文获取（第 76 片）：只走来源自己标为开放访问的副本（OpenAlex is_oa+oa_url；
 #     arXiv 用官方 PDF 直链），没标开放就按拿不到处理、不去 scrape 出版商页面；
 #     加 --offline 就只登记"可不可取"，不下载也不伪造全文。
+#     第 77 片补上"取到字节"与"抽出正文"的分别：开放副本实测都是 PDF，
+#     正文靠可选依赖 pypdf（BSD-3；PyMuPDF 是 AGPL，不兼容所以不用）；
+#     抽不出文本就报 pdf_without_text/pdf_extractor_unavailable，绝不记成 open。
 #   ↑ 分母逐字取自 references/production-cad-deliverables.md 那一行：改契约不改映射会当场红。
 #     三档读数：有生产者且有常驻用例 / 只有校验方（门会判声明，但产品侧没有落点）/ 零实现。
 #     2026-09-25 第 26 片后实测 14 / 0 / 1（第 19 片那次是 13 / 1 / 1）：零实现只剩 ICD 一项，

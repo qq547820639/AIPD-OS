@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T18:53:16",
+  "generated_at": "2026-09-27T19:58:32",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 214
+      "tests": 216
     }
   },
   "tags": [
@@ -116,39 +116,56 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 674,
+    "total_files": 677,
     "hash_matches": 671,
-    "hash_mismatch_count": 3,
+    "hash_mismatch_count": 6,
     "mismatches": [
       {
-        "path": "scripts/absence_claim_census.py",
+        "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "427eacd7912aef3f5391a2585a5fa6b2566801084c8217675576d7416c0edd7f",
-        "actual": "50a46c1df53ef132cdc5933386a80db8d89764847390c3c761c28d3530b36fdf"
+        "expected": "c66c799106237ee8387ca9cf54c1e126de645a339a711e5ffea01dc489c71689",
+        "actual": "00dce2ab8493f904e282ae802c65932ac82a48a50f30babc0d99cb3b737e383c"
       },
       {
-        "path": "scripts/research/search_papers_by_open_alex.py",
+        "path": "pyproject.toml",
         "reason": "hash_mismatch",
-        "expected": "df12ed36f22eb67233840b154278b94578a3ea5781056c597794778915848eb3",
-        "actual": "330f744e04aa5feaf3d32f72825a5bf3690c19754ad43c3d6ddf9d05f1231c45"
+        "expected": "93becd9738374e7a8b2bce419aa4489b5c2951156dcc7735a7ead2fbdd63a3b2",
+        "actual": "a20ebb027edaee80a6c13bbd4ccce78a210b5308e5f12619733baae6cc566377"
+      },
+      {
+        "path": "scripts/research/fetch_fulltexts.py",
+        "reason": "hash_mismatch",
+        "expected": "c78387ebda7c576092227cb28245a6be4a036aec636940513fe3f1928ff3eed1",
+        "actual": "6ce32f2ca847a064ef1dac6fb00cc65cee2eef60467cd44912d6aa010b3692c2"
+      },
+      {
+        "path": "scripts/research/requirements.txt",
+        "reason": "hash_mismatch",
+        "expected": "bbc83f43851fd901e27a60d8d8239b81f8a0d505ed16a1b5b166c4cfcd8b087d",
+        "actual": "418d8a440def25369b4f21d41ddd9da9624199ea8a1369a313b1023e3aa4562b"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "8b1fd36196a198c1816ef6437552f0e7522831619e72e6d4e29b3ce90a449348",
-        "actual": "2f70aaa03a35e4e19059921f1b5e56d4acb01da1ce53fac94bded6870575c88b"
+        "expected": "2f70aaa03a35e4e19059921f1b5e56d4acb01da1ce53fac94bded6870575c88b",
+        "actual": "0af4825e78d9e7d53a2906646ab35f47719e30a9b52ebd348b8da17750d2895e"
+      },
+      {
+        "path": "tests/test_research_fulltext_step.py",
+        "reason": "hash_mismatch",
+        "expected": "38cd920b7a1e454b929d08387c8bfd6af6aa5073b7ef0b78c33a371148364a91",
+        "actual": "be2cd4fd8ff76f099821e8f9dc1d48e8a3091c87140c4b6a545f9ab54c72d1c6"
       }
     ]
   },
   "untracked_or_generated": [
-    " M docs/audit/capability_matrix.json",
-    " M docs/audit/capability_matrix.md",
-    " M docs/audit/repository_snapshot.json",
-    " M scripts/absence_claim_census.py",
-    " M scripts/research/search_papers_by_open_alex.py",
+    " M README.md",
+    " M pyproject.toml",
+    " M scripts/research/fetch_fulltexts.py",
+    " M scripts/research/requirements.txt",
     " M src/aipd_os/registry_data.py",
-    "?? scripts/research/fetch_fulltexts.py",
-    "?? tests/test_research_fulltext_step.py",
+    " M tests/test_research_fulltext_step.py",
+    "?? tests/test_research_fulltext_live.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

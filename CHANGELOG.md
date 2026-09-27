@@ -951,6 +951,31 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.38 F-FULLTEXT-EXTRACTION 第 77 片：把"取到字节"与"抽出正文"分成两件事，并顺手纠正上一片的一句假话**：
+  先纠错：上一片我在证据栏写"**沙箱无出网**，联网端到端未跑"——**这是错的**，
+  本机出网正常。真实跑过之后发现的不是"没验"，而是**能力名不副实**：
+  三条真实开放副本（arXiv 官方 PDF 1.6 MB、arXiv 落地页实际也回 PDF、OpenAlex 给的出版商 OA PDF 3.6 MB）
+  **全是 PDF**，而第 76 片那版把二进制交给库的 UTF-8 判定 ⇒ 一律 `access=restricted`。
+  也就是说：**能下载、被许可、却报成"来源不开放"**——把"我们缺一个 PDF 抽取器"
+  伪装成"这篇文章不是开放获取"，方向正好相反。
+  **改法（三件事分开）**：① `sniff_bytes()` 先认 `%PDF` 头/HTML/纯文本；
+  ② `pdf_to_text()` 走**可选**依赖 pypdf，没装就报 `pdf_extractor_unavailable`、
+  抽出空白就报 `pdf_without_text`（strip 那道闸是实测逼出来的：3.6 MB 那份只返回空白）；
+  ③ 抽不到文本**永不**记 `open`，`access_counts` 新增 `open_needs_extractor`、
+  `short_or_landing_page`（`MIN_FULL_TEXT_CHARS = 2000`，防止把摘要落地页当正文）。
+  选型六维：pypdf（BSD-3-Clause、纯 Python、活跃维护）胜 PyMuPDF（**AGPL-3.0**，与本仓
+  Apache-2.0 不兼容，直接排除）、pdfminer.six（MIT，但作为解析库要自己管布局/编码，适配成本高）、
+  外部 `pdftotext`（系统依赖，跨平台安装不可控）；`License-Expression` 从 wheel METADATA 现读，不靠记忆。
+  **在线实测**（新增默认跳过的 `tests/test_research_fulltext_live.py`）：
+  arXiv `2401.04398` 抽出 **80991 字**、`content_kind=pdf`、`outcome=extracted_pdf`、
+  sha256 长度 64、`bytes=1638905`，计数 `open: 2`；`AIPD_RESEARCH_INTEGRATION=1` 才跑，默认 SKIP。
+  登记表该行 `input_output`/`integration_test`/`e2e_evidence`/限制句同步改口（含"没装 pypdf 就报不可用，
+  不冒充拿到"），README 补两行边界。
+  **电池第一版 U1 存活**：我那条空白 PDF 用例喂的是坏文件，走的是 `pdf_extract_failed` 分支，
+  根本没碰到 strip 那道闸 ⇒ 控制必须打在它声称要防的那一行上（改为 monkeypatch `PdfReader`）。
+  最终 `docs/audit/s77/battery77.py` **4 臂杀 4 活 0**；常驻新增 4 条（含 PDF 语义 3 条 + 在线 1 条）。
+  证据见 `docs/audit/FULLTEXT_EXTRACTION_F-FULLTEXT-EXTRACTION_2026-09-27.md`。
+
 - **v5.37 F-FULLTEXT-STEP 第 76 片：全文获取那一步终于有了消费者（`scripts/research/fetch_fulltexts.py`）**：
   第 65 片登记的原话是"库里有一个**完全没被任何连接器消费**的 `fetch_fulltext`"。
   这一步就是那个消费者，而且**不重新实现下载与分类**——只做连接器侧的两件事实：

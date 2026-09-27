@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T18:53:17",
+  "generated_at": "2026-09-27T19:58:33",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
   "latest_commit_sha": "a66040520139405095648461f7144d4f00629924",
@@ -377,11 +377,11 @@
           "implementation_file": "scripts/research/fetch_fulltexts.py; _http_runtime.py; source_worker.py",
           "entry_point": "research.fetch_fulltexts.fetch_all",
           "run_command": "python scripts/research/fetch_fulltexts.py --input papers.json --out fulltexts.json [--offline] [--cache-dir DIR]",
-          "input_output": "检索结果 JSON（含 DOI/arXiv id/OpenAlex 开放副本地址）-> 逐条 TextRecord 摘要 + 分 access 计数",
+          "input_output": "检索结果 JSON（含 DOI/arXiv id/OpenAlex 开放副本地址）-> 逐条正文文本记录（HTML 走 stdlib 抽取、PDF 走可选 pypdf）+ 分结果计数",
           "unit_test": "tests/test_research_fulltext_step.py",
-          "integration_test": "scripts/research/selftest_runtime.py",
-          "e2e_evidence": "联网跑通即拿到正文；离线模式只登记可取性",
-          "current_limitation": "scripts/research/fetch_fulltexts.py（第 76 片）是库里 fetch_fulltext 的消费者：只走来源自己标为开放访问的副本（OpenAlex is_oa+oa_url；arXiv 用官方 PDF 直链），没标开放访问就按拿不到处理、不去 scrape 出版商页面；摘要之外的正文仍受版权/robots 边界约束，--offline 下不下载也不伪造全文",
+          "integration_test": "tests/test_research_fulltext_live.py",
+          "e2e_evidence": "第 77 片在线实测：arXiv 官方 PDF 抽出 80991 字并入缓存（AIPD_RESEARCH_INTEGRATION=1 才跑）",
+          "current_limitation": "scripts/research/fetch_fulltexts.py（第 76 片）是库里 fetch_fulltext 的消费者：只走来源自己标为开放访问的副本（OpenAlex is_oa+oa_url；arXiv 用官方 PDF 直链），没标开放访问就按拿不到处理、不去 scrape 出版商页面；摘要之外的正文仍受版权/robots 边界约束，--offline 下不下载也不伪造全文；PDF 只有在装了可选依赖 pypdf 时才抽正文，没装就报 pdf_extractor_unavailable 而不是冒充拿到了",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,

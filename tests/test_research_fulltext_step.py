@@ -42,26 +42,60 @@ def test_openalex_uses_only_what_the_source_marked_open() -> None:
     assert "scrape" in closed["reason"], closed
 
 
-def test_fetch_all_counts_by_access_and_keeps_abstract_only_items_out() -> None:
-    items = [
-        {"source": "arxiv", "arxiv_id": "2401.04398", "title": "拿到全文的那篇"},
-        {"source": "arxiv", "arxiv_id": "2401.00001", "title": "付费墙那篇"},
-        {"source": "crossref", "title": "没有开放副本"},
-    ]
+def test_pdf_is_not_reported_as_not_open_access() -> None:
+    """第 77 片的核心更正：开放获取的 PDF **能下载**，只是这一层没有抽取器。
 
-    def getter(url: str) -> bytes:
-        if "04398" in url:
-            return b"full body text here"
-        return b"%PDF-1.5\xff\xfe\x00"     # 非法 UTF-8 字节：库里判"拿不到"，不当全文
+    第 76 片那版把它一路交给库的 UTF-8 判定，结果 `access=restricted`——
+    那等于对读者说"这篇文章不是开放获取"，而事实是"我们缺一个 PDF 抽取器"。
+    两件事必须有两个词。
+    """
+    items = [{"source": "open_alex", "is_oa": True, "title": "PDF 那篇",
+              "oa_url": "https://repo.org/a.pdf", "oa_license": "cc-by"},
+             {"source": "arxiv", "arxiv_id": "2401.04398", "title": "arXiv PDF"}]
+    rep = ff.fetch_all(items, getter=lambda _u: b"%PDF-1.5\n%\x8f\n1 0 obj\n<<>>")
+    assert rep["full_texts"] == 0, rep
+    assert rep["needs_extractor"] == 2, rep
+    assert rep["restricted"] == 0, rep
+    kinds = {r["content_kind"] for r in rep["fetched"]}
+    assert kinds == {"pdf"}, kinds
+    # 装了 pypdf 之后这个假 PDF 的下场是"抽不出文本"，没装则是"没有抽取器"；
+    # 两种都不许写成"来源不开放"，也不许写成"抽到了"。
+    assert all(r["outcome"].startswith("pdf_") for r in rep["fetched"]), rep
+    assert all(not r["outcome"].endswith("extracted_pdf") for r in rep["fetched"]), rep
+    assert all(r["access"] == "open" for r in rep["fetched"]), rep
+    assert all(r["sha256"] and r["bytes"] > 0 for r in rep["fetched"]), rep
 
-    rep = ff.fetch_all(items, getter=getter)
+
+def test_html_body_is_extracted_into_cacheable_text() -> None:
+    """HTML 走 stdlib 抽取：拿到的是正文文本，``outcome=extracted_html``。"""
+    LONG = ("<p>" + ("这一段用于把正文撑过全文下限，" * 200) + "</p>").encode("utf-8")
+    html = ("<html><head><title>T</title><style>b{color:red}</style></head>"
+            "<body><h1>协作机器人与老年康复</h1>"
+            "<p>本文研究智能手环在居家场景下的应用。</p>"
+            "<script>alert(1)</script></body></html>").encode("utf-8")
+    rep = ff.fetch_all([{"source": "arxiv", "arxiv_id": "9999.00001",
+                         "is_oa": True,
+                         "oa_url": "https://arxiv.org/html/9999.00001",
+                         "title": "T"}],
+                       getter=lambda _u: html + b" " * 0 + LONG)
     assert rep["full_texts"] == 1, rep
-    # 三种"没拿到"是分开的两件事：非法字节 = restricted（真去取了），
-    # 没有开放副本 = no_open_copy（根本没发起下载）。混成一个数就看不出哪一步该修。
-    assert rep["restricted"] == 1, rep
-    assert rep["access_counts"].get("no_open_copy") == 1, rep
-    assert [r["access"] for r in rep["fetched"]] == ["open", "restricted"], rep
-    assert rep["fetched"][0]["chars"] > 0 and rep["fetched"][1]["chars"] == 0, rep
+    row = rep["fetched"][0]
+    assert row["content_kind"] == "html", row
+    assert row["outcome"] == "extracted_html", row
+    text = ff.html_to_text(html)
+    assert "协作机器人与老年康复" in text and "智能手环" in text, text
+    assert "alert" not in text and "color:red" not in text, text
+    assert row["sha256"] and row["chars"] > 0, row
+
+
+def test_script_and_style_text_never_leaks_into_the_extracted_body() -> None:
+    """抽取器不许把 <script>/<style> 里的字当正文（那是代码，不是文章内容）。"""
+    raw = ("<html><body><p>REAL BODY TEXT</p>"
+           "<script>var secretToken = 'abc'</script>"
+           "<style>.hidden{display:none}</style></body></html>").encode("utf-8")
+    text = ff.html_to_text(raw)
+    assert "REAL BODY TEXT" in text, text
+    assert "secretToken" not in text and "display:none" not in text, text
 
 
 def test_download_error_is_named_and_does_not_abort_the_step() -> None:
@@ -93,6 +127,8 @@ def test_offline_mode_never_builds_a_downloader(monkeypatch, tmp_path: Path) -> 
     assert ff.main(["--input", str(src), "--out", str(out), "--offline"]) == 0
     rep = json.loads(out.read_text(encoding="utf-8"))
     assert rep["offline"] is True and rep["full_texts"] == 0, rep
+    # 离线模式现在给的是独立结果词，不再混进 restricted
+    assert rep["access_counts"].get("offline_reachable") == 1, rep
 
 
 def test_offline_cli_run_still_reports_honestly(tmp_path: Path) -> None:
@@ -106,4 +142,54 @@ def test_offline_cli_run_still_reports_honestly(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stderr[-400:]
     rep = json.loads(out.read_text(encoding="utf-8"))
     assert rep["access_counts"].get("no_open_copy") == 1, rep
-    assert "离线" in proc.stdout, proc.stdout
+    assert "缺抽取器" in proc.stdout, proc.stdout
+
+def test_a_short_html_landing_page_is_not_reported_as_full_text() -> None:
+    """arXiv 的 /abs 页也是合法 HTML：抽出来只有摘要长度时不许说"拿到全文"。"""
+    landing = ("<html><body><h1>论文标题</h1><p>一小段摘要。</p>"
+               "<a href=/pdf>PDF</a></body></html>").encode("utf-8")
+    rep = ff.fetch_all([{"source": "arxiv", "arxiv_id": "9999.00002",
+                         "is_oa": True, "oa_url": "https://arxiv.org/abs/9999.00002",
+                         "title": "T"}], getter=lambda _u: landing)
+    assert rep["full_texts"] == 0, rep
+    assert rep["access_counts"].get("short_or_landing_page") == 1, rep
+    assert "短于全文下限" in rep["skipped"][0]["reason"], rep
+
+
+def test_whitespace_only_pdf_is_not_reported_as_extracted() -> None:
+    """第 77 片实测的形状：大 PDF 只抽出空白字符时不许标 `extracted_pdf`。
+
+    不 strip 的话，同一行读数里 `outcome=extracted_pdf` 与 `access=restricted`
+    会互相打脸——库里按空文本判受限，标签却说抽到了。
+    """
+    fake = b"%PDF-1.7\n" + b"\x00" * 64
+    text, outcome = ff.pdf_to_text(fake)
+    assert text == "", text
+    assert outcome == "pdf_without_text" or outcome.startswith("pdf_extract_failed:"), outcome
+    rep = ff.fetch_all([{"source": "arxiv", "arxiv_id": "8888.00001",
+                         "is_oa": True, "oa_url": "https://repo.org/blank.pdf",
+                         "title": "只抽出空白的 PDF"}], getter=lambda _u: fake)
+    assert rep["full_texts"] == 0, rep
+    assert rep["access_counts"].get("open_needs_extractor") == 1, rep
+    assert all(r["outcome"] != "extracted_pdf" for r in rep["fetched"]), rep
+
+
+def test_pdf_that_yields_only_whitespace_hits_the_strip_guard(monkeypatch) -> None:
+    """直接驱动 strip 那道闸：抽取器返回"只含空白"的页时必须算没抽到。
+
+    上一条用例喂的是坏 PDF，走的是 `pdf_extract_failed` 分支，碰不到这道闸——
+    电池臂 U1（把 strip 判空改成永不空）因此第一版存活。控制要打在它声称要防的那一行上。
+    """
+    import pypdf
+
+    class _Page:
+        def extract_text(self) -> str:
+            return "   \n\t  "
+
+    class _Reader:
+        pages = [_Page()]
+
+    monkeypatch.setattr(pypdf, "PdfReader", lambda *a, **k: _Reader())
+    text, outcome = ff.pdf_to_text(b"%PDF-1.7 anything")
+    assert text == "", text
+    assert outcome == "pdf_without_text", outcome

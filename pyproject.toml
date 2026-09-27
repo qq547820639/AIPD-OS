@@ -40,6 +40,10 @@ full = [
     # （它要给第三方自有的 requests.Session 挂超时与重试策略）。
     "requests",
     "pyyaml",
+    # 第 77 片：开放副本实测都是 PDF，没有抽取器就一行正文也拿不到。
+    # 选 pypdf 而不是 PyMuPDF（后者 AGPL-3.0，与本仓的 Apache-2.0 不兼容）；
+    # BSD-3-Clause、纯 Python、维护活跃（见 docs/audit/FULLTEXT_EXTRACTION…§二 的六维对比）。
+    "pypdf>=4",
 ]
 # 真实 CAD 参数化 B-Rep 内核（可选）。不放进默认 dependencies，保持最小安装干净；
 # 安装后 CadQueryBackend 可用，local_brep_adapter / cad.parametric_model 达到 C2。

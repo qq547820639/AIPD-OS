@@ -1,6 +1,6 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-27T18:53:17`
+- 生成时间：`2026-09-27T19:58:33`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
 - 默认分支：`main`；HEAD：`a66040520139405095648461f7144d4f00629924`
 - 版本：`5.6.0`
@@ -48,7 +48,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 附件读取 | `fully_implemented` | references/research-integration.md | scripts/research/_env.py; src/aipd_os/execution/adapter.py | research.source_worker.run_source | `python scripts/research/source_worker.py` | scripts/research/selftest_postprocess.py |  |
 | 多源论文检索 | `partially_implemented` | references/research-integration.md | scripts/research/search_papers_by_{arxiv,crossref,dblp,open_alex,openreview,semantic_scholar}.py | research.search_papers.search_papers | `python scripts/research/search_papers.py --query "..."` | scripts/research/selftest_runtime.py | 需网络/外部源可用 |
-| 全文获取 | `partially_implemented` | references/research-integration.md | scripts/research/fetch_fulltexts.py; _http_runtime.py; source_worker.py | research.fetch_fulltexts.fetch_all | `python scripts/research/fetch_fulltexts.py --input papers.json --out fulltexts.json [--offline] [--cache-dir DIR]` | tests/test_research_fulltext_step.py | scripts/research/fetch_fulltexts.py（第 76 片）是库里 fetch_fulltext 的消费者：只走来源自己标为开放访问的副本（OpenAlex is_oa+oa_url；arXiv 用官方 PDF 直链），没标开放访问就按拿不到处理、不去 scrape 出版商页面；摘要之外的正文仍受版权/robots 边界约束，--offline 下不下载也不伪造全文 |
+| 全文获取 | `partially_implemented` | references/research-integration.md | scripts/research/fetch_fulltexts.py; _http_runtime.py; source_worker.py | research.fetch_fulltexts.fetch_all | `python scripts/research/fetch_fulltexts.py --input papers.json --out fulltexts.json [--offline] [--cache-dir DIR]` | tests/test_research_fulltext_step.py | scripts/research/fetch_fulltexts.py（第 76 片）是库里 fetch_fulltext 的消费者：只走来源自己标为开放访问的副本（OpenAlex is_oa+oa_url；arXiv 用官方 PDF 直链），没标开放访问就按拿不到处理、不去 scrape 出版商页面；摘要之外的正文仍受版权/robots 边界约束，--offline 下不下载也不伪造全文；PDF 只有在装了可选依赖 pypdf 时才抽正文，没装就报 pdf_extractor_unavailable 而不是冒充拿到了 |
 | 去重排序 | `fully_implemented` | references/research-integration.md | scripts/research/postprocess.py | research.postprocess.dedup | `python scripts/research/postprocess.py` | scripts/research/selftest_postprocess.py |  |
 | 引用 | `partially_implemented` | references/research-integration.md | scripts/research/postprocess.py | research.postprocess.dedup | `python scripts/research/postprocess.py` | scripts/research/selftest_postprocess.py | 仅后处理附加引用标识，无独立引用生成/引文格式管线 |
 | 标准法规 | `external_dependency` | references/research-integration.md |  |  | `` |  | 依赖外部法规库/专业数据源，未接入时诚实等待 |
