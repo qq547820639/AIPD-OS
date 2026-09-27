@@ -77,11 +77,12 @@ def main() -> int:
                 "（本片未加合成读数；档位沿用第 71/72 片）")
 
     rc3, out3 = sh([PY, "-m", "pytest", "tests/test_absence_claim_census.py",
-                    "tests/test_absence_claim_census.py", "-q"])
+                    "tests/test_supervisor_execution.py", "-q"])
     tail3 = [ln for ln in out3.splitlines() if "passed" in ln or "failed" in ln][-1:]
     if rc3 != 0 or not tail3:
         fails.append(f"常驻用例 rc={rc3} {tail3}")
-    rows.append(f"- **常驻用例**：`pytest tests/test_absence_claim_census.py tests/test_absence_claim_census.py -q` → "
+    rows.append(f"- **常驻用例（量具 + 执行守卫合跑）**：`pytest "
+                f"tests/test_absence_claim_census.py tests/test_supervisor_execution.py -q` → "
                 f"`{tail3[0] if tail3 else ''}`（rc={rc3}）")
 
     rc4, out4 = sh([PY, "docs/audit/s73/battery73.py"], timeout=1200)
