@@ -66,7 +66,10 @@ V3（把策略判定改成"永远开放"）第一版**存活**：我的"策略�
 
 ## 七、下一片入口
 
-1. 白名单是主机级的，构造边界靠我们的代码自律；更硬的做法是让 `classify_access`
-   接受"路径前缀"级信任（需要改库的签名与既有用例）。
-2. §第 77 片两件仍未做：narrow 具名样本与处置账的直接联动、`rerun_for_rework` 与
-   `run_supervisor` 共用口子合并。
+1. 【第 79 片已做】白名单原来是主机级、构造边界靠代码自律；现在 `classify_access`
+   走 `OPEN_ACCESS_PREFIXES`（主机 + 路径前缀），`https://www.ebi.ac.uk/` 本身不再算开放来源。
+2. 【第 79 片更正】这条记错了：`rerun_for_rework` 与 `run_supervisor` 的**套件构造**早在
+   第 72 片就合成一处（`_execution_suite` / `_run_capability`，另有 AST 单点用例）。
+   第 79 片把剩下的"独立质量门的规则只许一处实现"也钉成用例；
+   而"narrow 具名样本与处置账的直接联动"经核与 `UNACCOUNTED` 等价，
+   不另建守卫（建了就是永不开火的死闸，第 76 片已因此删过一次）。

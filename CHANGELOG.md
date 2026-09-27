@@ -951,6 +951,29 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.40 F-PREFIX-SCOPED-TRUST 第 79 片：把开放来源的信任从"主机级"降到"主机 + 路径前缀"级**：
+  第 78 片给 `OPEN_ACCESS_DOMAINS` 加了 `ebi.ac.uk` / `europepmc.org`，
+  当时边界靠两句承诺：注释说"我们只构造 fullTextXML 路径"，用例说"只构造这一种 URL"。
+  **自律不是机制**：那一轮之后 `https://www.ebi.ac.uk/` 整台主机都算开放来源，
+  而 EBI 上远不止 Europe PMC 一个服务。
+  现在新增 `OPEN_ACCESS_PREFIXES`（`ebi.ac.uk` 只认 `/europepmc/webservices/rest/`，
+  `europepmc.org` 只认 `/articles/` 与 `/webservices/rest/`），两个主机从主机级表里**移出**；
+  `is_open_access_url` 命中前缀表时按路径判定。负例即证据：
+  `https://www.ebi.ac.uk/`、`/some/other/service`、`https://europepmc.org/reader/PMC1`、
+  `https://evil.test/ebi.ac.uk/...` 全部回到"未知即不拿"。
+  **顺手钉掉我上一片记错的一条队列**：`rerun_for_rework` 与 `run_supervisor` 的**套件构造**
+  早在第 72 片就合成一处（`_execution_suite` / `_run_capability` + AST 单点用例），
+  s77/s78 两篇文档却还写着"仍待合并"——查证后原地更正（不是补做，是改记录）。
+  真正剩下的是**门的规则**：两条路径都调 `_quality_gate`（调用两次合法），
+  但 findings 规则不许被抄第二遍 ⇒ 新增 `test_the_gate_rules_have_exactly_one_implementation`。
+  另一条队列项经核**判定不做**并写明理由："narrow 具名样本必须另有直接联动守卫"与
+  `UNACCOUNTED` 等价——窄档样本没有去处时 `UNACCOUNTED` 已经判红，再加一道就是永不开火的死闸
+  （第 76 片已因同样的理由删过一条）。
+  **又踩一次自己记过的坑**：给登记表加句子时把 `"未知即不拿"` 写进双引号字符串里 ⇒
+  `registry_data.py` 语法坏掉，量具当场报 `registry_unparseable`（连同"具名样本找不到"）；
+  改为「」后恢复。常驻新增 2 条、更正 1 条；`docs/audit/s79/battery79.py` **4 臂杀 4 活 0**（第一版 W1 的替换文本语法不通，被电池自己的 BAD-MUTATION 挡下）。
+  证据见 `docs/audit/PREFIX_SCOPED_TRUST_F-PREFIX-SCOPED-TRUST_2026-09-27.md`。
+
 - **v5.39 F-TEXT-FIRST-SOURCES 第 78 片：全文获取改成"真文本源优先"，并把策略判定挪到下载之前**：
   第 77 片留下的事实是：真实开放副本几乎全是 PDF，正文要靠可选抽取器。
   这一轮先探明再动手（在线实测）：Europe PMC 的 REST

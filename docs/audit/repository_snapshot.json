@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T20:24:52",
+  "generated_at": "2026-09-27T20:40:26",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -117,53 +117,32 @@
     "version": "5.6.0",
     "parsed": true,
     "total_files": 678,
-    "hash_matches": 672,
-    "hash_mismatch_count": 6,
+    "hash_matches": 675,
+    "hash_mismatch_count": 3,
     "mismatches": [
       {
-        "path": "README.md",
+        "path": "src/aipd_os/research/__init__.py",
         "reason": "hash_mismatch",
-        "expected": "00dce2ab8493f904e282ae802c65932ac82a48a50f30babc0d99cb3b737e383c",
-        "actual": "1cd6b45b85c05a5d64e52860c1d73c3262a3a9e554dedebecbf1a220f8f269af"
-      },
-      {
-        "path": "scripts/research/fetch_fulltexts.py",
-        "reason": "hash_mismatch",
-        "expected": "6ce32f2ca847a064ef1dac6fb00cc65cee2eef60467cd44912d6aa010b3692c2",
-        "actual": "a642434aa79e53063710a86e5c85c950c92303d1495a332a5c3fbc55f45a5fd2"
-      },
-      {
-        "path": "scripts/research/search_papers_by_open_alex.py",
-        "reason": "hash_mismatch",
-        "expected": "330f744e04aa5feaf3d32f72825a5bf3690c19754ad43c3d6ddf9d05f1231c45",
-        "actual": "2550366afbdfaa87bbd054bd43b0c8abff0fac59abdc3692872ed5038543b628"
+        "expected": "4d845dd0a8da5e73c32e0a9f5d50e91a33bcf3d88196775391d1b0910661726f",
+        "actual": "68acf0613dfceecbbbd59d2f8da64e26dd7c7438f81c0c0406364a7ae5b6cc0c"
       },
       {
         "path": "src/aipd_os/research/fulltext.py",
         "reason": "hash_mismatch",
-        "expected": "ab2721fd91cf28ef250f67c000b62956175d4a7a9f6f79e369c01d20888d292e",
-        "actual": "cc5c9fdddcccbeefe8744748ec852dbae85a00ec52bc5e971c7f76819c804c80"
-      },
-      {
-        "path": "tests/test_research_fulltext_live.py",
-        "reason": "hash_mismatch",
-        "expected": "0f3955da65d3f6375543d828647bbd58b20b3335af4254dba383fdcfa5433561",
-        "actual": "f894cdf2af6f2cc9909fcc3abb2fc7b7c91ae067fbde65f7ea79947d82485c3f"
+        "expected": "cc5c9fdddcccbeefe8744748ec852dbae85a00ec52bc5e971c7f76819c804c80",
+        "actual": "bd89e44f22fdaa969f664fa2539a0fdda70bd2f6043992d10a0b2699e0201cca"
       },
       {
         "path": "tests/test_research_fulltext_step.py",
         "reason": "hash_mismatch",
-        "expected": "2c1a5b1f979faa868e03da8e77ffa6ea698a2f478cf60e28b9af3afa1cfd79ea",
-        "actual": "0582a68ea962dbbcbed26aae3696f76fedb154583c6883e48e8a2ba05867cee5"
+        "expected": "6648e0c937415781caf00cd3f00389a489790f7212fd4c096c6e1cbb440306af",
+        "actual": "99d3155f6e34a5c6d192f977cfd7e3fb8f119d8fe74d33462022552a3f98d0e1"
       }
     ]
   },
   "untracked_or_generated": [
-    " M README.md",
-    " M scripts/research/fetch_fulltexts.py",
-    " M scripts/research/search_papers_by_open_alex.py",
+    " M src/aipd_os/research/__init__.py",
     " M src/aipd_os/research/fulltext.py",
-    " M tests/test_research_fulltext_live.py",
     " M tests/test_research_fulltext_step.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"

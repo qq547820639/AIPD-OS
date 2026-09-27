@@ -63,12 +63,15 @@ OPEN_ACCESS_DOMAINS = {
     "doabooks.org",
     "creativecommons.org",
     "zenodo.org",
-    # 第 78 片加：Europe PMC 的 REST `/{PMCID}/fullTextXML` 只对 OA 收藏里的文章返回正文
-    # （实测 OA 条目 200 + application/xml，非 OA 的 PMC8581587 直接 500、
-    #  版本化路径 404），所以这个信任面的边界由**我们自己只会构造这一种 URL** 来限定
-    # （见 `fetch_fulltexts.EUROPEPMC_XML`，另有常驻用例钉住"只构造 fullTextXML 路径"）。
-    "ebi.ac.uk",
-    "europepmc.org",
+}
+
+# 第 79 片：主机级信任太粗——`ebi.ac.uk` 上不止 Europe PMC 一个服务。
+# 这两个站按**路径前缀**给信任：只有落在 Europe PMC 的全文端点下才算开放来源，
+# 同一主机上的别的路径回到"未知 ⇒ 不拿"。第 78 片那句"信任边界由我们只构造一种 URL 来限定"
+# 当时是靠自律，现在改成机制。
+OPEN_ACCESS_PREFIXES: dict[str, tuple[str, ...]] = {
+    "ebi.ac.uk": ("/europepmc/webservices/rest/",),
+    "europepmc.org": ("/articles/", "/webservices/rest/"),
 }
 # 允许全文获取的开放许可
 OPEN_LICENSES = {"cc0", "cc-by", "cc-by-sa", "cc-by-nc", "public-domain", "open-access", "odc-by"}
@@ -149,10 +152,21 @@ class TextRecord:
 
 
 # ------------------------------------------------------------------ 版权/访问边界
+def _host_matches(host: str, domain: str) -> bool:
+    return bool(host) and (host == domain or host.endswith("." + domain))
+
+
 def is_open_access_url(url: str) -> bool:
-    """启发式判断 URL 是否属于已知开放获取来源。"""
-    host = (urlparse(url or "").netloc or "").lower()
-    return any(host == d or host.endswith("." + d) for d in OPEN_ACCESS_DOMAINS)
+    """启发式判断 URL 是否属于已知开放获取来源（主机级 + 主机/路径前缀级两张表）。"""
+    parsed = urlparse(url or "")
+    host = (parsed.netloc or "").lower()
+    if any(_host_matches(host, d) for d in OPEN_ACCESS_DOMAINS):
+        return True
+    for domain, prefixes in OPEN_ACCESS_PREFIXES.items():
+        if _host_matches(host, domain):
+            path = (parsed.path or "/")
+            return any(path == p.rstrip("/") or path.startswith(p) for p in prefixes)
+    return False
 
 
 def classify_access(url: str, *, robots_disallowed: bool = False, license: str | None = None) -> str:  # noqa: E501
@@ -447,7 +461,7 @@ __all__ = [
     "TEXT_TYPE_METADATA", "TEXT_TYPE_ABSTRACT", "TEXT_TYPE_FULL_TEXT",
     "TEXT_TYPE_OCR_TEXT", "TEXT_TYPE_QUOTED_SNIPPET", "TEXT_TYPES", "TEXT_TYPE_LABELS",
     "ACCESS_OPEN", "ACCESS_RESTRICTED", "ACCESS_BLOCKED",
-    "OPEN_ACCESS_DOMAINS", "OPEN_LICENSES",
+    "OPEN_ACCESS_DOMAINS", "OPEN_ACCESS_PREFIXES", "OPEN_LICENSES",
     "classify_text", "tag_text", "TextRecord",
     "is_open_access_url", "classify_access",
     "FullTextCache", "deduplicate_texts", "fetch_fulltext",

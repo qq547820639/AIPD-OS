@@ -276,22 +276,31 @@ def test_outcome_word_follows_the_final_access() -> None:
     assert ok["fetched"][0]["outcome"] == "extracted_xml", ok
 
 
-def test_the_two_new_open_access_hosts_are_the_europe_pmc_ones() -> None:
-    """第 78 片给库的白名单加了两个主机：只该是 Europe PMC 那两个。
+def test_europe_pmc_trust_is_prefix_scoped_not_host_wide() -> None:
+    """第 79 片：给 Europe PMC 的信任只覆盖全文端点，不覆盖整台主机。
 
-    加白名单等于放宽"允许去拿全文"的范围，所以点名钉住加了谁、并确认没顺手放进别的站。
+    第 78 片的边界写在注释与"我们只构造这种 URL"的自律里；这一轮把它变成机制：
+    主机命中但路径不在表里 ⇒ 不开放。两条负例是这道闸的存在理由。
     """
     import sys
     sys.path.insert(0, str(ROOT / "src"))
-    from aipd_os.research.fulltext import OPEN_ACCESS_DOMAINS, is_open_access_url
+    from aipd_os.research.fulltext import (
+        OPEN_ACCESS_DOMAINS,
+        OPEN_ACCESS_PREFIXES,
+        is_open_access_url,
+    )
 
-    assert "ebi.ac.uk" in OPEN_ACCESS_DOMAINS and "europepmc.org" in OPEN_ACCESS_DOMAINS
-    OA_XML = ("https://www.ebi.ac.uk/europepmc/webservices/rest/"
-              "PMC12900525/fullTextXML")
-    assert is_open_access_url(OA_XML)
-    for not_open in ("https://publisher.org/x.pdf", "https://researchgate.net/x.pdf",
-                     "https://example.com/ebiac.uk/x"):
-        assert not is_open_access_url(not_open), not_open
+    assert "ebi.ac.uk" in OPEN_ACCESS_PREFIXES and "europepmc.org" in OPEN_ACCESS_PREFIXES
+    assert "ebi.ac.uk" not in OPEN_ACCESS_DOMAINS, "已经从主机级降到前缀级"
+    assert "europepmc.org" not in OPEN_ACCESS_DOMAINS
+    for ok in ("https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12900525/fullTextXML",
+               "https://europepmc.org/articles/PMC8783953"):
+        assert is_open_access_url(ok), ok
+    for nope in ("https://www.ebi.ac.uk/",
+                 "https://www.ebi.ac.uk/some/other/service",
+                 "https://europepmc.org/reader/PMC1",
+                 "https://evil.test/ebi.ac.uk/europepmc/webservices/rest/x"):
+        assert not is_open_access_url(nope), nope
 
 
 def test_no_request_is_made_when_the_policy_says_no_even_for_a_chosen_url() -> None:
@@ -316,3 +325,16 @@ def test_no_request_is_made_when_the_policy_says_no_even_for_a_chosen_url() -> N
     rep2 = ff.fetch_all([{"source": "open_alex", "pmcid": "PMC1234567", "title": "T"}],
                         getter=spy)
     assert len(calls) == 1 and rep2["full_texts"] == 1, (calls, rep2)
+
+
+def test_the_gate_rules_have_exactly_one_implementation() -> None:
+    """独立质量门的判定规则只许有一处实现（两条路径共用同一个 `_quality_gate`）。
+
+    第 72 片把套件构造收成一处之后，剩下的"两处各写一遍"就是这个门：
+    `run_supervisor` 与 `rerun_for_rework` 都调 `_quality_gate`（两次调用是合法的），
+    但**findings 规则本身**不许在第二处被重新写一遍——那会让两条路径的门悄悄分叉。
+    """
+    src = (ROOT / "src/aipd_os/supervisor/supervisor.py").read_text(encoding="utf-8")
+    assert src.count('"missing evidence references"') == 1, "证据引用规则被复制了一份"
+    assert src.count('"missing output hash"') == 1, "输出哈希规则被复制了一份"
+    assert src.count("def _quality_gate(") == 1

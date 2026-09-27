@@ -436,6 +436,8 @@ python scripts/research/fetch_fulltexts.py --input papers.json --out fulltexts.j
 #     arXiv 用官方 PDF 直链），没标开放就按拿不到处理、不去 scrape 出版商页面；
 #     加 --offline 就只登记"可不可取"，不下载也不伪造全文。
 #     第 78 片再加一层：优先取**真文本源**（PMC 的 JATS XML、HTML），PDF 是退路；
+#     第 79 片把那两个主机的开放信任降到「主机 + 路径前缀」级（`OPEN_ACCESS_PREFIXES`），
+#     不再靠"我们只构造这一种 URL"的自律；`https://www.ebi.ac.uk/` 本身不再算开放来源。
 #     策略判定在下载之前做，抽到文本但策略不开放时结论词是 not_open_*。
 #     第 77 片补上"取到字节"与"抽出正文"的分别：开放副本实测都是 PDF，
 #     正文靠可选依赖 pypdf（BSD-3；PyMuPDF 是 AGPL，不兼容所以不用）；
