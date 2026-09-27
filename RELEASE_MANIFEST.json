@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 330275,
-      "sha256": "9e5de897d61a8d9029f82a0c0d292bb9ae12c666281c4a796dc509d0366a492e"
+      "size": 335294,
+      "sha256": "b6eb42f35acaf40e34e83e820754ad671493843a4ce3dd1c1f5428a55552201b"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 64074,
-      "sha256": "536519e516a20b33d6071cea6ce157d8a7d8b1db4c938f1ef8b8dfd0284a9b20"
+      "size": 64580,
+      "sha256": "71452d40d98d9dc8477add6569ed712ba085b49173c4b82a84e1fae525492699"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -747,8 +747,8 @@
     },
     {
       "path": "scripts/closeout_verifier.py",
-      "size": 33737,
-      "sha256": "58d9d0ef23ee3283da2e557a621ecbea550f99a9e3b9cf3d9f3d606d55281204"
+      "size": 41063,
+      "sha256": "49e55b0082daa67efb7e90a706c62622578a91be87230c746898ef0d4c54fb44"
     },
     {
       "path": "scripts/command_surface_census.py",
@@ -839,6 +839,11 @@
       "path": "scripts/release_evidence.py",
       "size": 14879,
       "sha256": "2aed5dc463ac792785a43b7660c285d06e0439713f1e1b9e032c253e427cdb4c"
+    },
+    {
+      "path": "scripts/release_fingerprint.py",
+      "size": 2901,
+      "sha256": "57547de892b2397852b22f290f14f9f30e95c462a92299c81f7a95feed8dc743"
     },
     {
       "path": "scripts/research/README.md",
@@ -2242,8 +2247,8 @@
     },
     {
       "path": "tests/conftest.py",
-      "size": 2008,
-      "sha256": "52256cd24e902770bae298bcca08d8c4ac47a1c8fde34f7fc40015c19a991641"
+      "size": 3231,
+      "sha256": "3653eaeb56ec45405555d45d7a65ddc4afe7a76afb576769d1c21f441105f4e5"
     },
     {
       "path": "tests/fixtures/__init__.py",
@@ -2577,8 +2582,8 @@
     },
     {
       "path": "tests/test_closeout_verifier.py",
-      "size": 26300,
-      "sha256": "616a4953b469265c4d219c49fd662e88af0ad9d09951021d959441397b0c9310"
+      "size": 29459,
+      "sha256": "4bbb3907c10b035e318234610e49405f10a898a33272737db572d8a7b16513c8"
     },
     {
       "path": "tests/test_command_coverage.py",
@@ -3159,6 +3164,11 @@
       "path": "tests/test_repo_hygiene.py",
       "size": 11696,
       "sha256": "b74caadb090402af4507940f5a473615908c0cd1b415de4012f9dcf5f0864f71"
+    },
+    {
+      "path": "tests/test_report_manifest_fingerprint.py",
+      "size": 7051,
+      "sha256": "ed295e1d968948bf61196b93b1288ba38a0500a6b938bad857f6ec6b6ebfa33f"
     },
     {
       "path": "tests/test_research_chain.py",
