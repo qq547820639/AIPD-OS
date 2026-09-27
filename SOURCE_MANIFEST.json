@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-27T19:07:48+00:00",
+  "generated_at": "2026-09-27T19:21:49+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 326918,
-      "sha256": "88a6435864d92ec782b80dcd9d79eb7e4c28b61fca63ee4f7a3b72dee67e607e"
+      "size": 326982,
+      "sha256": "5b367a25b27a53ec7bfa1016a284b290be9917ae57cd04fde91375ec3bcd4051"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 63703,
-      "sha256": "ec0531183b59018ae4deb566129e386bfac09e3ba00665c69dd8d98f4b28bb8b"
+      "size": 64074,
+      "sha256": "536519e516a20b33d6071cea6ce157d8a7d8b1db4c938f1ef8b8dfd0284a9b20"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -402,8 +402,8 @@
     },
     {
       "path": "docs/security/dependency-cve-review.md",
-      "size": 7854,
-      "sha256": "158ceceac858176605e023a4c19885bc298983fb6f7c91c034e2e01dc8064a3d"
+      "size": 8372,
+      "sha256": "68870b8f2d6845081274df41cb4c94282ff18d4ae2edeb77c08672f165b9fd78"
     },
     {
       "path": "evals/cad_evals.json",
