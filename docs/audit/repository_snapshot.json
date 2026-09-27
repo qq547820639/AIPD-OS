@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T12:12:42",
+  "generated_at": "2026-09-27T12:54:47",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -116,44 +116,58 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 667,
+    "total_files": 669,
     "hash_matches": 663,
-    "hash_mismatch_count": 4,
+    "hash_mismatch_count": 6,
     "mismatches": [
+      {
+        "path": "CHANGELOG.md",
+        "reason": "hash_mismatch",
+        "expected": "3370090ec0cc157ca1c59771396c3efc5c485414535873a92fe98c5e67871f53",
+        "actual": "406bd70056f1074c45fe543d90fbe244ca97aa4049665b90417a91dc4d5107ce"
+      },
       {
         "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "4277b3ad9fca680db3a0eebbab58c32282eb0b42f6f994c18f0da07f13abea42",
-        "actual": "45674e9a56206bf803d5957606fbe626e1bcf7779d96d5294632732d840a0a1d"
+        "expected": "45674e9a56206bf803d5957606fbe626e1bcf7779d96d5294632732d840a0a1d",
+        "actual": "1195ef0e9895899e671d63179861503f3bc305eae60bc14b49023d38fa1ad379"
       },
       {
-        "path": "scripts/product_capabilities_extra.py",
+        "path": "docs/architecture/truth_architecture.md",
         "reason": "hash_mismatch",
-        "expected": "bc51a3a97fe0c4b57d553fd1e871fc6bb6b169578ee73fd0e8f86f615ffba4bf",
-        "actual": "1eb3c7524b11fc51c56d9ea5b938147e1d6a486434ba61b1e26cf78894e8b150"
+        "expected": "55c25ee09d1671dcbcd0a5c07b3bc3eca93c90a9e5eb29285fc3d92007f4e4d7",
+        "actual": "ea0b7f797faeaf933e7dfec4fef9edab71b22745996685a9235f99b6fdc9e56d"
       },
       {
-        "path": "src/aipd_os/cli/commands_truth.py",
+        "path": "scripts/absence_claim_census.py",
         "reason": "hash_mismatch",
-        "expected": "420366be4cef0b4068fd507d9a2fc768168321e474c3ede7272b9e2384c4ea57",
-        "actual": "bcf8a9a497b6d0a237eec396f9c3f3b788741cc6223e3fd628e9ece2d1d64088"
+        "expected": "32e8378ee3946989a426a4f8d38576505d3345b48c10e2b49e582ac18ab9053a",
+        "actual": "0d39777b1f6e5bf32acdf077ea585ab763f477a5b95b1bd1f0063aaed14e6ef2"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "fff804a1fa7d5542d715d1276e28bca0af1d1b11c06d2e4c2c378334c7af249b",
-        "actual": "295dc50891c38a534d6ae3f5d9273fb6b37caa1059ce1e613076749d65dccb43"
+        "expected": "295dc50891c38a534d6ae3f5d9273fb6b37caa1059ce1e613076749d65dccb43",
+        "actual": "f1b3f9656f94bc62f467fd3c32bc42cb72f7a7034bd89ae3a03b8fffb462ff3c"
+      },
+      {
+        "path": "tests/test_absence_claim_census.py",
+        "reason": "hash_mismatch",
+        "expected": "36f51ab315b6d20556e7c5c968121f225c5f1180080a28ccc6296493beccd5e5",
+        "actual": "9b4cc7f107298fc98a7629fbcc8f82fe18d6d721c87a9b28cdbe35230a972824"
       }
     ]
   },
   "untracked_or_generated": [
+    " M CHANGELOG.md",
     " M README.md",
-    " M scripts/product_capabilities_extra.py",
-    " M src/aipd_os/cli/commands_truth.py",
+    " M docs/architecture/truth_architecture.md",
+    " M docs/audit/ABSENCE_CLAIM_CENSUS_F-STALE-ABSENCE_2026-09-27.md",
+    " M scripts/absence_claim_census.py",
     " M src/aipd_os/registry_data.py",
-    "?? docs/audit/ABSENCE_CLAIM_CENSUS_F-STALE-ABSENCE_2026-09-27.md",
-    "?? scripts/absence_claim_census.py",
-    "?? tests/test_absence_claim_census.py",
+    " M tests/test_absence_claim_census.py",
+    "?? docs/audit/PRODUCER_COUNT_F-PRODUCER-COUNT_2026-09-27.md",
+    "?? docs/audit/s66/",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],
