@@ -13,7 +13,7 @@
       "jsonschema": "4.25.1"
     }
   },
-  "build_time": "2026-09-27T01:06:39+00:00",
+  "build_time": "2026-09-27T01:15:18+00:00",
   "dependency_lock": {
     "files": {
       "requirements-quality.txt": "1dc9b146a4c1fc822b0938f5af742882ac1dc358ae16896b7acc1c7051418a37"
@@ -24,14 +24,14 @@
     "present": true,
     "path": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/docs/audit/pytest-report-v5.6.0.json",
     "parsed": true,
-    "sha256": "e3b9f2535b714dad9abbb856e7cae010b794087c992ee04f9d543bef306aa474",
+    "sha256": "cfe077160f8c318df195a28cce1019957441ebe89c477f0f45b94ec17b097dbd",
     "passed": 2509,
     "failed": 0,
     "total": 2512,
     "errors": null,
-    "source_commit": "044a1a67ff407a3a9e01578874868013452859d3",
+    "source_commit": "a66040520139405095648461f7144d4f00629924",
     "package_version": "5.6.0",
-    "generated_at": 1790471094.502338
+    "generated_at": 1790471658.072754
   },
   "bundle": null,
   "bundle_hash": null
