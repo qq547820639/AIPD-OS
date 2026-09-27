@@ -120,6 +120,12 @@ release manifest 写出 `assembly_instructions` 那一格**。不建 operations 
 - 工时 / 工序成本 / 扭矩值：不建模，清单里写就拒绝（与第 16 片同一裁决）。
 - 逐步骤的点检项接线：检验事实仍走 CTQ/图纸那条线，步骤里没有检查点。
 - PDF/图框版式：reportlab 中文本机可用，缺的是排版与分页判据。
+  **【第 81 片原地更正】** 这一句在第 80 片就已经不成立了——A4 图框矢量 PDF 与逐页标题栏
+  已交付（`src/aipd_os/cad/assembly_steps_pdf.py`，常驻 `tests/test_assembly_steps_pdf.py`，
+  分页判据是 `test_frame_and_page_numbers_appear_on_every_page`），第 81 片又把
+  `NOT_COVERED` 里残留的这一项撤掉（留着它，每份带 PDF 的产物都在自称没有 PDF）。
+  第 80 片当时只改了登记表与 README，漏了本篇这一行——按"接上 X 的那一轮必须 grep 到
+  '某类没有 X'并原地改"的纪律补上，原文保留在上一行不删。
 - 步骤顺序的自动求解：与爆炸位移同理，前提（装配约束、无碰撞路径）本仓没有。
 
 ## 八、收尾读数（落盘后复算，不是计划）
