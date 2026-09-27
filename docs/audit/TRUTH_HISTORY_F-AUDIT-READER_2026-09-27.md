@@ -70,10 +70,18 @@
 - 夹具最初按「`ctq add` 会写审计行」写，五处同时红；重开写入点确认它今天**不写**，
   于是新增 `_one_change` 走 add+revise 造审计行，并把那格记进 §七的 F-AUDIT-WRITER。
 
-## 六、终读数（干净工作树）
+## 六、终读数（干净工作树 @ `3815423c`，全部现跑现取）
 
-见收尾链路：取证工作树 @ 绑定前锚点提交，`collected/passed/skipped`、门禁 8/8、
-`audit_repo --strict` 唯一 ✗（钉 v5.6.0 那条设计内的红）在绑定后由脚本从原件写在这里。
+- 全量用例：`collected=2524 / passed=2521 / skipped=3 / failed=0 / exitcode=0`，用时 303s；报告 `source_commit` = 钉住的 v5.6.0，「测的就是这棵树」由套件内两条清单哈希用例证（收尾验签核过）。
+- 收尾验签 `tmp/s63/verify63.py`：25 条 [OK]、0 条 FAIL，退出码 0（outcome 自己数、名单与树上的 def test_* 求差、派发表/契约/README/函数体四张镜像正向读锚、工作树干净断言）。
+- 文档命令名对账（本仓语料）：权威面：90 条 argparse 路径（契约 deprecated 别名不并进权威面，由 alias_unregistered 单独核），15 个组名
+  判红面语料：run_command 86 段 / 速查行 94 行 / 生产代码 216 处（另有 6 处同行带否定标记 ⇒ 只报）
+  只报面 1015 处（全量扫描 1339 处，减去三档判红面覆盖的行）
+  · 只报面（不判红）里点到未注册的命令 10 个名字：aipd ctq listy（5 处）；aipd ctq zzz-listy（1 处）；aipd ctq zzz-quickref（1 处）；aipd ghost cmd（7 处）；aipd ghostci check（5 处）；aipd ghostly cmd（6 处）；aipd ghostspec run（5 处）；aipd truth ctq（10 处）；aipd truth show（14 处）；aipd x（3 处）
+- 命令面：已注册命令 74 条，读过的测试文件 201 个；低于 cli 档合计：0 条
+- 技能自审：自审通过：0 项警告，0 项失败 → 退出码 0
+- 发布前门禁 `production_release_gate.py --release-ready --tag v5.6.0`：8 项 `"passed": true`、0 项 false，`release_ready: true`，退出码 0（跑前 `export PATH="$PWD/.venv/bin:$PATH"`，否则 pip-audit 找不到会 fail-closed 假红）。
+- `audit_repo.py --strict`：唯一 ✗ = `Provenance source commit mismatch: manifest=a66040520139… vs HEA…` —— 钉在 v5.6.0 的设计内红，不是漂移。
 
 ## 七、未证实与下一步
 
@@ -82,5 +90,8 @@
 - **写入侧那一格（F-AUDIT-WRITER）**：`ctq add` 不写审计行 ⇒「谁第一次声明了这条要求」
   只能从记录自身的 `declared_by`/`created_at` 读，不在这张改动史上。补行会改写入语义，
   另立一片，不混进本轮。
+- 第 62 片记下的那格盲区**这轮又露了一次**：只报面的"未注册名"清单里现在混着
+  `aipd ctq zzz-listy` 与 `aipd ctq zzz-quickref`（各 1 处）——那是取证文档**引述夹具名**，
+  不是仓库缺口。修法与上一片记的一样：把 `zzz-` 前缀与 `ghost*` 单列一档，不计入缺口数。
 - 两个现役 `list_audit(limit=200)` 读者（`experience/owner_dashboard.py:62`、
   `experience/operations.py:224`）还没换到新读面——它们同样在静默截断，属下一片范围。
