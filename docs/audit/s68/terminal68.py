@@ -45,7 +45,7 @@ def main() -> int:
         other = {k: v for k, v in s.items() if k not in ("passed", "collected", "total")}
         wt = subprocess.run(["git", "-C", str(TMP / "checkout"), "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip()
-        rows.append(f"- **签出那一跑**（`tmp/s67/checkout`，报告产出于提交 `{wt}`，"
+        rows.append(f"- **签出那一跑**（`tmp/s68/checkout`，报告产出于提交 `{wt}`，"
                     f"主树当时 HEAD `{git('rev-parse', '--short', 'HEAD')}`）："
                     f"`exitcode={rep.get('exitcode')}`、`collected={s.get('collected')}`、"
                     f"`passed={s.get('passed')}`、`skipped={s.get('skipped')}`、"
@@ -115,13 +115,14 @@ def main() -> int:
     rows.append(f"- **发布门禁**：`rc={rc6}`、`\"passed\": true` 计 {okn} 条、"
                 f"`release_ready` {ready}")
 
+    gate_claims = tuple(c for c in acc.CLAIMS
+                        if c.get("check", {}).get("kind") == "external_callers")
+    gate_ids = {str(c["id"]) for c in gate_claims}
+    gate_verdicts = sorted({str(r["verdict"]) for r in acc.audit(REPO, gate_claims)["rows"]
+                            if str(r["id"]) in gate_ids})
     rows.append("- **本片新档的读数**：`external_callers` 对 "
-                "`commit_approved` / `commit_snapshot` 各判 "
-                + ",".join(sorted({str(r["verdict"]) for r in
-                                  acc.audit(REPO, tuple(
-                                      c for c in acc.CLAIMS
-                                      if c.get("check", {}).get("kind") ==
-                                      "external_callers"))["rows"]})) +
+                "`commit_approved` / `commit_snapshot` 判 "
+                + ",".join(gate_verdicts) +
                 "，正向对照 `record_dxf_lineage` 判 "
                 + str(acc.audit(REPO, ({"id": "POS", "capability": "product.definition_gate",
                                         "field": "current_limitation",
