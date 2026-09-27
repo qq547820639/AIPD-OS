@@ -2547,8 +2547,8 @@
     },
     {
       "path": "tests/test_closeout_verifier.py",
-      "size": 18083,
-      "sha256": "757e78f6afc959d47cd810247c3ff76fdea28d80fd6c291d15bf8cc81f4c1c16"
+      "size": 21405,
+      "sha256": "39167d02a6ebbfaf13552036d002e2bf3b6e86bd7d9238c19f3701af673c12bc"
     },
     {
       "path": "tests/test_command_coverage.py",
