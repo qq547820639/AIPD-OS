@@ -60,29 +60,40 @@ def main() -> int:
         if str(rep.get("source_commit")) != tagsha:
             fails.append("报告 source_commit != tag SHA")
 
-    rc, out = sh([PY, "scripts/absence_claim_census.py"])
+    # 本片改的是 doc_command_census ⇒ 主角是它；absence_claim_census 只作同族回归
+    rc, out = sh([PY, "scripts/doc_command_census.py"])
     if rc != 0:
-        fails.append(f"census rc={rc}")
+        fails.append(f"doc_command_census rc={rc}")
     got = [ln.strip() for ln in out.splitlines()
-           if ln.startswith(("语料：", "能力缺失句", "判红 0 条"))]
-    rows.append("- **本片主角（真仓库终态）**：`rc={}`；{}".format(rc, "；".join(got)))
-    if "未处置 0" not in out:
+           if ln.startswith(("只报面", "现状面缺陷", "权威面"))]
+    rows.append("- **本片主角 `doc_command_census`**：`rc={}`；{}".format(rc, "；".join(got)))
+    if "未注册命令 0" not in out and "现状面缺陷 0 条" not in out:
+        fails.append("doc 尺子现状面不干净")
+    rc1b, out1b = sh([PY, "scripts/absence_claim_census.py"])
+    if rc1b != 0:
+        fails.append(f"absence_claim_census rc={rc1b}")
+    got1b = [ln.strip() for ln in out1b.splitlines()
+             if ln.startswith(("能力缺失句", "被挡在窄档外"))]
+    rows.append("- **同族回归 `absence_claim_census`**：`rc={}`；{}".format(
+        rc1b, "；".join(got1b)))
+    if "未处置 0" not in out1b:
         fails.append("窄档仍有未处置句")
 
-    rc2, out2 = sh([PY, "scripts/absence_claim_census.py", "--self-test"])
-    marks = out2.count("✓立住")
-    if rc2 != 0 or marks < 21:
-        fails.append(f"--self-test rc={rc2} marks={marks}")
-    rows.append(f"- **`--self-test`**：`rc={rc2}`，**{marks} 条**合成读数全对上"
-                "（条数由本次运行现数，不引用上一片的说法）")
+    rc2, out2 = sh([PY, "scripts/doc_command_census.py", "--self-test"])
+    rc2b, out2b = sh([PY, "scripts/absence_claim_census.py", "--self-test"])
+    marks = out2.count("✓立住") + out2b.count("✓立住")
+    if rc2 != 0 or rc2b != 0 or marks < 30:
+        fails.append(f"--self-test doc={rc2} absence={rc2b} marks={marks}")
+    rows.append(f"- **两把尺子的 `--self-test`**：`rc={rc2}/{rc2b}`，合计 **{marks} 条**"
+                "合成读数全对上（条数由本次运行现数）")
 
-    rc3, out3 = sh([PY, "-m", "pytest", "tests/test_absence_claim_census.py",
+    rc3, out3 = sh([PY, "-m", "pytest", "tests/test_doc_command_census.py",
                     "tests/test_absence_claim_census.py", "-q"])
     tail3 = [ln for ln in out3.splitlines() if "passed" in ln or "failed" in ln][-1:]
     if rc3 != 0 or not tail3:
         fails.append(f"常驻用例 rc={rc3} {tail3}")
-    rows.append(f"- **常驻用例（两把文档/登记表尺子合跑）**：`pytest "
-                f"tests/test_absence_claim_census.py tests/test_absence_claim_census.py -q` → "
+    rows.append(f"- **常驻用例（两把尺子合跑，两个不同文件）**：`pytest "
+                f"tests/test_doc_command_census.py tests/test_absence_claim_census.py -q` → "
                 f"`{tail3[0] if tail3 else ''}`（rc={rc3}）")
 
     rc4, out4 = sh([PY, "docs/audit/s75/battery75.py"], timeout=1200)
