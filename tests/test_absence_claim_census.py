@@ -467,3 +467,45 @@ def test_a_real_absence_claim_cannot_be_dropped_by_a_co_located_clause() -> None
     assert any("维护指引没有生产者" in b for b in narrow_bodies), narrow_bodies[:3]
     # 它在窄档里，且被显式豁免（不是被漏掉）——豁免理由非空由 rep 的 problems 保证
     assert rep["corpus"]["narrow_exempted"] >= 1, rep["corpus"]
+
+
+def test_named_axis_samples_match_the_real_registry() -> None:
+    """本仓登记表的每档具名样本必须仍在语料里、仍落在声明的档上。
+
+    这条是第 74 片的正身：三档计数只说"每档非空"，把窄档的两句挪去别档也能自洽；
+    具名样本钉的是**分布**——词表被改动到让某句换档，这里立刻红。
+    """
+    rep = acc.audit(ROOT, acc.CLAIMS)
+    sample_problems = [x for x in rep["problems"]
+                       if str(x).startswith(("sample_", "axis_without"))]
+    assert sample_problems == [], sample_problems
+    assert len(acc.AXIS_SAMPLES) == 4, sorted(acc.AXIS_SAMPLES)
+    assert all(len(v) >= 1 for v in acc.AXIS_SAMPLES.values()), acc.AXIS_SAMPLES
+    # 样本串必须逐字能在语料里找到（防止有人把样本改成"想象中的文案"）
+    corpus, problems = acc.registry_strings(ROOT)
+    assert problems == [], problems
+    bodies = [acc._norm(s.split("|", 2)[-1]) for s in acc.absence_sentences(corpus)]
+    for axis, keys in acc.AXIS_SAMPLES.items():
+        for key in keys:
+            assert any(acc._norm(key) in b for b in bodies), (axis, key)
+
+
+def test_sample_validation_is_actually_wired_into_the_audit(tmp_path, monkeypatch) -> None:
+    """不只测"样本对"，还要测"样本错的时候 audit 会响"。
+
+    上一版的真语料断言是 `problems == []`：把校验函数改成永远返回空表，它照样绿。
+    这条用同一个入口（`audit`）喂一份坏样本，要求它确实冒出 `sample_missing`，
+    于是"校验被接上了"这件事本身有了反证。
+    """
+    corpus, _ = acc.registry_strings(ROOT)
+    sentences = acc.absence_sentences(corpus)
+    assert sentences, "前提：本仓语料读得到"
+    real_root = Path(__file__).resolve().parent.parent
+    good = len(acc.audit(real_root, acc.CLAIMS)["problems"])
+    monkeypatch.setattr(acc, "AXIS_SAMPLES",
+                        {"narrow": ("这句在本仓登记表里不存在-第74片对照",),
+                         "no-predicate": ("未覆盖",), "no-noun": ("没有",),
+                         "non-claim": ("不算收口",)})
+    bad = acc.audit(real_root, acc.CLAIMS)["problems"]
+    assert any(str(x).startswith("sample_missing") for x in bad), bad
+    assert len(bad) > good, (good, len(bad))

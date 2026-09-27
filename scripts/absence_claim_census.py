@@ -286,6 +286,65 @@ def duplicate_divergence(corpus: dict[str, dict[str, list[tuple[str, int, str]]]
     return out
 
 
+# ---------------------------------------------------------------------------
+# 三档"挡掉"的具名样本（第 74 片）：每档至少一句真实登记表文本 + 它该落的轴。
+#
+# 为什么不只钉计数：第 73 片的下界是"每档 > 0"，那意味着**把窄档的两句挪去无名词档、
+# 再把无名词档的两句挪去谈判决档**，总数与三档都还是非空，读数一片祥和。
+# 具名样本钉的是分布：某句今天算不算能力缺失，是判据的**结论**，不是它的作用域。
+# 三个失败面都算前提不成立（退 2）：样本找不到（登记表漂了）、样本落错轴（词表被改坏）、
+# 某档没有样本（有人为了让判据"更严"而悄悄删掉一条对照）。
+AXIS_SAMPLES: dict[str, tuple[str, ...]] = {
+    "narrow": ("仍没有执行器的是 quote_batch",
+               "BOM/成本变动要反向影响 CTQ 结论"),
+    "no-predicate": ("内置族为常用成年男女/儿童百分位示例",
+                     "库里有 src/aipd_os/research/fulltext.py"),
+    "no-noun": ("项目里还没有 BOM 版本记录时记录照写",
+                "条目里仍不写 drawing_feature"),
+    "non-claim": ("圆内没有图线即判未收口",
+                  "三种都不算收口"),
+}
+
+
+def check_axis_samples(sentences: list[str]) -> list[str]:
+    """按现读语料核对具名样本：返回问题列表（空 ⇒ 分布没被改坏）。"""
+    problems: list[str] = []
+    normed = [(acc_norm(s.split("|", 2)[-1]), classify_absence(s.split("|", 2)[-1])[0])
+              for s in sentences]
+    for axis, keys in AXIS_SAMPLES.items():
+        if not keys:
+            problems.append(f"axis_without_sample: 档 {axis} 没有具名样本")
+        for key in keys:
+            k = acc_norm(key)
+            hits = [(body, got) for body, got in normed if k in body]
+            if not hits:
+                problems.append(f"sample_missing: 档 {axis} 的样本「{key[:28]}」"
+                                "在语料里找不到（登记表改了文案，样本要跟着改，不能删了事）")
+                continue
+            if not any(got == axis for _b, got in hits):
+                problems.append(
+                    f"sample_axis_mismatch: 「{key[:28]}」现在落在 "
+                    f"{sorted({got for _b, got in hits})}，声明的轴是 {axis}")
+    return problems
+
+
+def acc_norm(text: str) -> str:
+    """`_norm` 的模块内别名（样本比对与锚点比对必须同一套剥号规则）。"""
+    return _norm(text)
+
+
+def _sample_problems_for(root: Path, sentences: list[str]) -> list[str]:
+    """具名样本只核对**本仓的登记表文本**——它们本身就是"这一句在本仓算哪一档"的主张。
+
+    拿一份两句话的合成语料去核对八条本仓样本，得到的必然是 8 条"样本找不到"，
+    那是夹具的尺寸而不是判据的问题；合成侧的三种失败面由 `check_axis_samples` 直接驱动
+    （见 `--self-test` 与 `tests/test_absence_claim_census.py`）。
+    """
+    if root.resolve() != Path(__file__).resolve().parent.parent:
+        return []
+    return check_axis_samples(sentences)
+
+
 def classify_absence(body: str) -> tuple[str, str]:
     """这句"带否定词的话"属于哪一档，以及为什么。
 
@@ -837,6 +896,7 @@ def audit(root: Path, claims: tuple[dict[str, Any], ...]) -> dict[str, Any]:
             dropped[axis] += 1
         else:
             dropped["unknown-axis"] += 1
+    problems.extend(_sample_problems_for(root, sentences))
     if dropped["unknown-axis"]:
         # 分类器吐出一个没登记的轴 ⇒ 词表被改坏了，不许当成"这句不算"
         problems.append(f"classifier_unknown_axis: "
@@ -907,13 +967,17 @@ def render(rep: dict[str, Any]) -> str:
     lines.append(f"语料：{c['capabilities']} 个能力，带否定词的句子 {c['absence_sentences']} 句；"
                  f"账本登记 {c['claims_registered']} 条，"
                  f"未挂锚点 {c['absence_sentences_unanchored']} 句（宽档，只报不判）")
+    n_samples = sum(len(v) for v in AXIS_SAMPLES.values())
+    sample_problems = sum(1 for pr in rep["problems"]
+                          if "sample" in str(pr) or "axis_without" in str(pr))
     lines.append(f"能力缺失句（窄档＝判据面）：{c['capability_absence_sentences']} 句 = "
                  f"登记 {c['narrow_registered']} + 豁免 {c['narrow_exempted']} + "
                  f"**未处置 {c['narrow_unaccounted']}**")
     lines.append(f"被挡在窄档外的 {c['absence_sentences'] - c['capability_absence_sentences']} 句，"
                  f"按轴分开：无缺失谓词 {c['dropped_no_predicate']}、"
                  f"无能力名词 {c['dropped_no_noun']}、谈判决/谈口径 {c['dropped_non_claim']}"
-                 f"（三档各有常驻用例钉住它非空，见 test_each_narrow_axis_is_load_bearing）")
+                 f"（三档各有常驻用例钉住它非空）；具名样本 {n_samples} 句、"
+                 f"样本问题 {sample_problems} 条")
     mark_map = {"HOLDS": "✓", "CONTRADICTED": "✗", "CLAIM_TEXT_ABSENT": "✗",
                 "UNACCOUNTED": "✗", "PRECONDITION": "!"}
     for row in rep["rows"]:
@@ -981,6 +1045,9 @@ def _self_test(tmp: Path) -> int:
         ' {"id": "cap.d", "name": "第四个能力",\n'
         '  "current_limitation": "圆内没有图线即判未收口，不编号不画圈；'
         '所以「没有执行器」不会被伪装成返工失败三次"},\n'
+        ' {"id": "cap.e", "name": "第五个能力",\n'
+        '  "current_limitation": "内置族为常用示例，未覆盖全部人群数据库；'
+        '项目里还没有 BOM 版本记录时记录照写"},\n'
         ']\n', encoding="utf-8")
     extra_dir = tmp / "scripts"
     extra_dir.mkdir(exist_ok=True)
@@ -1114,7 +1181,7 @@ def _self_test(tmp: Path) -> int:
         rep5 = audit(tmp, claims)
         c5 = rep5["corpus"]
         assert c5["capability_absence_sentences"] == 6, c5
-        assert c5["absence_sentences"] == 8, c5   # 宽 8 / 窄 6：cap.d 那两句是假阳性
+        assert c5["absence_sentences"] == 10, c5  # 宽 10 / 窄 6：cap.d、cap.e 四句是假阳性
         assert c5["narrow_registered"] == 5, c5   # 含那句带 **quote_batch** 强调的
         assert c5["narrow_unaccounted"] == 1, c5
         assert c5["capability_absence_sentences"] == \
@@ -1195,6 +1262,35 @@ def _self_test(tmp: Path) -> int:
          "check": {"kind": "external_callers", "symbol": "only_self_called",
                    "expect": "present"}},
     )
+    fixture_samples = {
+        "narrow": ("仍没有执行器",),
+        "no-predicate": ("未覆盖全部人群数据库",),
+        "no-noun": ("还没有 BOM 版本记录",),
+        "non-claim": ("即判未收口",),
+    }
+    saved_samples0 = dict(globals()["AXIS_SAMPLES"])
+    globals()["AXIS_SAMPLES"] = fixture_samples
+    try:
+        sample_ok = check_axis_samples([
+            "cap.a|current_limitation|bom 这一类仍没有执行器；跨币种折算未实现",
+            "cap.d|current_limitation|圆内没有图线即判未收口",
+            "cap.e|current_limitation|内置族为常用示例，未覆盖全部人群数据库",
+            "cap.e|current_limitation|项目里还没有 BOM 版本记录时记录照写"])
+        assert sample_ok == [], sample_ok
+        missing = check_axis_samples(["cap.x|current_limitation|这里什么都没有写"])
+        assert any(p.startswith("sample_missing") for p in missing), missing
+        misaxis = check_axis_samples([
+            "cap.z|current_limitation|项目里还没有 BOM 版本记录时没有执行器"])
+        assert any(p.startswith("sample_axis_mismatch") for p in misaxis), misaxis
+        globals()["AXIS_SAMPLES"] = {**fixture_samples, "no-noun": ()}
+        no_sample = check_axis_samples(
+            ["cap.a|current_limitation|bom 这一类仍没有执行器"])
+        assert any(p.startswith("axis_without_sample") for p in no_sample), no_sample
+    finally:
+        globals()["AXIS_SAMPLES"] = saved_samples0
+    assert any(p.startswith("axis_without_sample") for p in no_sample), no_sample
+    _mark(marks, "具名样本三档控制齐：合规样本不报、样本消失报 sample_missing、"
+                 "落错轴报 sample_axis_mismatch、档没样本报 axis_without_sample")
     rep9 = audit(tmp, caller_claims)
     by9 = {str(r["id"]): str(r["verdict"]) for r in rep9["rows"]}
     assert by9["CALL-INWARD"] == HOLDS, sorted(by9)
