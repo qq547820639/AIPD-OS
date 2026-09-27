@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from collections import Counter
@@ -34,8 +35,10 @@ def main() -> int:
     # 环境前提先看住：`production_release_gate.no_unacknowledged_cve` 用 shutil.which('pip-audit')
     # 找可执行，PATH 里没有 .venv/bin 时它 fail-closed 报"不可用"⇒ rc=2、只有 7 条 true。
     # 那是环境缺位不是代码回归（项目记忆里记过同一格两次）。这里直接拒跑，别让它冒充判决。
-    if subprocess.run(["bash", "-lc", "command -v pip-audit"], capture_output=True,
-                      text=True).returncode != 0:
+    # 判"pip-audit 在不在"要在**当前进程的环境**里查（shutil.which）。
+    # 先前那版起 `bash -lc`，登录 shell 会重读 profile 把调用方 export 的 PATH 洗掉，
+    # 于是明明有 pip-audit 也报"没有"——一把只会误拒的守卫比没有守卫更糟。
+    if shutil.which("pip-audit") is None:
         print("REFUSE-WRITE：PATH 里没有 pip-audit——先 export "
               "PATH=\"$PWD/.venv/bin:$PATH\" 再跑（否则门禁会 fail-closed 假红）")
         return 2
