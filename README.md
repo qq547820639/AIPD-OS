@@ -484,7 +484,7 @@ aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷
 #   ↑ 失效传播：沿血缘把下游 truth 标 stale、生成有界返工任务（rework_tasks，默认上限 3 次），
 #     并给出 owner 可读的四段变更说明（改了什么/为何影响/修复计划/需要批准什么）。
 #     本次新置 stale 与此前已 stale 分两栏报——空的那一栏不等于「没影响」。
-#     有下游待返工即退出码 4。返工的**执行**从第 45 片起接在下一行那条命令上：执行器今天认四类制品
+#     有下游待返工即退出码 4。返工的**执行**从第 45 片起接在下一行那条命令上：执行器今天认五类制品
 #     （drawing_spec / drawing_dxf / bom / bom_cost，各自按当前输入重算），不认识的制品（quote_batch）
 #     在烧 attempts 之前逐条点名拒；不给执行器时引擎仍只判 blocked，绝不伪造成功。
 aipd truth tasks --db state.db --project P [--status pending]     # 只读列返工待办
@@ -548,7 +548,7 @@ aipd truth sweep --db state.db --project P [--dry-run]                        # 
 #     边表里找不到上游的（上游是磁盘文件而不是库里的记录）逐条点名不办，绝不就近挑一条。
 #     `--dry-run` 只交计划、一个字都不写；仍待返工或有不办的记录即 exit 4（成因看 `targets`
 #     与 `orphaned` 两栏，别只看退码）。落刀原因里带着两个键，事后能问出当时按什么落的刀。
-#   ↑ 执行器今天认四类制品：drawing_spec（重算声明）、drawing_dxf（第 47 片：重跑出图）、
+#   ↑ 执行器今天认五类制品：drawing_spec（重算声明）、drawing_dxf（第 47 片：重跑出图）、
 #     bom（第 53 片：按当前 BOM 行演进这一条版本记录，正文与 metadata 走生产面那份投影）、
 #     bom_cost（第 49 片：按记录里的 BOM 与口径五项重跑核算）。不认识的（如 artifact=quote_batch）
 #     在烧 attempts 之前逐条点名拒，记录不会被打成 blocked。

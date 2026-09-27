@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T15:47:15",
+  "generated_at": "2026-09-27T16:21:48",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 212
+      "tests": 213
     }
   },
   "tags": [
@@ -116,60 +116,78 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 670,
-    "hash_matches": 664,
-    "hash_mismatch_count": 6,
+    "total_files": 672,
+    "hash_matches": 663,
+    "hash_mismatch_count": 9,
     "mismatches": [
       {
-        "path": "docs/architecture/truth_architecture.md",
+        "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "ea0b7f797faeaf933e7dfec4fef9edab71b22745996685a9235f99b6fdc9e56d",
-        "actual": "fd65e75a503b176a493063424a5686c31a425cfd4d0d91320669d8485c5a1953"
+        "expected": "6ab870a0a63e7210b6fd90b432e4b6748a406f516dd1b2159b61e8d9d6965828",
+        "actual": "e46af23ebbbbce5cfb64ef45b338318ac5218385f01aecbbd6795aaea4b61053"
       },
       {
         "path": "scripts/absence_claim_census.py",
         "reason": "hash_mismatch",
-        "expected": "a4d7069781b5a828a3cb3eff52e39f0e98c41d5463d41959421a0cfa1374a2fe",
-        "actual": "ebd478dad3189550c472f26400a5ed61272d0172d3ee09fe1d07186d9e9f1816"
+        "expected": "ebd478dad3189550c472f26400a5ed61272d0172d3ee09fe1d07186d9e9f1816",
+        "actual": "e176803ec88eead44b563e1e43f70d27dd573c338ea7c73d46abd51467760d63"
+      },
+      {
+        "path": "src/aipd_os/cli/commands_truth.py",
+        "reason": "hash_mismatch",
+        "expected": "bcf8a9a497b6d0a237eec396f9c3f3b788741cc6223e3fd628e9ece2d1d64088",
+        "actual": "67271de3aadeaf0f684f5a512cddc8b45129cbfe05004e20d9c593eccbbaac57"
+      },
+      {
+        "path": "src/aipd_os/product_truth/sweep.py",
+        "reason": "hash_mismatch",
+        "expected": "406ae282e33c158feb0702b0a448822583b042475b4f3e95bfa6cf1f5734bed2",
+        "actual": "fe510e07ed2ee0265bbe1265e7a6b730f5868a3872898ae2426b196443a2fd4f"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "2303ff11b8c39b26db7ec0c83dd5bc668ded31ea0941d5acebf0100ee3a96462",
-        "actual": "ff671a568c650fcf2ab34fa9d27fe171bef6306e0feea22df4d3a68e4c814087"
+        "expected": "ff671a568c650fcf2ab34fa9d27fe171bef6306e0feea22df4d3a68e4c814087",
+        "actual": "8b1fd36196a198c1816ef6437552f0e7522831619e72e6d4e29b3ce90a449348"
+      },
+      {
+        "path": "src/aipd_os/supervisor/fact_lineage.py",
+        "reason": "hash_mismatch",
+        "expected": "f815581b8d997d505ee2e3984d0bbced0503fee2d02a0e17063887d6f298131c",
+        "actual": "fbe1240f50e83b40e8b47d0ce576011a3c4e7659bfc6c0e8cd5932b301d502e8"
       },
       {
         "path": "src/aipd_os/supervisor/supervisor.py",
         "reason": "hash_mismatch",
-        "expected": "d4c07e9396fe0aaf917ced41e4398a3ac791fb662bfb8b52313d567460423b71",
-        "actual": "58b6ce1428a7c206476be67d796c2754c14f981ec8105050d88d6f3db2998d91"
+        "expected": "58b6ce1428a7c206476be67d796c2754c14f981ec8105050d88d6f3db2998d91",
+        "actual": "3e82628b26130d9fc74a54694674fa6d934a3b796c2a56a6388e9196eeaadb74"
       },
       {
-        "path": "tests/test_absence_claim_census.py",
+        "path": "tests/test_cost_rework.py",
         "reason": "hash_mismatch",
-        "expected": "3318d853558ec099821cffbbfb67c458e149db8a612815954f28ca79716a87f9",
-        "actual": "56406452479c6534e14b0935abe87973d3d66e3861b3ac6b1769cf322b0edb41"
+        "expected": "4441b5f2c01f5a36fbf44058d41d6234b7ff77e022c1069ff52da41b0706ae01",
+        "actual": "3415489fef45ac2b842f83af82e4ec791a4d3965e44b5b5503fa51a19bf31cdd"
       },
       {
-        "path": "tests/test_drawing_spec_lineage.py",
+        "path": "tests/test_dxf_rework.py",
         "reason": "hash_mismatch",
-        "expected": "5a31296b940229486610d700b42d5c00fed21875ecb8c7812f477d70d45d9938",
-        "actual": "74124a99a7300e7f6db4cfe5b5fa5197df8a4e7f841c480dd45356643e5d7582"
+        "expected": "aa930b31a1adcd6b4d6a31f73d958970e9cda86ce853277b227dd38a2665934c",
+        "actual": "62c867b0168f5426c9b8382bd4f4179e0163bbfac0bb35c6b06fd17763c6f4e1"
       }
     ]
   },
   "untracked_or_generated": [
-    " M docs/architecture/truth_architecture.md",
-    " M docs/audit/capability_matrix.json",
-    " M docs/audit/capability_matrix.md",
-    " M docs/audit/repository_snapshot.json",
+    " M README.md",
     " M scripts/absence_claim_census.py",
+    " M src/aipd_os/cli/commands_truth.py",
+    " M src/aipd_os/product_truth/sweep.py",
     " M src/aipd_os/registry_data.py",
+    " M src/aipd_os/supervisor/fact_lineage.py",
     " M src/aipd_os/supervisor/supervisor.py",
-    " M tests/test_absence_claim_census.py",
-    " M tests/test_drawing_spec_lineage.py",
-    "?? src/aipd_os/supervisor/fact_lineage.py",
-    "?? tests/test_supervisor_fact_lineage.py",
+    " M tests/test_cost_rework.py",
+    " M tests/test_dxf_rework.py",
+    "?? src/aipd_os/supervisor/evidence_rework.py",
+    "?? tests/test_evidence_rework.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

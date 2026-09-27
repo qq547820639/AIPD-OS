@@ -175,8 +175,12 @@ def cmd_truth_rework(args):
     from aipd_os.cli.commands_drawing import render_dxf_from_record
     from aipd_os.cli.commands_manufacturing import bom_from_record, recalc_cost_from_record
     from aipd_os.product_truth.propagation import PropagationEngine, ReworkExhaustedError
+    from aipd_os.supervisor import Supervisor
+    from aipd_os.supervisor.evidence_rework import SUPPORTED_RECORD_TYPE as EVIDENCE_ARTIFACT
+    from aipd_os.supervisor.evidence_rework import evidence_artifact_kind, rework_evidence_artifact
 
-    supported = [SUPPORTED_ARTIFACT, DXF_ARTIFACT, BOM_ARTIFACT, COST_ARTIFACT]
+    supported = [SUPPORTED_ARTIFACT, DXF_ARTIFACT, BOM_ARTIFACT, COST_ARTIFACT,
+                 EVIDENCE_ARTIFACT]
     rework_db_path = str(args.db)
     rework_project = (getattr(args, "project", None)
                       or getattr(store, "project_id", None))
@@ -195,6 +199,26 @@ def cmd_truth_rework(args):
                 store, truth_id,
                 recalc=lambda meta: recalc_cost_from_record(
                     meta, db_path=rework_db_path, project_id=rework_project))
+        if kind == EVIDENCE_ARTIFACT:
+            # 证据这一类的"重算"= 用记下来的工作项把它再执行一次（走监督器同一套 router
+            # 与独立质量门），再就地演进这条记录。缺工作项/缺输入 ⇒ 下面回 rerun_missing_*，
+            # 不猜最近一条，也不去碰不可重放的对外副作用。
+            sup = Supervisor(rework_db_path, project_id=rework_project)
+
+            def _rerun(meta):
+                out = sup.rerun_for_rework(str(meta.get("work_id") or ""))
+                if out is None:
+                    return {"status": "missing_work_item"}
+                rec = out["record"]
+                return {"run_id": rec.run_id,
+                        "output_hash": getattr(rec, "output_hash", None),
+                        "evidence_references": list(
+                            getattr(rec, "evidence_references", []) or []),
+                        "status": getattr(rec, "status", ""),
+                        "side_effect_mode": out["side_effect_mode"],
+                        "gate": (out["gate"] or {}).get("gate")}
+
+            return rework_evidence_artifact(store, truth_id, rerun=_rerun)
         return rework_artifact(store, truth_id)
 
     engine = PropagationEngine(store)
@@ -214,7 +238,9 @@ def cmd_truth_rework(args):
                             "artifact_kind": None,
                             "reason": f"任务读不到：{type(exc).__name__}: {exc}"})
             continue
-        kind = artifact_kind(store, task.truth_id)
+        # 两条轴：版本记录看 metadata["artifact"]，执行证据看 record_type
+        kind = artifact_kind(store, task.truth_id) or evidence_artifact_kind(
+            store, task.truth_id)
         if kind not in supported:
             refused.append({"task_id": task_id, "truth_id": task.truth_id,
                             "artifact_kind": kind,

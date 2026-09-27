@@ -150,6 +150,16 @@ CLAIMS: tuple[dict[str, Any], ...] = (
     },
     # ---- 第 67 片：把"能力缺失句"逐条挂上反证锚点 ----
     {
+        "id": "EVIDENCE-REWORK-WIRED",
+        "capability": "industrialize.physical_writeback",
+        "field": "current_limitation",
+        "anchor": "第 71 片：拿记下来的工作项再执行一次",
+        "check": {"kind": "external_callers", "symbol": "rework_evidence_artifact",
+                  "expect": "present"},
+        "why": "存在式：登记说这一类制品收得了口，反证 = 执行器在生产面 0 处外部调用点。"
+               "第 70 片让证据能被标 stale 之后，这一格才成为缺口，本片补上",
+    },
+    {
         "id": "BOM-COST-TO-CTQ-REVERSE-PATH",
         "capability": "product_truth.impact_propagation",
         "field": "current_limitation",

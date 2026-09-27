@@ -951,6 +951,33 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.32 F-REWORK-EVIDENCE 第 71 片：执行证据这一类制品有了返工执行器（`aipd truth rework` 认五类）**：
+  第 70 片让证据能被传播标 stale 之后，缺口从"连不上"变成"收不了口"——
+  `artifact_kind()` 只看 `metadata["artifact"]`，证据行没有这个键，于是仍落在"点名拒"那一侧。
+  **这一类的"重算"= 拿记下来的工作项再执行一次，然后就地演进这条证据记录**
+  （引擎成功时 bump 的是同一条；另起新版是生产面 `cost calc --truth-lineage` 的规则，两边刻意不同）。
+  新执行器 `src/aipd_os/supervisor/evidence_rework.py`：
+  ① 只认 `record_type="evidence"`（第二道类别轴，四类版本记录照旧各归各的执行器）；
+  ② **正文与生产者共用同一份投影** `fact_lineage.evidence_content`——两边各写一遍时
+  "run 换了正文没换"与"正文换了 run 没换"都不会有人红（第 52/53 片同格）；
+  ③ 信任按**这次**的独立质量门重定，不沿用旧值（门没过 ⇒ low）；
+  ④ 四条拒绝各有控制：`missing_metadata`（不猜最近一条）、`not_replayable`
+  （`EXTERNAL_SIDE_EFFECT`/`NON_RETRYABLE` 不自动重放，**只能人处置**）、
+  `rerun_not_ok`（blocked_external 不算收口，stale 留在原处让下次扫描继续看见）、
+  `rerun_same_run`（同一次 run 没有新信息）。
+  **端到端**：propagate 标 stale ⇒ `aipd truth rework --task` ⇒ 任务 succeeded、
+  证据回到 active、正文换成新 run（`tests/test_evidence_rework.py`，10 条）。
+  **电池抓到一条我自己写的死守卫**：`evidence_artifact_kind` 里那道
+  "有 `artifact` 键就交回原四支"的让位判断，注入"把这个键换成任何别的键"之后
+  38 条用例全绿 ⇒ 它永远不开火、没有主人 ⇒ 删掉，只留第二道 `record_type` 判据并在注释里写明为什么不需要它。
+  镜像面：`commands_truth.py` 的 supported 清单与"本执行器只认 …"消息、
+  登记表两行（`product_truth.impact_propagation`、`industrialize.physical_writeback`）把
+  "四类制品"改口为"五类制品（四类版本记录 + 执行证据）"、README 两处、`sweep.py` 模块说明；
+  账本补存在式 `EVIDENCE-REWORK-WIRED`；`test_dxf_rework`/`test_cost_rework` 里钉死四类清单的
+  两条断言同批改五类（**保留"quote_batch 仍点名拒、不烧 attempts"那一半**）。
+  窄档 16 句 = 登记 6 + 豁免 10 + 未处置 0；`docs/audit/s71/battery71.py` **7 臂杀 7 活 0**。
+  证据见 `docs/audit/EVIDENCE_REWORK_F-REWORK-EVIDENCE_2026-09-27.md`。
+
 - **v5.31 F-TRUTH-LINEAGE 第 70 片：执行证据终于能被失效传播走到（`supervisor/fact_lineage.py`）**：
   登记原话"不写 truth_lineage 边——工作项与上游 truth 之间还没有映射，
   因此这一步产出的 evidence 今天不会被 aipd truth propagate 传播到"

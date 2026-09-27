@@ -169,7 +169,8 @@ def test_rework_closes_the_stale_task_end_to_end(env, capsys):
     assert rc == 0, payload
     assert payload["ok"] is True and payload["refused"] == []
     assert payload["supported_artifacts"] == ["drawing_spec", "drawing_dxf",
-                                              "bom", "bom_cost"]
+                                              "bom", "bom_cost",
+                                              "evidence"]   # 第 71 片接上执行证据这一类
     assert [r["executor"]["outcome"] for r in payload["results"]] == ["unchanged"]
     assert _store(db).get(lin["cost"]["record_id"]).status == "active"
 

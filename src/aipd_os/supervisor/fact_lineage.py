@@ -25,6 +25,17 @@ from __future__ import annotations
 import json
 from typing import Any
 
+
+def evidence_content(capability: str, run_id: str,
+                     output_hash: str | None) -> str:
+    """一条执行证据的正文（生产者与返工执行器共用，唯一来源）。
+
+    第 52/53 片的教训原样适用：正文规则两边各写一遍时，
+    「run 换了但正文没换」与「正文换了但身份没换」这两种错都不会有人红。
+    """
+    return f"{capability} 执行产出：run={run_id} output_hash={output_hash or '-'}"
+
+
 RELATION = "validated_by"
 UPSTREAM_KEYS = ("truth_refs", "truth_ids")
 
@@ -128,4 +139,5 @@ def write_fact_lineage(store: Any, *, evidence_id: str, upstream: list[str],
     return summary
 
 
-__all__ = ["RELATION", "UPSTREAM_KEYS", "resolve_upstream", "write_fact_lineage"]
+__all__ = ["RELATION", "UPSTREAM_KEYS", "evidence_content", "resolve_upstream",
+           "write_fact_lineage"]

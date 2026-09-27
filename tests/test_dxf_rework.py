@@ -444,9 +444,10 @@ class TestRenderArgumentSurface:
         assert not missing, f"`drawing generate` 新增旗子而返工还原器没跟上：{sorted(missing)}"
 
 
-def test_rework_cli_supports_four_artifacts_and_still_refuses_quote_batch(
+def test_rework_cli_supports_five_kinds_and_still_refuses_quote_batch(
         env, capsys):
-    """`supported_artifacts` 由第 49 片的三个变四个（第 53 片接上 `artifact=bom`）。
+    """`supported_artifacts` 由第 49 片的三个变四个（第 53 片 `artifact=bom`）、
+    再变五个（第 71 片加 `record_type=evidence` 那一类，走 `record_type` 这条新轴）。
 
     这条断言原本钉的是「BOM 那一支**没有**执行器」——第 53 片把它接上了，
     于是「没有执行器 ⇒ 点名拒、不烧 attempts、记录不许被打成 blocked」这半段换了宿主：
@@ -466,6 +467,6 @@ def test_rework_cli_supports_four_artifacts_and_still_refuses_quote_batch(
                  "--task", task_id, "--json"]) == 4
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert sorted(out["supported_artifacts"]) == ["bom", "bom_cost", "drawing_dxf",
-                                                  "drawing_spec"]
+                                                  "drawing_spec", "evidence"]
     assert out["refused"][0]["artifact_kind"] == "quote_batch"
     assert store.get(quote).status == "active", "拒掉不是失败，不该把记录打成 blocked"

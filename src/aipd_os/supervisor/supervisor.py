@@ -486,8 +486,8 @@ class Supervisor:
         record = out["record"]
         refs = list(getattr(record, "evidence_references", []) or [])
         output_hash = getattr(record, "output_hash", None)
-        content = (f"{capability_floor} 执行产出：run={record.run_id} "
-                   f"output_hash={output_hash or '-'}")
+        from aipd_os.supervisor.fact_lineage import evidence_content
+        content = evidence_content(capability_floor, record.run_id, output_hash)
         try:
             with self.connect() as c:
                 row = c.execute(
@@ -555,6 +555,42 @@ class Supervisor:
             logger.warning("supervisor_fact_lineage_failed work_id=%s evidence=%s "
                            "error=%s", wid, evidence_id, exc)
             return {"lineage": {"edges": 0, "skipped": [], "error": str(exc)}}
+
+    def rerun_for_rework(self, wid, adapter_registry=None, router=None):
+        """为「返工一条执行证据」把同一个工作项再执行一次，**不改工作项状态、不写新证据行**。
+
+        与 `run_supervisor` 的成功分支用同一套件（同一个 router、同一个独立质量门），
+        免得这里长出第二条执行路径；证据行由 `evidence_rework` 就地演进。
+        ⇒ 返回 None 表示这条工作项缺能力或缺输入，交调用方点名拒，不猜。
+        """
+        from aipd_os.execution.execution_router import ExecutionRouter
+        from aipd_os.execution.runs import RunStore
+        from aipd_os.tool_adapters.builtin import build_registry
+
+        with self.connect() as c:
+            row = c.execute(
+                "SELECT capability_floor, inputs_json FROM supervisor_work_items "
+                "WHERE work_id=?", (wid,)).fetchone()
+        if row is None or not row["capability_floor"]:
+            return None
+        try:
+            inputs = json.loads(row["inputs_json"] or "{}")
+        except (TypeError, ValueError):
+            return None
+        if adapter_registry is None:
+            adapter_registry = build_registry(state_db=str(self.path))
+        if router is None:
+            router = ExecutionRouter(
+                RunStore(str(self.path.parent / "execution_runs.db")),
+                adapter_registry, logger)
+        out = router.run(wid, row["capability_floor"], inputs,
+                         context={"work_id": wid, "project_id": self.project_id(),
+                                  "tenant_id": self._tenant_id})
+        record = out["record"]
+        gate = self._quality_gate(wid, record)
+        return {"record": record, "gate": gate,
+                "capability": row["capability_floor"],
+                "side_effect_mode": getattr(record, "side_effect_mode", "PURE")}
 
     def _mark_stale(self, wid):
         """标记依赖本工作项的既有工件为 stale（记录到 lineage）。"""
