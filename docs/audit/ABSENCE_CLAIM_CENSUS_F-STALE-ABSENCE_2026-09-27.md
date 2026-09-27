@@ -172,6 +172,25 @@ adapter——所以「未接入」是低报，准确说法是"只有 LLM 这一�
 3. 第 64 片留的 `doc_command_census` 只报面收窄（把 `tests/` 挡在语料外 + 单开"记录性引述"一桶）仍未做。
 
 
-## 八、终局读数（占位）
+## 八、终局读数（由 `tmp/s65/terminal65.py` 从原件现跑生成，不手抄）
 
-（本节由 `tmp/s65/terminal65.py` 从原件现跑替换，写之前先过"取不到读数就整轮拒写"那道闸。）
+- **签出那一跑的原件**（`tmp/s65/checkout`，HEAD `c831868`）：`exitcode=0`、`collected=2555`、`passed=2552`、`skipped=3`、其余终态 `{'skipped': 3}`、用时 `313.5s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s65/checkout`、`source_commit=a66040520139`
+- **收尾量具自证**：`scripts/absence_claim_census.py` → `rc=0`；语料：84 个能力，带否定词的句子 37 句；账本登记 5 条，未挂锚点 34 句（只报，不判红）；判红 0 条：登记的 5 句「仍缺着」现在都还缺着
+- **`--self-test`**：`rc=0`，**13 条**合成读数全对上
+- **常驻用例**：`pytest tests/test_absence_claim_census.py -q` → `15 passed in 4.09s`（rc=0）
+- **账文同步那一档在真仓库上的读数**：`--claims before_claims.json` → `rc=4`，`{'CLAIM_TEXT_ABSENT': 3}`（三句已删 ⇒ 三条悬空账）
+- **第 64 片那台收尾验签在本片树上**：`rc=0`；收尾验签（报告 ↔ 证据 ↔ 工作树）；读数：报告 2555 条 / 208 个文件，树 208 个文件 / 2472 个 def，终态 {'passed': 2552, 'skipped': 3}；锚点 a66040520139 ← HEAD c831868169c2，报告 root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s65/checkout；✓ report_bound_to_provenance：报告 sha256=de3e40346210 与 PROVENANCE 记录一致
+- **发布门禁**：`production_release_gate --release-ready --tag v5.6.0` → `rc=0`、`"passed": true` 计 8 条、`release_ready` true
+- **`audit_repo --strict`**：`rc=1`，恰 **1** 条 ✗（`✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=c831868169c2`）——这条按设计不修：发布锚点不许重锚到 HEAD
+- **锚点核对**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag `a66040520139`；被哈希文件数 `669`
+- **工作树**：`git status --porcelain` 输出 0 行
+
+**补记（读数取自哪棵树）**：上面全部读数取自绑定提交 `c831868`；本节本身落盘时又多一个
+**只动 `docs/audit/`** 的提交（该前缀整体不参与发布哈希，实测两张清单里 `docs/audit/` 条目数为 0），
+所以锚点、清单、门禁三格都不因它改变。顺序按第 64 片那条纪律：**收尾验签先跑、门禁后跑**
+（gate 会写 `repository_snapshot.json`，先跑 gate 会让验签的 `worktree_clean` 读到自造的脏）。
+
+**两处记账脚本自己的错，按不 amend 的规矩记在这里**：① 第一版 `terminal65.py` 把
+`source_commit`/`root` 当成 `environment` 的子键去读（`conftest.py:22-46` 注入的是**顶层**键），
+读出 `root=None`——被写盘前那道"读数里不许有 None"的闸拒了一轮，没有落进文档；
+② 同一版把门禁排在验签前面，调换后才是上面那句纪律的形状。
