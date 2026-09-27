@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 335294,
-      "sha256": "b6eb42f35acaf40e34e83e820754ad671493843a4ce3dd1c1f5428a55552201b"
+      "size": 336411,
+      "sha256": "b463d134c95a4a22f875e7cd957ecf1e74430cdc067eaa1ce9df7a2459df52f1"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 64580,
-      "sha256": "71452d40d98d9dc8477add6569ed712ba085b49173c4b82a84e1fae525492699"
+      "size": 64884,
+      "sha256": "b5bc63948522aee041b6ae6e5d523f97d1b82a438b7aab7f7dcaf902f1de916f"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -747,8 +747,8 @@
     },
     {
       "path": "scripts/closeout_verifier.py",
-      "size": 41063,
-      "sha256": "49e55b0082daa67efb7e90a706c62622578a91be87230c746898ef0d4c54fb44"
+      "size": 42822,
+      "sha256": "8dd5e325ff3a50822e1429f0a8184b19e6573cd61cf93138083cd3151488269a"
     },
     {
       "path": "scripts/command_surface_census.py",
@@ -2582,8 +2582,8 @@
     },
     {
       "path": "tests/test_closeout_verifier.py",
-      "size": 29459,
-      "sha256": "4bbb3907c10b035e318234610e49405f10a898a33272737db572d8a7b16513c8"
+      "size": 30643,
+      "sha256": "a776cbb5ecd0937ddcb4dfc135c45c06d0bbfc6333e4c360a9975abb83551cfd"
     },
     {
       "path": "tests/test_command_coverage.py",
