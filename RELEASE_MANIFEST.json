@@ -3157,8 +3157,8 @@
     },
     {
       "path": "tests/test_research_fulltext_fetcher.py",
-      "size": 3362,
-      "sha256": "e68f9fcbe5f0fef8cfbe0b5896cf7c20fcea33068d294401accf559a79222c9b"
+      "size": 3349,
+      "sha256": "f50205f5b1a8a7dd07a692fd985b58546c1df1f5daf08a0dbd798c9257b7331c"
     },
     {
       "path": "tests/test_research_fulltext_step.py",
