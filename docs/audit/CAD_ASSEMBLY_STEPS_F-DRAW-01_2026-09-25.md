@@ -22,6 +22,11 @@ C6 要一份「装配/维护」交付物。本仓此前**完全没有落点**：
 结论：**生产者 = 从装配清单里作者声明的步骤序列渲染 Markdown + 证据侧车，并让
 release manifest 写出 `assembly_instructions` 那一格**。不建 operations 表（那是
 第 16 片已裁决不做的事），不做生成式装配说明，不做 PDF 版式。
+  **【第 81 片原地更正】** "不做 PDF 版式"这半句在第 80 片就不成立了：A4 图框矢量 PDF 与
+  逐页标题栏已交付（`src/aipd_os/cad/assembly_steps_pdf.py`，常驻 `tests/test_assembly_steps_pdf.py`），
+  第 81 片又把图片层接上（`--draw-image` 排**作者提供的**示意图）。
+  "不做生成式装配说明"到今天仍成立——步骤正文是作者声明的原文，程序不生成措辞，
+  也没有 STEP → 栅格那条自动出图的路。
 
 ## 二、技术选型（本机真实检索，六维对比）
 

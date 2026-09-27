@@ -13,8 +13,8 @@ REPO = Path("/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS")
 # 取证目录在**项目持久卷**上（`REPO.parent/tmp`），不在 `/tmp`：宿主重启会清空 `/tmp`，
 # 而一整轮 4 分钟的全量跑结果不该住在易失目录里（这条教训在项目记忆里）。
 TMP, PY = REPO.parent / "tmp" / "s81", str(REPO / ".venv/bin/python")
-FINAL = TMP / "final"
-REPORT = FINAL / "report.json"
+FINAL = TMP / "final2"
+REPORT = TMP / "report.json"
 DRC, BATTERY = TMP / "doc_reference_census.json", REPO / "docs/audit/s81/battery81.log"
 DOC = REPO / "docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md"
 HEADING = "## 六、终局读数"
@@ -111,7 +111,7 @@ def main() -> int:
                      "（那格陷阱：报告跑在本片 HEAD 上而不是 tag 上）")
     if rep.get("exitcode") != 0:
         fails.append(f"全量 exitcode={rep.get('exitcode')!r}")
-    rows.append(f"- **签出那一跑**（`tmp/s81/final`，报告产出于提交 `{wt}`，主树当时 HEAD `{head}"
+    rows.append(f"- **签出那一跑**（`{FINAL.relative_to(REPO.parent)}`，报告产出于提交 `{wt}`，主树当时 HEAD `{head}"
                 f"`）：`exitcode={rep.get('exitcode')}`、" + "、".join(f"`{k}={counts[k]}`"
                 for k in OUTCOMES) + f"、用时 `{float(rep.get('duration', 0)):.1f}s`、"
                 f"`root={rep.get('root')}`、`source_commit={str(rep.get('source_commit'))[:12]}`")

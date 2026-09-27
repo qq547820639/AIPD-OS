@@ -1050,7 +1050,7 @@
   `tests/test_absence_claim_census.py` **4 条常驻用例红**（第一次干净签出全量跑里最早那批 F 就是它们，
   我原本准备把早段红归因给宿主 load 42，是逐条开用例名才没让这次归因出错）；
   ④`docs/security/dependency-cve-review.md` 的 pillow 行仍承诺"不经手不可信第三方图片、
-  输入均来自受控生成流程"，而 `assembly_steps_pdf.py:132` 的 `Image.open` 读的是命令行给的路径
+  输入均来自受控生成流程"，而 `assembly_steps_pdf.py` 里 `read_image_size()` 的 `:104`/`:106` 两处 `Image.open`（收尾时的行号）读的是命令行给的路径
   ——按新事实改写那一格，并如实记**升级受阻**：`pillow@12.3.0` 要 `requires_python>=3.10`（PyPI 现读），
   本机 venv 是 `Python 3.9.6`，升 pillow 得先动本仓 Python 下限，那是属主裁决项；
   ⑤`commands_drawing.py:751` 的函数 docstring 还说这条命令只出"Markdown + sidecar"。

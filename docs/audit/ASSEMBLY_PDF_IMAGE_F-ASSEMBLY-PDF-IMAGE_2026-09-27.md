@@ -187,12 +187,27 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
 
 **但 reviewer 交来的读数我重开后作废了一半**：它写"只给 `--pdf ""` 时 `rc=0` 且只出 Markdown"。我在 HEAD `6ca9c41` 的工作树上用 `PYTHONPATH` 顶到那份 `src/`、读数打了真正被加载的文件路径，实测是 **Markdown 与侧车都落了盘、退码 4**（那份清单自己的球标未收口读数）——"静默丢掉请求"这件事成立，"`rc=0`"不成立。退码随清单覆盖度变（全覆盖就是 0），所以这条不能用退码当判据，用例钉的是"拒绝必须给 2""产物必须不在盘上"与"话说对了没有"。
 
-**电池的形状（原写在 §六，那一节整节由 `terminal81.py` 重写，所以搬到这里）**：- 终局 `合计 KILLED 17 / 17；其余按判决分类：无`（臂 17、开火用例名 27 条、`BAD-*` 0 条、存活 0 条）。- 一臂多红本轮 6 支：Y11 4 条、Y12 3 条、Y15 2 条、Y16 2 条、Y6 3 条、Y8 2 条；  上一轮 Y3/Y4 各多红一条普查的"落盘读数==内存读数"用例，本轮没复现  （各 1/1 条），所以那件事记成"同树耦合可复现性未定"，  不记成契约。- Y16 只有一个原告（``tests/test_assembly_steps_pdf.py::test_blank_pdf_value_is_refused_not_treated_as_absent`、`tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag``），Y17 也只有一个（``tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag``）⇒ 新增的两面各自单点承重。- Y10 的读数形状就是 §四之二 那个症状本身：`1 failed, 57 passed, 24 warnings, 6 errors`——撤掉 `key=_defect_sort_key` 后  崩溃回到 setup 阶段，6 条用例连断言都没跑到；这条臂同时是"新用例有牙"与"旧故障可复现"两份证据。
+**电池的形状（原写在 §六，那一节整节由 `terminal81.py` 重写，所以搬到这里）**：
+
+- 终局 `合计 KILLED 17 / 17；其余按判决分类：无`（开火用例名 27 条、`BAD-*` 0 条、存活 0 条）。
+- 一臂多红本轮 6 支：Y11 4 条、Y12 3 条、Y15 2 条、Y16 2 条、Y6 3 条、Y8 2 条。
+  上一轮 Y3/Y4 各多红一条普查的"落盘读数==内存读数"用例，本轮没复现
+  （各 1/1 条），所以那件事记成
+  "同树耦合可复现性未定"，不记成契约。
+- Y16 红 2 条（`test_blank_pdf_value_is_refused_not_treated_as_absent`、`test_pdf_blank_together_with_an_image_names_the_blank_flag`）——第二条是叠用形状那条话术用例，
+  撤掉 `--pdf` 空值检查时它同样守不住，所以**不是**"单点承重"；Y17 红 1 条
+  （`test_pdf_blank_together_with_an_image_names_the_blank_flag`），只钉顺序那一格。上一版这段写"只有一个原告"是错的，本轮从日志重取。
+- Y10 的读数形状就是 §四之二 那个症状本身：`1 failed, 57 passed, 24 warnings, 6 errors`——
+  撤掉 `key=_defect_sort_key` 后崩溃回到 setup 阶段，6 条用例连断言都没跑到；
+  这条臂同时是"新用例有牙"与"旧故障可复现"两份证据。
 
 **两条我自己犯的**（记下来免得只记别人的）：
 ① 上一轮我普查过期句用的关键词是 `PDF/图框版式`，匹配不到第 56 片取证件里
    写作「PDF 版式」的那一行，于是同一份文档 `:122` 改口、`:24` 还在说没做——
-   已就地第二次更正，并落进记忆："否证一处之后要按事实关键词把全文再扫一遍"。
+   **而这一行当时写的是"已就地第二次更正"，那是句没证过的话**：第三轮独立复核重开 `:24`
+   才发现那处从没落地（只有 `:122` 那条改了），本轮才真正就地补上更正标记。
+   教训比原先记的更狠一层：不光"否证一处之后要按事实关键词把全文再扫一遍"，还要
+   **"在账上写'已更正'之前重开那一行确认它真的改了"**——否则修的是一个句子而不是缺陷。
 ② 我在文档里写的 `assembly_steps_pdf.py:132/:147` 会因这轮插入的行号漂移而失效，
    安全文档那一格的引用要在收尾前重新一遍（已重取）。
 
@@ -316,20 +331,17 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
 
 ## 六、终局读数（由 `docs/audit/s81/terminal81.py` 从原件现跑生成，不手抄）
 
-占位：等第 ④ 步那份 0 failed 的报告落盘后由脚本写入。复算入口见本节脚本。
-
-**电池读数已经在盘上**（`docs/audit/s81/battery81.log`，10 臂 **KILLED 10 / 存活 0**，
-逐臂打出开火的用例全名，不是只打退码）。两条要如实记的形状：
-
-- **Y3 / Y4 各多打红一条** `tests/test_doc_reference_census.py::test_json_artifact_matches_in_process_reading`。
-  原因是量具性质而非判据串味：Y3/Y4 的变异把 `assembly_steps.py` 删掉几行，
-  文档里那些 `文件:行号` 引用就落到 EOF 之后或指向别的内容，普查的落盘读数与内存读数当场不一致。
-  这两臂**各自想验的那条用例都开火了**（`test_image_without_pdf_is_refused_not_ignored` /
-  `test_cli_refuses_blank_draw_image`），多出来的这条是同树耦合，记在这里免得下一位读者以为
-  "一条臂只该红一条用例"。
-- **Y10 的读数形状就是本节 §四之二 描述的那个症状本身**：`1 failed, 43 passed, 6 errors`——
-  撤掉 `key=_defect_sort_key` 之后崩溃回到 setup 阶段，6 条用例连断言都没跑到。
-  这条臂因此同时是"新用例有牙"与"旧故障可复现"两份证据。
+- **签出那一跑**（`tmp/s81/final2`，报告产出于提交 `0452798`，主树当时 HEAD `745e2a9`）：`exitcode=0`、`collected=2657`、`passed=2652`、`skipped=5`、`failed=0`、`error=0`、`xfailed=0`、`xpassed=0`、用时 `318.7s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/final2`、`source_commit=a66040520139`
+- **读数来处（两棵树不许互换引用）**：全量报告出自**干净签出树** `/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/final2`（未跟踪文件不在里面）；下面四把尺子与那条常驻门禁都跑在**主树** `/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`（cwd 就是主树），主树看得见本篇与 `docs/audit/s81/` 这些未跟踪件，签出树看不见 ⇒ 普查的历史面计数只在主树这一侧成立，别拿它去核对签出树的报告。
+- **报告 `summary` 原样与红名单**：`{'collected': 2657, 'passed': 2652, 'skipped': 5, 'total': 2657}`；逐条红面（outcome 为 failed/error）共 0 条 ⇒ 一条都没有
+- **`doc_command_census --self-test`**：`rc=0`，**7 条**合成读数全对上
+- **同族尺子 `doc_command_census --repo .`（README 这轮加了旗子 ⇒ 命令名普查是本片的主面）**：`rc=0`；权威面：90 条 argparse 路径（契约 deprecated 别名不并进权威面，由 alias_unregistered 单独核），15 个组名；判红面语料：run_command 86 段 / 速查行 97 行 / 生产代码 220 处（另有 6 处同行带否定标记 ⇒ 只报）；只报面（live，可行动）48 处；记录性引述（只数不列名）1026 处 {'CHANGELOG.md': 83, 'docs/audit': 832, 'tests': 65, '.trae': 46}；全量扫描 1404 处，live + record = 1074 处（与减去三档判红面覆盖后的行数同构）；现状面缺陷 0 条：文档与登记表点名的命令都注册着
+- **同族尺子 `absence_claim_census --repo .`（这轮翻了 `NOT_COVERED` 里那句假话 ⇒ 看有没有没处置的否定句）**：`rc=0`；语料：84 个能力，带否定词的句子 37 句；账本登记 14 条，未挂锚点 30 句（宽档，只报不判）；能力缺失句（窄档＝判据面）：17 句 = 登记 7 + 豁免 10 + **未处置 0**；被挡在窄档外的 20 句，按轴分开：无缺失谓词 11、无能力名词 6、谈判决/谈口径 3（三档各有常驻用例钉住它非空）；具名样本 8 句、样本问题 0 条；· 未挂锚点的否定句（前 8 条，供下一轮挑）：
+- **本片修过的那把尺子 `doc_reference_census --repo . --json doc_reference_census.json`**（`Ref.key()` 混着空串与整数两种行号形状，全序由 `_defect_sort_key` 给）：`rc=0`、`ok=True`、`docs=184` / `denominator=4846` / 分档 `{'elided': 65, 'resolved': 3981, 'external': 150, 'missing': 181, 'multi': 459, 'line_beyond_eof': 10}` / `live_defects=0` / `history_defects=162`（只报不判）/ `problems=[]`
+- **本片新增的常驻门禁**：`pytest tests/test_changelog_integrity.py -q` → `7 passed`（rc=0）
+- **变异电池（现读 `battery81.log`）**：`合计 KILLED 17 / 17；其余按判决分类：无`；逐臂现数 KILLED 17 / 共 17 臂，存活臂：无
+- **逐臂开火的用例名（日志原样 27 条）**：`tests/test_assembly_steps_pdf.py::test_absence_of_an_image_is_stated_in_the_document`、`tests/test_assembly_steps_pdf.py::test_absence_of_an_image_is_stated_in_the_document`、`tests/test_assembly_steps_pdf.py::test_image_without_pdf_is_refused_not_ignored`、`tests/test_assembly_steps_pdf.py::test_cli_refuses_blank_draw_image - ...`、`tests/test_assembly_steps_pdf.py::test_absence_of_an_image_is_stated_in_the_document`、`tests/test_assembly_steps_pdf.py::test_draw_image_lands_in_the_pdf_without_killing_the_text`、`tests/test_assembly_steps_pdf.py::test_a_legitimate_png_still_passes_that_gate`、`tests/test_assembly_steps_pdf.py::test_evidence_records_the_placed_size_not_just_the_source_pixels`、`tests/test_assembly_steps_pdf.py::test_draw_image_lands_in_the_pdf_without_killing_the_text`、`tests/test_assembly_steps_pdf.py::test_the_frame_and_the_body_declare_one_boundary`、`tests/test_cad_assembly_steps.py::TestEvidenceSidecar::test_evidence_names_what_the_document_does_not_carry`、`tests/test_assembly_steps_pdf.py::test_the_frame_and_the_body_declare_one_boundary`、`tests/test_doc_reference_census.py::test_history_face_sorts_when_line_shapes_mix`、`tests/test_assembly_steps_pdf.py::test_pdf_path_pointing_at_a_directory_is_refused_before_writing`、`tests/test_assembly_steps_pdf.py::test_decompression_bomb_is_a_rejection_not_a_traceback`、`tests/test_assembly_steps_pdf.py::test_draw_image_lands_in_the_pdf_without_killing_the_text`、`tests/test_assembly_steps_pdf.py::test_evidence_records_the_placed_size_not_just_the_source_pixels`、`tests/test_assembly_steps_pdf.py::test_blank_pdf_value_is_refused_not_treated_as_absent`、`tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag`、`tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag`、`tests/test_assembly_steps_pdf.py::test_unreadable_image_is_refused_before_anything_is_written[\u622a\u65ad\u7684 PNG]`、`tests/test_assembly_steps_pdf.py::test_unreadable_image_is_refused_before_anything_is_written[\u6587\u672c\u5192\u5145.png]`、`tests/test_assembly_steps_pdf.py::test_unreadable_image_is_refused_before_anything_is_written[\u96f6\u5b57\u8282]`、`tests/test_assembly_steps_pdf.py::test_decompression_bomb_is_a_rejection_not_a_traceback`、`tests/test_assembly_steps_pdf.py::test_cli_returns_two_for_unreadable_image[\u622a\u65ad\u7684 PNG]`、`tests/test_assembly_steps_pdf.py::test_cli_returns_two_for_unreadable_image[\u6587\u672c\u5192\u5145.png]`、`tests/test_assembly_steps_pdf.py::test_cli_returns_two_for_unreadable_image[\u96f6\u5b57\u8282]`
+- **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag；被哈希文件数 `681`（去重后 681 条路径）；**相对 tag v5.6.0** 的清单：新增 170 个、消失 9 个——累计漂移不是本片增量
 
 ## 六之二、收口顺序上的一次自伤（真实代价：多烧一整个全量）
 
@@ -344,9 +356,10 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
   **最近一次把同一 `test_report.sha256` 绑进 PROVENANCE 的提交**。我在本轮中途为了刷清单
   跑了两次 `release_evidence.py`（提交 41698a0 与 a3d5159），报告内容没变、sha 相同，
   于是这个基准被一路推到我的测试改动**之后**，`git diff 基准..HEAD -- tests` 自然为空。
-  该函数的 docstring 第 165-168 行写的正是这一格（"把 touch 点推到代码改动之后 ⇒ 在途红被放大"，
+  该函数的 docstring 第 196-199 行写的正是这一格（"把 touch 点推到代码改动之后 ⇒ 在途红被放大"，
   第 69 片），这次是我自己把 touch 点挪的。
-- 处置：**只有换绑一份新内容的报告能解**，所以按配方走完 ③→④→⑤——先换绑本轮报告
+- 处置（**这条结论下一轮就被推翻，见本节末条**）：当时认为**只有换绑一份新内容的报告能解**，
+  所以按配方走完 ③→④→⑤——先换绑本轮报告
   （提交里如实写"这一跑含 1 条在途红，红在这条自伤"），再跑第二次全量拿 0 failed 那份，
   最后再绑一次并交终局证据。代价：多一整个 700 秒量级的全量跑。
 - 立下来的规矩（已写进项目记忆的配方那条）：**本轮只允许跑一次 `release_evidence.py`**；

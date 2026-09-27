@@ -53,6 +53,9 @@ PDF 不解析 manifest：`generate_assembly_steps` 把 `columns / table / plan` 
 
 ## 六、下一片入口
 
-1. PDF 版式没有插图（图纸页/爆炸图占位）；要接需要把 2D 图纸 PNG 作为图片层嵌入，
-   并保留文字层——那是另一片。
+1. **【第 81 片已闭】** 原写"PDF 版式没有插图（图纸页/爆炸图占位）；要接需要把 2D 图纸
+   PNG 作为图片层嵌入，并保留文字层——那是另一片"。图片层已接：`--draw-image` 把**作者提供的**
+   PNG 排进首页，文字层仍可抽取——验收是 pypdf 独立解码回来核（`tests/test_assembly_steps_pdf.py`），
+   不是看文件大小。仍然不做的是"自动出装配图"（STEP → 离屏渲染），理由与四家候选的六维对比在
+   `docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md` §一。
 2. 第 79 片留的两件：其余开放来源主机的路径级收紧、`rerun_for_rework` 多轮失败/退避形状。
