@@ -599,3 +599,134 @@ def cmd_truth_ctq_list(args: Any) -> int:
                   "门口判 ctq_missing_feature 阻断")
     _emit(args, payload, prose)
     return 0
+
+
+_MISSING = object()
+
+
+def _audit_side(value: Any) -> Any:
+    """审计行的 before/after 文本 → dict / None（没写值）/ `_MISSING`（不是合法 JSON）。
+
+    三态分开是规矩：`None` 与"解析不了"在"有没有改动"这件事上含义完全不同，
+    压成一件事就会把脏数据读成"那次没改东西"。
+    """
+    import json
+
+    if value is None or value == "":
+        return None
+    if isinstance(value, dict):
+        return value
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return _MISSING
+    return parsed if isinstance(parsed, dict) else _MISSING
+
+
+def _audit_diff(before: Any, after: Any) -> list[str]:
+    """两份快照 → 「字段: 旧 → 新」。
+
+    借 django.contrib.admin 的形状：`LogEntry.get_change_message()`（`django/django`
+    `contrib/admin/models.py`）把结构化 JSON 在**读侧**翻成人话，库里只存结构化那一份。
+    本仓比它多一层——存的是 before/after 全量快照，所以能报出**值**（"8.05 → 8.10"），
+    而不只是"改了 upper_limit 这个字段"。
+    """
+    if not isinstance(before, dict) and before is not None:
+        return []
+    if not isinstance(after, dict) and after is not None:
+        return []
+    keys = set(before or {}) | set(after or {})
+    out: list[str] = []
+    for key in sorted(keys):
+        if key in _AUDIT_NOISE_KEYS:
+            continue
+        old, new = (before or {}).get(key), (after or {}).get(key)
+        if old != new:
+            out.append(f"{key}: {old} → {new}")
+    return out
+
+
+_AUDIT_NOISE_KEYS = ("record_id", "created_at", "updated_at", "timestamp")
+
+
+def cmd_truth_history(args: Any) -> int:
+    """``aipd truth history``：谁在什么时候把哪条事实从什么改成了什么。
+
+    闭的是 registry 与 `ctq.py` 都记过的那笔账：审计行本来就落在 `audit_log`，
+    但 `AIPDStateDB.list_audit` 不分作用域且默认 100 条**静默截断**，
+    于是"谁把 8.05 改成 8.10"问得出、却要读者自己去按 before/after JSON 筛。
+
+    三条刻意的形状：
+    1. 谓词全在 SQL 侧（含 payload 里的 `record_id`）——先截断再筛会把
+       "窗口里没有"与"整库没有"压成同一个读数，`total` 就跟着说谎；
+    2. `total` / `returned` / `truncated` / `unparseable_rows` 四件事分开报，
+       被 `--limit` 切掉的与解析不了的都是**看得见的差额**，不是少掉的行；
+    3. 渲染只在读面做，库里仍只存结构化快照；`--json` 给的是未截断的原文
+       （prose 每行最多展示 4 处改动并写明"另有 N 处"，payload 不裁）。
+    """
+    from datetime import datetime, timezone
+
+    from aipd_os.state.db import AIPDStateDB
+
+    db = Path(args.db)
+    if not db.is_file():
+        print(f"状态库不存在：{db}")
+        return 2
+    since = None
+    if args.since:
+        try:
+            moment = datetime.fromisoformat(str(args.since).replace("Z", "+00:00"))
+        except ValueError as exc:
+            print(f"--since 不是合法 ISO 8601 时间：{args.since}（{exc}）")
+            return 2
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        since = moment.astimezone(timezone.utc).isoformat()
+    try:
+        result = AIPDStateDB(str(db)).audit_history(
+            tenant_id=args.tenant, project_id=args.project,
+            actors=tuple(args.actor or ()), actions=tuple(args.action or ()),
+            record_id=args.record, since=since, limit=args.limit)
+    except Exception as exc:  # noqa: BLE001 - 读不出来不等于没有历史
+        print(f"审计历史读取失败：{type(exc).__name__}: {exc}")
+        return 2
+    payload = {"command": "truth history", "ok": True, **result}
+
+    def prose() -> None:
+        scope = result["scope"]
+        print(f"审计历史（tenant={scope['tenant_id']} project={scope['project_id']}，"
+              f"作用域内 {result['total']} 条，本次给出 {result['returned']} 条）")
+        if result["truncated"]:
+            print(f"  ！还有 {result['total'] - result['returned']} 条没给出"
+                  f"（是 --limit {result['filters']['limit']} 切的），"
+                  "加大它或加过滤条件再看")
+        if result["unparseable_rows"]:
+            print(f"  ！作用域内有 {result['unparseable_rows']} 条的 before/after "
+                  "不是合法 JSON，比不了值——它们算在 total 里，不等于「没有改动」")
+        if not result["entries"]:
+            print("  0 条 —— 这个作用域里没有审计行"
+                  "（--project/--tenant 拼错与真的没有，在这张读数上同形，先核对作用域）")
+        for entry in result["entries"]:
+            before = _audit_side(entry.get("before_json"))
+            after = _audit_side(entry.get("after_json"))
+            # 一次 revise 会另起一条记录：改的是 T-001、写出来的是 T-002。只报一个号
+            # 就会让人按号去查另一条而查不到，所以两侧不同就两个都报。
+            ids = [str(side["record_id"]) for side in (before, after)
+                   if isinstance(side, dict) and side.get("record_id")]
+            record = " → ".join(dict.fromkeys(ids)) if ids else "-"
+            if before is _MISSING or after is _MISSING:
+                detail = "（payload 不是合法 JSON，比不了值）"
+            elif before is None and after is None:
+                detail = "（这一行只记了动作，没有前后值）"
+            else:
+                changes = _audit_diff(before, after)
+                if changes:
+                    detail = "；".join(changes[:4])
+                    if len(changes) > 4:
+                        detail += f"（另有 {len(changes) - 4} 处）"
+                else:
+                    detail = "（无值变化）"
+            print(f"  {entry['timestamp']}  {entry['actor']}  {entry['action']}  "
+                  f"record={record}  {detail}")
+    _emit(args, payload, prose)
+    return 0

@@ -627,6 +627,29 @@ def build_parser() -> argparse.ArgumentParser:
     tr.add_argument("--json", action="store_true")
     tr.set_defaults(func=COMMAND_FUNCS["truth rework"])
 
+    # ---- F-AUDIT-READER 第 63 片：把 audit_log 变成问得出来的东西 ----
+    # 审计行本来就在（AIPDStateDB.add_audit 有十个写入点），但 list_audit 不分作用域、
+    # 默认 100 条静默截断 ⇒「谁把 8.05 改成 8.10」问得出、却要读者自己按 JSON 筛。
+    th = truth_sub.add_parser(
+        "history", help="按作用域读改动史（audit_log）：报「谁、什么时候、改的哪条、"
+                        "从什么改成了什么」。谓词全在 SQL 侧，total / returned / "
+                        "truncated 分开数——被 --limit 切掉的是看得见的差额，不是少掉的行。"
+                        " Example: aipd truth history --db state.db --project P "
+                        "--record R7 --json")
+    th.add_argument("--db", required=True)
+    th.add_argument("--project", required=True)
+    th.add_argument("--tenant", default="default")
+    th.add_argument("--actor", action="append", help="只看这个人写的行（可重复给）")
+    th.add_argument("--action", action="append",
+                    help="精确匹配动作名（如 ctq.revise），可重复。"
+                         "不做前缀通配：动作名里本来就有 . 与 %，通配会把过滤条件"
+                         "变成另一个查询")
+    th.add_argument("--record", help="只看这条记录号出现在 before/after 快照里的行")
+    th.add_argument("--since", help="ISO 8601 时间下界（按 UTC 归一后比较）")
+    th.add_argument("--limit", type=int, default=200)
+    th.add_argument("--json", action="store_true")
+    th.set_defaults(func=COMMAND_FUNCS["truth history"])
+
     # ---- F-CTQ-PRODUCER 第 56 片：链头 CTQ 由人声明 ----
     # record_type="ctq" 此前只有读者（发布证据分母、drawing spec 的输入、返工重算），
     # 全仓排除 tests/ 后没有写入点 ⇒ 链条第二跳在真库里没有输入。判据见

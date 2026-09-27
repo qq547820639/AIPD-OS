@@ -176,6 +176,17 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                              "状态按库里原样报，不折算。投影复用生产面那份 _snapshot，"
                              "带 drawing_feature（发布证据的 ctq 数组不带那一列）。"
                              "只读命令：不写 audit_log——那条通道要留给『谁改了事实』"),
+    CommandEntry("truth history", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.24",
+                 requires_args=frozenset({"--db", "--project"}),
+                 description="按作用域读改动史（audit_log）——谁、什么时候、改的哪条、"
+                             "从什么改成了什么。审计行本来就在（add_audit 有多个写入点），"
+                             "缺的是读面：list_audit 不分 tenant/project 且默认 100 条"
+                             "静默截断，于是「谁把 8.05 改成 8.10」要读者自己筛 JSON。"
+                             "谓词全在 SQL 侧（含快照里的 record_id）：先截断再筛会把"
+                             "「窗口里没有」与「整库没有」压成同一个读数。"
+                             "total / returned / truncated / unparseable_rows 四件事分开报，"
+                             "被 --limit 切掉的与 payload 解析不了的都是看得见的差额。"
+                             "只读命令：不写 audit_log"),
     CommandEntry("truth rework", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
                  requires_args=frozenset({"--db", "--project"}),
                  description="按当前 active CTQ 重算图纸声明并跑一次返工："

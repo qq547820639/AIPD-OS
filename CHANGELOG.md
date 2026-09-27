@@ -951,6 +951,47 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.24 F-AUDIT-READER 第 63 片：新公开命令 `aipd truth history`——把 `audit_log` 变成问得出来的东西**：
+  缺口不在写侧。`AIPDStateDB.add_audit` 有多个写入点（CTQ 修订/停用、血缘加边、返工与备份、
+  邮件客户端），缺的是读面：`list_audit(limit=100)` **不分 tenant/project**、默认 100 条
+  **静默截断**（`product_truth/ctq.py` 里原话是"读者一翻页就丢"），registry 那句限制也说
+  「问得出、但要自己按 before/after JSON 筛」。本片补 `state/db.py:audit_history` +
+  `cli/commands_truth.py:cmd_truth_history`。四处形状：
+  ① **谓词全留在 SQL 侧**——连"快照里的记录号"也用 `json_extract` 过滤，因为先 `LIMIT`
+  再用 Python 筛会把「窗口里没有」与「整库没有」压成同一个读数，`total` 跟着说谎；
+  ② `total` / `returned` / `truncated` / `unparseable_rows` 四件分开报，
+  被 `--limit` 切掉的与 payload 解析不了的都是**看得见的差额**；
+  ③ `json_valid` 兜底：没有它，一行脏 payload 就让整条查询抛 `malformed JSON`；
+  有了它，脏行不匹配但仍被计数点名，不折算成「那次没改东西」；
+  ④ 渲染只在读面做（库里仍只存结构化快照），一次 revise 前后两个记录号都报
+  （`record=T-001 → T-002`），只报新号会让人按旧号再也找不着。
+  **选型（真读过原件，两条都引到行）**：借 `django/django@4fab678a`
+  `contrib/admin/models.py` 的读侧渲染（`get_change_message()` 把结构化 JSON 翻成人话、
+  `Meta.ordering=["-action_time"]` 最新在前）与 `collectiveidea/audited@dbf84326`
+  README 的 `audited_changes` 值对与 `associated_with`（归属键写在**写入侧**，
+  间接查询才走得动）——本仓已有 `tenant_id`/`project_id` 两列与 before/after 两份快照，
+  所以是**借语义、不引依赖**（Django BSD-3 / audited MIT 都与本项目 Python 3.9 矩阵无关，
+  代码不可移）。明确**拒绝**两件事并给理由：拒绝 Django 那种"只存改了哪些字段、不存值"
+  （本片的立论就是把值答出来）；拒绝 audited 的 `max_audits` 留存上限（审计是证据，
+  截断＝销毁证据）。未检索到第三个"审计回读作用域语义"的成熟候选（K8s audit policy 只管
+  写侧采样、pgAudit 不提供按对象回读），如实记为未找到。
+  **电池教的三处**：① 八臂首轮 **B3 SURVIVED**——"撤掉 `json_valid` 兜底"这一改动，
+  在只跑「不带 `--record` 的查询」时结构上到不了那段谓词，等于那条例外没有原告；
+  补上「脏行 + `--record` 同用」那一断言后 **8/8 KILLED**（`py_compile` 全 0，
+  还原后 12 passed，两份源 sha 各自复原）；② 夹具最初按「`ctq add` 会写审计行」写，
+  五处同时红——重开代码确认 **`ctq add` 今天不写审计行**（创建的事实只记在记录自身的
+  `declared_by`/`created_at`），于是"谁第一次声明了这条"在这张改动史上看不见；
+  这是**写入侧的一格**（F-AUDIT-WRITER），本片不混改，已写进 registry 限制句与 §下一步；
+  ③ 命令名 `aipd audit` 早已被能力矩阵生成占用 ⇒ 读面挂 `truth` 组下叫 `history`。
+  命令面镜像：契约条目（PUBLIC / 5.24）、README 速查行与设计注释、SKILL 分组与
+  "主线共 64 个"、registry 那行的 run_command/unit_test/input_output/current_limitation、
+  `tests/test_command_surface_census.py` 分母 73 → 74（现算）。
+  常驻用例 **12 条**（`tests/test_truth_history.py`：注册面 / 租户与项目隔离 /
+  `--record` 命中改前那侧 / limit 截断自报 / actor 作用域 / 脏 payload 计数与点名 /
+  `--since` 时区归一含 Z 边界 / 值渲染 / 审计不写含反向对照 / 读失败不出成功件 /
+  README 镜像 / `--action` 精确不通配）。
+  证据见 `docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md`。
+
 - **v5.23 F-CTQ-READER 第 62 片：新公开命令 `aipd ctq list`——链头第一个面向人的读面**：
   第 56/59 片给链头配了三个写者（`ctq add` / `ctq revise` / `ctq deprecate`）与四个读者
   （发布证据分母、图纸声明输入、出图返工、漂移扫描），但**没有任何一条命令能让人问出

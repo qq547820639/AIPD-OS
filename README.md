@@ -447,6 +447,16 @@ aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷
 #     在烧 attempts 之前逐条点名拒；不给执行器时引擎仍只判 blocked，绝不伪造成功。
 aipd truth tasks --db state.db --project P [--status pending]     # 只读列返工待办
 aipd truth rework --db state.db --project P (--task RW-001 | --all-pending)   # 跑一次真实返工
+aipd truth history --db state.db --project P [--record T-001] [--actor 张工] [--action ctq.revise] [--since 2026-09-01] [--limit 200]   # 只读：谁、什么时候、改的哪条、从什么改成什么
+#   ↑ 缺口不在写侧：审计行本来就在 `audit_log`（`add_audit` 有多个写入点），缺的是读面——
+#     `AIPDStateDB.list_audit` 不分 tenant/project，且默认 100 条**静默截断**
+#     （`product_truth/ctq.py` 里原话是"读者一翻页就丢"）。这条命令把四件事分开报：
+#     作用域内匹配多少（total）、这次给出多少（returned）、有没有被 --limit 切掉
+#     （truncated）、有几行的 payload 根本不是 JSON（unparseable_rows）。
+#     谓词全部留在 SQL 侧（连快照里的 record_id 也用 json_extract 过滤，并对非法 JSON
+#     先过 json_valid）：先截断再筛会把"窗口里没有"与"整库没有"压成同一个读数，
+#     total 就跟着说谎。`--action` 只做精确匹配不做前缀通配（动作名里本来就有 `.`）。
+#     渲染只在读面做（库里仍只存结构化快照），一次 revise 前后两个记录号都报出来。
 aipd ctq add --db state.db --project P --feature hole_Ø8 --drawing-feature TOP.hole_1 --nominal 8.0 --lower 7.95 --upper 8.05 --inspection CMM --by 张工   # 链头：由人声明一条 CTQ
 #   ↑ `record_type="ctq"` 此前全仓只有读者（发布证据分母、`aipd drawing spec` 的输入、
 #     返工重算），没有任何生产写入点 ⇒ 链条第二跳在真库里永远对着 0 条 CTQ 跑

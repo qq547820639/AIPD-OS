@@ -1084,6 +1084,70 @@ class AIPDStateDB:
             rows = c.execute("SELECT * FROM audit_log ORDER BY entry_id DESC LIMIT ?", (limit,)).fetchall()  # noqa: E501
         return [dict(r) for r in rows]
 
+    def audit_history(self, *, tenant_id: str | None = None,
+                      project_id: str | None = None, actors: tuple[str, ...] = (),
+                      actions: tuple[str, ...] = (), record_id: str | None = None,
+                      since: str | None = None, limit: int = 200) -> dict[str, Any]:
+        """带作用域的审计读取：谓词全在 SQL 侧，`total` 与 `returned` 分开数。
+
+        为什么不用既有的 ``list_audit(limit)``：它不分 tenant/project，且默认 100 条
+        **静默截断**（``product_truth/ctq.py`` 里就记着"读者一翻页就丢"这笔账）。
+        这里把四件事分开报：作用域内匹配多少（``total``）、这次给出多少（``returned``）、
+        有没有被 ``limit`` 切掉（``truncated``）、有几行的 payload 根本不是 JSON
+        （``unparseable_rows``，见下）。
+
+        ``record_id`` 这个谓词刻意留在 SQL 里而不是取回后再用 Python 筛：
+        先 ``LIMIT`` 再筛会把"窗口里没有"与"整库没有"压成同一个读数，
+        ``total`` 也就跟着说谎。``json_valid`` 兜住"那一行不是合法 JSON"——
+        没有它，一行脏数据就让整条查询抛 ``malformed JSON``；有了它，脏行不匹配
+        但被 ``unparseable_rows`` 计数点名（不折算成"没有改动"）。
+        """
+        scope: list[str] = []
+        params: list[Any] = []
+        if tenant_id is not None:
+            scope.append("tenant_id = ?")
+            params.append(tenant_id)
+        if project_id is not None:
+            scope.append("project_id = ?")
+            params.append(project_id)
+        if actors:
+            scope.append("actor IN (" + ",".join("?" for _ in actors) + ")")
+            params.extend(actors)
+        if actions:
+            scope.append("action IN (" + ",".join("?" for _ in actions) + ")")
+            params.extend(actions)
+        if since is not None:
+            scope.append("timestamp >= ?")
+            params.append(since)
+        where = (" WHERE " + " AND ".join(scope)) if scope else ""
+        row_sql = where
+        row_params = list(params)
+        if record_id is not None:
+            row_sql += (" AND ((CASE WHEN json_valid(before_json)"
+                        " THEN json_extract(before_json, '$.record_id') END = ?)"
+                        " OR (CASE WHEN json_valid(after_json)"
+                        " THEN json_extract(after_json, '$.record_id') END = ?))")
+            row_params = params + [record_id, record_id]
+        with self.connect() as c:
+            total = c.execute("SELECT COUNT(*) FROM audit_log" + row_sql,  # noqa: S608
+                              row_params).fetchone()[0]
+            unparseable = c.execute(
+                "SELECT COUNT(*) FROM audit_log" + where +  # noqa: S608
+                " AND ((before_json IS NOT NULL AND json_valid(before_json) = 0)"
+                " OR (after_json IS NOT NULL AND json_valid(after_json) = 0))",
+                params).fetchone()[0]
+            rows = c.execute("SELECT * FROM audit_log" + row_sql +  # noqa: S608
+                             " ORDER BY entry_id DESC LIMIT ?",
+                             row_params + [int(limit)]).fetchall()
+        entries = [dict(r) for r in rows]
+        return {"scope": {"tenant_id": tenant_id, "project_id": project_id},
+                "filters": {"actors": list(actors), "actions": list(actions),
+                            "record_id": record_id, "since": since,
+                            "limit": int(limit)},
+                "total": int(total), "returned": len(entries),
+                "truncated": int(total) > len(entries),
+                "unparseable_rows": int(unparseable), "entries": entries}
+
     # ---------------------------------------------------------- checkpoints
     def save_checkpoint(self, tenant_id: str, project_id: str, data: Any,
                         summary: Any = None) -> int:
