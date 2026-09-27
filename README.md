@@ -522,6 +522,9 @@ aipd ctq deprecate --db state.db --project P --record T-001 --reason 客户取�
 aipd ctq list --db state.db --project P [--all] [--json]                        # 读面：现在有效的是哪几条
 #   ↑ 三个写者、四个读者，但此前没有任何一条命令能让人问出「这个作用域里 active 的 CTQ 是哪几条、
 #     各自的限值与版本是几」——第 60 片那把 `doc_command_census` 把这条缺席登记在 registry 的限制句里。
+#     第 75 片把那把尺子的只报面拆成两桶：live（现在还有人敲的文本，47 处）与 record
+#     （CHANGELOG / docs/audit / tests / .trae，1012 处＝73%）。未注册命令清单只从 live 出，
+#     于是"live 里一个幻影名都不许有"第一次成为钉得住的不变量；record 仍在 record 清单里可见。
 #     默认视图与发布分母的 active 过滤同口径，并**自报排除了几条、各是什么态**：只说「1 条」
 #     而不说「另有 2 条不在有效名单里」，读面就成了第二个 `_collect_ctq`（它只含 active、
 #     且不带 `drawing_feature`，回答不了「这条图纸尺寸归哪条要求管」）。

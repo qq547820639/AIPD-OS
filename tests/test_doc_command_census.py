@@ -111,7 +111,13 @@ def test_real_repo_clean_and_all_three_judging_faces_live() -> None:
     assert c["code_mentions"] >= 100, c
     # 去重生效：只报面必须小于全量扫描，否则"Σ 分桶"式的自证是恒真的
     assert c["report_only_mentions"] < c["prose_mentions"], c
-    assert c["report_only_mentions"] >= 500, c
+    # 第 75 片把只报面拆成 live（可行动）与 record（记录性引述）：
+    # 两桶各自都要非空、加起来要等于拆桶前的总数——否则"拆桶"就是"藏起一半语料"。
+    assert c["report_only_mentions"] >= 20, c
+    assert c["report_record_mentions"] >= 500, c
+    assert c["report_only_mentions"] + c["report_record_mentions"] == \
+        c["report_total_mentions"], c
+    assert set(c["report_record_dirs"]) == {"CHANGELOG.md", "docs/audit", "tests", ".trae"}, c
 
 
 def test_injected_phantoms_fire_on_all_three_judging_faces(tmp_path: Path,
@@ -266,9 +272,15 @@ def test_spec_and_ci_writers_are_watched_by_the_report_face(tmp_path: Path,
     ci.mkdir(parents=True, exist_ok=True)
     (ci / "ci.yml").write_text("    - run: aipd ghostci check --db x\n", encoding="utf-8")
     rep = census.audit(tmp_path)
-    spots = {(r["doc"], r["written"]) for r in rep["report_only_unmatched"]}
+    # 第 75 片把只报面拆成 live / record 两桶：`.trae`（轮次 spec）归记录面、`.github`（CI 定义）
+    # 归 live。两桶都要**可见**、都不判红——拆桶的目的是让可行动清单可读，不是把一半语料藏起来。
+    live = {(r["doc"], r["written"]) for r in rep["report_only_unmatched"]}
+    record = {(r["doc"], r["written"]) for r in rep["report_record_unmatched"]}
+    spots = live | record
     assert (".trae/specs/v9/checklist.md", "aipd ghostspec run") in spots, rep["corpus"]
     assert (".github/workflows/ci.yml", "aipd ghostci check") in spots, rep["corpus"]
+    assert (".trae/specs/v9/checklist.md", "aipd ghostspec run") in record, live
+    assert (".github/workflows/ci.yml", "aipd ghostci check") in live, record
     judged = {v["written"] for v in rep["violations"]}
     assert "aipd ghostspec run" not in judged and "aipd ghostci check" not in judged
     assert rep["ok"] is True, rep["violations"]      # 只报面不改判决
@@ -292,7 +304,8 @@ def test_the_instruments_own_files_are_out_of_all_four_faces() -> None:
     # 前提单独钉住，将来谁把它注册了，这里报的是"对照组名字过期"而不是"排除外溢了"。
     paths, _g, _p = census.valid_commands()
     assert "truth show" not in paths, "对照组名 `aipd truth show` 已注册，换一个仍在语料里的幻影"
-    assert any(r["written"] == "aipd truth show" for r in rep["report_only_unmatched"]), rep
+    assert any(r["written"] == "aipd truth show" for r in rep["report_record_unmatched"]), rep
+    assert all("doc_command_census" not in r["doc"] for r in rep["report_record_unmatched"])
 
 
 def test_those_two_dirs_are_actually_walked_in_the_real_repo() -> None:
@@ -322,8 +335,12 @@ def test_absence_written_in_prose_is_reported_not_judged(tmp_path: Path,
                prose=f"本轮实测：`{g}` 仍然没有，只能读库。\n")
     rep = census.audit(tmp_path)
     assert rep["ok"] is True, rep["violations"]
-    names = {r["written"] for r in rep["report_only_unmatched"]}
-    assert g in names, rep["report_only_unmatched"]
+    # 夹具把这句写在 `docs/audit/note.md` ⇒ 第 75 片之后它属于记录面：
+    # 仍然**可见**（进 record 清单）、仍然**不判红**（两向都要钉住）。
+    names = {r["written"] for r in rep["report_record_unmatched"]}
+    assert g in names, rep["report_record_unmatched"]
+    assert g not in {v["written"] for v in rep["violations"]}, rep["violations"]
+    assert rep["report_only_unmatched"] == [], rep["report_only_unmatched"]
 
 
 def test_record_produced_by_the_command_names_a_real_command(tmp_path: Path) -> None:
@@ -372,3 +389,16 @@ def test_payload_command_labels_are_registered(tmp_path: Path) -> None:
     payload = json.loads(out.getvalue().strip().splitlines()[-1])
     assert payload["command"] == "ctq add", payload["command"]
     assert payload["command"] in paths, payload["command"]
+
+
+def test_live_bucket_has_no_unregistered_commands_in_this_repo() -> None:
+    """拆桶的**目的**本身要钉住：live（现在还有人在敲的文本）里一个未注册名都不许留。
+
+    拆之前这件事看不见——1059 处只报面里混着 1012 处记录性引述与测试里故意写的幻影名，
+    未注册清单永远是"十几行噪音"。拆之后它是空表，
+    而任何新写进 src/scripts/模板/架构文档里的假命令都会让它变非空。
+    """
+    rep = census.audit(ROOT)
+    assert rep["report_only_unmatched"] == [], rep["report_only_unmatched"]
+    assert rep["corpus"]["report_record_mentions"] > rep["corpus"]["report_only_mentions"], \
+        rep["corpus"]

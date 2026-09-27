@@ -912,22 +912,20 @@ def audit(root: Path, claims: tuple[dict[str, Any], ...]) -> dict[str, Any]:
             exempted.append(s)
         else:
             unaccounted.append(s)
+    for s in unaccounted:
+        rows.append({"id": f"UNACCOUNTED:{s.split('|', 1)[0]}",
+                     "verdict": UNACCOUNTED, "evidence": [], "problems": [],
+                     "detail": s.split("|", 2)[-1][:90]})
     for key, reason in sorted(EXEMPTIONS.items()):
         if len(reason.strip()) < 8:
             problems.append(f"exemption_reason_thin: 豁免「{key}」的理由是空的或太短，"
                             "空理由的豁免等于没有豁免")
         # 陈旧性按**宽档**判，不按窄档：豁免记的是"这句我看过、决定不登记"，
-        # 而窄档可能因为同句里另一处谈判决的写法（「记成盲区」「读者不会把…」）把它整句挡在
-        # 判据面之外——那时豁免仍然是有效记录，拿窄档去判就会把"我看过"读成"这条该删"
-        # （第 67 片实测：两句这样的豁免被自己判红过一次）。
+        # 而窄档会因为同句里另一处谈判决的写法把整句挡住，那时豁免仍然是有效记录。
         if not any(_norm(key) in _norm(s.split("|", 2)[-1]) for s in sentences):
             rows.append({"id": f"EXEMPT:{key[:24]}", "verdict": CLAIM_TEXT_ABSENT,
                          "evidence": [], "problems": [],
                          "detail": "豁免台账里还留着这条，语料里已经没有这句了 ⇒ 删掉这条豁免"})
-    for s in unaccounted:
-        rows.append({"id": f"UNACCOUNTED:{s.split('|', 1)[0]}",
-                     "verdict": UNACCOUNTED, "evidence": [], "problems": [],
-                     "detail": s.split("|", 2)[-1][:90]})
     judged = [r for r in rows if r["verdict"] in (CONTRADICTED, CLAIM_TEXT_ABSENT,
                                                   UNACCOUNTED)]
     divergence = duplicate_divergence(corpus)

@@ -509,3 +509,24 @@ def test_sample_validation_is_actually_wired_into_the_audit(tmp_path, monkeypatc
     bad = acc.audit(real_root, acc.CLAIMS)["problems"]
     assert any(str(x).startswith("sample_missing") for x in bad), bad
     assert len(bad) > good, (good, len(bad))
+
+
+def test_dropping_a_narrow_sample_s_registration_shows_up_as_unaccounted() -> None:
+    """具名样本的"有没有去处"已经被 `UNACCOUNTED` 管住了，不需要再加一道守卫。
+
+    第 75 片我先写了 `sample_without_home`，随后自己把它删了：
+    样本句一定在窄档里，窄档里没去处的句子必然进 `unaccounted` ⇒ 那道守卫**永不单独开火**。
+    这条用例就是那个证明：抽掉某条 narrow 样本对应的登记，红的是 `UNACCOUNTED`，
+    不是任何"样本专用"的新判决。
+    """
+    target_axis = "narrow"
+    key = next(k for k in acc.AXIS_SAMPLES[target_axis])
+    owner = next(c for c in acc.CLAIMS
+                 if acc._norm(key) in acc._norm(str(c.get("anchor", "")))
+                 or key in str(c.get("anchor", "")))
+    partial = tuple(c for c in acc.CLAIMS if c is not owner)
+    rep = acc.audit(ROOT, partial)
+    un = [r for r in rep["rows"] if r["verdict"] == acc.UNACCOUNTED]
+    # detail 只带 90 字（长限制句会被截），所以按能力名归因，不按整句子串
+    assert any(str(r["id"]) == f"UNACCOUNTED:{owner['capability']}" for r in un), (key, un)
+    assert rep["ok"] is False, rep

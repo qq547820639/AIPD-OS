@@ -51,6 +51,16 @@
   真仓库的历史读数与逐档撤销的对照表在
   `docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md` §九。
 
+第 75 片把只报面拆成两桶（占比是现读的：全量扫描 1389 处提及里 1012 处、即 73% 属于记录面）：
+``live`` = 现在还有人在照它敲的文本（src / scripts / templates / docs/architecture / .github / …），
+``record`` = 记当时事实的文本（``CHANGELOG.md``、``docs/audit/``、``tests/``、``.trae/``）。
+**可行动清单（``report_only_unmatched``）只从 live 出**——拆之前那张名单长期被"当初为什么这么判"
+的记录与测试里**故意写的幻影名**（``aipd ctq zzz-listy`` 那类是为了证明判据会开火才写的）占满，
+拆之后它是空表，于是"live 文本里不许出现未注册命令"第一次成为可钉的不变量。
+两桶都可见（record 的名字与位点在 ``report_record_unmatched`` 里照列），只是都不判红；
+每类记录文本还必须真的贡献过内容（``record_bucket_empty``，仅对本仓核对），
+否则说明名单与语料脱了钩。
+
 退码（与同族量具同形）：0 现状面干净；4 现状面有未注册命令；2 前提不成立
 （权威面建不起来、判红面为空、或有文件解析失败——**空读数一律不当通过**）。
 """
@@ -98,6 +108,26 @@ REPORT_ONLY_FILES = ("CHANGELOG.md",)
 # 所以升不升都不改判决，只改"下一次谁先知道"。
 REPORT_ONLY_DIRS = ("docs", "src", "tests", "scripts", "state_service", "templates",
                     "agents", "evals", ".trae", ".github")
+
+# ---------------------------------------------------------------------------
+# 只报面再分两半（第 75 片，占比是现读的，不是猜的）：
+#   live   = 现在还有人在照它敲的地方（src / scripts / templates / docs/architecture / …）
+#   record = 记当时事实的文本（`CHANGELOG.md`、`docs/audit/`、`tests/`、`.trae/`）
+# 实测本仓：全量扫描 1389 处提及里，docs/audit 820 + tests 65 + .trae 46 + CHANGELOG 81
+# = **1012 处（73%）**落在 record。把它们和 live 混在一个"只报面 1059 处"里，
+# 结果就是可行动清单（未命中名）长期被"当初为什么这么判"的记录与测试里的**故意幻影名**占满
+# ——`aipd ctq zzz-listy` 那类名字本来就是为了让判据开火才写的。
+RECORD_FILES = ("CHANGELOG.md",)
+RECORD_DIR_PREFIXES = ("docs/audit", "tests", ".trae")
+
+
+def is_record_path(rel: str) -> bool:
+    """这条提及是不是"记录性引述"（只数不列名）。"""
+    norm = rel.replace("\\", "/")
+    if norm in RECORD_FILES:
+        return True
+    return any(norm == pre or norm.startswith(pre + "/") for pre in RECORD_DIR_PREFIXES)
+
 
 # `aipd` 后面跟 1~2 个小写 token；负向后看断言避开 `aipd-os` / `aipd_os`，
 # 大写与中文不匹配 ⇒ 自然避开 "aipd CLI"、"`aipd <命令>`" 这类非命令写法。
@@ -324,11 +354,36 @@ def audit(root: Path) -> dict[str, Any]:
     have = set(kept)
     report_rows = kept + [r for r in code_neg if r not in have]
 
+    live_rows = [r for r in report_rows if not is_record_path(r[0])]
+    record_rows = [r for r in report_rows if is_record_path(r[0])]
+    record_dirs: dict[str, int] = {}
+    for rel, _no, _seg in record_rows:
+        key = rel.split("/", 1)[0] if not rel.startswith("docs/") else "/".join(rel.split("/")[:2])
+        record_dirs[key] = record_dirs.get(key, 0) + 1
+    # 每一类记录文本都要真的贡献过内容：把某个目录从 RECORD 名单里删掉时，
+    # 总数看着没变（它滑进 live 或消失），这里会先红。
+    # 只对**本仓**核对（同第 74 片的具名样本：合成语料里没有 CHANGELOG 不是判据的毛病）。
+    if root.resolve() == Path(__file__).resolve().parent.parent:
+        for label in RECORD_FILES + RECORD_DIR_PREFIXES:
+            head = label.split("/", 1)[0]
+            if not any(v for k, v in record_dirs.items()
+                       if k == head or k.startswith(head)):
+                problems.append(
+                    f"record_bucket_empty: 记录面里 {label!r} 一处提及都没有"
+                    "（名单或语料变了，要么改名单要么删掉这条，别让它挂着）")
+
     report_bad = []
-    for rel, no, seg in report_rows:
+    for rel, no, seg in live_rows:      # 可行动清单只从 live 出
         first, second = _mentions(seg)[0]
         if resolve(first, second or None, paths, groups) is None:
             report_bad.append((rel, no, seg))
+    # 记录面仍然**可查**：它不判红、也不进可行动清单，但名字与位点要能列出来，
+    # 否则"拆成两桶"就变成"把一半语料藏起来"（第 75 片拆桶的前提是可见性不降）。
+    record_bad = []
+    for rel, no, seg in record_rows:
+        first, second = _mentions(seg)[0]
+        if resolve(first, second or None, paths, groups) is None:
+            record_bad.append((rel, no, seg))
 
     if not (reg and quick and code):
         problems.append(f"judging_face_empty: run_command 段 {len(reg)}、速查行 {len(quick)}、"
@@ -340,7 +395,13 @@ def audit(root: Path) -> dict[str, Any]:
         "authority_groups": len(groups),
         "corpus": {"run_command_segments": len(reg), "quickref_lines": len(quick),
                    "code_mentions": len(code), "code_negated": len(code_neg),
-                   "prose_mentions": len(prose), "report_only_mentions": len(report_rows)},
+                   "prose_mentions": len(prose),
+                   "report_only_mentions": len(live_rows),
+                   "report_record_mentions": len(record_rows),
+                   "report_total_mentions": len(report_rows),
+                   "report_record_dirs": record_dirs},
+        "report_record_unmatched": [{"doc": d, "line": n, "written": w}
+                                    for d, n, w in record_bad],
         "violations": [{"field": f, "doc": d, "line": n, "written": w}
                        for f, d, n, w in judged],
         "report_only_unmatched": [{"doc": d, "line": n, "written": w}
@@ -358,8 +419,11 @@ def render(rep: dict[str, Any]) -> str:
     lines.append(f"判红面语料：run_command {c['run_command_segments']} 段 / "
                  f"速查行 {c['quickref_lines']} 行 / 生产代码 {c['code_mentions']} 处"
                  f"（另有 {c['code_negated']} 处同行带否定标记 ⇒ 只报）")
-    lines.append(f"只报面 {c['report_only_mentions']} 处（全量扫描 {c['prose_mentions']} 处，"
-                 "减去三档判红面覆盖的行）")
+    lines.append(f"只报面（live，可行动）{c['report_only_mentions']} 处；"
+                 f"记录性引述（只数不列名）{c['report_record_mentions']} 处 "
+                 f"{c['report_record_dirs']}；全量扫描 {c['prose_mentions']} 处，"
+                 f"live + record = {c['report_only_mentions'] + c['report_record_mentions']} 处"
+                 "（与减去三档判红面覆盖后的行数同构）")
     for v in rep["violations"]:
         lines.append(f"  ✗ {v['field']} {v['doc']}:{v['line']} 写了 `{v['written']}`"
                      " ⇒ 权威面上没有这条命令")
@@ -369,7 +433,7 @@ def render(rep: dict[str, Any]) -> str:
         uniq: dict[str, list[str]] = {}
         for r in rep["report_only_unmatched"]:
             uniq.setdefault(r["written"], []).append(f"{r['doc']}:{r['line']}")
-        lines.append(f"  · 只报面（不判红）里点到未注册的命令 {len(uniq)} 个名字："
+        lines.append(f"  · live 只报面里点到未注册的命令 {len(uniq)} 个名字："
                      + "；".join(f"{k}（{len(v)} 处）" for k, v in sorted(uniq.items())))
     if not rep["violations"] and not rep["problems"]:
         lines.append("现状面缺陷 0 条：文档与登记表点名的命令都注册着")
