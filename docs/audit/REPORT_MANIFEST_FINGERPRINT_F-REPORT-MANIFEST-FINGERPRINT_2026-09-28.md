@@ -1,6 +1,6 @@
 # 报告自证「测的是哪一份清单」（F-REPORT-MANIFEST-FINGERPRINT，第 83 片）
 
-日期：2026-09-28。产物：`scripts/release_fingerprint.py`（42 号量具，58 行）＋
+日期：2026-09-28。产物：`scripts/release_fingerprint.py`（58 行，本片新落）＋
 `scripts/closeout_verifier.py` 的 C10/C11 两格 ＋ `tests/conftest.py` 的注入 ＋
 常驻牙 `tests/test_report_manifest_fingerprint.py` 6 条、`tests/test_closeout_verifier.py` 20 条。
 入口项来自第 81 片 §七.5（`docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md`），
@@ -84,24 +84,32 @@ ResourceDescriptor（`name` + `digest`）表达"在哪份配置下跑的"，是�
 这一条由两支读数钉住：`--self-test` 的假红控制（两份**字节不同**而摘要相同的清单，判绿）
 与电池臂 Y3（把验签侧改成比原始字节 sha ⇒ `--self-test` 当场红）。
 
-**② C10 与 C11 分开，且"报告没带指纹"时 C11 沉默而不判红。**
-`closeout_verifier.py:354` 判"字段在不在"（不在就是红——生产者没记，不是"值恰好为空"）；
-`:364` 在没有基准时写 `kind="skipped"`；`:368` 才做磁盘对账。
-`--self-test` 的 C10 臂断"只点亮 `report_fingerprint_recorded` 这一格"，
-电池臂 Y5（把 `elif not rec_fp:` 改成 `elif False:`）证明这条纪律真的有牙。
+**② C10 与 C11 分开：C10 是"有没有可比基准"的前提闸，C11 才是判红面。**
+`closeout_verifier` 里缺字段走 `problem("report_fingerprint_recorded", …)`（退 2），
+C11 那一格读成 `kind="skipped"`；有字段才做磁盘对账。
+`--self-test` 的 C10 臂断"退 2、`problems` 恰好这一格、`violations` 为空、C11 沉默"，
+电池臂 Y5（让缺字段也去开 C11 那一判）与 Y4（整支沉默）各钉一个方向。
 
 **③ 磁盘清单读不出是前提塌（退 2），不是判红。**
 `:361` 那一支；电池臂 Y6 证明把它折成判红会被 `--self-test` 拒。
 这沿用本仓三态纪律："看不见"既不折算成违规，也不折算成通过。
 
-**④ 换绑之前它就是红的，而且应当是红的。**
-新格把第 82 片那份旧报告判红（它出自没有注入的 conftest）：基线
-`pytest tests/test_report_manifest_fingerprint.py tests/test_closeout_verifier.py -q` 读数
-`5 failed, 21 passed`，五条全部是"旧报告没带指纹"这一因（`test_bound_production_report_carries_its_manifest_fingerprint`、
-`test_eight_checks_are_green_on_the_real_corpus…`、以及三条按"只该那一格开火"断言的用例）。
-这是有意的强制装置：**换绑一份新报告即解，不许把判据改宽**。
-写这篇时 `closeout_verifier` 的格名集合、`STAGE_BOUND`（新增 `report_fingerprint_matches_disk`，
-它在"清单被刷新而报告未重跑"那段窗口里合法地红）也同步改到十一格。
+**④ 第一版把"缺字段"判成违规——那是一条自锁，被本轮自己的两次实测推翻。**
+原判据形状 `judge("report_fingerprint_recorded", bool(rec_fp), …)`，理由"生产者没记不能读成
+值恰好为空的绿"——这句话到今天仍然对。漏想的是**报告是不可变的历史产物**：树里那份旧报告
+不出自新 conftest ⇒ 任何在它被换掉之前跑出来的全量都带着这条红 ⇒ 拿不到 0-failed 的证据
+⇒ 不能绑定 ⇒ 树里那份永远换不掉。两次一手读数把这条路走死：
+①常驻基线 `5 failed, 21 passed`（五条同一因，因此本片电池按"增量开火"记分）；
+②干净签出全量（worktree 检出 `7acaced`）`2658 passed / 5 failed / 2668 total`、417.9 s、
+`exitcode=1` ⇒ 绑定脚本按前提退 8 拒绑。中途还试过把那一跑的报告**不绑定地**放进
+`docs/audit/`（`3d5e0f6`）：它自己也带着那 5 条红，`terminal_clean` 照样判红，死锁没解开，
+已把那份**撤回**（`git checkout 3d5e0f6^ -- 那个路径`），本片的 attestation 不引用它。
+定形是三态各归各位：缺席＝没有可比基准（退 2，配方过不去）；强制力放在**写入侧**
+（收尾脚本在绑定前逐位比对，下一片接进 `release_evidence.py` 本体，见 §八.4）
+与**生产侧常驻用例**（真 `pytest --json-report` 端到端那条，删掉注入就翻）。
+格名集合与 `STAGE_BOUND` 同步改到十一格；`test_eight_checks…` 那条"真语料必须全绿"的用例
+现在**限定**地允许 `problems ⊆ {report_fingerprint_recorded}`，并要求这一判能由
+"报告里确实没有那个键"解释——换绑之后 `problems` 为空，该格回到必须绿的名单里。
 
 ## 五、真生产者路径与独立盲尺
 
@@ -128,7 +136,7 @@ ResourceDescriptor（`name` + `digest`）表达"在哪份配置下跑的"，是�
 | Y1 | `tests/conftest.py:69` 算出来却不写 | 只有 `test_production_conftest_stamps_a_real_json_report` |
 | Y2 | `VOLATILE_KEYS` 清空（不剥时间戳） | 盲尺那条＋假红那条＋命令行面那条＋生产侧那条＋`--self-test` spawn |
 | Y3 | 验签侧改成比原始字节 sha | 6 条（含 `--self-test` spawn 与四格"只点亮自己那一格"的期望） |
-| Y4 | C10 恒真 | `--self-test` spawn＋跨阶段解释那条 |
+| Y4 | C10 那一支整支沉默（缺字段不再拦） | `--self-test` spawn＋真语料两极那条 |
 | Y5 | 报告没带指纹时让 C11 也开火 | `--self-test` spawn＋跨阶段解释那条 |
 | Y6 | 清单读不出折成判红 | `--self-test` spawn |
 
@@ -138,7 +146,7 @@ ResourceDescriptor（`name` + `digest`）表达"在哪份配置下跑的"，是�
 ## 七、复算入口
 
 ```
-python scripts/closeout_verifier.py --self-test                      # 23 臂合成读数
+python scripts/closeout_verifier.py --self-test                      # 22 臂合成读数
 python scripts/release_fingerprint.py SOURCE_MANIFEST.json           # 打当前清单的规范摘要
 pytest tests/test_report_manifest_fingerprint.py tests/test_closeout_verifier.py -q
 python docs/audit/s83/battery83.py                                   # 六臂，逐臂还原并校验 sha
@@ -150,8 +158,16 @@ python docs/audit/s83/battery83.py                                   # 六臂，
    这两份清单↔磁盘一致，而"跑完之后被重写"这件事对二者同样成立；但 `--test-report` 那步只重写
    `SOURCE_MANIFEST`/`PROVENANCE`（实测：绑定那次 `git status` 只列这两个），bundle 只在打 tag 时生成。
    要不要一并做，取决于正式发版那轮是否把 bundle 也绑进证据——那是属主决定，列为线下项。
-2. **报告没带指纹时 C11 沉默**。若将来出现"既没指纹又有人想追责"的读法，
-   可以把 skipped 那一支升成前提塌（退 2），但那会让每轮"旧报告＋新代码"的窗口都退 2，
-   现形状更好。
+2. **缺字段读成前提塌（退 2），C11 同时沉默**。这一判的代价是：常驻用例在"旧报告还绑着"的那段
+   窗口里对该格不判绿（限定成 `problems ⊆ {report_fingerprint_recorded}` 且必须能由"报告没那个键"
+   解释）。所以强制力**必须在写入侧补上**，见第 4 项。
 3. **`environment` 恒为 `{}` 这件事本仓没修**。它是上游 issue #89；本仓不受影响（不读那一格），
    但值得知道：任何指望 `environment` 携带元数据的方案在本仓 pin 上都是空转。
+4. **下一片该做：把"拒绑没有指纹／指纹不同源的报告"接进 `scripts/release_evidence.py` 本体。**
+   现在这道比对只在收尾脚本的前提核对里（`tmp/s83/s83b.sh` 第 2 步：报告指纹与磁盘清单逐位比对，
+   不等就退 8），也就是说它守的是"我记得跑这一步"，不是工具自己。落点：`_parse_pytest_report`
+   （`release_evidence.py:236-278`）把 `source_manifest_fingerprint` 抄进
+   `PROVENANCE.test_report`，`write_evidence` 在写之前比"报告记的那份"与"即将落盘的这份"，
+   不等就拒（不写文件、非零退码）。两极都要配：删掉 conftest 注入 ⇒ 必须拒；
+   只刷 `generated_at` ⇒ 必须照绑。这一格补上之后，"缺席读成前提塌"才真正不是放水，
+   而是"由更靠前的一道闸拦下"。

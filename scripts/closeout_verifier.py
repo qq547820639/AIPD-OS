@@ -30,9 +30,12 @@
   C8 plaintiffs_measured          本轮新补的用例（`--expect-test`）确实在名单里跑过并且过了
   C9 size_ratchet                 `--min-tests` 下界（借 dorny/test-reporter 的 `fail-on-empty` 语义，
                                   但把它从"空就红"收紧成"低于下界就红"，因为本仓分母是 2 千量级）
-  C10 report_fingerprint_recorded  报告自带 `source_manifest_fingerprint`——生产者没记就是红，
-                                  不能读成"值恰好为空的绿"（第 83 片之前 conftest 不写这个键，
-                                  所以这条会把那条旧报告打红，直到换绑一份新的）
+  C10 report_fingerprint_recorded  报告自带 `source_manifest_fingerprint`。缺字段读成**前提塌（退 2）**
+                                  而不是违规：报告是不可变的历史产物，把缺席判红会自锁
+                                  ——attestation 必须 0 failed，而任何"旧报告还在树里"时跑出来的
+                                  全量都带着这条红，于是永远拿不到可绑的报告（第 83 片实测到）。
+                                  退 2 一样挡住收尾配方；强制力在写入侧（绑定脚本拒绑没有字段的报告）
+                                  与生产侧常驻用例（真 `pytest --json-report` 那条）。
   C11 report_fingerprint_matches_disk
                                   报告记的清单指纹 == 磁盘当前 `SOURCE_MANIFEST.json` 的内容摘要。
                                   C6 只能证"那份报告里两条清单哈希用例过了"，而清单一旦被之后的
@@ -351,19 +354,29 @@ def audit(report_path: Path, worktree: Path, provenance_path: Path,
     rec_fp = report.get("source_manifest_fingerprint")
     rec_fp = str(rec_fp) if rec_fp else ""
     rep["readings"]["report_fingerprint"] = rec_fp[:12]
-    judge("report_fingerprint_recorded", bool(rec_fp),
-          "报告里没有 source_manifest_fingerprint——生产它的 conftest 没抄清单指纹"
-          "（第 83 片之前的旧报告就是这个形状，或注入被人删了）" if not rec_fp else
-          f"报告自带清单指纹 {rec_fp[:12]}")
     disk_fp, fp_err = release_fingerprint.fingerprint_from_file(manifest_path)
     rep["readings"]["disk_manifest_fingerprint"] = disk_fp[:12]
+    if not rec_fp:
+        # 前提塌而不是判红——这一条改判是本片自己踩出来的（理由与出处见取证文档 §四之二）：
+        # 报告是不可变的历史产物，"带指纹"只有新 conftest 跑出来的报告才可能满足。
+        # 把缺席判成违规会自锁：attestation 必须 0 failed，而任何在"旧报告还在树里"时跑出来的
+        # 全量都带着这条红 ⇒ 永远拿不到可绑的报告。缺席也不读成通过：退 2 一样挡住收尾配方，
+        # 真正的牙挪到写入侧（绑定脚本与 `release_evidence.py` 拒绑没有字段的报告）
+        # 与生产侧常驻用例（`tests/test_report_manifest_fingerprint.py` 那条真 pytest 端到端）。
+        problem("report_fingerprint_recorded",
+                "报告没有 source_manifest_fingerprint：它出自第 83 片之前的 conftest，"
+                "或那段注入被删了。这一格要求的是「换绑一份带字段的报告」，"
+                "所以它把自己的缺席读成前提塌（退 2，配方过不去），而不是违规，也不是通过")
+    else:
+        rep["checks"]["report_fingerprint_recorded"] = {
+            "ok": True, "kind": "ok", "detail": f"报告自带清单指纹 {rec_fp[:12]}"}
     if fp_err:
         problem("manifest_fingerprint_readable", f"{manifest_path}：{fp_err}"
                 "——磁盘清单读不出就没有可比基准，判前提塌而不是违规")
     elif not rec_fp:
         rep["checks"]["report_fingerprint_matches_disk"] = {
             "ok": True, "kind": "skipped",
-            "detail": "报告没带指纹（C10 已判红），这一格没有可比基准"}
+            "detail": "报告没带指纹（已由 report_fingerprint_recorded 判为前提塌），这一格没有可比基准"}
     else:
         judge("report_fingerprint_matches_disk", rec_fp == disk_fp,
               f"报告记的清单指纹 {rec_fp[:12]} != 磁盘当前清单 {disk_fp[:12]}"
@@ -509,7 +522,7 @@ def _git_init(repo: Path, message: str) -> str:
 
 
 def _self_test(tmp: Path) -> int:
-    """一支合规对照 + 十四支逐格注入 + 五支前提退 2 + 一支「只换时间戳必须绿」的假红控制。
+    """一支合规对照 + 十三支逐格注入 + 六支前提退 2 + 一支「只换时间戳必须绿」的假红控制。
 
     每支注入都断言"开火的判据集合恰好等于该开的那一格"。这条规矩是第 61 片量出来的：
     一次注入点亮三格时，你分不清是判据强还是夹具脏——第 63 片电池里那支 SURVIVED
@@ -661,10 +674,16 @@ def _self_test(tmp: Path) -> int:
     # ---- C10 / C11（第 83 片）：报告自证「测的是哪一份清单」----
     _pristine_report(evidence, nodeids, pinned)     # 故意不盖指纹＝第 83 片之前 conftest 的形状
     _bind_provenance(prov, report)
-    arm("C10 注入：报告没带清单指纹", {"report_fingerprint_recorded"})
-    assert now()["checks"]["report_fingerprint_matches_disk"]["kind"] == "skipped", \
-        now()["checks"]["report_fingerprint_matches_disk"]
-    _mark("报告没带指纹时只有 C10 开火，C11 读成「没有可比基准」而不是连带判红")
+    assert run() == 2, now()
+    rep10 = now()
+    assert not rep10["violations"], rep10["violations"]
+    assert {p["check"] for p in rep10["problems"]} == {"report_fingerprint_recorded"}, \
+        rep10["problems"]
+    assert rep10["checks"]["report_fingerprint_matches_disk"]["kind"] == "skipped", \
+        rep10["checks"]["report_fingerprint_matches_disk"]
+    _mark("报告没带指纹 → 退 2（前提塌）：既不是「没违规」也不是判红；"
+          "判红会自锁（旧报告还在树里时任何全量都带着这条红，attestation 永远出不来），"
+          "读成通过则是把「生产者没记」洗成绿。C11 同时读成「没有可比基准」而不连带开火")
 
     prist(evidence, nodeids, pinned)
     _bind_provenance(prov, report)

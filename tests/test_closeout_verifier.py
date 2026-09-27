@@ -119,7 +119,7 @@ def test_instrument_self_test_is_actually_run_and_green() -> None:
     assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-2000:]
     assert "条合成读数全部对上" in proc.stdout, proc.stdout
     marks = proc.stdout.count("[OK]")
-    assert marks >= 23, f"--self-test 的臂从 23 条缩水成 {marks} 条：注入没跑满就别谈判据"
+    assert marks >= 22, f"--self-test 的臂从 22 条缩水成 {marks} 条：注入没跑满就别谈判据"
 
 
 def test_check_names_are_the_documented_eleven(real_pair) -> None:
@@ -131,11 +131,24 @@ def test_check_names_are_the_documented_eleven(real_pair) -> None:
 
 def test_eight_checks_are_green_on_the_real_corpus_regardless_of_stage(real_pair,
                                                                        pinned: str) -> None:
-    """真语料（两千六百条量级的绑定报告）上，与新鲜度无关的八格必须全绿；只有三格允许因本轮在途而红。"""
+    """真语料（两千六百条量级的绑定报告）上，与新鲜度无关的八格必须全绿；只有三格允许因本轮在途而红。
+
+    第四种允许态是**前提塌**：`report_fingerprint_recorded` 在换绑之前没有可比读数
+    （旧报告出自没有注入的 conftest）。这不是"放宽"——它被限定成只许那一格，
+    且必须能由"报告里确实没有那个键"解释；换绑之后 `problems` 为空，这条循环照旧判它绿。
+    """
     rep = real_pair()
     fired = {v["check"] for v in rep["violations"]}
     assert fired <= STAGE_BOUND, sorted((v["check"], v["detail"]) for v in rep["violations"])
+    probs = {p["check"] for p in rep["problems"]}
+    assert probs <= {"report_fingerprint_recorded"}, sorted(probs)
+    if probs:
+        payload = json.loads(REPORT.read_text(encoding="utf-8"))
+        assert not payload.get("source_manifest_fingerprint"), \
+            "前提塌必须能由『报告确实没带那个键』解释，否则是判据在瞎报"
     for name in ALL_CHECKS - STAGE_BOUND:
+        if name in probs:
+            continue
         assert rep["checks"][name]["ok"] is True, (name, rep["checks"][name])
     r = rep["readings"]
     assert r["report_entries"] >= 2000 and r["tree_files"] >= 200, r
@@ -486,16 +499,26 @@ def test_the_instrument_itself_is_cited_in_the_tool_catalog() -> None:
         "README 里要有 `python scripts/closeout_verifier.py …` 这一行（行首、可复制执行）"
 
 
-def test_bound_production_report_carries_its_manifest_fingerprint() -> None:
-    """C10 的牙落在真产物上：绑进证据的那份报告必须自带 64 位清单指纹。
+def test_fingerprint_face_on_the_real_corpus_is_never_silently_green(real_pair) -> None:
+    """真产物这一面的两极：带字段 ⇒ 记 ok；不带 ⇒ 必须读成前提塌（退 2），不许读成"没违规"。
 
-    手写夹具能盖上指纹也能不盖，只有真报告证明 `tests/conftest.py` 的注入在生产里跑过。
-    第 83 片换绑之前这条是红的——那是有意的强制装置（旧报告出自没有注入的 conftest），
-    不是判据写坏了；它红了就把报告重跑重绑，别把判据改宽。
+    换绑前后两判都成立（旧报告走后半、新报告走近半），所以"把注入删了"永远有地方翻红，
+    而"把缺席判成违规"那条自锁路也被这格钉住：它要求的是 rc 2 而不是 rc 4。
     """
-    data = json.loads(REPORT.read_text(encoding="utf-8"))
-    fp = data.get("source_manifest_fingerprint")
-    assert isinstance(fp, str) and len(fp) == 64 and fp == fp.lower(), sorted(data)
+    payload = json.loads(REPORT.read_text(encoding="utf-8"))
+    rec = str(payload.get("source_manifest_fingerprint") or "")
+    rep = real_pair()
+    chk = rep["checks"].get("report_fingerprint_recorded")
+    assert chk is not None, sorted(rep["checks"])
+    if rec:
+        assert len(rec) == 64 and rec == rec.lower(), rec
+        assert chk["ok"] is True and chk["kind"] == "ok", chk
+    else:
+        assert chk["ok"] is False and chk["kind"] == "problem", chk
+        assert [p["check"] for p in rep["problems"]] == ["report_fingerprint_recorded"], \
+            rep["problems"]
+        assert not [v for v in rep["violations"]
+                    if v["check"] == "report_fingerprint_recorded"], "缺席不该判红（自锁）"
 
 
 def test_fingerprint_verdict_always_has_a_content_level_explanation(real_pair) -> None:
@@ -513,8 +536,8 @@ def test_fingerprint_verdict_always_has_a_content_level_explanation(real_pair) -
     fired = {v["check"] for v in rep["violations"]}
     kind = rep["checks"]["report_fingerprint_matches_disk"]["kind"]
     if kind == "skipped":
-        assert "report_fingerprint_recorded" in fired, \
-            "C11 因为报告没带指纹而沉默时，必须由 C10 开火——两处都沉默等于这条判据被删了"
+        assert [p["check"] for p in rep["problems"]] == ["report_fingerprint_recorded"], \
+            rep["problems"]
         return
     if "report_fingerprint_matches_disk" in fired:
         assert disk["files"] != at_anchor["files"], \

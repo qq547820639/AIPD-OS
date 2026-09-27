@@ -975,7 +975,7 @@
   `release_evidence.py:133` 每次生成都重写 `generated_at`，比原始字节就是给每轮"刷清单→跑全量→绑定"
   判一条假红（`scripts/release_fingerprint.py:24,28,31` 定规则，`--self-test` 里"两份字节不同而摘要相同
   必须判绿"那一臂钉住，电池臂 Y3 把验签侧改成比原始字节 sha 后那一臂当场红）；
-  ② 新增两格各管一件事：`report_fingerprint_recorded` 判"生产者记没记"（没记就是红，不读成"值恰好为空"），
+  ② 新增两格各管一件事：`report_fingerprint_recorded` 判"生产者记没记"——**缺字段读成前提塌（退 2）而不是判红**（这条改判是本轮实测逼出来的，见下面那段自锁），
   `report_fingerprint_matches_disk` 判"记的数与磁盘当前那份对不对"，报告没带指纹时后者写 `skipped`
   而不是连带判红（电池臂 Y5 证明这条纪律有牙）；③ 磁盘清单读不出是前提塌（退 2），
   折成判红会被 `--self-test` 拒（臂 Y6）。
@@ -984,11 +984,20 @@
   自己先红（正在改 `scripts/` 而清单未刷，那正是 C6 那两条替身在工作），种子换成不依赖清单新鲜度的
   本文件纯函数用例。同文件的 `_independent_digest()` 是把规则**另写一遍**的盲尺，
   与模块在真清单上必须得同一个数。
-  **换绑之前它就是红的，而且应当是红的**：旧报告出自没有注入的 conftest，基线
-  `pytest tests/test_report_manifest_fingerprint.py tests/test_closeout_verifier.py -q` 读数
-  `5 failed, 21 passed`，五条同一因；处置是重跑重绑，不是把判据改宽。
+  **一条被本轮自己推翻的设计：把「缺字段」判成违规会自锁，attestation 因此永远拿不出来**。
+  第一版 C10 是判红，理由（「生产者没记不能读成值恰好为空的绿」）到今天仍然对，
+  但它忘了一件事：报告是**不可变的历史产物**。树里那份报告不出自新 conftest ⇒
+  任何在它被换掉之前跑出来的全量都带着这条红 ⇒ 绑定脚本拿不到 0-failed 的证据 ⇒
+  换不上新的那一份。两次一手读数把这条路走死：常驻基线 `5 failed, 21 passed`
+  （因此电池按「增量开火」记分——基线不全绿时「退码非零就算杀掉」这条判法失效）；
+  干净签出那一跑 `2658 passed / 5 failed / 2668 total`、417.9 s、`exitcode=1` ⇒ 退 8 拒绑。
+  中途还试过把第一次那份**不绑定地**放进 `docs/audit/`（`3d5e0f6`）——
+  它自己也带着那 5 条红，`terminal_clean` 照样判红，死锁没解开，已把那份撤回。
+  定形是三态各归各位：**缺席＝没有可比基准（退 2，配方过不去）**，强制力放在
+  **写入侧**（绑定前逐位比对的这道闸现在就在收尾脚本里，下一片接进 `release_evidence.py` 本体）
+  与**生产侧常驻用例**（真 `pytest --json-report` 那条，删掉注入就翻）。
   格数 9 → **11**（`STAGE_BOUND` 同步收 `report_fingerprint_matches_disk`，它在"清单已刷新而报告未重跑"
-  那段窗口合法地红），`--self-test` 18 → **23 臂**（`grep -c '^def test_'` 现算：`tests/test_closeout_verifier.py`
+  那段窗口合法地红），`--self-test` 18 → **22 臂**（`grep -c '^def test_'` 现算：`tests/test_closeout_verifier.py`
   18 → **20 条**，本片加的两条是"真产物带指纹"与"红绿都要有内容级解释"）＋新文件 6 条；电池 `docs/audit/s83/battery83.py` 六臂，终局
   `合计 KILLED+CRASH-KILL 6 / 6；其余按判决分类：无`，无一支靠崩溃杀（都是判决翻转）。
   **本片新记一条电池纪律**：基线不全绿时（本片就是）判决必须按"增量开火"＝`fired − baseline` 非空，

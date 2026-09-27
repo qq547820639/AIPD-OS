@@ -490,11 +490,13 @@ python scripts/closeout_verifier.py --tag v5.6.0 --expect-test tests/test_new_th
 #     把"没有基准"读成两格判红会让人去修一个本来正常的状态）。锚点是 **tag 指向的提交**
 #     而不是 HEAD——按约定发布锚点不重锚，传 HEAD 会被 `pinned_source_binding` 判红，
 #     这正是第 62 片真犯过的错。
-#     `--self-test` 是 23 臂合成电池（每臂只点亮自己那一格判决，其中一支是「只换
+#     `--self-test` 是 22 臂合成电池（每臂只点亮自己那一格判决，其中一支是「只换
 #     `generated_at` 必须读成同一份清单」的假红控制——比原始字节 sha 就会每轮都假红），
 #     常驻牙 20 条见 `tests/test_closeout_verifier.py`；指纹那把尺另见
 #     `tests/test_report_manifest_fingerprint.py` 6 条，含用真 `pytest --json-report`
-#     跑出来的生产侧端到端。
+#     跑出来的生产侧端到端。`report_fingerprint_recorded` 缺字段读成**前提塌（退 2）**而不是判红：
+#     报告是不可变的历史产物，判红会自锁——attestation 必须 0 failed，而任何"旧报告还在树里"
+#     时跑出来的全量都带着这条红，于是永远拿不到可绑的那一份。
 python scripts/absence_claim_census.py
 #   ↑ 登记表否定句对账（第 65 片）：`src/aipd_os/registry_data.py` 里每句「X 仍没有」都配一个
 #     **反证锚点**（哪个文件/符号一旦出现，这句话就算过期）。判决四档：成立、过期（判红）、

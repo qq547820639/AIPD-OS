@@ -40,10 +40,11 @@ ARMS = [
                '    disk_fp, fp_err = _sha256_path(manifest_path), ""')],
      "note": "验签侧改成比原始字节 sha：字节面每轮必变，"
              "--self-test 里「只换 generated_at 必须绿」那一支就该红"},
-    {"id": "Y4-C10-becomes-always-true", "file": COV,
-     "reps": [('    judge("report_fingerprint_recorded", bool(rec_fp),',
-               '    judge("report_fingerprint_recorded", True,')],
-     "note": "恒真的 C10：报告没带指纹也不判红。注入被删时这一格与 C11 的沉默一起隐身"},
+    {"id": "Y4-C10-silenced", "file": COV,
+     "reps": [('    if not rec_fp:\n        # 前提塌而不是判红',
+               '    if False:\n        # 前提塌而不是判红')],
+     "note": "把「报告没带指纹」那一支整支沉默：verifier 会对着没有字段的旧证据退 0，"
+             "换绑配方与常驻两极用例（problem 那一判）都该翻"},
     {"id": "Y5-C11-fires-without-baseline", "file": COV,
      "reps": [('    elif not rec_fp:', '    elif False:')],
      "note": "报告没带指纹时让 C11 也开火：self-test 的「每支注入只点亮自己那一格」"
