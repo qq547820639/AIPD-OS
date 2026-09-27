@@ -85,7 +85,19 @@
 本轮把"写控制前先问一句：把被测那支整支反过来，这条夹具的输出会不会变一格"
 当成硬规矩用——三条都是问了之后才发现自己没造出差异。
 
-## 六、终局读数（占位）
+## 六、终局读数（由 `docs/audit/s67/terminal67.py` 从原件现跑生成，不手抄）
+
+- **签出那一跑**（`tmp/s67/checkout`，报告产出于提交 `fd04fcb`，主树当时 HEAD `b49d077`）：`exitcode=0`、`collected=2562`、`passed=2559`、`skipped=3`、其余终态 `{'skipped': 3}`、用时 `328.4s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s67/checkout`、`source_commit=a66040520139`
+- **本片主角（真仓库终态）**：`rc=0`；语料：84 个能力，带否定词的句子 37 句；账本登记 11 条，未挂锚点 29 句（宽档，只报不判）；能力缺失句（窄档＝判据面）：17 句 = 登记 7 + 豁免 10 + **未处置 0**；判红 0 条：登记的 11 句「仍缺着」现在都还缺着
+- **`--self-test`**：`rc=0`，**21 条**合成读数全对上（含四档去处判决与 `table_ddl` 双向）
+- **常驻用例**：`pytest tests/test_absence_claim_census.py -q` → `22 passed in 28.51s`（rc=0）
+- **变异电池（入库副本现跑）**：`docs/audit/s67/battery67.py` → `rc=0`，合计 KILLED 7 / SURVIVED 0 / 电池自身问题 0
+- **两档分母现读**：宽档 37 句、窄档 17 句（差 20 句是谈判决/谈口径的假阳性）；登记表解析问题 `[]`；薄理由豁免 `[]`
+- **第 64 片那台收尾验签在本片树上**：`rc=0`；收尾验签（报告 ↔ 证据 ↔ 工作树）；读数：报告 2562 条 / 208 个文件，树 208 个文件 / 2479 个 def，终态 {'passed': 2559, 'skipped': 3}
+- **发布门禁**：`rc=0`、`"passed": true` 计 8 条、`release_ready` true
+- **`audit_repo --strict`**：`rc=1`，恰 **1** 条 ✗（`✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=b4`）——设计内不修
+- **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag；被哈希文件数 `669`（本片**文件数不变**，只改内容）
+- **工作树**：`git status --porcelain` 输出 0 行
 
 ## 七、下一片入口
 
