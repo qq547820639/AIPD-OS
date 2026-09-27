@@ -49,7 +49,7 @@
 - **两档分母现读**：宽档 36 句、窄档 16 句（差 20 句是谈判决/谈口径的假阳性）；登记表解析问题 `[]`；薄理由豁免 `[]`
 - **第 64 片那台收尾验签在本片树上**：`rc=0`；收尾验签（报告 ↔ 证据 ↔ 工作树）；读数：报告 2577 条 / 210 个文件，树 210 个文件 / 2494 个 def，终态 {'passed': 2574, 'skipped': 3}
 - **发布门禁**：`rc=0`、`"passed": true` 计 8 条、`release_ready` true
-- **本片新档的读数**：`external_callers` 对 `commit_approved` / `commit_snapshot` 判 HOLDS，正向对照 `record_dxf_lineage` 判 CLAIM_TEXT_ABSENT（探针会开火）
+- **本片新档的读数**：`external_callers` 对 `commit_approved` / `commit_snapshot` 判 `HOLDS`（生产面外部调用点分别为 1 / 0 处，"外部"口径把同文件的兼容包装排除在外）；正向对照 `record_dxf_lineage` 判 `CONTRADICTED`（同一函数换个名字就翻红 ⇒ 探针会开火）。**更正记录**：这一行最初由 `terminal70.py` 生成时用了改口前的旧锚点，读出来是 `CLAIM_TEXT_ABSENT`（账文脱钩）而不是 `CONTRADICTED`（过期）——读数本身把脚本的错暴露了，脚本已改、这一行按实测重写。
 - **`audit_repo --strict`**：`rc=1`，恰 **1** 条 ✗（`✗ Provenance source commit mismatch: manifest=a66040520139… vs HEAD=7f`）——设计内不修
 - **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag；被哈希文件数 `672`（本片**文件数不变**，只改内容）
 - **工作树**：`git status --porcelain` 输出 0 行

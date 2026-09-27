@@ -127,10 +127,10 @@ def main() -> int:
                 "，正向对照 `record_dxf_lineage` 判 "
                 + str(acc.audit(REPO, ({"id": "POS", "capability": "product.definition_gate",
                                         "field": "current_limitation",
-                                        "anchor": "今天没有生产入口",
+                                        "anchor": "aipd product gate --commit",
                                         "check": {"kind": "external_callers",
                                                   "symbol": "record_dxf_lineage"}},))
-                      ["rows"][0]["verdict"]) + "（探针会开火）")
+                      ["rows"][0]["verdict"]) + "（同一函数换个名字就翻红 ⇒ 探针会开火；第一版这里用的是改口前的旧锚点，读出来是「账文脱钩」而不是「过期」，已更正）")
     rc7, out7 = sh([PY, "scripts/audit_repo.py", "--strict"])
     bad = [ln.strip() for ln in out7.splitlines() if ln.strip().startswith("✗")]
     if rc7 == 0 or len(bad) != 1:
