@@ -159,8 +159,39 @@ def test_helper_only_fires_when_def_counts_move() -> None:
     assert _defs_differ(two, one) is True, "少一条用例也要算（条数动了）"
 
 
+def _pick_anchor(bound_commits: list[str]) -> str:
+    """同一份报告被绑过多次时取**最早**那次（入参按 `git log` 的新→旧排）。
+
+    为什么不是最近一次：刷清单那一步会重写 `PROVENANCE.json`，报告内容没变、sha 相同，
+    于是"最近一次绑定"被推到本轮的测试改动**之后** ⇒ `git diff 基准..HEAD -- tests` 读成空集，
+    而名单缺口还在 ⇒ 同一种假红。第 81 片实测：中途两次重绑各把基准前推一次，
+    最后多烧一整个全量。基准应该是"这份内容第一次成为权威"的那一刻，那之后无论重绑几次都不动。
+    """
+    return bound_commits[-1]
+
+
+def _bound_commits_for(digest: str, repo: Path = ROOT) -> list[str]:
+    """PROVENANCE 历史里绑着这份 sha256 的提交，按 `git log` 的顺序（新→旧）。"""
+    hits: list[str] = []
+    for c in subprocess.run(["git", "-C", str(repo), "log", "--format=%H", "--",
+                             "PROVENANCE.json"], capture_output=True, text=True,
+                            check=True).stdout.splitlines():
+        if not c:
+            continue
+        try:
+            doc = json.loads(subprocess.run(["git", "-C", str(repo), "show",
+                                             f"{c}:PROVENANCE.json"], capture_output=True,
+                                            text=True, check=True).stdout)
+        except subprocess.CalledProcessError:
+            continue      # 早期的提交里 PROVENANCE.json 还不存在
+        bound = str(((doc.get("test_report") or {}).get("sha256")) or "")
+        if bound and bound == digest:
+            hits.append(c)
+    return hits
+
+
 def _anchor_commit_for_this_report() -> str:
-    """这份报告"从哪一次提交起算权威"：PROVENANCE 历史里最近一次绑着同一份 sha256 的提交。
+    """这份报告"从哪一次提交起算权威"：PROVENANCE 历史里**最早**一次绑着同一份 sha256 的提交。
 
     不能用 `git log -1 -- 报告文件`：报告被重新提交过（例如误绑定之后 revert）就会把 touch 点
     推到代码改动**之后** ⇒ "报告以来改过的测试文件"算成空集，而名单缺口还在 ⇒ 假红。
@@ -168,15 +199,44 @@ def _anchor_commit_for_this_report() -> str:
     在途（PROVENANCE 尚未绑定）与已绑定两种状态都落在同一个基准上。
     """
     digest = hashlib.sha256(REPORT.read_bytes()).hexdigest()
-    for c in [x for x in _git("log", "--format=%H", "--", "PROVENANCE.json").splitlines() if x]:
-        try:
-            doc = json.loads(_git("show", f"{c}:PROVENANCE.json"))
-        except (ValueError, subprocess.CalledProcessError):
-            continue      # 早期的提交里 PROVENANCE.json 还不存在
-        bound = str(((doc.get("test_report") or {}).get("sha256")) or "")
-        if bound and bound == digest:
-            return c
+    hits = _bound_commits_for(digest)
+    if hits:
+        return _pick_anchor(hits)
     return _git("log", "-1", "--format=%H", "--", REPORT_REL)
+
+
+def _gap_and_changed(report_data: dict, report_commit: str,
+                     repo: Path = ROOT) -> tuple[set[str], set[str]]:
+    """把判据的两边算出来：左边=名单↔树的缺口，右边=自基准以来 def 条数动过的测试文件。
+
+    抽成函数是因为这两边必须能在**合成历史**上重放：本轮踩的坑正是"重绑把基准推后"，
+    只在真仓库上断言就看不见那一支（真仓库里基准只有一个候选时，新旧取法读数相同）。
+    """
+    changed: set[str] = set()
+    for ln in subprocess.run(["git", "-C", str(repo), "diff", "--name-only",
+                              "--diff-filter=AM", f"{report_commit}..HEAD", "--", "tests"],
+                             capture_output=True, text=True, check=True).stdout.splitlines():
+        if not _is_pytest_file(ln):
+            continue
+        new_src = (repo / ln).read_text(encoding="utf-8")
+        try:
+            old_src = subprocess.run(["git", "-C", str(repo), "show", f"{report_commit}:{ln}"],
+                                     capture_output=True, text=True,
+                                     check=True).stdout
+        except subprocess.CalledProcessError:
+            old_src = None          # 报告那次提交时还没有这个文件
+        if _defs_differ(old_src, new_src):
+            changed.add(ln)
+    tree = cov.tree_roster(repo / "tests")[0]
+    measured = {t["nodeid"].split("::")[0] for t in report_data["tests"]}
+    counts: dict[str, int] = {}
+    for node in report_data["tests"]:
+        f = node["nodeid"].split("::")[0]
+        counts[f] = counts.get(f, 0) + 1
+    never_ran = {f for f in tree if f not in measured}
+    short = {f for f in tree if f in measured and counts[f] < tree[f]}
+    return never_ran | short, changed
+
 
 
 def test_roster_gap_equals_tests_changed_since_the_report(pinned: str) -> None:
@@ -188,30 +248,53 @@ def test_roster_gap_equals_tests_changed_since_the_report(pinned: str) -> None:
     data = json.loads(REPORT.read_text(encoding="utf-8"))
     report_commit = _anchor_commit_for_this_report()
     assert report_commit, "报告没在任何提交里？"
-    changed: set[str] = set()
-    for ln in _git("diff", "--name-only", "--diff-filter=AM",
-                   f"{report_commit}..HEAD", "--", "tests").splitlines():
-        if not _is_pytest_file(ln):
-            continue
-        new_src = (ROOT / ln).read_text(encoding="utf-8")
-        try:
-            old_src = _git("show", f"{report_commit}:{ln}")
-        except (AssertionError, subprocess.CalledProcessError, ValueError):
-            old_src = None          # 报告那次提交时还没有这个文件
-        if _defs_differ(old_src, new_src):
-            changed.add(ln)
-    tree = cov.tree_roster(ROOT / "tests")[0]
-    measured = _report_files(data)
-    never_ran = {f for f in tree if f not in measured}
-    counts: dict[str, int] = {}
-    for node in data["tests"]:
-        f = node["nodeid"].split("::")[0]
-        counts[f] = counts.get(f, 0) + 1
-    short = {f for f in tree if f in measured and counts[f] < tree[f]}
-    assert never_ran | short == changed, (sorted(never_ran | short), sorted(changed))
-    ghosts = sorted(f for f in measured if f not in tree)
+    gap, changed = _gap_and_changed(data, report_commit)
+    assert gap == changed, (sorted(gap), sorted(changed))
+    ghosts = sorted(f for f in _report_files(data) if f not in cov.tree_roster(ROOT / "tests")[0])
     assert ghosts == [], f"报告里有个树上没有的文件（测的不是这棵树）：{ghosts}"
     assert _git("rev-parse", "v5.6.0^{commit}") == data["source_commit"] == pinned
+
+
+def test_rebinding_the_same_report_does_not_move_the_anchor(tmp_path: Path) -> None:
+    """合成历史：同一份报告被重绑过两次，中间动过一条用例 ⇒ 基准必须是**最早**那次绑定。
+
+    这条就是第 81 片那笔代价的形状：为了刷 `SOURCE_MANIFEST` 中途又跑了一次绑定，
+    报告内容没变、sha 相同，按"最近一次"取基准就把基准推到测试改动之后，
+    于是右边读成空集、左边缺口还在 ⇒ 常驻全量多一条假红，最后多烧一整跑。
+    这里两边都断：既断新取法选对，也断旧取法（最近一次）确实会把等式判坏——
+    只断"新取法对"抓不到"旧取法错在哪"。
+    """
+    repo = tmp_path / "repo"
+    (repo / "tests").mkdir(parents=True)
+    prov = repo / "PROVENANCE.json"
+    report = repo / "report.json"
+    report.write_text(json.dumps({"tests": [{"nodeid": "tests/test_a.py::test_one",
+                                             "outcome": "passed"}]}), encoding="utf-8")
+    digest = hashlib.sha256(report.read_bytes()).hexdigest()
+    bound = json.dumps({"test_report": {"sha256": digest}})
+
+    (repo / "tests/test_a.py").write_text("def test_one():\n    assert True\n", encoding="utf-8")
+    cov._git_init(repo, "seed")
+    prov.write_text(bound, encoding="utf-8")
+    first = cov._git_init(repo, "第一次绑定这份报告")
+    # 中间加一条用例（名单缺口 +1），随后重绑同一份内容（sha 不变，只多一个时间戳）
+    (repo / "tests/test_a.py").write_text("def test_one():\n    assert True\n\n\n"
+                                          "def test_two():\n    assert True\n",
+                                          encoding="utf-8")
+    cov._git_init(repo, "本轮新增一条用例")
+    prov.write_text(json.dumps({"test_report": {"sha256": digest},
+                                "generated_at": "later"}), encoding="utf-8")
+    latest = cov._git_init(repo, "重绑同一份报告")
+
+    hits = _bound_commits_for(digest, repo)
+    assert hits == [latest, first], "夹具前提：同一份 sha 得真被绑过两次（新→旧）"
+    assert _pick_anchor(hits) == first, "基准取错了"
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    gap, changed = _gap_and_changed(payload, _pick_anchor(hits), repo)
+    assert gap == changed == {"tests/test_a.py"}, (sorted(gap), sorted(changed))
+    gap_old, changed_old = _gap_and_changed(payload, latest, repo)
+    assert gap_old == {"tests/test_a.py"} and changed_old == set(), \
+        f"旧取法的病必须复现（缺口 {sorted(gap_old)} vs 改动 {sorted(changed_old)}）"
 
 
 def test_worktree_verdict_tracks_git_status_exactly(real_pair) -> None:

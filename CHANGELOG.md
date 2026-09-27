@@ -1062,6 +1062,18 @@
   反驳（第 4x 片漏改，本轮就地更正、只留仍成立的"装配约束/配合没做"），
   `scripts/c6_coverage.py` 给 `cad.assembly_instructions` 列的 producers/tests 欠
   `assembly_steps_pdf.py` 与 `test_assembly_steps_pdf.py` 两项（本轮补齐，与登记表同源）。
+  **收口基准的一个真缺陷（同一格第二次撞上才查清）**：`tests/test_closeout_verifier.py`
+  的 `_anchor_commit_for_this_report()` 取"PROVENANCE 历史里**最近**一次绑着同一 sha 的提交"，
+  于是**重绑同一份报告会把基准推到本轮测试改动之后**——右边 `git diff 基准..HEAD -- tests` 读成空集、
+  左边的名单缺口还在 ⇒ 必红；这一红又写进被绑的报告，而 `terminal_clean` 读的正是那份文件，
+  连带四条常驻用例一起红，"换绑一份新内容报告"这个处置**解不了**（它自己会续期）。
+  改成取**最早**一次绑定（新增 `_pick_anchor()`，`git log` 是新→旧故取末项）：等式
+  `缺口 == 自基准以来 def 动过的测试文件` 一个字没放宽，所以不是调松判据，是修基准取法。
+  配套新常驻 `test_rebinding_the_same_report_does_not_move_the_anchor`——合成历史里同一 sha 真被
+  绑两次、中间加一条用例，断候选是 `[latest, first]`、新取法两边都等于 `{tests/test_a.py}`、
+  并且**旧取法会把等式判坏**（缺口有 / 改动空），正反两极都在。过渡期把上一份干净报告
+  （`4a2d9cf`：exitcode 0、2622 passed / 5 skipped、tag 锚点）放回绑定路径当语料，
+  本轮 attestation 报告在绑定那一步覆盖它——那条来处写进取证文档 §六之二，不当成本轮读数。
   证据见 `docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md`。
 
 - **v5.41 F-ASSEMBLY-PDF 第 80 片：装配步骤文档的 PDF 版式与图框补上（第 56 片那句"本轮不排"排上了）**：
