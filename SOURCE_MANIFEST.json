@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-27T08:43:42+00:00",
+  "generated_at": "2026-09-27T09:01:05+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 289895,
-      "sha256": "2c3e7c26b24d90423d514192f57187636c6a246d7a211b420acad3113b47c561"
+      "size": 291960,
+      "sha256": "df113155feb14649bd4c0983af518d7833b59538320bc8a0d94fd97fb9e3f9d2"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1962,8 +1962,8 @@
     },
     {
       "path": "src/aipd_os/supervisor/supervisor.py",
-      "size": 42249,
-      "sha256": "3e82628b26130d9fc74a54694674fa6d934a3b796c2a56a6388e9196eeaadb74"
+      "size": 43182,
+      "sha256": "e2931570d512e31b9b415d87f6852bbe93c8c8a4fd218c7950cbdb10674444ef"
     },
     {
       "path": "src/aipd_os/supply_chain/__init__.py",
@@ -3242,8 +3242,8 @@
     },
     {
       "path": "tests/test_supervisor_execution.py",
-      "size": 3241,
-      "sha256": "c6cf232455af5ee623661104280a6cc3f463542a144e9fe1106067d8327732dc"
+      "size": 6177,
+      "sha256": "8e35c6e0bca0fec65e242d836b6d02cdc2362c95189fc2b5362b7e7ae3539c81"
     },
     {
       "path": "tests/test_supervisor_fact_lineage.py",

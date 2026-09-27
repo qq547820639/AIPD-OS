@@ -1,3 +1,5 @@
+# ruff: noqa: E501   # 长字面量是逐字锚点，不拆行改值
+
 """第 72 片（收回第 71 片留下的两处各写一遍）的变异电池。"""
 from __future__ import annotations
 
