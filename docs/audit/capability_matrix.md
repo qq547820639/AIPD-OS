@@ -1,6 +1,6 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-27T12:54:49`
+- 生成时间：`2026-09-27T14:09:18`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
 - 默认分支：`main`；HEAD：`a66040520139405095648461f7144d4f00629924`
 - 版本：`5.6.0`
@@ -146,5 +146,5 @@
 | 推导需求候选 | `external_dependency` | docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py | aipd_os.tool_adapters.product_adapters.ProductDeriveRequirementsAdapter | `aipd run（Supervisor S2 product.derive_requirements）` | tests/test_product_definition_integrity.py | 生产 Provider 今天只有 LLM 这一家（配了 AIPD_MODEL_API_KEY 与 AIPD_MODEL_BASE_URL 时由 runtime 装配 LlmProductIntelligenceProvider 注进这五个 adapter）；未配置时诚实 EXTERNAL_DEPENDENCY |
 | 推导功能候选 | `external_dependency` | docs/architecture/idea_evidence_architecture.md; docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/tool_adapters/product_adapters.py; src/aipd_os/product_intelligence/provider.py | aipd_os.tool_adapters.product_adapters.ProductDeriveFeaturesAdapter | `aipd run（Supervisor S2 product.derive_features）` | tests/test_product_definition_integrity.py | 生产 Provider 今天只有 LLM 这一家（配了 AIPD_MODEL_API_KEY 与 AIPD_MODEL_BASE_URL 时由 runtime 装配 LlmProductIntelligenceProvider 注进这五个 adapter）；未配置时诚实 EXTERNAL_DEPENDENCY |
 | 冻结产品定义快照 | `fully_implemented` | docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/product_intelligence/snapshot.py; src/aipd_os/tool_adapters/product_adapters.py | aipd_os.tool_adapters.product_adapters.ProductCreateSnapshotAdapter | `aipd run（Supervisor S2 product.create_snapshot）` | tests/test_product_definition_integrity.py |  |
-| 产品定义门禁 | `partially_implemented` | docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/product_intelligence/gate.py; src/aipd_os/tool_adapters/product_adapters.py | aipd_os.tool_adapters.product_adapters.ProductDefinitionGateAdapter | `aipd product gate --db state.db --project p1` | tests/test_product_definition_integrity.py | 确定性本地评估（LLM 只可解释不可决定 READY）；生产 Provider 不影响 Gate 可用性 |
+| 产品定义门禁 | `partially_implemented` | docs/audit/V5_9_1_RE_AUDIT_MATRIX.md | src/aipd_os/product_intelligence/gate.py; src/aipd_os/tool_adapters/product_adapters.py | aipd_os.tool_adapters.product_adapters.ProductDefinitionGateAdapter | `aipd product gate --db state.db --project p1` | tests/test_product_definition_integrity.py | 确定性本地评估（LLM 只可解释不可决定 READY）；生产 Provider 不影响 Gate 可用性；但 commit 这一步（commit_snapshot / commit_approved）今天没有生产入口——`aipd product gate` 只走到 evaluate / authorization / eligibility，两个 commit 方法在生产面0 处外部调用点，requirement 与 feature 两类 truth 记录因此只由测试驱动 |
 

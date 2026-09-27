@@ -383,3 +383,59 @@ def test_readme_carries_a_runnable_line_for_the_instrument() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert "python scripts/absence_claim_census.py" in readme, \
         "改README这一行时同批改这里"
+
+
+# ------------------------------------------------------------------ ⑧ 外部调用点档（第 68 片）
+def test_gate_commit_has_no_production_caller_yet() -> None:
+    """产品定义门禁的 commit 这一步：生产面 0 处外部调用点 ⇒ 这句登记今天成立。"""
+    claims = tuple(c for c in acc.CLAIMS
+                   if c.get("check", {}).get("kind") == "external_callers")
+    assert len(claims) == 2, [c["id"] for c in claims]
+    rep = acc.audit(ROOT, claims)
+    assert set(verdicts(rep).values()) == {acc.HOLDS}, rep["rows"]
+    ids = {str(c["id"]) for c in claims}
+    for row in rep["rows"]:
+        if str(row["id"]) not in ids:
+            continue   # 喂半份账本必然多出语料级的"未处置"行，它们的 evidence 就是空的
+        assert "外部调用点 = 0 处" in row["evidence"][0], row["evidence"]
+
+
+def test_external_callers_probe_can_fire_positive_on_the_real_corpus() -> None:
+    """探针必须会开火：拿一个真有外部调用点的名字，同一档必须判成过期。
+
+    没有这一条，"0 处调用点"这个读数与"探针对任何名字都报 0"在输出上完全同形
+    （记忆里那条"探针恒零的形状"在这里的对偶）。
+    """
+    probe = ({"id": "POS", "capability": "product.definition_gate",
+              "field": "current_limitation", "anchor": "今天没有生产入口",
+              "check": {"kind": "external_callers", "symbol": "record_dxf_lineage"}},)
+    rep = acc.audit(ROOT, probe)
+    assert verdicts(rep) == {"POS": acc.CONTRADICTED}, rep["rows"]
+    ev = rep["rows"][0]["evidence"]
+    assert any("外部调用点 = 1 处" in one for one in ev), ev
+    assert any("commands_drawing.py" in str(one) for one in ev), ev
+
+
+def test_external_callers_counts_are_memoized_and_stable() -> None:
+    """同一 symbol 两次判决必须同一读数（缓存命中不能改变结果，也不能改变盲区）。"""
+    claims = tuple(c for c in acc.CLAIMS
+                   if c.get("check", {}).get("kind") == "external_callers")
+    a1 = acc.external_callers(ROOT, "commit_snapshot")
+    a2 = acc.external_callers(ROOT, "commit_snapshot")
+    assert a1 == a2, (a1, a2)
+    rep = acc.audit(ROOT, claims)
+    assert list(verdicts(rep).values()) == [acc.HOLDS] * len(claims), rep["rows"]
+
+
+def test_external_callers_without_production_tree_is_precondition(tmp_path: Path) -> None:
+    """生产面除登记表自己没有别的代码时，"0 处调用点"是盲区，不是证据。"""
+    (tmp_path / "src/aipd_os").mkdir(parents=True)
+    (tmp_path / "src/aipd_os/registry_data.py").write_text(
+        'CAPABILITIES = [{"id": "cap.a", "current_limitation": "X 今天没有生产入口"}]\n',
+        encoding="utf-8")
+    claims = ({"id": "NOAUTH", "capability": "cap.a", "field": "current_limitation",
+               "anchor": "今天没有生产入口",
+               "check": {"kind": "external_callers", "symbol": "zzz_nope"}},)
+    rep = acc.audit(tmp_path, claims)
+    assert verdicts(rep) == {"NOAUTH": acc.PRECONDITION}, rep["rows"]
+    assert any(str(p).startswith("authority_thin") for p in rep["problems"]), rep["problems"]

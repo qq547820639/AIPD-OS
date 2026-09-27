@@ -469,6 +469,11 @@ python scripts/absence_claim_census.py
 #     写清为什么不登记；既没登记也没豁免 ⇒ `UNACCOUNTED` 判红，空理由的豁免 ⇒ 前提不成立，
 #     豁免对应的句子消失 ⇒ 与悬空账同形判红。新增 `table_ddl` 档专核"某张表还没建"
 #     （正则要求表名后紧跟左括号，所以 `external_operations` 不会被误吃）。
+#     第 68 片再加一档 `external_callers`：「某一步没有生产入口」这类话的反证是
+#     生产面（src/scripts/state_service）里该符号的**外部**调用点（不在定义它的文件里）；
+#     除登记表外没有别的代码文件时不判（`authority_thin`）。开尺当天抓到一条低报：
+#     产品定义门禁的 commit（`commit_snapshot`/`commit_approved`）外部调用点为 0，
+#     requirement/feature 两类 truth 记录只由测试驱动 ⇒ 登记表补了这条限制。
 #     退码 0 全部成立 / 4 有过期或悬空账 / 2 前提不成立。`--claims <json>` 换账本，
 #     常驻用例用它拿真语料做出判红那一跑。开尺当天的读数就是三句过期话（见
 #     `docs/audit/ABSENCE_CLAIM_CENSUS_F-STALE-ABSENCE_2026-09-27.md`）。

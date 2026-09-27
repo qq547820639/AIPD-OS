@@ -180,6 +180,24 @@ CLAIMS: tuple[dict[str, Any], ...] = (
                "正则要求表名后紧跟左括号，就是为了不吃前缀碰撞）",
     },
     {
+        "id": "GATE-COMMIT-NO-PRODUCER-APPROVED",
+        "capability": "product.definition_gate",
+        "field": "current_limitation",
+        "anchor": "今天没有生产入口",
+        "check": {"kind": "external_callers", "symbol": "commit_approved"},
+        "why": "反证 = 生产面（src/scripts/state_service）里 `commit_approved` 的**外部**调用点；"
+               "同文件内的 `commit_snapshot` 调用不算（那就是这条断言要说的事）",
+    },
+    {
+        "id": "GATE-COMMIT-NO-PRODUCER-SNAPSHOT",
+        "capability": "product.definition_gate",
+        "field": "current_limitation",
+        "anchor": "今天没有生产入口",
+        "check": {"kind": "external_callers", "symbol": "commit_snapshot"},
+        "why": "接 CLI 时哪怕只调 commit_snapshot 不调 commit_approved，这一格也会翻红——"
+               "两条各盯一个名字，免得「接了另一个」被读成「还是没接」",
+    },
+    {
         "id": "ASSEMBLY-STEPS-PDF-LAYOUT",
         "capability": "cad.assembly_instructions",
         "field": "current_limitation",
@@ -342,6 +360,64 @@ def table_created(root: Path, name: str) -> tuple[bool, list[str], list[str]]:
     if not seen_any:
         problems.append(f"authority_missing: {bases} 都读不到，判不了表 {name!r} 建没建")
     return (bool(hits), hits, problems)
+
+
+_CALLER_CACHE: dict[tuple[str, str], tuple[list[str], list[str]]] = {}
+
+
+def external_callers(root: Path, symbol: str) -> tuple[list[str], list[str]]:
+    """`symbol` 在生产面（`src/`+`scripts/`+`state_service/`）的**外部**调用点。
+
+    "外部"= 不在定义它的那个文件里。这一档是为「某个能力其实没有生产入口」这句话服务的：
+    `ProductDefinitionGate.commit_snapshot` 只被同文件的 `commit_approved` 调，
+    而 `commit_approved` 在 src/scripts 里 0 处被调用——**测试能跑通不等于产品接上了**。
+    定义文件可能有多处（同名方法），取"该符号出现为 `def` 的文件集合"当排除集。
+    """
+    key = (str(root), symbol)
+    if key in _CALLER_CACHE:
+        return _CALLER_CACHE[key]
+    dirs = ["src", "scripts", "state_service"]
+    defining: set[str] = set()
+    hits: list[str] = []
+    problems: list[str] = []
+    scanned = 0
+    only_registry_files = 0
+    registry_rels = set(REGISTRY_FILES)
+    for rel in dirs:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            if "__pycache__" in path.parts or path.stem in SELF_STEMS:
+                continue
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            except (OSError, UnicodeDecodeError, SyntaxError) as exc:
+                problems.append(f"authority_unreadable: {path.relative_to(root)}: {exc}")
+                continue
+            here = str(path.relative_to(root))
+            scanned += 1
+            if here in registry_rels:
+                only_registry_files += 1
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) \
+                        and node.name == symbol:
+                    defining.add(here)
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                f = node.func
+                name = f.attr if isinstance(f, ast.Attribute) else (
+                    f.id if isinstance(f, ast.Name) else None)
+                if name == symbol:
+                    hits.append(f"{here}:{node.lineno}")
+    # 只读到登记表自己（或什么都没读到）时，"0 处调用点"不是证据而是盲区：
+    #  scanned==0 这一支在任何能被解析的语料上都不可达，写它就是写一条永远不开火的守卫。
+    if scanned - only_registry_files <= 0:
+        problems.append("authority_thin: 生产面除登记表自身外没读到任何 .py（调用点判不了）")
+    external = [h for h in hits if h.split(":", 1)[0] not in defining]
+    _CALLER_CACHE[key] = (external, problems)
+    return external, problems
 
 
 def absence_sentences(corpus: dict[str, dict[str, list[tuple[str, int, str]]]]) -> list[str]:
@@ -653,6 +729,13 @@ def run_check(root: Path, check: dict[str, Any],
         if not name:
             return (False, [], ["check_malformed: table_ddl 锚点缺 table"])
         return table_created(root, name)
+    if kind == "external_callers":
+        symbol = str(check.get("symbol", ""))
+        if not symbol:
+            return (False, [], ["check_malformed: external_callers 锚点缺 symbol"])
+        external, problems = external_callers(root, symbol)
+        return (bool(external), [f"{symbol} 生产面外部调用点 = {len(external)} 处"] + external,
+                problems)
     return (False, [], [f"check_kind_unknown: {kind!r}"])
 
 
@@ -1033,6 +1116,28 @@ def _self_test(tmp: Path) -> int:
         globals()["REGISTRY_FILES"] = saved
     print(render(rep5))
     print(render(rep6))
+    # ---- 第 68 片：外部调用点档（"这一步其实没有生产入口"） ----
+    (tmp / "src/aipd_os/entry.py").write_text(
+        "from aipd_os.own import only_self_called, outward_called\n\n\n"
+        "def run():\n    return outward_called()\n", encoding="utf-8")
+    (tmp / "src/aipd_os/own.py").write_text(
+        "def only_self_called():\n    return 1\n\n\n"
+        "def self_caller():\n    return only_self_called()\n\n\n"
+        "def outward_called():\n    return 1\n", encoding="utf-8")
+    caller_claims = (
+        {"id": "CALL-INWARD", "capability": "cap.a", "field": "current_limitation",
+         "anchor": "仍没有执行器",
+         "check": {"kind": "external_callers", "symbol": "only_self_called"}},
+        {"id": "CALL-OUTWARD", "capability": "cap.a", "field": "current_limitation",
+         "anchor": "仍没有执行器",
+         "check": {"kind": "external_callers", "symbol": "outward_called"}},
+    )
+    rep9 = audit(tmp, caller_claims)
+    by9 = {str(r["id"]): str(r["verdict"]) for r in rep9["rows"]}
+    assert by9["CALL-INWARD"] == HOLDS, sorted(by9)
+    assert by9["CALL-OUTWARD"] == CONTRADICTED, sorted(by9)
+    _mark(marks, "外部调用点档双向：只被同文件调 ⇒ 成立（commit_snapshot 的真实形状）；"
+                 "被别的文件调 ⇒ 判红")
     _mark(marks, f"合计 {len(marks)} 条合成读数全部对上")
     return 0
 

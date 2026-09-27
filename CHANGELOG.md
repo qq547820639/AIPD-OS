@@ -951,6 +951,35 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.29 F-GATE-COMMIT-ENTRY 第 68 片：登记一条**低报**的缺口，并给它一台能双向开火的机器（量具加 `external_callers` 档）**：
+  第 66/67 片都在修"写着没有、其实已经有了"；这一片修的是反方向——**写着有、其实没接上**。
+  普查（AST 现读，非 grep 子串）：`ProductDefinitionGate.commit_snapshot` 在生产面
+  （`src/`+`scripts/`+`state_service/`）的**外部**调用点为 0，唯一那一处在同文件的兼容包装
+  `commit_approved:562` 里，而 `commit_approved` 自己在生产面 **0 处被调用**；
+  `aipd product gate` 只走到 evaluate / authorization / eligibility。
+  ⇒ **requirement 与 feature 两类 `product_truth` 记录今天只由测试驱动**
+  （6 个测试文件调 commit，产品入口 0 个）。`docs/audit/` 之外没有一处叙述这件事，
+  登记表原话只写到"READY/CONDITIONAL/BLOCKED + authorization + eligibility"，属于低报。
+  正向对照（同一档判据必须会开火）：`record_dxf_lineage` 有 1 处外部调用点
+  （`src/aipd_os/cli/commands_drawing.py:240`）⇒ 同一函数判成 `CONTRADICTED`。
+  **做了什么**：① `scripts/product_capabilities_extra.py`（`product.*` 七行的权威）里给
+  `product.definition_gate` 的 `current_limitation` 补上这条限制，再重跑
+  `scripts/migrate_capability_registry.py` 生成 `src/aipd_os/registry_data.py`（84 项不变）；
+  ② 量具加档 `external_callers`（"外部"= 不在定义该符号的文件里；带 (root,symbol) 记忆化，
+  整轮 census 实测 4.6s）；③ 账本加两条登记（`commit_approved` / `commit_snapshot` 各一条，
+  接任意一个都会翻红，免得"接了另一个"被读成"还是没接"）；④ 常驻用例 22 → **26 条**
+  （成立 / 正向开火 / 记忆化稳定 / 薄语料不判各一条）、`--self-test` 21 → **22 条**；
+  ⑤ 电池 `docs/audit/s68/battery68.py` **4 臂杀 4 活 0**。
+  **两条被自己的控制教出来的形状**：
+  (a) 我第一版写的守卫是 `scanned == 0 ⇒ 前提不成立`，而任何能被解析的语料里
+  `scanned` 至少是 1（登记表自己就在被扫的树上）——**那是一条永不开火的守卫**；
+  改成"除登记表自身外没有别的生产代码文件 ⇒ `authority_thin`"之后才真的能红（D3 臂专打它）。
+  (b) 我第一版控制测试直接 `write_text` 到不存在的目录，`FileNotFoundError` 冒充"判据不对"，
+  读码才发现是夹具没建目录——报错的形状与判据缺陷不同形，别顺手怀疑判据。
+  另记一条我自己的重复自伤：**这是本会话第 5 次**在双引号字符串里嵌半角双引号导致
+  `SyntaxError`（中文正文里的引述必须用「」），已把这条写进记忆。
+  证据见 `docs/audit/GATE_COMMIT_ENTRY_F-GATE-COMMIT-ENTRY_2026-09-27.md`。
+
 - **v5.28 F-ABSENCE-LEDGER 第 67 片：能力缺失句必须逐条有去处（登记 or 带理由的豁免）**：
   第 65/66 片把"登记一句、证伪一句"做成了机器，但**覆盖率本身仍是口头话**：账本只吃 7 句，
   剩下几十句带否定词的登记文本处于"没人看过也没人认领"的状态。本片把这件事变成判决。
