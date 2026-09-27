@@ -951,6 +951,50 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.44 F-REPORT-MANIFEST-FINGERPRINT 第 83 片：报告从此自证"测的是哪一份清单"，C6 那句替身证明被换成机器读的数**：
+  第 81 片 §七.5 那条入口项在本片开头按事实拆成两半——"事前警告"那一半的危害说明（重绑会把报告锚点
+  前推、`test_roster_gap…` 因此红）已被 `7761c7c` 的"锚点取最早一次绑定"拆掉，降级为可选提示；
+  支撑形状如实记：**主仓历史里"修正后再绑同一份报告"的实例 0 条**（修正后 3 次绑定的内容 sha 各不相同
+  `da57cfe12145`/`8ed70856ff69`/本报告），依据是合成历史控制而不是历史。留下的真缺口才是本片要做的：
+  `tests/conftest.py` 原先只注入 `source_commit`/`package_version`/`generated_at`，真报告顶层键读出来
+  一个清单指纹都没有 ⇒ C6 只能证"那两条清单哈希用例过了"，而清单在跑完之后被重写时那句证明说的是旧哈希。
+  代价由被绑报告自己的读数数出来：第 81 片为同一件事跑了三次全量
+  （`6ca9c41` 2636 passed/1 failed 701.4s、`745e2a9` 2652/0 318.7s、`223db51` 2652/0 329.8s）。
+  **选型两个候选都真开过源**：候选 A `pytest-metadata 3.1.1`（MPL-2.0，PyPI 上传 2024-02-12）——
+  它把值写 `config.stash[metadata_key]`（`pytest_metadata/plugin.py:87,95,96`），而 `pytest-json-report`
+  读 `getattr(self._config, '_metadata', {})`（`pytest_jsonreport/plugin.py:231`），
+  所以报告的 `environment` **恒为 `{}`**：本机三份真报告（含绑进证据那份）实测都是 `{}`；
+  上游 issue #89「pytest-metadata 3.0.0 breaking "Environment"」`state=open`（2023-06-05，无 PR 关闭它），
+  修复 PR #90 `state=open, merged=false`（+3/−2，排队两年）⇒ 装上也接不上，淘汰理由不是 License 也不是质量。
+  候选 B 是 `pytest-json-report 1.5.0`（MIT，上传 2022-03-15）自己的 `pytest_json_modifyreport`
+  ——本仓已在用的那个 hookspec，README 就示范顶层加键。**择一：自研一小块＋沿用官方 hook**，
+  第三个候选（"工件哈希记进测试报告"的既有惯例）只找到 in-toto `test-result` predicate 的
+  ResourceDescriptor（`name`+`digest`），**借它"配置资源也用内容摘要"这一个思路**，不借 JSON 形状
+  （本仓两个读者都按顶层键读）；SLSA provenance 讲构建产物，不对题。
+  **判据形状三条是实测不是推的**：① 指纹是**内容规范摘要**而不是清单文件的 sha256——
+  `release_evidence.py:133` 每次生成都重写 `generated_at`，比原始字节就是给每轮"刷清单→跑全量→绑定"
+  判一条假红（`scripts/release_fingerprint.py:24,28,31` 定规则，`--self-test` 里"两份字节不同而摘要相同
+  必须判绿"那一臂钉住，电池臂 Y3 把验签侧改成比原始字节 sha 后那一臂当场红）；
+  ② 新增两格各管一件事：`report_fingerprint_recorded` 判"生产者记没记"（没记就是红，不读成"值恰好为空"），
+  `report_fingerprint_matches_disk` 判"记的数与磁盘当前那份对不对"，报告没带指纹时后者写 `skipped`
+  而不是连带判红（电池臂 Y5 证明这条纪律有牙）；③ 磁盘清单读不出是前提塌（退 2），
+  折成判红会被 `--self-test` 拒（臂 Y6）。
+  **真生产者路径与独立盲尺**：`tests/test_report_manifest_fingerprint.py` 6 条里最关键一条起子进程跑
+  真 `pytest --json-report` 读真报告；第一次试跑借的种子 `test_source_manifest_hashes_match_disk`
+  自己先红（正在改 `scripts/` 而清单未刷，那正是 C6 那两条替身在工作），种子换成不依赖清单新鲜度的
+  本文件纯函数用例。同文件的 `_independent_digest()` 是把规则**另写一遍**的盲尺，
+  与模块在真清单上必须得同一个数。
+  **换绑之前它就是红的，而且应当是红的**：旧报告出自没有注入的 conftest，基线
+  `pytest tests/test_report_manifest_fingerprint.py tests/test_closeout_verifier.py -q` 读数
+  `5 failed, 21 passed`，五条同一因；处置是重跑重绑，不是把判据改宽。
+  格数 9 → **11**（`STAGE_BOUND` 同步收 `report_fingerprint_matches_disk`，它在"清单已刷新而报告未重跑"
+  那段窗口合法地红），`--self-test` 18 → **23 臂**（`grep -c '^def test_'` 现算：`tests/test_closeout_verifier.py`
+  18 → **20 条**，本片加的两条是"真产物带指纹"与"红绿都要有内容级解释"）＋新文件 6 条；电池 `docs/audit/s83/battery83.py` 六臂，终局
+  `合计 KILLED+CRASH-KILL 6 / 6；其余按判决分类：无`，无一支靠崩溃杀（都是判决翻转）。
+  **本片新记一条电池纪律**：基线不全绿时（本片就是）判决必须按"增量开火"＝`fired − baseline` 非空，
+  看退码等于什么都没判。证据见
+  `docs/audit/REPORT_MANIFEST_FINGERPRINT_F-REPORT-MANIFEST-FINGERPRINT_2026-09-28.md`。
+
 - **v5.43 F-DOC-CONTINUATION 第 82 片：文档里"续行接另一条命令"第一次有了常驻判据**：
   第 81 片手查出来的那处 README 损坏（一行以 `\` 收尾、下一行另起一条 `aipd` 命令 ⇒ 照抄只会
   跑到半条命令）当时只登记成待办并把代价量成数；本片把它接成 `doc_command_census` 的

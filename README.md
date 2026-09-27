@@ -479,17 +479,22 @@ python scripts/research/fetch_fulltexts.py --input papers.json --out fulltexts.j
 #     这张表的作用就是决定下一片做什么，而不是继续在已交付的项上精雕。
 #     它刻意**没接进** `production_release_gate`：普查里今天就有零实现项，挂成阻断等于没人看。
 python scripts/closeout_verifier.py --tag v5.6.0 --expect-test tests/test_new_thing.py
-#   ↑ 收尾验签（第 64 片）：一次判三件事——报告是不是 `PROVENANCE.json` 记下那个 sha 的字节、
-#     汇总数是不是由名单自己数出来的、名单与树上的 `def test_` 是不是同一批。主线门
-#     （`production_release_gate._check_test_report`）只读 provenance 里抄过去的三个数字加一条
-#     STALE 判决，看不见「summary 被改过」「tests[] 被截断」「报告换了没重绑」这三件事。
+#   ↑ 收尾验签（第 64 片，判据面由第 83 片加到十一格）：一次判四件事——报告是不是
+#     `PROVENANCE.json` 记下那个 sha 的字节、汇总数是不是由名单自己数出来的、名单与树上的
+#     `def test_` 是不是同一批、报告自记的清单指纹是不是磁盘当前那份 `SOURCE_MANIFEST.json`
+#     的**内容**摘要。主线门（`production_release_gate._check_test_report`）只读 provenance 里
+#     抄过去的三个数字加一条 STALE 判决，看不见「summary 被改过」「tests[] 被截断」
+#     「报告换了没重绑」「清单在跑完之后被重写」这四件事。
 #     退码 0 全绿 / 4 判红 / 2 前提不成立（报告读不出、**证据还没绑这份报告**、名单为空、
-#     没给锚点都算前提塌，不折算成零违规——重锚与绑定之间那段窗口每轮收尾都要经过，
+#     没给锚点、磁盘清单读不出都算前提塌，不折算成零违规——重锚与绑定之间那段窗口每轮收尾都要经过，
 #     把"没有基准"读成两格判红会让人去修一个本来正常的状态）。锚点是 **tag 指向的提交**
 #     而不是 HEAD——按约定发布锚点不重锚，传 HEAD 会被 `pinned_source_binding` 判红，
 #     这正是第 62 片真犯过的错。
-#     `--self-test` 是 18 臂合成电池（每臂只点亮自己那一格判决），常驻牙 16 条见
-#     `tests/test_closeout_verifier.py`。
+#     `--self-test` 是 23 臂合成电池（每臂只点亮自己那一格判决，其中一支是「只换
+#     `generated_at` 必须读成同一份清单」的假红控制——比原始字节 sha 就会每轮都假红），
+#     常驻牙 20 条见 `tests/test_closeout_verifier.py`；指纹那把尺另见
+#     `tests/test_report_manifest_fingerprint.py` 6 条，含用真 `pytest --json-report`
+#     跑出来的生产侧端到端。
 python scripts/absence_claim_census.py
 #   ↑ 登记表否定句对账（第 65 片）：`src/aipd_os/registry_data.py` 里每句「X 仍没有」都配一个
 #     **反证锚点**（哪个文件/符号一旦出现，这句话就算过期）。判决四档：成立、过期（判红）、
