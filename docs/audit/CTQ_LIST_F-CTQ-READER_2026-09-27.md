@@ -11,8 +11,9 @@
 （`aipd ctq add` / `ctq revise` / `ctq deprecate`）与**四个读者**
 （发布证据分母 `src/aipd_os/release_manifest.py:69`、图纸声明输入
 `src/aipd_os/cli/commands_drawing.py:86`、出图返工 `src/aipd_os/cad/spec_rework.py:91`、
-漂移扫描 `src/aipd_os/cli/commands_drift.py:78`，四处都是 `store.query(record_type="ctq", …)`，
-本轮逐个 `sed -n 'Np'` 复核过），
+漂移扫描 `src/aipd_os/cli/commands_drift.py:78`）；四处读的都是 `record_type="ctq"`，
+但形状不同：`release_manifest.py:69` 是不带作用域与状态参数的 `truth.query`，
+另三处带 `status="active"`。四条指针本轮逐个 `sed -n 'Np'` 复核过，
 **但没有一条命令能让人问出"这个图纸尺寸上现在有效的是哪几条、限值与版本各是几"**。
 人能问的最近一件事是 `aipd release manifest` 的 `ctq` 数组——它只收 active、
 条目里不带 `drawing_feature`，所以"按图纸尺寸问"问不出。
@@ -32,9 +33,19 @@
 | `src/aipd_os/cli/command_contract.py` | 契约条目 `CommandEntry("ctq list", PUBLIC, PRODUCT, "5.23", requires_args={--db,--project})` |
 | `README.md` / `SKILL.md` / `src/aipd_os/registry_data.py` | 命令面镜像：速查行、分组与"主线共 63 个"、能力行的 `run_command`/`input_output`/`unit_test`/`e2e_evidence`/`current_limitation` |
 | `tests/test_truth_ctq_list.py` | 新增（见 §四） |
+
+> 本表只列**实现面**。镜像与记账面另有三笔，不在表里：`scripts/doc_command_census.py` 与
+> `tests/test_doc_command_census.py`（幻影名改 `zzz-`，见 §六）、`CHANGELOG.md` 与本文件与
+> `docs/architecture/truth_architecture.md`，以及两个纯锚点提交（`dfef885`、`cf2a86b`：
+> PROVENANCE / SOURCE_MANIFEST / RELEASE_MANIFEST 与 capability_matrix 三件）。
 | `tests/test_command_surface_census.py` | 手抄分母随注册面挪（现算值见 §三） |
 
 ## 三、现算读数（本轮真仓库，三条命令可复算）
+
+> 标注：只报面**与三档判红面的语料数**都是「正文自己会长」的读数——本文件与 CHANGELOG
+> 每多写几条 `aipd …` 提及，它们就漂一次。不随正文长的是：权威面路径数、契约 PUBLIC 数、
+> 注册命令数、缺陷数 0。干净检出的终读数单列在 §八。
+> （原稿在这里写过「判决性的量不受影响」，被独立复核按 92→93 反证掉了，现已改口。）
 
 ```
 PYTHONPATH=src:scripts .venv/bin/python scripts/doc_command_census.py            # rc=0
@@ -43,7 +54,9 @@ PYTHONPATH=src:scripts .venv/bin/python scripts/skill_quality_audit.py          
 ```
 
 - 权威面：`89` 条 argparse 路径 / `15` 个组名（第 61 片末是 88/15，多的那条就是 `ctq list`）。
-- 判红面语料：`run_command 85 段 / 速查行 92 行 / 生产代码 214 处`（另 `6` 处同行带否定标记 ⇒ 只报）。
+- 判红面语料：`run_command 85 段 / 速查行 93 行 / 生产代码 214 处`（另 `6` 处同行带否定标记 ⇒ 只报）。
+  速查行这一档**被本片自己的正文推高过**：`docs/architecture` 里以反引号开头、去壳后以
+  `aipd ` 起头的行同样算速查行，本片写进去的那段把 92 抬到了 93。
 - 只报面 `964` 处（全量扫描 `1282`），**现状面缺陷 0 条**。
 - 只报面点到未注册的命令 8 个名字：`aipd ctq listy`(4)、`aipd ghost cmd`(5)、
   `aipd ghostci check`(3)、`aipd ghostly cmd`(4)、`aipd ghostspec run`(3)、
@@ -54,7 +67,7 @@ PYTHONPATH=src:scripts .venv/bin/python scripts/skill_quality_audit.py          
 - lint/类型：`ruff check src tests state_service` → `All checks passed!`；
   `mypy src` → `Success: no issues found in 245 source files`。
 
-## 四、常驻用例（`tests/test_truth_ctq_list.py`，10 条）
+## 四、常驻用例（`tests/test_truth_ctq_list.py`，14 条）
 
 每条对着一个具体的说谎方式，不是"能跑通"：
 
@@ -90,7 +103,7 @@ PYTHONPATH=src:scripts .venv/bin/python scripts/skill_quality_audit.py          
 | 2 | `_open_store` 的读不出退码 2 → 0（用例 8） | 未测 | **KILLED** |
 | 3 | 读面往 `audit_log` 落一行（用例 10） | 未测 | **KILLED** |
 | 4 | 合格域退回 `f"{low:g}"` 格式化（用例 11） | 未测（§五之二那条缺陷带来的） | **KILLED** |
-| 5 | 口径注改回"superseded 是唯一退出分母的态"（用例 13） | 未测 | **KILLED** |
+| 5 | 口径注改回"superseded 是唯一退出分母的态"（用例 13；现块 5 个物理行，第一版 2 行） | 未测 | **KILLED** |
 | 6 | 非 active 记录既计数又列出（破坏 `total == returned + Σexcluded`，用例 12） | 未测 | **KILLED** |
 
 六臂 `py_compile` 全 0（变异自身语法成立，不是 INJECT-INVALID），终局
@@ -103,7 +116,8 @@ PYTHONPATH=src:scripts .venv/bin/python scripts/skill_quality_audit.py          
 臂 2 改同文件 `_open_store` 里 Product Truth 读取失败那支的 `return None, 2`；
 臂 3 在 `_emit(args, payload, prose)` 之前插一次 `AIPDStateDB(...).add_audit(...)`；
 臂 4 把合格域那行的 `[{lower}, {upper}]` 改回带 `:g` 的写法；
-臂 5 把"注："那三行改回第一版的"superseded 是唯一能让一条要求退出分母的态"；
+臂 5 把"注："那一整块（现 5 个物理行）换回第一版那两句"superseded 是唯一能让一条要求
+退出分母的态"；
 臂 6 在 `product_truth/ctq.py:list_ctq` 的 `else` 分支里既 `excluded[...] += 1` 又
 `kept.append(_snapshot(rec))`。
 
@@ -116,11 +130,12 @@ PYTHONPATH=src:scripts .venv/bin/python scripts/skill_quality_audit.py          
    `format(8.050001, 'g') == '8.05'`、`format(1234567.8, 'g') == '1.23457e+06'`——
    一条读面的存在理由就是把限值说准，它却把 8.050001 印成 8.05。
    顺带 `format(10**400, 'g')` 会 `OverflowError`；但那条**不可达**：
-   `declare_ctq` 在 `ctq.py:70` 就把 inf/NaN 拒了，超大整数走不进生产者，
+   `ctq.py:49 _number`（`declare_ctq` 在 `:122-124` 调它）在 `:59-60` 的 `float(value)`
+   处就把超大整数崩掉，并在 `:70` 拒掉 inf/NaN，超大整数走不进生产者，
    所以本轮没为它造用例（不为打不到的分支写测试）。
    修：原样打印，并删掉那个从不生效的 `isinstance` 分支；用例 11 + 臂 4 钉住。
 2. **口径注把例外说满了**（成立）。原句"superseded 是唯一能让一条要求退出分母的态"。
-   重开 `release_manifest.py:67-103`：`by_id` 只收 active，**全部**非 active 态都退出分母，
+   重开 `release_manifest.py:56-108`（函数 `_collect_ctq`）：`by_id` 只收 active，**全部**非 active 态都退出分母，
    superseded 特殊的只有一点——对它只出**非阻断**点名；另外缺 `metadata.feature` 的
    active 记录门口判 `ctq_missing_feature` 阻断，而本视图照样列出。
    修：注释句改成两差别都点明；`README.md:473`、`command_contract.py:173`、

@@ -957,7 +957,7 @@
   「这个图纸尺寸上现在有效的是哪几条、限值与版本各是几」**——那条缺席是第 60 片那把
   `doc_command_census` 写进 registry 限制句、由只报面持续可见化的。本片把它闭掉：
   `src/aipd_os/product_truth/ctq.py:363 list_ctq` + `src/aipd_os/cli/commands_truth.py:543
-  cmd_truth_ctq_list`。三处形状：① 默认只列 `active`（与发布分母同口径）但**同时自报
+  cmd_truth_ctq_list`。三处形状：① 默认只列 `active`（同发布分母的 active 过滤口径）但**同时自报
   排除了几条、各是什么态**（`excluded`），因为 `aipd release manifest` 的 `ctq` 数组正是
   "只含 active 且不说明排除、条目不带 `drawing_feature`"那个形状，而"要求被撤了几条"
   恰是属主最该看见的；② 投影复用审计行那份 `_snapshot`，等值断言 `records == _snapshot(活记录)`

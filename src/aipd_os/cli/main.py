@@ -703,8 +703,8 @@ def build_parser() -> argparse.ArgumentParser:
     cd.add_argument("--json", action="store_true")
     cd.set_defaults(func=COMMAND_FUNCS["ctq deprecate"])
     cl = ctq_sub.add_parser(
-        "list", help="列出这个作用域里的 CTQ 合格域声明。默认只列 active（与发布分母"
-                     "同口径），并自报排除了几条、各是什么态；--all 把 stale/"
+        "list", help="列出这个作用域里的 CTQ 合格域声明。默认只列 active（同发布"
+                     "分母的 active 过滤口径），并自报排除了几条、各是什么态；--all 把 stale/"
                      "superseded/expired/blocked 一起列出，状态按库里原样报。"
                      " Example: aipd ctq list --db state.db --project P --json")
     cl.add_argument("--db", required=True)
