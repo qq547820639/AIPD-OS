@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T14:44:32",
+  "generated_at": "2026-09-27T15:47:15",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 211
+      "tests": 212
     }
   },
   "tags": [
@@ -116,52 +116,60 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 669,
+    "total_files": 670,
     "hash_matches": 664,
-    "hash_mismatch_count": 5,
+    "hash_mismatch_count": 6,
     "mismatches": [
+      {
+        "path": "docs/architecture/truth_architecture.md",
+        "reason": "hash_mismatch",
+        "expected": "ea0b7f797faeaf933e7dfec4fef9edab71b22745996685a9235f99b6fdc9e56d",
+        "actual": "fd65e75a503b176a493063424a5686c31a425cfd4d0d91320669d8485c5a1953"
+      },
       {
         "path": "scripts/absence_claim_census.py",
         "reason": "hash_mismatch",
-        "expected": "3c9253f5bfcb7918a0c06aa28a05b25cdc44bc3910525c6f7c06c0ec43eae883",
-        "actual": "55e6111b369f039080d52b156504b0f391ef075b99c129c37cda34439b1725b4"
-      },
-      {
-        "path": "scripts/product_capabilities_extra.py",
-        "reason": "hash_mismatch",
-        "expected": "12b8c7dd8fe72ef71e79a915f1c8256236472d35600fd51cf824c070135b29e9",
-        "actual": "217c4d8ca6c0a69a519218cdcf7fb661f0af22fb53866e7dec9cb7f470825c82"
-      },
-      {
-        "path": "src/aipd_os/cli/main.py",
-        "reason": "hash_mismatch",
-        "expected": "87638cbd4b403106aff8ef4d13ad93f5447e85912e56309c33a1888a6babfef3",
-        "actual": "dbcd13979e6dcda0d73f808bffcae8125872ad55fab86e42c68b5501b1bff6ed"
-      },
-      {
-        "path": "src/aipd_os/cli/product_commands.py",
-        "reason": "hash_mismatch",
-        "expected": "f20dcb53f5b24edca5979e71b43b658199bd68562e7679aee6aa8268817ed23d",
-        "actual": "ce6fca9387d2d262e69096bc55b3cca017f246896d6aad2f7d975c39105c6fad"
+        "expected": "a4d7069781b5a828a3cb3eff52e39f0e98c41d5463d41959421a0cfa1374a2fe",
+        "actual": "ebd478dad3189550c472f26400a5ed61272d0172d3ee09fe1d07186d9e9f1816"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "16fa2dccfdad925b31b30bb61a461cca9f99a148a0234addc6fb8be04f6af1e0",
-        "actual": "2303ff11b8c39b26db7ec0c83dd5bc668ded31ea0941d5acebf0100ee3a96462"
+        "expected": "2303ff11b8c39b26db7ec0c83dd5bc668ded31ea0941d5acebf0100ee3a96462",
+        "actual": "ff671a568c650fcf2ab34fa9d27fe171bef6306e0feea22df4d3a68e4c814087"
+      },
+      {
+        "path": "src/aipd_os/supervisor/supervisor.py",
+        "reason": "hash_mismatch",
+        "expected": "d4c07e9396fe0aaf917ced41e4398a3ac791fb662bfb8b52313d567460423b71",
+        "actual": "58b6ce1428a7c206476be67d796c2754c14f981ec8105050d88d6f3db2998d91"
+      },
+      {
+        "path": "tests/test_absence_claim_census.py",
+        "reason": "hash_mismatch",
+        "expected": "3318d853558ec099821cffbbfb67c458e149db8a612815954f28ca79716a87f9",
+        "actual": "56406452479c6534e14b0935abe87973d3d66e3861b3ac6b1769cf322b0edb41"
+      },
+      {
+        "path": "tests/test_drawing_spec_lineage.py",
+        "reason": "hash_mismatch",
+        "expected": "5a31296b940229486610d700b42d5c00fed21875ecb8c7812f477d70d45d9938",
+        "actual": "74124a99a7300e7f6db4cfe5b5fa5197df8a4e7f841c480dd45356643e5d7582"
       }
     ]
   },
   "untracked_or_generated": [
+    " M docs/architecture/truth_architecture.md",
     " M docs/audit/capability_matrix.json",
     " M docs/audit/capability_matrix.md",
     " M docs/audit/repository_snapshot.json",
     " M scripts/absence_claim_census.py",
-    " M scripts/product_capabilities_extra.py",
-    " M src/aipd_os/cli/main.py",
-    " M src/aipd_os/cli/product_commands.py",
     " M src/aipd_os/registry_data.py",
-    "?? tests/test_product_gate_commit_cli.py",
+    " M src/aipd_os/supervisor/supervisor.py",
+    " M tests/test_absence_claim_census.py",
+    " M tests/test_drawing_spec_lineage.py",
+    "?? src/aipd_os/supervisor/fact_lineage.py",
+    "?? tests/test_supervisor_fact_lineage.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

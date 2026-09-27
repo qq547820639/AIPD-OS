@@ -92,14 +92,14 @@ CLAIMS: tuple[dict[str, Any], ...] = (
                "（第 47/49/53 片四个执行器都是这个形状），报价批次哪天接上就过期",
     },
     {
-        "id": "SUPERVISOR-TRUTH-MAPPING",
+        "id": "FACT-LINEAGE-WIRED",
         "capability": "supervisor.fact_writeback",
         "field": "current_limitation",
-        "anchor": "工作项与上游 truth 之间还没有映射",
-        "check": {"kind": "identifier", "paths": ["src/aipd_os/supervisor"],
-                  "symbols": ["LineageGraph"]},
-        "why": "写 truth_lineage 边的唯一入口是 `LineageGraph.add_edge`；"
-               "supervisor 目录里哪天引用它，这句就过期",
+        "anchor": "evidence 现在会连上游 truth 边",
+        "check": {"kind": "external_callers", "symbol": "write_fact_lineage",
+                  "expect": "present"},
+        "why": "第 65/66 片那条「还没有映射」的缺席式登记在第 70 片被接线闭合 ⇒ 同批撤掉；"
+               "换成存在式：句子里说会连边，反证 = `write_fact_lineage` 在生产面 0 处外部调用点",
     },
     {
         "id": "CAD-ASSEMBLY-CONSTRAINT-SOLVER",
@@ -135,7 +135,7 @@ CLAIMS: tuple[dict[str, Any], ...] = (
         "id": "PRODUCER-COUNT-REGISTRY",
         "capability": "product_truth.impact_propagation",
         "field": "current_limitation",
-        "anchor": "血缘边的生产者今天有 8 个",
+        "anchor": "血缘边的生产者今天有 9 个",
         "check": {"kind": "producer_count", "scope": "truth"},
         "why": "权威 = AST 现读「含 `add_edge` 属性调用且文件里出现 `LineageGraph`」的文件集，"
                "SQL 写入口 `product_truth/lineage.py` 自己单列不算生产者；"
@@ -144,7 +144,7 @@ CLAIMS: tuple[dict[str, Any], ...] = (
     {
         "id": "PRODUCER-COUNT-ARCH",
         "file": "docs/architecture/truth_architecture.md",
-        "anchor": "血缘边有** 8 个**生产者",
+        "anchor": "血缘边有** 9 个**生产者",
         "check": {"kind": "producer_count", "scope": "truth"},
         "why": "同一件事在架构文档里的第二个副本；两档面各判各的，谁漂了当场点名",
     },

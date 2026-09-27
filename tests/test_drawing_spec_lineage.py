@@ -205,6 +205,7 @@ class TestProducerRatchet:
         "src/aipd_os/bom/cost_lineage.py",                # 第 48 片：BOM 版本 -> 成本结论
         "src/aipd_os/bom/cost_rework.py",                 # 第 49 片：成本返工后补同一条边
         "src/aipd_os/supply_chain/quote_lineage.py",       # 第 50 片：报价批次 -> BOM 版本
+        "src/aipd_os/supervisor/fact_lineage.py",          # 第 70 片：执行证据 -> 已批准的定义
         "src/aipd_os/product_intelligence/gate.py",     # PI 需求/Feature → truth
         "src/aipd_os/product_truth/lineage.py",         # 自身：canonical 镜像
         "src/aipd_os/idea/decomposer.py",               # 以下三处写 canonical，

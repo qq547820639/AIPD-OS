@@ -499,8 +499,11 @@ class Supervisor:
                                       project_id=pid)
             found = store.find_id_by_type_and_content("evidence", content)
             if found is not None:
+                # 重放同一次 run：证据行不新增，边也不该新增（add_edge 是 INSERT OR IGNORE，
+                # 但解析与"为什么没连"仍要报出来，否则第二次跑就看不见第一轮的结论）
                 return {"record_id": found, "created": False,
-                        "project_id": pid, "tenant_id": tenant}
+                        "project_id": pid, "tenant_id": tenant,
+                        **self._link_fact_lineage(store, found, wid, tenant, pid)}
             trust = "high" if (gate or {}).get("gate") == "pass" else "low"
             rid = store.add(TruthRecord(
                 record_type="evidence",
@@ -514,11 +517,44 @@ class Supervisor:
                           "evidence_references": refs,
                           "gate": (gate or {}).get("gate")}))
             return {"record_id": rid, "created": True, "trust_level": trust,
-                    "project_id": pid, "tenant_id": tenant}
+                    "project_id": pid, "tenant_id": tenant,
+                    **self._link_fact_lineage(store, rid, wid, tenant, pid)}
         except Exception as exc:  # noqa: BLE001 - 写回失败不中断执行，但标签必须改判
             logger.warning("supervisor_fact_writeback_failed work_id=%s error=%s",
                            wid, exc)
             return {"record_id": None, "created": False, "error": str(exc)}
+
+    def _link_fact_lineage(self, store, evidence_id, wid, tenant, pid):
+        """给这条证据连上游 truth 边（F-TRUTH-LINEAGE 第 70 片）。
+
+        键的来源与"为什么连不上"都原样回给调用方；这一步**失败不许把证据步改判**
+        （证据已经写成了，边是另一件事——把它并到同一个标签上就会掩盖真问题）。
+        """
+        from aipd_os.supervisor.fact_lineage import resolve_upstream, write_fact_lineage
+        try:
+            with self.connect() as c:
+                row = c.execute(
+                    "SELECT inputs_json FROM supervisor_work_items "
+                    "WHERE work_id=?", (wid,)).fetchone()
+            inputs = json.loads((row["inputs_json"] if row else None) or "{}") \
+                if (row and row["inputs_json"]) else {}
+        except (TypeError, ValueError):
+            inputs = {}
+        try:
+            resolved = resolve_upstream(store, inputs=inputs, state_db=self._state_db,
+                                        tenant_id=tenant, project_id=pid)
+            summary = write_fact_lineage(
+                store, evidence_id=evidence_id, upstream=resolved["upstream"],
+                tenant_id=tenant, project_id=pid)
+            summary.update({"upstream": resolved["upstream"],
+                            "unknown_refs": resolved["unknown_refs"],
+                            "source": resolved["source"],
+                            "reason": resolved["reason"]})
+            return {"lineage": summary}
+        except Exception as exc:  # noqa: BLE001 - 边写不上要报出来，但不能谎称证据没写成
+            logger.warning("supervisor_fact_lineage_failed work_id=%s evidence=%s "
+                           "error=%s", wid, evidence_id, exc)
+            return {"lineage": {"edges": 0, "skipped": [], "error": str(exc)}}
 
     def _mark_stale(self, wid):
         """标记依赖本工作项的既有工件为 stale（记录到 lineage）。"""

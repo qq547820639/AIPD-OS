@@ -951,6 +951,38 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.31 F-TRUTH-LINEAGE 第 70 片：执行证据终于能被失效传播走到（`supervisor/fact_lineage.py`）**：
+  登记原话"不写 truth_lineage 边——工作项与上游 truth 之间还没有映射，
+  因此这一步产出的 evidence 今天不会被 aipd truth propagate 传播到"
+  从第 42 片挂到今天，第 66/67 片两次普查都停在"没有键"上；第 69 片接上 `--commit` 之后
+  上游记录才真的存在，本片把边连上。
+  **映射两把键**（都要求身份真实存在，宁可报"连不上"也不猜）：
+  ① `inputs["truth_refs"]`/`["truth_ids"]`——逐个回查 `product_truth`，
+  查不到的进 `unknown_refs` **原样报出**（静默丢掉一个错号就等于让"声明过上游"假绿）；
+  ② `inputs["idea_id"]`（idea 与 product 那一族调度器今天就在写这个键）——
+  走公开服务 `ProductDefinitionSnapshotService.list_snapshots` + `ProductDefinitionGate.get_commit`
+  解析"该 idea 已提交的产品定义"，不直读别人的表；
+  ③ 两把都没有 ⇒ 0 条边 + 一句说清缺哪把。边的关系名用白名单里的 `validated_by`，
+  `compute_affected` 不按 relation 过滤 ⇒ 写进去就能被走到。
+  **验收不是"多了一条边"而是那句承诺**：新增常驻 `tests/test_supervisor_fact_lineage.py` 6 条，
+  其中 `test_propagate_from_that_fact_reaches_the_evidence` 从上游记录跑
+  `aipd truth propagate` → 证据 `status` 由 active 变 **stale** 并生成 1 条 pending 返工任务、CLI `rc=4`。
+  另 5 条钉：显式声明连上 1 条边、未知号报出来且不造假边、idea 走已提交定义（用的就是第 69 片那条 CLI）、
+  无上游时 reason 可读、重放不重复连边。
+  **两条被自己的用例抓出来的实现错**：
+  (a) 我按 receipt 形状读 ledger 行（`committed`），而 `get_commit` 回的是**表行**
+  （列名 `committed_truth_refs_json`）⇒ idea 那条路径永远解析成 0，与"真的没有上游"在读数上同形；
+  (b) `edges` 原本数的是"调用了几次 `add_edge`"，而 `add_edge` 是 `INSERT OR IGNORE`
+  ⇒ 重放会把 0 新增说成又连上了；改成数**前后行数之差**并额外报 `total_for_this_evidence`。
+  **又被自己上一片的判据抓到一次**：新模块写边 ⇒ AST 现读的生产者从 8 变 9，
+  第 66 片那两条 `producer_count` 登记当场翻红（登记表与架构文档各一条）——
+  判据在无人提醒的情况下把"改了实现没说数"这件事拦住了；两句就地改 9 并写明第 9 处是谁。
+  账本同步：撤 `SUPERVISOR-TRUTH-MAPPING`，补一条存在式 `FACT-LINEAGE-WIRED`
+  （反证 = `write_fact_lineage` 生产面 0 处外部调用点）。
+  生产者棘轮 `REGISTERED_PRODUCERS` 加第 13 项；`ruff`/import 环无新增违例。
+  电池 `docs/audit/s70/battery70.py` **5 臂杀 5 活 0**。证据见
+  `docs/audit/SUPERVISOR_FACT_LINEAGE_F-TRUTH-LINEAGE_2026-09-27.md`。
+
 - **v5.30 F-GATE-COMMIT-CLI 第 69 片：把产品定义门禁的 commit 接上 CLI（`aipd product gate --commit`）**：
   第 68 片登记的那条低报（"commit 这一步没有生产入口，requirement/feature 两类 truth 记录只由
   测试驱动"）本轮闭合。**这是账本里第一条"存在式"登记**：以前每一档都在判"句子里说没有、

@@ -116,7 +116,7 @@ def test_count_face_fires_on_the_real_corpus_with_a_mis_scoped_claim() -> None:
     所以"档选错"这一件事本身就足以让判据开火；它同时也证明这个数不是我在账本里抄的。
     """
     claims = (claim("MIS-SCOPED", "product_truth.impact_propagation",
-                    "血缘边的生产者今天有 8 个",
+                    "血缘边的生产者今天有 9 个",
                     {"kind": "producer_count", "scope": "canonical"}),)
     rep = acc.audit(ROOT, claims)
     assert verdicts(rep) == {"MIS-SCOPED": acc.CONTRADICTED}, rep
@@ -394,13 +394,15 @@ def test_gate_commit_entry_is_a_presence_claim_now() -> None:
     """
     claims = tuple(c for c in acc.CLAIMS
                    if c.get("check", {}).get("kind") == "external_callers")
-    assert [c["id"] for c in claims] == ["GATE-COMMIT-CLI-ENTRY-WIRED"], claims
-    assert claims[0]["check"].get("expect") == "present", claims[0]
+    ids = {c["id"] for c in claims}
+    assert "GATE-COMMIT-CLI-ENTRY-WIRED" in ids, sorted(ids)
+    assert all(c["check"].get("expect") == "present" for c in claims), claims
     rep = acc.audit(ROOT, claims)
-    assert verdicts(rep) == {"GATE-COMMIT-CLI-ENTRY-WIRED": acc.HOLDS}, rep["rows"]
-    ev = rep["rows"][0]["evidence"]
-    assert "外部调用点 = 1 处" in ev[0], ev
-    assert any("product_commands.py" in str(x) for x in ev), ev
+    assert set(verdicts(rep).values()) == {acc.HOLDS}, rep["rows"]
+    for row in rep["rows"]:
+        if str(row["id"]) not in ids:
+            continue
+        assert "外部调用点 = 1 处" in row["evidence"][0], row["evidence"]
 
 
 def test_external_callers_probe_can_fire_positive_on_the_real_corpus() -> None:
