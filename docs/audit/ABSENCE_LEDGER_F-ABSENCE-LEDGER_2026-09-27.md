@@ -99,8 +99,16 @@
 - **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag；被哈希文件数 `669`（本片**文件数不变**，只改内容）
 - **工作树**：`git status --porcelain` 输出 0 行
 
-## 七、下一片入口
+**补记一条环境读数事故（不修代码，改脚本的闸）**：上面那串"门禁 8/8"之后，我在**最终 HEAD**
+（本节落盘的那一提）上又跑了一次门禁，读出 `rc=2`、只有 7 条 `"passed": true`，
+失败项是 `no_unacknowledged_cve`，detail 写的是「pip-audit not available…（fail-closed）」。
+这是项目记忆里记过两次的同一格：**门禁用 `shutil.which('pip-audit')` 找可执行，
+PATH 里没带 `.venv/bin` 就 fail-closed 假红**。同一条命令树、同一份清单，
+补上 PATH 后复跑 → `rc=0`、8 条 true、`release_ready: true`（已实测）。
+处置不是把这一格当回归去改代码，而是给 `terminal67.py` 加了一道**跑前先查 pip-audit 在不在 PATH**
+的守卫：不在就整轮拒写读数并打印该 export 什么——环境缺位不该冒充判决，也不该由读者去猜。
 
+## 七、下一片入口
 1. `supervisor.fact_writeback → truth_lineage`：第 66 片 §七.3 的普查结论仍然成立
    （没有任何生产者把工作项的上游 truth 身份带进 `inputs`），
    先做"带进来"那一步（契约 + 至少一个真调用点），再谈边。

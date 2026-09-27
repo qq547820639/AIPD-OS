@@ -28,6 +28,14 @@ def git(*args):
 def main() -> int:
     rows, fails = [], []
     tagsha = (REPO.parent / "tmp/s65/tagsha.txt").read_text(encoding="utf-8").strip()
+    # 环境前提先看住：`production_release_gate.no_unacknowledged_cve` 用 shutil.which('pip-audit')
+    # 找可执行，PATH 里没有 .venv/bin 时它 fail-closed 报"不可用"⇒ rc=2、只有 7 条 true。
+    # 那是环境缺位不是代码回归（项目记忆里记过同一格两次）。这里直接拒跑，别让它冒充判决。
+    if subprocess.run(["bash", "-lc", "command -v pip-audit"], capture_output=True,
+                      text=True).returncode != 0:
+        print("REFUSE-WRITE：PATH 里没有 pip-audit——先 export "
+              "PATH=\"$PWD/.venv/bin:$PATH\" 再跑（否则门禁会 fail-closed 假红）")
+        return 2
 
     if not REPORT.is_file():
         fails.append(f"report 不存在：{REPORT}")
