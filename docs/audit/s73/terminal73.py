@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections import Counter
 import sys
 from pathlib import Path
 
@@ -95,9 +96,12 @@ def main() -> int:
     corpus, pbs = acc.registry_strings(REPO)
     wide = acc.absence_sentences(corpus)
     narrow = [x for x in wide if acc.is_capability_absence(x.split("|", 2)[-1])]
+    axes = Counter(acc.classify_absence(x.split("|", 2)[-1])[0] for x in wide)
+    d1, d2, d3 = (axes["no-predicate"], axes["no-noun"], axes["non-claim"])
     ex_thin = [k for k, v in acc.EXEMPTIONS.items() if len(v.strip()) < 8]
     rows.append(f"- **两档分母现读**：宽档 {len(wide)} 句、窄档 {len(narrow)} 句"
-                f"（差 {len(wide) - len(narrow)} 句是谈判决/谈口径的假阳性）；"
+                f"（差的 {len(wide) - len(narrow)} 句按轴分：无缺失谓词 {d1}、无能力名词 {d2}、"
+                 f"谈判决/谈口径 {d3}）；"
                 f"登记表解析问题 `{pbs}`；薄理由豁免 `{ex_thin}`")
 
     # 收尾验签先跑，门禁后跑（gate 会写 repository_snapshot.json）
