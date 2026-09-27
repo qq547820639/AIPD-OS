@@ -1,7 +1,7 @@
 # 三档"挡掉"各配具名样本（F-AXIS-SAMPLES，第 74 片，2026-09-27）
 
 产物：`scripts/absence_claim_census.py` 的 `AXIS_SAMPLES` / `check_axis_samples` /
-`_sample_problems_for`；`tests/test_absence_claim_census.py` +2 条（29 → 31）；
+`_sample_problems_for`；`tests/test_absence_claim_census.py` +2 条（`def test_` 计数 27 → 29）；
 `docs/audit/s74/battery74.py`（5 臂）。不改登记表与矩阵。
 
 ## 一、为什么"每档 > 0"不够

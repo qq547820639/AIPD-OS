@@ -968,7 +968,7 @@
   `test_sample_validation_is_actually_wired_into_the_audit` —— 上一版真语料断言只有
   `problems == []`，把校验函数改成永远返回空表它照样绿；这条用同一个入口喂一份坏样本，
   要求它真的冒出 `sample_missing`，于是"校验被接上了"这件事自己有了控制。
-  常驻用例 29 → 31 条、`--self-test` 24 → 25 条；
+  常驻用例 27 → 29 条（`def test_` 计数）、`--self-test` 25 条合成读数；
   电池 `docs/audit/s74/battery74.py` **5 臂杀 5 活 0**
   （Q1 校验永不生效、Q2 空档不报、Q3 换档不报、Q4 样本消失静默跳过、Q5 样本串漂走）。
   Q4 第一版是 BAD-MUTATION：锚点只截了跨两行 `problems.append(...)` 的首行，
