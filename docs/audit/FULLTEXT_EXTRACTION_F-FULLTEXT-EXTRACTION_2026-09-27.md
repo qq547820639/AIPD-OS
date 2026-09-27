@@ -64,6 +64,13 @@ U1（把 strip 判空改成永不空）第一版**存活**：我的空白 PDF �
 - **相对 tag 新增的被哈希文件（前 5 个）**：`assets/templates/fact.json`、`docs/architecture/project_boundary.md`、`docs/architecture/state_infrastructure.md`、`docs/architecture/state_inventory.md`、`scripts/absence_claim_census.py`
 - **工作树**：`git status --porcelain` 输出 0 行
 
+**§六 那条读数差点成了假话**：我把"跑验签 + 跑门禁"写在同一条命令里，而**在同一条命令的后面**才
+`git add && git commit` 读数那一步的文档改动。于是闸看到的是脏树 ⇒ `verifier rc=4`、`gate rc=2`（7/8），
+而我已经先提交了一条写着"8/8、验签 rc=0"的 commit message。顺序修正后（树干净再跑）：
+`closeout_verifier rc=0`、`production_release_gate rc=0`、`"passed": true` 8 条、`release_ready: true`
+——结论没变，但**先写结论再取读数**这件事本身要被记下来：
+规则是"闸门必须在写盘之前跑完，读数必须在树干净之后取"，两步不能挤在同一条命令的两侧。
+
 ## 七、下一片入口
 
 1. 在线用例今天只打 arXiv 一个域（出版商 OA 那份抽不出文本是事实，不是缺陷）；
