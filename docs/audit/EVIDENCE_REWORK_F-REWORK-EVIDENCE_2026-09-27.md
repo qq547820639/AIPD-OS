@@ -4,7 +4,8 @@
 `fact_lineage.evidence_content`（生产者与执行器共用的唯一投影）、
 `commands_truth.py` 第二道类别轴、`tests/test_evidence_rework.py`（10 条）、
 `docs/audit/s71/battery71.py`（7 臂）、登记表/README/sweep/账本的同批改口。
-命令数与三张分母不变；被哈希文件数 +2（新实现 + 新常驻测试）。
+- **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = `a66040520139` == tag；被哈希文件数 `674`（**本片 +2**：新实现 `supervisor/evidence_rework.py` 与新常驻 `tests/test_evidence_rework.py`）。
+  这一行最初由脚本印成"本片文件数不变"——那是我从第 70 片脚本复制时留下的**断言文案**，不是现读的差集；已把脚本改成现算差集（见下）。
 
 ## 一、缺口为什么挪了一格
 
