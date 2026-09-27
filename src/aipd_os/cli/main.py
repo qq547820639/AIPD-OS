@@ -546,7 +546,7 @@ def build_parser() -> argparse.ArgumentParser:
     pg = prod_sub.add_parser(
         "gate",
         help="Product Definition Gate 评估 + Owner 决策（--propose 创建；"
-             "--decision-id/--choice 裁定）。")
+             "--decision-id/--choice 裁定；--commit 提交进 Product Truth）。")
     pg.add_argument("--db", required=True)
     pg.add_argument("--project")
     pg.add_argument("--json", action="store_true")
@@ -559,6 +559,9 @@ def build_parser() -> argparse.ArgumentParser:
     pg.add_argument("--waiver-conditions",
                     help="approve_with_waiver 必填：接受的条件（P0-04）")
     pg.add_argument("--waiver-risks", help="approve_with_waiver：接受的已知风险")
+    pg.add_argument("--commit", action="store_true",
+                    help="把**已绑定 Owner Decision 且 eligibility 通过**的最新 snapshot "
+                         "提交进 Product Truth（原子 exactly-once，P0-02/04/29）")
     pg.set_defaults(func=COMMAND_FUNCS["product gate"])
 
     # ---- v5.11 结构化事实的失效传播（F-TRUTH-PROP-01）----

@@ -180,22 +180,15 @@ CLAIMS: tuple[dict[str, Any], ...] = (
                "正则要求表名后紧跟左括号，就是为了不吃前缀碰撞）",
     },
     {
-        "id": "GATE-COMMIT-NO-PRODUCER-APPROVED",
+        "id": "GATE-COMMIT-CLI-ENTRY-WIRED",
         "capability": "product.definition_gate",
         "field": "current_limitation",
-        "anchor": "今天没有生产入口",
-        "check": {"kind": "external_callers", "symbol": "commit_approved"},
-        "why": "反证 = 生产面（src/scripts/state_service）里 `commit_approved` 的**外部**调用点；"
-               "同文件内的 `commit_snapshot` 调用不算（那就是这条断言要说的事）",
-    },
-    {
-        "id": "GATE-COMMIT-NO-PRODUCER-SNAPSHOT",
-        "capability": "product.definition_gate",
-        "field": "current_limitation",
-        "anchor": "今天没有生产入口",
-        "check": {"kind": "external_callers", "symbol": "commit_snapshot"},
-        "why": "接 CLI 时哪怕只调 commit_snapshot 不调 commit_approved，这一格也会翻红——"
-               "两条各盯一个名字，免得「接了另一个」被读成「还是没接」",
+        "anchor": "aipd product gate --commit",
+        "check": {"kind": "external_callers", "symbol": "commit_approved",
+                  "expect": "present"},
+        "why": "第 68 片那两条「没有生产入口」在第 69 片被 CLI 接上 ⇒ 同批撤掉；"
+               "这一条是**存在式**登记（账本里第一条）：句子里说走 `--commit`，"
+               "反证 = `commit_approved` 在生产面 0 处外部调用点 ⇒ 旗子被摘掉就翻红",
     },
     {
         "id": "ASSEMBLY-STEPS-PDF-LAYOUT",
@@ -734,8 +727,15 @@ def run_check(root: Path, check: dict[str, Any],
         if not symbol:
             return (False, [], ["check_malformed: external_callers 锚点缺 symbol"])
         external, problems = external_callers(root, symbol)
-        return (bool(external), [f"{symbol} 生产面外部调用点 = {len(external)} 处"] + external,
-                problems)
+        has = bool(external)
+        head = f"{symbol} 生产面外部调用点 = {len(external)} 处"
+        # expect="present" 把这一档从"缺席式"翻成"存在式"：
+        #   缺席式（默认）= 句子里说"没人调用"，调用点在 ⇒ 这句话过期；
+        #   存在式 = 句子里说"有入口"，调用点为 0 ⇒ 这句话过期。
+        # 两档共用同一个 CONTRADICTED 位点（"这句话被证伪"），只是取反方向。
+        if str(check.get("expect", "absent")) == "present":
+            return (not has, [head] + external, problems)
+        return (has, [head] + external, problems)
     return (False, [], [f"check_kind_unknown: {kind!r}"])
 
 
@@ -1132,10 +1132,24 @@ def _self_test(tmp: Path) -> int:
          "anchor": "仍没有执行器",
          "check": {"kind": "external_callers", "symbol": "outward_called"}},
     )
+    caller_claims = caller_claims + (
+        {"id": "CALL-PRESENT", "capability": "cap.a", "field": "current_limitation",
+         "anchor": "仍没有执行器",
+         "check": {"kind": "external_callers", "symbol": "outward_called",
+                   "expect": "present"}},
+        {"id": "CALL-PRESENT-BROKE", "capability": "cap.a", "field": "current_limitation",
+         "anchor": "仍没有执行器",
+         "check": {"kind": "external_callers", "symbol": "only_self_called",
+                   "expect": "present"}},
+    )
     rep9 = audit(tmp, caller_claims)
     by9 = {str(r["id"]): str(r["verdict"]) for r in rep9["rows"]}
     assert by9["CALL-INWARD"] == HOLDS, sorted(by9)
     assert by9["CALL-OUTWARD"] == CONTRADICTED, sorted(by9)
+    assert by9["CALL-PRESENT"] == HOLDS, sorted(by9)
+    assert by9["CALL-PRESENT-BROKE"] == CONTRADICTED, sorted(by9)
+    _mark(marks, "存在式登记（expect=present）双向：有外部调用点 ⇒ 成立；"
+                 "只剩同文件自调用 ⇒ 判红（旗子被摘就响）")
     _mark(marks, "外部调用点档双向：只被同文件调 ⇒ 成立（commit_snapshot 的真实形状）；"
                  "被别的文件调 ⇒ 判红")
     _mark(marks, f"合计 {len(marks)} 条合成读数全部对上")

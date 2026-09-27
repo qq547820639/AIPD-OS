@@ -168,6 +168,21 @@ def cmd_product_gate(args) -> int:
                      args,
                      f"决策 {args.decision_id} 已裁定：{args.choice}")
 
+    if getattr(args, "commit", False):
+        # P0-02/04/29：只有"绑定了 Owner Decision 且 eligibility 通过"的 frozen
+        # snapshot 提得动；前置校验不过就抛错，由 CLI 顶层兜底成 ok=false + 非零，
+        # 绝不静默退回"只评估不提交"（那等于把旗子读成成功）。
+        receipt = gate.commit_approved(actor="owner-cli")
+        payload = {"command": "product gate", "ok": True, "action": "committed",
+                   **receipt}
+        replay = "（幂等重放：该 snapshot 早已提交过，本次 0 新写）" \
+            if receipt.get("idempotent_replay") else ""
+        return _emit(
+            payload, args,
+            f"已提交 {receipt['snapshot_id']}（commit {receipt['commit_id']}）："
+            f"requirement {receipt['requirements']} 条、feature {receipt['features']} 条"
+            f"进 Product Truth{replay}")
+
     # 无操作参数 → 状态输出
     snapshot = _snapshot_summary(db, tenant, pid)
     gate_status = _gate_status(db, tenant, pid)

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T14:09:14",
+  "generated_at": "2026-09-27T14:44:32",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 210
+      "tests": 211
     }
   },
   "tags": [
@@ -117,33 +117,51 @@
     "version": "5.6.0",
     "parsed": true,
     "total_files": 669,
-    "hash_matches": 666,
-    "hash_mismatch_count": 3,
+    "hash_matches": 664,
+    "hash_mismatch_count": 5,
     "mismatches": [
       {
         "path": "scripts/absence_claim_census.py",
         "reason": "hash_mismatch",
-        "expected": "4f7856d304fc246fff63bda69200cefcebf464d0488e8e98cf4b03b75d75dac2",
-        "actual": "4dee67102b41181872f40566df4499be8dba1954c2f26d610da44d324b8d20d1"
+        "expected": "3c9253f5bfcb7918a0c06aa28a05b25cdc44bc3910525c6f7c06c0ec43eae883",
+        "actual": "55e6111b369f039080d52b156504b0f391ef075b99c129c37cda34439b1725b4"
       },
       {
         "path": "scripts/product_capabilities_extra.py",
         "reason": "hash_mismatch",
-        "expected": "1eb3c7524b11fc51c56d9ea5b938147e1d6a486434ba61b1e26cf78894e8b150",
-        "actual": "12b8c7dd8fe72ef71e79a915f1c8256236472d35600fd51cf824c070135b29e9"
+        "expected": "12b8c7dd8fe72ef71e79a915f1c8256236472d35600fd51cf824c070135b29e9",
+        "actual": "217c4d8ca6c0a69a519218cdcf7fb661f0af22fb53866e7dec9cb7f470825c82"
+      },
+      {
+        "path": "src/aipd_os/cli/main.py",
+        "reason": "hash_mismatch",
+        "expected": "87638cbd4b403106aff8ef4d13ad93f5447e85912e56309c33a1888a6babfef3",
+        "actual": "dbcd13979e6dcda0d73f808bffcae8125872ad55fab86e42c68b5501b1bff6ed"
+      },
+      {
+        "path": "src/aipd_os/cli/product_commands.py",
+        "reason": "hash_mismatch",
+        "expected": "f20dcb53f5b24edca5979e71b43b658199bd68562e7679aee6aa8268817ed23d",
+        "actual": "ce6fca9387d2d262e69096bc55b3cca017f246896d6aad2f7d975c39105c6fad"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "f1b3f9656f94bc62f467fd3c32bc42cb72f7a7034bd89ae3a03b8fffb462ff3c",
-        "actual": "16fa2dccfdad925b31b30bb61a461cca9f99a148a0234addc6fb8be04f6af1e0"
+        "expected": "16fa2dccfdad925b31b30bb61a461cca9f99a148a0234addc6fb8be04f6af1e0",
+        "actual": "2303ff11b8c39b26db7ec0c83dd5bc668ded31ea0941d5acebf0100ee3a96462"
       }
     ]
   },
   "untracked_or_generated": [
+    " M docs/audit/capability_matrix.json",
+    " M docs/audit/capability_matrix.md",
+    " M docs/audit/repository_snapshot.json",
     " M scripts/absence_claim_census.py",
     " M scripts/product_capabilities_extra.py",
+    " M src/aipd_os/cli/main.py",
+    " M src/aipd_os/cli/product_commands.py",
     " M src/aipd_os/registry_data.py",
+    "?? tests/test_product_gate_commit_cli.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

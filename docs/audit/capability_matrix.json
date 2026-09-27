@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T14:09:18",
+  "generated_at": "2026-09-27T14:44:35",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
   "latest_commit_sha": "a66040520139405095648461f7144d4f00629924",
@@ -1839,7 +1839,7 @@
           "unit_test": "tests/test_product_definition_integrity.py",
           "integration_test": "tests/test_product_intelligence_golden_e2e.py",
           "e2e_evidence": "CLI product gate --json；Runtime Golden E2E",
-          "current_limitation": "确定性本地评估（LLM 只可解释不可决定 READY）；生产 Provider 不影响 Gate 可用性；但 commit 这一步（commit_snapshot / commit_approved）今天没有生产入口——`aipd product gate` 只走到 evaluate / authorization / eligibility，两个 commit 方法在生产面0 处外部调用点，requirement 与 feature 两类 truth 记录因此只由测试驱动",
+          "current_limitation": "确定性本地评估（LLM 只可解释不可决定 READY）；生产 Provider 不影响 Gate 可用性；commit 这一步走 `aipd product gate --commit`（第 69 片接上，内部到 commit_approved）：没绑定 Owner Decision 或 eligibility 不过就非零退出、0 部分写入；提交后 snapshot 转 committed，再按一次 `--commit` 因「非 frozen」被拒",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,

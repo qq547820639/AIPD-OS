@@ -136,6 +136,7 @@ aipd decide --db state.db --decision-id D-001 --choice "按 AI 推荐路径继�
 ```bash
 aipd product show --db state.db --project p1      # 产品定义进展
 aipd product gate --db state.db --project p1 --propose   # 创建批准事项
+aipd product gate --db state.db --project p1 --commit       # 把已批准的 snapshot 提交进 Product Truth
 ```
 
 门禁通过后由你批准，需求与功能才会正式冻结。
@@ -472,8 +473,9 @@ python scripts/absence_claim_census.py
 #     第 68 片再加一档 `external_callers`：「某一步没有生产入口」这类话的反证是
 #     生产面（src/scripts/state_service）里该符号的**外部**调用点（不在定义它的文件里）；
 #     除登记表外没有别的代码文件时不判（`authority_thin`）。开尺当天抓到一条低报：
-#     产品定义门禁的 commit（`commit_snapshot`/`commit_approved`）外部调用点为 0，
-#     requirement/feature 两类 truth 记录只由测试驱动 ⇒ 登记表补了这条限制。
+#     产品定义门禁的 commit 当时外部调用点为 0 ⇒ 登记表补了那条限制；
+#     **第 69 片把入口接上**（`aipd product gate --commit` → `commit_approved`），
+#     那两条登记同批撤掉、换成账本里第一条**存在式**登记（旗子被摘掉时那一格会翻红）。
 #     退码 0 全部成立 / 4 有过期或悬空账 / 2 前提不成立。`--claims <json>` 换账本，
 #     常驻用例用它拿真语料做出判红那一跑。开尺当天的读数就是三句过期话（见
 #     `docs/audit/ABSENCE_CLAIM_CENSUS_F-STALE-ABSENCE_2026-09-27.md`）。

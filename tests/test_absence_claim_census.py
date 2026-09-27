@@ -386,18 +386,21 @@ def test_readme_carries_a_runnable_line_for_the_instrument() -> None:
 
 
 # ------------------------------------------------------------------ ⑧ 外部调用点档（第 68 片）
-def test_gate_commit_has_no_production_caller_yet() -> None:
-    """产品定义门禁的 commit 这一步：生产面 0 处外部调用点 ⇒ 这句登记今天成立。"""
+def test_gate_commit_entry_is_a_presence_claim_now() -> None:
+    """第 68 片那两条「没有生产入口」在第 69 片被 CLI 接上 ⇒ 同批改口径。
+
+    这条用例本身就是那批镜像的一部分：登记方向从"缺席式"翻成"存在式"，
+    所以断言的**方向**也要跟着翻——否则它会绿着守住一个已经不存在的说法。
+    """
     claims = tuple(c for c in acc.CLAIMS
                    if c.get("check", {}).get("kind") == "external_callers")
-    assert len(claims) == 2, [c["id"] for c in claims]
+    assert [c["id"] for c in claims] == ["GATE-COMMIT-CLI-ENTRY-WIRED"], claims
+    assert claims[0]["check"].get("expect") == "present", claims[0]
     rep = acc.audit(ROOT, claims)
-    assert set(verdicts(rep).values()) == {acc.HOLDS}, rep["rows"]
-    ids = {str(c["id"]) for c in claims}
-    for row in rep["rows"]:
-        if str(row["id"]) not in ids:
-            continue   # 喂半份账本必然多出语料级的"未处置"行，它们的 evidence 就是空的
-        assert "外部调用点 = 0 处" in row["evidence"][0], row["evidence"]
+    assert verdicts(rep) == {"GATE-COMMIT-CLI-ENTRY-WIRED": acc.HOLDS}, rep["rows"]
+    ev = rep["rows"][0]["evidence"]
+    assert "外部调用点 = 1 处" in ev[0], ev
+    assert any("product_commands.py" in str(x) for x in ev), ev
 
 
 def test_external_callers_probe_can_fire_positive_on_the_real_corpus() -> None:
@@ -407,7 +410,7 @@ def test_external_callers_probe_can_fire_positive_on_the_real_corpus() -> None:
     （记忆里那条"探针恒零的形状"在这里的对偶）。
     """
     probe = ({"id": "POS", "capability": "product.definition_gate",
-              "field": "current_limitation", "anchor": "今天没有生产入口",
+              "field": "current_limitation", "anchor": "aipd product gate --commit",
               "check": {"kind": "external_callers", "symbol": "record_dxf_lineage"}},)
     rep = acc.audit(ROOT, probe)
     assert verdicts(rep) == {"POS": acc.CONTRADICTED}, rep["rows"]

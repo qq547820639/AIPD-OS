@@ -951,6 +951,38 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.30 F-GATE-COMMIT-CLI 第 69 片：把产品定义门禁的 commit 接上 CLI（`aipd product gate --commit`）**：
+  第 68 片登记的那条低报（"commit 这一步没有生产入口，requirement/feature 两类 truth 记录只由
+  测试驱动"）本轮闭合。**这是账本里第一条"存在式"登记**：以前每一档都在判"句子里说没有、
+  代码里其实有"，这次反过来——句子里说有（`--commit`），反证 = `commit_approved` 在生产面
+  **0** 处外部调用点。为此 `external_callers` 加 `expect: "present"`，
+  两种方向共用同一个 `CONTRADICTED` 位点（含义始终是"这句话被证伪"），
+  默认仍是缺席式，所以第 68 片那种老登记不受影响。
+  **接的是什么**：`main.py` 加旗子（不改命令数 ⇒ 三张命令分母与 census 分母都不动），
+  `product_commands.cmd_product_gate` 在 `--propose` / `--decision-id` 之后、
+  状态输出之前插一支：`gate.commit_approved(actor="owner-cli")` → 幂等/receipt 原样透出。
+  前置校验（stale / hash / 授权 / eligibility）留在 `commit_snapshot` 里，CLI **不吞错**：
+  抛错走顶层兜底 ⇒ `rc!=0` 且 `0 部分写入`（原子性由既有实现保证，本轮只验没被洗成成功）。
+  **实测读数**（新常驻 `tests/test_product_gate_commit_cli.py` 4 条，走 `main()` 真入口）：
+  提交成功后 `product_truth` 里 `requirement` 1 条、`feature` 1 条，
+  `truth_lineage` 2 条 `derived_from` 边（上游是 PI 的 `requirement_id`/`feature_id`——
+  第 66 片普查说"生产面上没有带 truth 身份的工作项输入"，这里给出的是**另一侧**：
+  上游记录现在真的存在了，这是第 70 片接 `supervisor` 那条边的前提被解除的证据）；
+  没有绑定 Owner Decision ⇒ 非零 + 0 记录；再按一次 `--commit` ⇒ 按"非 frozen"拒
+  （读数改判：我原本按 `idempotent=True` 的契约预期第二次走幂等重放，
+  实测走不到那一支，因为 `commit_approved` 取的是"最新 snapshot"而它已不是 frozen——
+  **拒**比"静默重放"更硬，于是按代码真行为定稿，不把契约当事实）。
+  **同批改口的镜像**：`scripts/product_capabilities_extra.py`（权威）→
+  重跑 `migrate_capability_registry.py` 生成 `registry_data.py`（84 项、被哈希 669 不变）→
+  `capability_matrix` 按 tag 重生成；README 第 68 片那段"外部调用点为 0"就地更正 + 速查加
+  `--commit` 一行；账本两条 `GATE-COMMIT-NO-PRODUCER-*` 撤掉、换成一条存在式登记；
+  第 68 片那两条常驻控制用例（盯 0 处调用点/正向对照锚点）同批改方向——
+  **不改它们就会绿着守住一个已经不存在的说法**（这条按 [[call-site-census-polarity]] 的教训办）。
+  窄档分母 19 → 17 句（那句"没有生产入口"消失），仍 未处置 0。
+  电池 `docs/audit/s69/battery69.py` **5 臂杀 5 活 0**：E1 摘存在式分支、E2 让缺席式永不判红、
+  E3 摘 CLI 支路、E4 把拒绝洗成 ok、E5 旗子不进 argparse。
+  证据见 `docs/audit/GATE_COMMIT_CLI_F-GATE-COMMIT-CLI_2026-09-27.md`。
+
 - **v5.29 F-GATE-COMMIT-ENTRY 第 68 片：登记一条**低报**的缺口，并给它一台能双向开火的机器（量具加 `external_callers` 档）**：
   第 66/67 片都在修"写着没有、其实已经有了"；这一片修的是反方向——**写着有、其实没接上**。
   普查（AST 现读，非 grep 子串）：`ProductDefinitionGate.commit_snapshot` 在生产面
