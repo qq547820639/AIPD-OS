@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 265590,
-      "sha256": "b4ba533fca2b70df83b53ee5f75c9d401b8b9eb162ae0b11a23e15f49222b053"
+      "size": 271874,
+      "sha256": "3370090ec0cc157ca1c59771396c3efc5c485414535873a92fe98c5e67871f53"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 56100,
-      "sha256": "4277b3ad9fca680db3a0eebbab58c32282eb0b42f6f994c18f0da07f13abea42"
+      "size": 57262,
+      "sha256": "45674e9a56206bf803d5957606fbe626e1bcf7779d96d5294632732d840a0a1d"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -671,6 +671,11 @@
       "sha256": "1dc9b146a4c1fc822b0938f5af742882ac1dc358ae16896b7acc1c7051418a37"
     },
     {
+      "path": "scripts/absence_claim_census.py",
+      "size": 33605,
+      "sha256": "32e8378ee3946989a426a4f8d38576505d3345b48c10e2b49e582ac18ab9053a"
+    },
+    {
       "path": "scripts/aipd_state.py",
       "size": 5604,
       "sha256": "efd0956feb05defa633d04dac7962e4e1e0afacbd113392af3bdde9f513b7786"
@@ -812,8 +817,8 @@
     },
     {
       "path": "scripts/product_capabilities_extra.py",
-      "size": 6566,
-      "sha256": "bc51a3a97fe0c4b57d553fd1e871fc6bb6b169578ee73fd0e8f86f615ffba4bf"
+      "size": 7311,
+      "sha256": "1eb3c7524b11fc51c56d9ea5b938147e1d6a486434ba61b1e26cf78894e8b150"
     },
     {
       "path": "scripts/production_release_gate.py",
@@ -1177,8 +1182,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_truth.py",
-      "size": 37134,
-      "sha256": "420366be4cef0b4068fd507d9a2fc768168321e474c3ede7272b9e2384c4ea57"
+      "size": 37175,
+      "sha256": "bcf8a9a497b6d0a237eec396f9c3f3b788741cc6223e3fd628e9ece2d1d64088"
     },
     {
       "path": "src/aipd_os/cli/commands_validation.py",
@@ -1697,8 +1702,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 104096,
-      "sha256": "fff804a1fa7d5542d715d1276e28bca0af1d1b11c06d2e4c2c378334c7af249b"
+      "size": 105092,
+      "sha256": "295dc50891c38a534d6ae3f5d9273fb6b37caa1059ce1e613076749d65dccb43"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2309,6 +2314,11 @@
       "path": "tests/maturity_consistency_test.py",
       "size": 7063,
       "sha256": "ecbbaa49095eeaec3f086b9bbf9794e2301278aa09355bd850e693845a0a0aef"
+    },
+    {
+      "path": "tests/test_absence_claim_census.py",
+      "size": 14644,
+      "sha256": "36f51ab315b6d20556e7c5c968121f225c5f1180080a28ccc6296493beccd5e5"
     },
     {
       "path": "tests/test_actor_columns_no_default.py",
