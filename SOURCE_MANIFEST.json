@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-27T05:55:21+00:00",
+  "generated_at": "2026-09-27T06:21:57+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 278173,
-      "sha256": "14d2c8909d205c2cee6a0c6a9af9490c5f21206e9dc4f32c374c7876c3a2acea"
+      "size": 281065,
+      "sha256": "7a9b380882414653386c149f289b66622c92f1be023adbf5c5da15041f1ed638"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 58581,
-      "sha256": "3ca2950c352af92339302024324f6ea65be56f9fc2f3605073ba716d06e654a2"
+      "size": 59114,
+      "sha256": "9ab2b021af2e63663201806bade1c59b46d309791ccbeb811e289341e7f626d0"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -672,8 +672,8 @@
     },
     {
       "path": "scripts/absence_claim_census.py",
-      "size": 59508,
-      "sha256": "4f7856d304fc246fff63bda69200cefcebf464d0488e8e98cf4b03b75d75dac2"
+      "size": 65015,
+      "sha256": "3c9253f5bfcb7918a0c06aa28a05b25cdc44bc3910525c6f7c06c0ec43eae883"
     },
     {
       "path": "scripts/aipd_state.py",
@@ -817,8 +817,8 @@
     },
     {
       "path": "scripts/product_capabilities_extra.py",
-      "size": 7311,
-      "sha256": "1eb3c7524b11fc51c56d9ea5b938147e1d6a486434ba61b1e26cf78894e8b150"
+      "size": 7596,
+      "sha256": "12b8c7dd8fe72ef71e79a915f1c8256236472d35600fd51cf824c070135b29e9"
     },
     {
       "path": "scripts/production_release_gate.py",
@@ -1702,8 +1702,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 105543,
-      "sha256": "f1b3f9656f94bc62f467fd3c32bc42cb72f7a7034bd89ae3a03b8fffb462ff3c"
+      "size": 105828,
+      "sha256": "16fa2dccfdad925b31b30bb61a461cca9f99a148a0234addc6fb8be04f6af1e0"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2317,8 +2317,8 @@
     },
     {
       "path": "tests/test_absence_claim_census.py",
-      "size": 20964,
-      "sha256": "27eb7a8cea7029f2b60ece15934990f51a1b50fbf2525b2ae8536bff6f53a45b"
+      "size": 24117,
+      "sha256": "6c11178a1528c2861a9c354d513b9b96ebdd24e1edd5d8a810d5272050f88531"
     },
     {
       "path": "tests/test_actor_columns_no_default.py",
