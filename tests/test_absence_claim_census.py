@@ -93,9 +93,61 @@ def test_every_claim_is_located_in_its_declared_field() -> None:
     for row in rep["rows"]:
         assert row["verdict"] != acc.CLAIM_TEXT_ABSENT, row
         doc, field, lineno = str(row["anchor_at"]).split(":")
-        assert doc.startswith("src/") and field == "current_limitation", row
+        # 登记表条目落在 src/，文档条目（第 66 片的 PRODUCER-COUNT-ARCH）落在 docs/——
+        # 两档都是"现状面"，但只有前者在登记表里，所以读数必须带文件名才分得开。
+        assert doc.startswith(("src/", "docs/")), row
+        assert field in ("current_limitation", "text"), row
         assert int(lineno) > 0, row
         assert (ROOT / doc).is_file(), row
+
+
+# ------------------------------------------------------------------ ⑥ 计数叙述档（第 66 片）
+def test_count_face_fires_on_the_real_corpus_with_a_mis_scoped_claim() -> None:
+    """真语料上的永久开火对照：把同一句话的权威档换成 canonical，判决必须翻。
+
+    不靠改文档造违规——数字是从**那句散文**里读的，而权威是从代码 AST 现读的，
+    所以"档选错"这一件事本身就足以让判据开火；它同时也证明这个数不是我在账本里抄的。
+    """
+    claims = (claim("MIS-SCOPED", "product_truth.impact_propagation",
+                    "血缘边的生产者今天有 8 个",
+                    {"kind": "producer_count", "scope": "canonical"}),)
+    rep = acc.audit(ROOT, claims)
+    assert verdicts(rep) == {"MIS-SCOPED": acc.CONTRADICTED}, rep
+    assert any("现读" in one for one in rep["rows"][0]["evidence"]), rep
+
+
+def test_document_face_claim_is_checked_against_the_same_authority() -> None:
+    """`file:` 条目（架构文档）与登记表条目吃同一个权威面，两格今天都要成立。"""
+    docs = tuple(c for c in acc.CLAIMS if c.get("file"))
+    assert len(docs) == 1, [c["id"] for c in docs]
+    rep = acc.audit(ROOT, docs)
+    assert [r["verdict"] for r in rep["rows"]] == [acc.HOLDS], rep
+
+
+def test_count_unreadable_is_precondition_not_green(tmp_path: Path) -> None:
+    """句子里读不到数量词 ⇒ 前提不成立，不许悄悄当"这句没问题"。"""
+    (tmp_path / "src/aipd_os").mkdir(parents=True)
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "src/aipd_os/m.py").write_text(
+        "from aipd_os.product_truth.lineage import LineageGraph\n\n\n"
+        "def f(g):\n    return g.add_edge('a', 'b')\n", encoding="utf-8")
+    (tmp_path / "docs/x.md").write_text("这里没有数字的说法\n", encoding="utf-8")
+    claims = ({"id": "NOCOUNT", "file": "docs/x.md", "anchor": "这里没有数字的说法",
+               "check": {"kind": "producer_count", "scope": "truth"}},)
+    rep = acc.audit(tmp_path, claims)
+    assert verdicts(rep) == {"NOCOUNT": acc.PRECONDITION}, rep
+    assert any(p.startswith("count_unreadable") for p in rep["problems"]), rep
+
+
+def test_missing_authority_tree_is_precondition(tmp_path: Path) -> None:
+    """权威面建不起来（没有 src/aipd_os）⇒ 退 2，绝不读成"0 个生产者、句里写 0 个就对了"。"""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs/x.md").write_text("血缘边有**三个**生产者——a、b、c\n", encoding="utf-8")
+    claims = ({"id": "NOAUTH", "file": "docs/x.md", "anchor": "血缘边有**三个**生产者",
+               "check": {"kind": "producer_count", "scope": "truth"}},)
+    rep = acc.audit(tmp_path, claims)
+    assert verdicts(rep) == {"NOAUTH": acc.PRECONDITION}, rep
+    assert any(p.startswith("authority_missing") for p in rep["problems"]), rep
 
 
 # ------------------------------------------------------------------ ④b 两份登记表一面

@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -48,6 +49,9 @@ ROOT = Path(__file__).resolve().parent.parent
 
 REGISTRY_FILES = ("src/aipd_os/registry_data.py",
                   "scripts/product_capabilities_extra.py")
+# `truth_lineage` 的唯一 SQL 写入口。它自己不算"生产者"，但必须出现在权威面上，
+# 否则读到一个空集合会被当成"没有生产者"。
+SQL_ENTRY_FILE = "src/aipd_os/product_truth/lineage.py"
 
 # 只报面的分母用这套否定词。刻意**不**拿它判红，理由见模块 docstring。
 NEGATION_MARKERS = ("仍没有", "还没有", "尚未", "未实现", "未接入", "未做", "仍未",
@@ -110,6 +114,24 @@ CLAIMS: tuple[dict[str, Any], ...] = (
                   "symbols": ["fetch_fulltext"]},
         "why": "库里有 `src/aipd_os/research/fulltext.py`，但这句话判的是**连接器消费不消费它**——"
                "锚点取在连接器目录，取在库里会把自己判红（第 65 片实测的窄法）",
+    },
+    # ---- 第 66 片新增：计数叙述档（"有 N 个生产者"必须等于 AST 现读）----
+    {
+        "id": "PRODUCER-COUNT-REGISTRY",
+        "capability": "product_truth.impact_propagation",
+        "field": "current_limitation",
+        "anchor": "血缘边的生产者今天有 8 个",
+        "check": {"kind": "producer_count", "scope": "truth"},
+        "why": "权威 = AST 现读「含 `add_edge` 属性调用且文件里出现 `LineageGraph`」的文件集，"
+               "SQL 写入口 `product_truth/lineage.py` 自己单列不算生产者；"
+               "数字从**这句话里**现读，账本不抄第二份",
+    },
+    {
+        "id": "PRODUCER-COUNT-ARCH",
+        "file": "docs/architecture/truth_architecture.md",
+        "anchor": "血缘边有** 8 个**生产者",
+        "check": {"kind": "producer_count", "scope": "truth"},
+        "why": "同一件事在架构文档里的第二个副本；两档面各判各的，谁漂了当场点名",
     },
 )
 
@@ -366,12 +388,99 @@ def identifier_hits(root: Path, dirs: list[str], symbols: list[str]) -> list[str
     return hits
 
 
-def run_check(root: Path, check: dict[str, Any]) -> tuple[bool, list[str], list[str]]:
-    """⇒ (反证锚点在不在, 位点, 盲区)。
+def locate_claim(root: Path, claim: dict[str, Any]) -> tuple[str, str, int, str] | None:
+    """⇒ (文件, 字段或 'text', 行号, 命中那行的原文)；找不到这句 ⇒ None。
 
-    锚点**在** ⇒ 这句话过期，与别处有没有盲区无关（判决已经拿到证据）。
-    锚点**不在** + 有盲区 ⇒ 前提不成立：盲区完全可能正藏着那个执行器，不许读成"这句话对"。
-    锚点**不在** + 无盲区 ⇒ 这句话仍然成立。
+    登记表条目走 `registry_strings`（绑 capability+field）；带 `file` 的条目走那份**现状文档**
+    的逐行文本（第 66 片要吃的就是 `docs/architecture/*.md` 里那种"有三个生产者"的叙述——
+    它不在登记表里，但同样是要被代码事实管住的一句话）。
+    返回原文是为了让"数量词"这类判据**从这句话里现读数字**，而不是我在账本里再抄一遍
+    （抄一份就会漂，且抄错会把判据变成自证）。
+    """
+    anchor = str(claim.get("anchor", ""))
+    rel = str(claim.get("file", ""))
+    if rel:
+        path = root / rel
+        if not path.is_file():
+            return None
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeDecodeError):
+            return None
+        for no, line in enumerate(lines, 1):
+            if anchor and anchor in line:
+                return rel, "text", no, line
+        return None
+    corpus, _problems = registry_strings(root)
+    for file, lineno, text in corpus.get(str(claim.get("capability", "")), {}).get(
+            str(claim.get("field", "")), []):
+        if anchor and anchor in text:
+            return file, str(claim.get("field", "")), lineno, text
+    return None
+
+
+# ------------------------------------------------------------------ 边生产者权威面
+def edge_producers(root: Path) -> tuple[dict[str, list[str]], list[str]]:
+    """AST 现读「谁在写边」，分两档：写 `truth_lineage` 的与只写 canonical 的。
+
+    分类判据是**文件里有没有 `LineageGraph`**：`LineageGraph.add_edge` 是唯一
+    进 `truth_lineage` 的入口（`tests/test_drawing_spec_lineage.py:226` 钉着这条），
+    而 canonical 侧走 `state.lineage.LineageService`，两档不能混成一个数。
+    本体 `src/aipd_os/product_truth/lineage.py` 是 SQL 写入口自己，单列不算"生产者"。
+    读不出来的文件 ⇒ 记盲区，绝不静默少算一个生产者（少算会把"有三个"读成对）。
+    """
+    out = {"truth": [], "canonical": [], "sql_entry": []}
+    blind: list[str] = []
+    base = root / "src" / "aipd_os"
+    if not base.is_dir():
+        return out, ["authority_missing: src/aipd_os 不存在，权威面建不起来"]
+    for path in sorted(base.rglob("*.py")):
+        rel = str(path.relative_to(root))
+        try:
+            text = path.read_text(encoding="utf-8")
+            tree = ast.parse(text, filename=str(path))
+        except (OSError, UnicodeDecodeError, SyntaxError) as exc:
+            blind.append(f"authority_unreadable: {rel}: {type(exc).__name__}")
+            continue
+        writes = any(isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                     and n.func.attr == "add_edge" for n in ast.walk(tree))
+        if not writes:
+            continue
+        if rel == SQL_ENTRY_FILE:
+            out["sql_entry"].append(rel)
+        elif "LineageGraph" in text:
+            out["truth"].append(rel)
+        else:
+            out["canonical"].append(rel)
+    if not (out["truth"] or out["canonical"] or out["sql_entry"]):
+        blind.append("authority_empty: 一个 add_edge 位点都没读到（这把尺子读空了）")
+    return out, blind
+
+
+def count_words(text: str) -> list[int]:
+    """从句子里取阿拉伯数字或中文数词（「有五个」「有 8 个」都算）。
+
+    先剥掉 markdown 的 `*`：现状文档与登记表的强调写法是 `有**三个**生产者`，
+    不剥就读不到数，那一档会静默降级成"前提不成立"——听起来安全，实际是这面判据
+    在**唯一需要它开火的文档面上**永远不开火（第 66 片第一版就是这样，靠真仓库读数才发现）。
+    """
+    cn = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7,
+          "八": 8, "九": 9, "十": 10, "两": 2}
+    text = text.replace("*", "")
+    out: list[int] = []
+    for m in re.finditer(r"(?:有|共|为)\s*(\d+|[一二三四五六七八九十两])\s*个", text):
+        tok = m.group(1)
+        out.append(int(tok) if tok.isdigit() else cn.get(tok, 0))
+    return out
+
+
+def run_check(root: Path, check: dict[str, Any],
+              text: str = "") -> tuple[bool, list[str], list[str]]:
+    """⇒ （反证成不成立, 位点, 盲区）。
+
+    前三种的"成不成立"都是"锚点在不在"；`producer_count` 那一支的"成不成立"是
+    **"这句话写的个数与代码现读不符"** ⇒ 两种都归到 `CONTRADICTED`，判决方向一致，
+    但读数消息要写清是哪一种，否则读者会把"文件存在"当成"这句话被证伪的方式"。
     """
     kind = check.get("kind")
     if kind == "artifact_executor":
@@ -386,7 +495,42 @@ def run_check(root: Path, check: dict[str, Any]) -> tuple[bool, list[str], list[
                     ["check_malformed: identifier 锚点缺 paths 或 symbols"])
         hits = identifier_hits(root, dirs, symbols)
         return (bool(hits), hits, [])
+    if kind == "producer_count":
+        scope = str(check.get("scope", "truth"))
+        producers, blind = edge_producers(root)
+        if scope not in producers:
+            return (False, [], [f"check_kind_unknown: 权威档 {scope!r} 不存在"])
+        authority = producers[scope]
+        # 计数档的优先级与存在档**相反**：存在档里"已经找到东西"可以无视别处盲区，
+        # 而计数档的数就是从这批位点数出来的——盲区或空集合意味着这个数**量不出来**，
+        # 把"看不见"折成"句里写的数不对"就是拿判据造违规（第 66 片被自家新用例抓出来的）。
+        if blind or not authority:
+            return (False, [], (blind or [f"authority_empty: {scope} 档一个位点都没读到"]))
+        written = count_words(text)
+        if not written:
+            return (False, [], [f"count_unreadable: 这句里读不到「有 N 个」数量词：{text[:50]}"])
+        got = written[0]
+        sites = [f"现读 {scope} 生产者 = {len(authority)} 个，句里写 {got} 个"] + authority
+        return (got != len(authority), sites, [])
     return (False, [], [f"check_kind_unknown: {kind!r}"])
+
+
+def slice_sentence(text: str, anchor: str) -> str:
+    """从锚点起点切到本句末尾（`；`/`。`/换行）。
+
+    必须切句再取数字：登记表一行装一整段限制句，拿整段去找「有 N 个」会读到
+    别的小句的数，然后把别人的数字算在这句账上。
+    """
+    idx = text.find(anchor)
+    if idx < 0:
+        return text
+    rest = text[idx:]
+    for stop in ("；", "。", ";", "\n"):
+        cut = rest.find(stop)
+        if cut >= 0:
+            rest = rest[:cut]
+            break
+    return rest
 
 
 # ------------------------------------------------------------------ 判决
@@ -399,15 +543,18 @@ def audit(root: Path, claims: tuple[dict[str, Any], ...]) -> dict[str, Any]:
 
     rows: list[dict[str, Any]] = []
     for claim in claims:
-        where = locate(corpus, str(claim.get("capability", "")),
-                       str(claim.get("field", "")), str(claim.get("anchor", "")))
-        if where is None:
+        found = locate_claim(root, claim)
+        anchor = str(claim.get("anchor", ""))
+        if found is None:
+            home = str(claim.get("file")
+                       or f"{claim.get('capability')}.{claim.get('field')}")
             rows.append({"id": claim.get("id"), "verdict": CLAIM_TEXT_ABSENT,
                          "evidence": [], "problems": [],
-                         "detail": f"账里有这条，登记表 {claim.get('capability')}."
-                                   f"{claim.get('field')} 里已找不到原句锚点"})
+                         "detail": f"账里有这条，{home} 里已找不到原句锚点"})
             continue
-        present, sites, check_problems = run_check(root, dict(claim.get("check", {})))
+        file, field, lineno, text = found
+        present, sites, check_problems = run_check(
+            root, dict(claim.get("check", {})), slice_sentence(text, anchor))
         if present:
             verdict = CONTRADICTED
         elif check_problems:
@@ -416,7 +563,7 @@ def audit(root: Path, claims: tuple[dict[str, Any], ...]) -> dict[str, Any]:
             verdict = HOLDS
         rows.append({"id": claim.get("id"), "verdict": verdict, "evidence": sites[:5],
                      "problems": check_problems,
-                     "anchor_at": f"{where[0]}:{where[1]}:{where[2]}",
+                     "anchor_at": f"{file}:{field}:{lineno}",
                      "detail": str(claim.get("why", ""))})
 
     sentences = absence_sentences(corpus)
@@ -573,6 +720,53 @@ def _self_test(tmp: Path) -> int:
     assert _rc_with(tmp, clean_only, two) == 4, "两份各说各话要自己退 4，不靠别的判红凑出来"
     _mark(marks, "两份登记表对同一 id 各说各话 ⇒ 判红并独立退 4（第 65 片的真实失效形状）")
     (extra_dir / "product_capabilities_extra.py").write_text(EXTRA_ROW, encoding="utf-8")
+    # ---- 计数档（第 66 片）：数字从散文里现读，权威从 AST 现读 ----
+    for name in ("prod1.py", "prod2.py"):
+        (tmp / "src/aipd_os" / name).write_text(
+            "from aipd_os.product_truth.lineage import LineageGraph\n\n\n"
+            "def f(g):\n    return g.add_edge('a', 'b')\n", encoding="utf-8")
+    (tmp / "src/aipd_os/prod3.py").write_text(
+        "from aipd_os.state.lineage import LineageService\n\n\n"
+        "def f(s):\n    return s.add_edge('a', 'b')\n", encoding="utf-8")
+    (tmp / "docs").mkdir(exist_ok=True)
+    (tmp / "docs/x.md").write_text(
+        "血缘边有**三个**生产者——p1、p2、p3\n"
+        "血缘边有**两个**生产者——p1、p2\n"
+        "血缘边有**三个**canonical 生产者\n"
+        # 这一行专打"切句"：不切句就会先读到「另有五个说法」里的 5
+        "另有五个说法。血缘边有两个生产者——p1、p2\n", encoding="utf-8")
+    count_claims = (
+        {"id": "CNT-FIRE", "file": "docs/x.md", "anchor": "血缘边有**三个**生产者——",
+         "check": {"kind": "producer_count", "scope": "truth"}},
+        {"id": "CNT-QUIET", "file": "docs/x.md", "anchor": "血缘边有**两个**生产者——",
+         "check": {"kind": "producer_count", "scope": "truth"}},
+        {"id": "CNT-SCOPE", "file": "docs/x.md", "anchor": "血缘边有**三个**生产者——",
+         "check": {"kind": "producer_count", "scope": "canonical"}},
+        {"id": "CNT-SLICE", "file": "docs/x.md", "anchor": "血缘边有两个生产者——",
+         "check": {"kind": "producer_count", "scope": "truth"}},
+    )
+    rep3 = audit(tmp, count_claims)
+    by3 = {str(r["id"]): str(r["verdict"]) for r in rep3["rows"]}
+    assert by3["CNT-SLICE"] == HOLDS, rep3
+    _mark(marks, "同一行里前面还有一句带数字时，数必须从**锚点那句**里读（切句而非整行）")
+    assert by3["CNT-FIRE"] == CONTRADICTED, rep3
+    assert by3["CNT-QUIET"] == HOLDS, rep3
+    _mark(marks, "计数档双向：文档写三个而 AST 读到两个 ⇒ 判红；写两个 ⇒ 成立"
+                 "（markdown 的 `**` 必须剥掉才读得到数，第一版就因此在文档面上永不开火）")
+    assert by3["CNT-SCOPE"] == CONTRADICTED, rep3
+    assert any("canonical" in one for one in rep3["rows"][2]["evidence"]), rep3
+    _mark(marks, "权威档选错（拿 canonical 的 1 个去核 truth 那句三个）也必须翻红——"
+                 "证明这个数真从代码来，不是账本里抄的")
+    empty = tmp / "emptytree"
+    (empty / "docs").mkdir(parents=True)
+    (empty / "docs/x.md").write_text("血缘边有**三个**生产者——a、b、c\n", encoding="utf-8")
+    rep4 = audit(empty, ({"id": "NOAUTH", "file": "docs/x.md",
+                          "anchor": "血缘边有**三个**生产者",
+                          "check": {"kind": "producer_count", "scope": "truth"}},))
+    assert str(rep4["rows"][0]["verdict"]) == PRECONDITION, rep4
+    assert any(p.startswith("authority_missing") for p in rep4["problems"]), rep4
+    _mark(marks, "权威面建不起来时计数档**不判**：0 个位点不是「句里写错了」，"
+                 "而是量不出来（这条是第 66 片被自家新用例抓出来的方向错）")
     print(render(rep))   # 四档判决都要在 stdout 上留名，常驻用例按这个形状断言"真走了一遍"
     saved = globals()["REGISTRY_FILES"]
     globals()["REGISTRY_FILES"] = ("src/aipd_os/registry_data.py",)

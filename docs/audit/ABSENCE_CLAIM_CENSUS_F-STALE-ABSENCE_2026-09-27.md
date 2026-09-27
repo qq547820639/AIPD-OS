@@ -162,15 +162,15 @@ adapter——所以「未接入」是低报，准确说法是"只有 LLM 这一�
 
 1. `supervisor.fact_writeback` 那条 `SUPERVISOR-TRUTH-MAPPING` 登记今天仍成立；接上它的那一轮
    要把这条账本条目一起删（不删就 `CLAIM_TEXT_ABSENT` 响，这是刻意的）。
-2. **血缘边的"有几个生产者"三个面各说各话**（本轮我亲手数过，不是引用）：
-   `docs/architecture/truth_architecture.md:185` 写「血缘边有**三个**生产者」；
-   `registry_data.py` 的 `product_truth.impact_propagation` 那行写「血缘边的生产者今天有**五个**」；
-   我自己按 AST 数 `x.add_edge(` 在 `src/` 下命中 **12 个文件**（含 `product_truth/lineage.py` 自身
-   与三处写 canonical 的 `idea/decomposer.py`、`idea/evidence_relations.py`、
-   `product_intelligence/service.py`）。权威应是 `tests/test_drawing_spec_lineage.py:200`
-   的 `REGISTERED_PRODUCERS`（AST 双向棘轮），下一片按它现读统一这三处叙述。
-   这正是本片那把尺子的形状能管到、但**账本还没登记**的一类（"三个生产者"里没有否定词，
-   所以不进 37 句的分母）——记在这里，不假装机器已经覆盖。
+2. **血缘边的"有几个生产者"三个面各说各话**——**本项已由第 66 片闭合**（原行内更正，
+   读者不必往下翻）：`docs/architecture/truth_architecture.md:185` 当时写「血缘边有**三个**生产者」、
+   登记表 `product_truth.impact_propagation` 写「今天有**五个**」，而 AST 现读写
+   `truth_lineage` 边的是 **8 个**文件（另有 3 处只写 canonical、1 处是 SQL 写入口自己）。
+   闭合方式：给本片这台量具加了一档 `producer_count`（数字从散文里现读、权威从代码里现读），
+   并把两句就地改口为 8 且写明各自展开哪几处；
+   权威是 AST 现读而不是 `tests/test_drawing_spec_lineage.py:200` 的 `REGISTERED_PRODUCERS`
+   ——两向对账由那片新增的真语料 mis-scope 用例钉住。全过程见
+   `docs/audit/PRODUCER_COUNT_F-PRODUCER-COUNT_2026-09-27.md`。
 3. 第 64 片留的 `doc_command_census` 只报面收窄（把 `tests/` 挡在语料外 + 单开"记录性引述"一桶）仍未做。
 
 

@@ -951,6 +951,34 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.27 F-PRODUCER-COUNT 第 66 片：「生产者有 N 个」这类计数句必须等于 AST 现读（给第 65 片那台量具加一档）**：
+  第 65 片 §七 留的那格顺手改掉了。两个 live 面当时**都是错的**：
+  `src/aipd_os/registry_data.py` 的 `product_truth.impact_propagation` 写「血缘边的生产者今天有五个」，
+  `docs/architecture/truth_architecture.md:185` 写「血缘边有**三个**生产者」，
+  而 AST 现读（文件里有 `add_edge` 属性调用 **且** 出现 `LineageGraph`）是 **8 个**：
+  `cad/spec_lineage.py`、`cad/spec_rework.py`、`cad/dxf_lineage.py`、`cad/dxf_rework.py`、
+  `bom/cost_lineage.py`、`bom/cost_rework.py`、`supply_chain/quote_lineage.py`、
+  `product_intelligence/gate.py`；另有 3 处只写 canonical 的 `dependencies`
+  （`idea/decomposer.py`、`idea/evidence_relations.py`、`product_intelligence/service.py`）与
+  1 处 SQL 写入口自己（`product_truth/lineage.py`），都不算在这 8 个里。
+  两句就地改成 8 并**写明各自展开哪几处**（原文只展开三处并不是错，错的是把三处说成全集）。
+  **机器形状**：加一档 `producer_count`——数字**从那句散文里现读**（中文数词与阿拉伯数字都吃，
+  并先剥掉 markdown 的 `*`），权威从代码 AST 现读，账本只负责点名"哪一句是全集声明"；
+  账本条目因此允许 `file:` 指向现状文档，不再只吃登记表。判决的两个错向都由真语料钉住：
+  把同一句的权威档换成 `canonical` 就翻红（证明数真从代码来，不是我在账本里抄的第二份）。
+  **两处被自己的用例教出来的形状**：① 第一版把"权威面空/有盲区"排在比较之后，
+  于是"扫不到任何生产者"会被读成"句里写的数不对"——**把看不见折成违规**，
+  与第 65 片"不把看不见折成合规"是同一条纪律的对偶面；现改为量不出来就不判（退 2）。
+  ② 不剥 `*` 时这一面在**唯一需要它开火的文档面上**永远读不到数，而读数完全自洽
+  （`PRECONDITION` 不是红），第一版就这么混过一轮。
+  产物：`scripts/absence_claim_census.py` 加档（`--self-test` 13 → **17 条**合成读数）、
+  `tests/test_absence_claim_census.py` 15 → **19 条**常驻用例（新增真语料 mis-scope 开火、
+  文档面成立、读不到数退 2、权威树缺失退 2 各一条）、`docs/audit/s66/battery66.py`
+  变异电池 **6 臂：杀 6 / 活 0 / 电池自身问题 0**——其中 B3「不切句」第一版**存活**，
+  原因是我的夹具每行只装一句，补一行「另有五个说法。血缘边有两个生产者——」才杀掉：
+  **反例必须能区分两种实现，不能只是"看起来不一样"**。证据见
+  `docs/audit/PRODUCER_COUNT_F-PRODUCER-COUNT_2026-09-27.md`。
+
 - **v5.26 F-STALE-ABSENCE 第 65 片：新常驻量具 `scripts/absence_claim_census.py`——登记表里每句「X 仍没有」都要配一个能推翻它的锚点**：
   起因是一句漂了 12 片的假话。第 53 片接上 BOM 版本记录的返工执行器（`src/aipd_os/bom/bom_rework.py:32`
   定义 `SUPPORTED_ARTIFACT = ARTIFACT_BOM`，`src/aipd_os/cli/commands_truth.py:188-195` 分派）之后，
