@@ -80,11 +80,11 @@ def main() -> int:
     rows.append(f"- **常驻用例**：`pytest tests/test_absence_claim_census.py -q` → "
                 f"`{tail3[0] if tail3 else ''}`（rc={rc3}）")
 
-    rc4, out4 = sh([PY, "docs/audit/s67/battery68.py"], timeout=1200)
+    rc4, out4 = sh([PY, "docs/audit/s68/battery68.py"], timeout=1200)
     sum4 = [ln for ln in out4.splitlines() if ln.startswith("合计")]
     if rc4 != 0 or not sum4:
-        fails.append(f"battery rc={rc4} {sum4}")
-    rows.append(f"- **变异电池（入库副本现跑）**：`docs/audit/s67/battery68.py` → "
+        fails.append(f"battery rc={rc4} {sum4}；输出尾：{out4[-300:]!r}")
+    rows.append(f"- **变异电池（入库副本现跑）**：`docs/audit/s68/battery68.py` → "
                 f"`rc={rc4}`，{sum4[0] if sum4 else ''}")
 
     sys.path.insert(0, str(REPO / "scripts"))
