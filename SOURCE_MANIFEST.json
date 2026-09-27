@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-27T12:34:52+00:00",
+  "generated_at": "2026-09-27T12:53:52+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 306840,
-      "sha256": "5da8fd28ff70324331010f8a5961bf062b91a774bf7d3c34500cad84240a1e26"
+      "size": 309105,
+      "sha256": "ead3ecbecd92d12e24e8d970aa85427757c2825b9867b24a251657056dcbfccc"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 60714,
-      "sha256": "1cd6b45b85c05a5d64e52860c1d73c3262a3a9e554dedebecbf1a220f8f269af"
+      "size": 60944,
+      "sha256": "bb82e8b93f82ca0e13f1df0a08318add1314bacab26e596c7429e977d8673182"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -1707,8 +1707,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 106996,
-      "sha256": "0af4825e78d9e7d53a2906646ab35f47719e30a9b52ebd348b8da17750d2895e"
+      "size": 107337,
+      "sha256": "f7c8ea2b5d6d4d1429ba891b590fb5a127f41a9004b13163ef21b1eb99b8e33b"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -1717,8 +1717,8 @@
     },
     {
       "path": "src/aipd_os/research/__init__.py",
-      "size": 4708,
-      "sha256": "4d845dd0a8da5e73c32e0a9f5d50e91a33bcf3d88196775391d1b0910661726f"
+      "size": 4758,
+      "sha256": "18915bbc2c8dd66e0b5ab237334afa2d3db7eb7a4004ec46560907f8db91cd0d"
     },
     {
       "path": "src/aipd_os/research/credibility.py",
@@ -1742,8 +1742,8 @@
     },
     {
       "path": "src/aipd_os/research/fulltext.py",
-      "size": 16379,
-      "sha256": "cc5c9fdddcccbeefe8744748ec852dbae85a00ec52bc5e971c7f76819c804c80"
+      "size": 16930,
+      "sha256": "bd89e44f22fdaa969f664fa2539a0fdda70bd2f6043992d10a0b2699e0201cca"
     },
     {
       "path": "src/aipd_os/research/models.py",
@@ -3167,8 +3167,8 @@
     },
     {
       "path": "tests/test_research_fulltext_step.py",
-      "size": 15536,
-      "sha256": "6648e0c937415781caf00cd3f00389a489790f7212fd4c096c6e1cbb440306af"
+      "size": 16775,
+      "sha256": "6b5e85203fc348f68daf5940415fde4911d55e2b64b8004f440d75a9f7beec19"
     },
     {
       "path": "tests/test_research_integration_idea.py",
