@@ -194,3 +194,20 @@ PYTHONPATH=src:scripts .venv/bin/python scripts/skill_quality_audit.py          
 - **旧取证文档不追改**：`docs/audit/CTQ_REVISION_*.md:235`、`DOC_COMMAND_CENSUS_*.md` §三/§七/§十
   里"没有 `aipd ctq list`"是当轮取证件，按本仓规矩保留原文；当前读法以本文件与
   registry 那一行为准。
+
+## 八、终读数（全部取自被检出的干净工作树，不抄主树、不抄上一节）
+
+取证工作树 `tmp/s62c` @ `044a1a67`（detached，跑完即删）；机器报告 `docs/audit/pytest-report-v5.6.0.json`。
+
+- 全量用例：`collected=2512 / passed=2509 / skipped=3 / failed=0 / exitcode=0`，用时 330s；报告里 `source_commit` = 钉住的 v5.6.0（门禁 `test_numbers_from_report` 的定义），**「测的就是这棵树」不靠字符串证**：套件内 `test_packaging.py::test_release_manifest_hashes_match_disk` 与 `::test_source_manifest_hashes_match_disk` 两条在场且 passed，收尾验签器逐条核过（25 条 [OK]，rc=0）。
+- 权威面（在干净树里现跑）：89 条 argparse 路径（契约 deprecated 别名不并进权威面，由 alias_unregistered 单独核），15 个组名
+- 判红面语料：run_command 85 段 / 速查行 93 行 / 生产代码 214 处（另有 6 处同行带否定标记 ⇒ 只报）
+- 只报面 982 处（全量扫描 1301 处，减去三档判红面覆盖的行）
+  · 只报面（不判红）里点到未注册的命令 8 个名字：aipd ctq listy（5 处）；aipd ghost cmd（6 处）；aipd ghostci check（4 处）；aipd ghostly cmd（5 处）；aipd ghostspec run（4 处）；aipd truth ctq（9 处）；aipd truth show（14 处）；aipd x（2 处）
+- 命令面（现跑）：已注册命令 73 条，读过的测试文件 200 个；低于 cli 档合计：0 条
+- 技能自审：自审通过：0 项警告，0 项失败 → 退出码 0
+- 量具自测：--self-test：7 条合成读数全部对上
+- 发布前门禁 `production_release_gate.py --release-ready --tag v5.6.0`：8 项 `"passed": true`、0 项 false，`release_ready: true`，退出码 0（跑前按配方 `export PATH="$PWD/.venv/bin:$PATH"`，否则 pip-audit 找不到 → 假红）
+- `audit_repo.py --strict`：退出码 1，唯一一条 ✗ = `Provenance source commit mismatch: manifest=a66040520139… vs HEA…` —— 这是**设计内的红**（发布钉在 v5.6.0，而 HEAD 每轮都在走），不是漂移
+
+被哈希面 664 个文件（第 61 片末 663，本片加一个测试文件）；`PROVENANCE.json` 的 `source_commit` 仍钉 v5.6.0 `a6604052…`，所以 `audit_repo --strict` 那一条 ✗ 是设计内的红，不是漂移。
