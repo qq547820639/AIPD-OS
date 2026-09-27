@@ -22,7 +22,7 @@
 
 | 格 | 判什么 | 主线为什么看不见 |
 | --- | --- | --- |
-| C1 `report_bound_to_provenance` | 报告字节 sha256 == `PROVENANCE.test_report.sha256` | `release_evidence.py:236-278` 写入这条 sha，但**没有任何一处事后重算** |
+| C1 `report_bound_to_provenance` | 报告字节 sha256 == `PROVENANCE.test_report.sha256`（证据**还没绑**这份报告时读成前提塌，见 §四 第 4 条） | `release_evidence.py:236-278` 写入这条 sha，但**没有任何一处事后重算** |
 | C2 `counts_counted_from_roster` | 汇总数由 `tests[]` 现数，再与 `summary` 与 `PROVENANCE` **两处副本**对账 | `production_release_gate._check_test_report`（`:503-542`）只读 provenance 里抄过去的三个数字；而那三个数字里的 `failed` 是 `total - passed - skipped` **推导**的 |
 | C3 `terminal_clean` | `exitcode == 0` 且没有 `failed`/`error` 终态（setup/call/teardown 三相都查） | 门读的是"推导出来的 failed 数"，相位级 error 会被折进同一个数 |
 | C4 `roster_covers_tree` | 树上测试文件 ↔ 名单文件**双向求差**为空；每文件「名单 ≥ 树上 def 数」；重复 nodeid 单列 | 没有任何常驻件把"报告里的名单"与"树上的 `def test_`"对上过——少跑一个文件今天读成 2512 条全绿 |
@@ -32,9 +32,9 @@
 | C8 `plaintiffs_measured` | `--expect-test` 点名的本轮新用例确实在名单里并 passed | 这是"我写了 14 条用例、那一次签出到底跑没跑它们"的唯一机械答案 |
 | C9 `size_ratchet` | `--min-tests` 下界（opt-in） | 借 `dorny/test-reporter` 的 `fail-on-empty`，但从"空就红"收紧成"低于下界就红"——本仓分母是 2 千量级，光"非空"挡不住截断 |
 
-**前提档（退 2，不折算成"零违规"）**：provenance 读不出、报告读不出、`tests` 为空、
-测试目录不存在、既没给 `--pinned-commit` 也没给 `--tag`。最后一条是刻意的：**没有基准就不判 STALE**，
-因为"默认取 HEAD"正是第 62 片真犯的那个错（见 §五 A4）。
+**前提档（退 2，不折算成"零违规"）**：provenance 读不出、**证据里还没绑这份报告**、报告读不出、
+`tests` 为空、测试目录不存在、既没给 `--pinned-commit` 也没给 `--tag`。最后一条是刻意的：**没有基准就不判 STALE**，
+因为"默认取 HEAD"正是第 62 片真犯的那个错（见 §五 A4）；倒数第三条同样是"没基准"（§四 第 4 条）。
 
 ## 三、选型四段（原件本轮重开，不是复述上一轮）
 
@@ -51,9 +51,10 @@
 - 未检索到第三个同轴候选（搜"报告名单与树上 def 求差"只命中 pytest-json-report 本体、教程与
   coverage 类 `diff-cover`），如实记为未找到。
 
-## 四、两处形状是夹具试跑实测出来的，不是推的
+## 四、形状是被试跑教出来的，不是推的
 
-第一轮合规对照就不绿，读数直接点名了两处判据自己的错：
+合规对照臂第一轮就不绿，读数直接点名了判据自己的两处错；第二次（干净检出复算）又点名了
+**用例**私藏的一条前提。
 
 1. **名单文件面必须同时吃 `test_*.py` 与 `*_test.py`**。pytest 默认 `pythonFiles` 是两个模式，
    只 glob 前者时，`tests/maturity_consistency_test.py`（真仓库里唯一那个反向命名）被读成
@@ -63,41 +64,59 @@
    这类"差集全非空"的读数比空读数更容易被当成"语料真的对不上"。
 3. 附带一条旧账复发：`summary` 里 `failed`/`error` 键**计数为 0 时不存在**，必须读成 0。
    这条第 63 片记过一次，本轮在 C2 里又差点重犯（对照臂读成 `summary.skipped=None 而现数=0`）。
+4. **常驻用例不许假设仓库处于"刚绑定"那一小段窗口**（第 64 片的新格）。
+   第一次干净检出复算（`git worktree add --detach tmp/s64a HEAD`，HEAD 就是重锚那一提 `af1c6f4`）里，
+   `tests/test_closeout_verifier.py` 有 **4 条**用例红：那一段 `PROVENANCE.test_report` 是
+   `{"present": false}`（重锚与绑定之间本来就有这一步），量具便报两格判红，而用例把
+   "除工作树干净外全绿"写成了断言。两边都错，各自修：
+   - 量具侧：证据里没绑这份报告 ⇒ **前提档退 2**，`report_bound_to_provenance` 整个不进判红面，
+     而 C2 里"报告内部 `summary` ↔ 名单"那一半照判（它不需要基准）；
+   - 用例侧：凡拿真语料判绿的地方改成两种写法之一——① 先复制报告并就地绑定（`_bind_provenance`），
+     使读数与"仓库正处在配方哪一步"无关；② 允许缺哪几格由 git 现算：
+     `git log -1 --format=%H -- docs/audit/pytest-report-v5.6.0.json` 定位报告所在提交，
+     再 `git diff --name-only --diff-filter=AM <该提交>..HEAD -- tests` 得到"合法缺席集"，
+     与名单缺口求**等号**。写"差额为空"在途时必红，写"差额随便"就恒真，等号两边都自己算才两头能翻。
 
 ## 五、电池
 
-**合成电池（量具自己，`--self-test` 17 臂）**：一支分母前提 + 一支合规对照 + 12 支逐格注入 +
-3 支前提退 2。每支注入都断言"**开火的判据集合恰好等于该开的那一格**"，这是第 61 片量到的规矩：
-一次注入点亮三格时，分不清是判据强还是夹具脏。实跑 `17 条合成读数全部对上`，rc=0。
-两支夹具自己的错在这一层被抓出来：
+**合成电池（量具自己，`--self-test` 18 臂）**：一支分母前提 + 一支合规对照 + 12 支逐格注入 +
+4 支前提退 2（空名单 / 报告读不出 / **证据没绑报告** / 没给锚点）。每支注入都断言
+"**开火的判据集合恰好等于该开的那一格**"，这是第 61 片量到的规矩：一次注入点亮三格时，
+分不清是判据强还是夹具脏。实跑 `18 条合成读数全部对上`，rc=0。
+三支夹具自己的错在这一层被抓出来：
 ① 证据文件当初写在夹具工作树**里面**，对照臂先红在 C7 上；
-② C8 那一支没复位上一臂留下的 `failed` 终态，读成两格同火（同一个坑第三次露头）。
+② C8 那一支没复位上一臂留下的 `failed` 终态，读成两格同火（同一个坑第三次露头）；
+③ `tree_roster` 的键形状（§四 第 2 条）也是对照臂读出来的，不是看代码看出来的。
 
-**变异电池（常驻用例，7 臂，脚本 `tmp/s64/battery64.py`）**：先立对照组（未注入 `14 passed`），
-每臂落地前证明源文件 sha 变了、跑完立刻还原并验 sha 复原（`76605b6a4d9e → 76605b6a4d9e`）。
+**变异电池（常驻用例，7 臂，脚本 `tmp/s64/battery64.py`）**：先立对照组（未注入 `16 passed`），
+每臂落地前证明源文件 sha 变了、跑完立刻还原并验 sha 复原（`58d9d0ef23ee → 58d9d0ef23ee`）。
+下表是**重写常驻用例之后再跑一遍**的读数（第一轮在 14 条用例上跑过，判决同为 7 KILLED；
+改了用例就必须重跑电池，否则"杀掉"记的是一件已经不存在的事）：
 
 | 臂 | 改坏的是什么 | 判定 | 常驻用例侧读数 |
 | --- | --- | --- | --- |
-| A1 | 名单只吃 `test_*.py`（丢 `*_test.py` 那半边） | **KILLED** | `2 failed`（真语料的 `maturity_consistency_test.py` 立刻被读成幻影文件） |
-| A2 | `summary` 缺键不读成 0 | **KILLED** | `9 failed`（缺键即 None，把每一处对账都掀了） |
-| A3 | 去掉"锚点是 HEAD 祖先"那一支 | **KILLED** | `1 failed`（只有 self-test 那一臂在管——单点原告，别删） |
-| A4 | 没给锚点时默认取 HEAD（第 62 片的真错） | **KILLED** | `2 failed` |
-| A5 | C1 改成无条件绿 | **KILLED** | `2 failed` |
-| A6 | `--expect-test` 分支整个不执行 | **KILLED** | `2 failed` |
-| A7 | 空名单不再算前提塌 | **KILLED** | `2 failed`（退 2 变退 4，"空读数"被读成"有判决"） |
+| A1 | 名单只吃 `test_*.py`（丢 `*_test.py` 那半边） | **KILLED** | `2 failed / 14 passed`（真语料的 `maturity_consistency_test.py` 立刻被读成幻影文件） |
+| A2 | `summary` 缺键不读成 0 | **KILLED** | `10 failed / 6 passed`（缺键即 None，把每一处对账都掀了） |
+| A3 | 去掉"锚点是 HEAD 祖先"那一支 | **KILLED** | `1 failed / 15 passed`（只有 self-test 那一臂在管——单点原告，别删） |
+| A4 | 没给锚点时默认取 HEAD（第 62 片的真错） | **KILLED** | `2 failed / 14 passed` |
+| A5 | C1 改成无条件绿 | **KILLED** | `2 failed / 14 passed` |
+| A6 | `--expect-test` 分支整个不执行 | **KILLED** | `2 failed / 14 passed` |
+| A7 | 空名单不再算前提塌 | **KILLED** | `2 failed / 14 passed`（退 2 变退 4，"空读数"被读成"有判决"） |
 
-合计 **7 KILLED / 0 SURVIVED / 0 注入无效**。首轮跑到 A4 时锚点缩进写错、命中 0 条，
-脚本在写盘**之前**就 assert 崩了——源文件未动（sha 复原证明），改锚点后重跑，七臂全绿。
+合计 **7 KILLED / 0 SURVIVED / 0 注入无效**，终局还原复跑 rc=0。
+电池自己也错过一次：A4 的锚点缩进写错、命中 0 条，脚本在写盘**之前**就 assert 崩——
+源文件未被改动（sha 复原证明），改锚点后重跑，七臂全绿。
 
-## 六、常驻牙（`tests/test_closeout_verifier.py`，14 条）
+## 六、常驻牙（`tests/test_closeout_verifier.py`，16 条）
 
-`--self-test` 被真 spawn（孤儿门禁与没有门禁看不出差别）/ 九格名字面 / 真语料除"本轮未提交"外全绿 /
-**名单缺口必须与工作区未提交文件逐文件相等**（写成"差额为空"在本轮必红，写成"差额随便"就是恒真）/
-锚点传 HEAD 只多点亮那一格 / 整文件抽掉一条常驻用例只点亮名单格而**不**牵连汇总格 /
+`--self-test` 被真 spawn / 九格名字面 / 真语料上**与阶段无关的六格**必须全绿 /
+名单缺口 == 报告所在提交以来被增改的测试文件（§四 第 4 条那条等号）/
+`git status --porcelain` 与 C7 逐次同向 / 锚点传 HEAD 只多点亮那一格 /
+整文件抽掉一条常驻用例只点亮名单格而**不**牵连汇总格（显式断言 `counts_counted_from_roster` 仍绿）/
 两条替身 nodeid 还长在 `tests/test_packaging.py` 上（AST 反查——替身被删则 C6 永不开火）/
 默认从 PROVENANCE 取报告路径那条面（`--self-test` 每臂都显式传 `--report`，不另开用例它就是死码）/
-空名单与缺锚点与缺目录都退 2 / 缺席原告 / `--min-tests` 是 opt-in / 退 2 与退 4 不互相折算 /
-被绑的那份才是权威（字节不同的未绑副本必须红）/ README 行首镜像。
+空名单、缺锚点、缺目录、**证据没绑报告**四种都退 2 / 缺席原告 / `--min-tests` 是 opt-in /
+退 2 与退 4 不互相折算 / 被绑的那份才是权威（字节不同的未绑副本必须红）/ README 行首镜像。
 
 ## 七、量具自己的读数：只报面的 10 个未注册名里，今天 0 条是活缺口
 

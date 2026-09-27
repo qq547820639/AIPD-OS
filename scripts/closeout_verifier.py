@@ -19,6 +19,8 @@
 
 判据（退码形状沿用本仓常驻量具：0 全绿 / 4 判红 / 2 前提不成立）：
   C1 report_bound_to_provenance   报告文件 sha256 == provenance 记录的那条
+                                  （证据里压根没绑这份报告时读成**前提塌**退 2，不判违规：
+                                  重锚与绑定之间那段窗口每轮收尾都要经过，把它读成红会让人去"修"正常状态）
   C2 counts_counted_from_roster   汇总数由 tests[] 现数，summary 与 provenance 两处副本都对得上
   C3 terminal_clean               exitcode 0 且没有 failed/error 终态（setup/teardown 也算）
   C4 roster_covers_tree           树上的测试文件与名单里的文件双向求差为空；每文件名单 ≥ 树上 def 数
@@ -194,14 +196,25 @@ def audit(report_path: Path, worktree: Path, provenance_path: Path,
     rep["readings"]["report_root"] = report.get("root")
     rep["readings"]["report_duration_s"] = report.get("duration")
 
+    # 证据是否已经把这份报告绑进去：没绑是**没有基准**，不是违规（重锚与绑定之间那段窗口
+    # 每轮都会经过，把它读成两格判红会让人去"修"一个本来正常的状态）
+    tr = prov.get("test_report") if isinstance(prov.get("test_report"), dict) else {}
+    bound = bool(tr.get("present")) and bool(tr.get("sha256"))
+    rep["readings"]["provenance_binds_report"] = bound
+
     # C1 报告 ↔ 证据绑定
-    rec_sha = (prov.get("test_report") or {}).get("sha256")
-    actual_sha = _sha256_path(report_path)
-    judge("report_bound_to_provenance", rec_sha == actual_sha,
-          f"报告 sha256={actual_sha[:12]}，PROVENANCE 记的是 "
-          f"{(rec_sha or '（没有这条）')[:12]}——证据绑定的不是现在这份文件"
-          if rec_sha != actual_sha else
-          f"报告 sha256={actual_sha[:12]} 与 PROVENANCE 记录一致")
+    if bound:
+        rec_sha = tr.get("sha256")
+        actual_sha = _sha256_path(report_path)
+        judge("report_bound_to_provenance", rec_sha == actual_sha,
+              f"报告 sha256={actual_sha[:12]}，PROVENANCE 记的是 "
+              f"{str(rec_sha)[:12]}——证据绑定的不是现在这份文件"
+              if rec_sha != actual_sha else
+              f"报告 sha256={actual_sha[:12]} 与 PROVENANCE 记录一致")
+    else:
+        problem("provenance_binds_report",
+                "PROVENANCE.test_report 里没有 present+sha256——证据还没绑这份报告。"
+                "先跑 `release_evidence.py --test-report …` 再验签；这里没有基准可比，不算违规")
 
     # C2 计数由名单现数，两处副本对账
     summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
@@ -218,14 +231,13 @@ def audit(report_path: Path, worktree: Path, provenance_path: Path,
     collected = summary.get("collected")
     if collected is not None and collected != len(nodes):
         mism.append(f"summary.collected={collected} 而名单={len(nodes)}")
-    tr = prov.get("test_report") or {}
     derived_failed = len(nodes) - hist.get("passed", 0) - hist.get("skipped", 0)
     for field, want in (("passed", hist.get("passed", 0)),
                         ("total", len(nodes)),
                         ("failed", derived_failed)):
+        if not bound:
+            break
         got = tr.get(field)
-        if got is None and not tr:
-            continue
         if got != want:
             mism.append(f"PROVENANCE.test_report.{field}={got} 而现数={want}")
     judge("counts_counted_from_roster", not mism,
@@ -442,7 +454,7 @@ def _git_init(repo: Path, message: str) -> str:
 
 
 def _self_test(tmp: Path) -> int:
-    """一支合规对照 + 十一支逐格注入 + 三支前提退 2（参数化那条已并进对照组）。
+    """一支合规对照 + 十一支逐格注入 + 四支前提退 2（参数化那条已并进对照组）。
 
     每支注入都断言"开火的判据集合恰好等于该开的那一格"。这条规矩是第 61 片量出来的：
     一次注入点亮三格时，你分不清是判据强还是夹具脏——第 63 片电池里那支 SURVIVED
@@ -582,6 +594,21 @@ def _self_test(tmp: Path) -> int:
     report.write_text("{ not json", encoding="utf-8")
     assert run() == 2
     _mark("报告读不出 → 退 2，不折算成「没违规」")
+
+    # 证据没绑这份报告（重锚与绑定之间那段窗口，每轮收尾都要经过）：算前提塌，不算违规
+    _pristine_report(evidence, nodeids, pinned)
+    unbound = json.loads(prov.read_text(encoding="utf-8"))
+    unbound["test_report"] = {"present": False, "path": str(report)}
+    prov.write_text(json.dumps(unbound, ensure_ascii=False, indent=1), encoding="utf-8")
+    code = run()
+    rep = now()
+    assert code == 2, (code, rep["violations"])
+    assert not rep["violations"], rep["violations"]
+    assert "provenance_binds_report" in rep["checks"], sorted(rep["checks"])
+    assert "report_bound_to_provenance" not in rep["checks"], "没有基准那一格不该进判红面"
+    assert "counts_counted_from_roster" in rep["checks"], "报告内部一致性仍可判，不因未绑定而整格消失"
+    _mark("证据没绑这份报告 → 退 2（前提塌），C1 不进判红面而 C2 的 summary↔名单那一半照判")
+    _bind_provenance(prov, report)
 
     _pristine_report(evidence, nodeids, pinned)
     _bind_provenance(prov, report)

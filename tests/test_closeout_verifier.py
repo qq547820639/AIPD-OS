@@ -6,25 +6,19 @@
 被判 STALE 一次、PATH 缺 `.venv/bin` 假红一次）。提为常驻件之后，那些坑由这里的用例
 长期按住，而不是靠下一次的记忆。
 
-用例分四组：
-① 量具被真的 spawn（`--self-test` 17 条合成读数）——孤儿门禁与没有门禁看不出差别；
-② 真语料上的"必须不开火"：报告与已提交树之间唯一的名单差额，必须与工作区的未提交
-   改动**逐文件相等**（本轮正在写的测试文件当然没被测过；但已提交的用例一条不许缺）；
-③ 真语料上的"必须开火"：把锚点换成 HEAD（第 62 片真犯过的错）只点亮
-   `pinned_source_binding`；从报告里整文件抽掉一条常驻用例（汇总数与证据同口径改小，
-   使 C2 不被牵连）只点亮 `roster_covers_tree`；
-④ 夹具侧前提：替身 nodeid 必须真的还长在 `tests/test_packaging.py` 上，否则"测的就是
-   这棵树"这句话挂在一条已被删掉的用例上，永远开不了火。
-
-一处形状值得记：`--tests-dir` 比的是**工作树**。收尾配方在 detached 干净检出里取证，
-那里 C4 与 C7 都该全绿；在开发中的工作树里，C7 判红、C4 只许报未提交的那几个文件。
-所以 ② 组用"两个独立算出来的集合相等"来断言，而不是"差额为空"——后者在这轮必红，
-写成"允许任何差额"就又变回恒真。
+一条写成本篇才成立的规矩（第一次签出复算就把四条用例打红了，见 §四）：
+**常驻用例不许假设仓库处于"刚绑定"那一小段窗口**。仓库里 `PROVENANCE` 与报告的关系在每个
+提交上都不一样（重锚后未绑定 ⇒ 未绑；本轮新增的测试文件比报告新 ⇒ 名单缺它），所以这里
+凡是拿真语料判"必须绿"的断言，都改成两种写法之一：
+① 先把真报告**复制一份并就地绑定**，再让量具对它出判决（C1/C2 与新鲜度无关了）；
+② 把"允许缺哪几格"由 git 自己算出来（名单缺口 == 自报告那次提交以来被增改的测试文件），
+   而不是写死一个集合或干脆放宽判据。
 """
 from __future__ import annotations
 
 import ast
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -40,12 +34,15 @@ import closeout_verifier as cov  # noqa: E402
 TOOL = ROOT / "scripts" / "closeout_verifier.py"
 REPORT = ROOT / "docs" / "audit" / "pytest-report-v5.6.0.json"
 PROV = ROOT / "PROVENANCE.json"
+REPORT_REL = str(REPORT.relative_to(ROOT))
 
 ALL_CHECKS = {
     "report_bound_to_provenance", "counts_counted_from_roster", "terminal_clean",
     "roster_covers_tree", "pinned_source_binding", "content_parity_measured",
     "worktree_clean", "plaintiffs_measured", "size_ratchet",
 }
+# 与"这份报告新不新、这棵树干不干净"有关的三格：其余六格与仓库阶段无关，必须绿
+STAGE_BOUND = {"roster_covers_tree", "worktree_clean"}
 
 
 def _git(*args: str) -> str:
@@ -53,19 +50,13 @@ def _git(*args: str) -> str:
                           capture_output=True, text=True, check=True).stdout.strip()
 
 
+def _is_pytest_file(path: str) -> bool:
+    name = Path(path).name
+    return path.startswith("tests/") and (name.startswith("test_") or name.endswith("_test.py"))
+
+
 def _report_files(rep: dict) -> set[str]:
     return {t["nodeid"].split("::")[0] for t in rep["tests"]}
-
-
-def _uncommitted_test_files() -> set[str]:
-    """`git status --porcelain` 里那些还带着 pytest 命名的路径（未跟踪或已改未提交）。"""
-    out = set()
-    for line in _git("status", "--porcelain").splitlines():
-        path = line[3:].strip().strip('"')
-        name = Path(path).name
-        if path.startswith("tests/") and (name.startswith("test_") or name.endswith("_test.py")):
-            out.add(path)
-    return out
 
 
 @pytest.fixture(scope="module")
@@ -76,12 +67,24 @@ def pinned() -> str:
     return sha
 
 
-@pytest.fixture(scope="module")
-def baseline(pinned: str) -> dict:
-    rep = cov.audit(REPORT, ROOT, PROV, pinned, ROOT / "tests", [],
-                    list(cov.PARITY_TESTS), 0)
-    assert rep["problems"] == [], rep["problems"]
-    return rep
+@pytest.fixture
+def real_pair(tmp_path: Path, pinned: str):
+    """把真报告复制一份并就地绑定，这样 C1/C2 的读数就与"仓库正处在配方哪一步"无关。"""
+    report = tmp_path / "pytest-report.json"
+    shutil.copyfile(REPORT, report)
+    prov = tmp_path / "PROVENANCE.json"
+    cov._bind_provenance(prov, report)
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    assert payload["source_commit"] == pinned, "夹具前提：仓库那份报告绑的就是 tag 锚点"
+
+    def run(pinned_arg: str = pinned, expect: list[str] | None = None,
+            parity: list[str] | None = None, min_tests: int = 0) -> dict:
+        return cov.audit(report, ROOT, prov, pinned_arg, ROOT / "tests",
+                         expect if expect is not None else ["tests/test_packaging.py"],
+                         parity if parity is not None else list(cov.PARITY_TESTS),
+                         min_tests)
+
+    return run
 
 
 def _clean_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path, str]:
@@ -104,49 +107,71 @@ def test_instrument_self_test_is_actually_run_and_green() -> None:
     assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-2000:]
     assert "条合成读数全部对上" in proc.stdout, proc.stdout
     marks = proc.stdout.count("[OK]")
-    assert marks >= 17, f"--self-test 的臂从 17 条缩水成 {marks} 条：注入没跑满就别谈判据"
+    assert marks >= 18, f"--self-test 的臂从 18 条缩水成 {marks} 条：注入没跑满就别谈判据"
 
 
-def test_check_names_are_the_documented_nine(baseline: dict) -> None:
+def test_check_names_are_the_documented_nine(real_pair) -> None:
     """判据名字是文档与 CHANGELOG 引用的面；改名必须在这里一起翻。"""
-    names = set(baseline["checks"])
+    names = set(real_pair()["checks"])
     assert names >= ALL_CHECKS, sorted(ALL_CHECKS - names)
     assert names <= ALL_CHECKS, sorted(names - ALL_CHECKS)
 
 
-def test_real_report_matches_the_committed_tree(baseline: dict, pinned: str) -> None:
-    fired = {v["check"] for v in baseline["violations"]}
-    assert fired <= {"worktree_clean", "roster_covers_tree"}, baseline["violations"]
-    r = baseline["readings"]
+def test_six_checks_are_green_on_the_real_corpus_regardless_of_stage(real_pair,
+                                                                     pinned: str) -> None:
+    """真语料 2524 条上，与新鲜度无关的六格必须全绿；只有两格允许因本轮在途而红。"""
+    rep = real_pair()
+    fired = {v["check"] for v in rep["violations"]}
+    assert fired <= STAGE_BOUND, sorted((v["check"], v["detail"]) for v in rep["violations"])
+    for name in ALL_CHECKS - STAGE_BOUND:
+        assert rep["checks"][name]["ok"] is True, (name, rep["checks"][name])
+    r = rep["readings"]
     assert r["report_entries"] >= 2000 and r["tree_files"] >= 200, r
     assert r["report_entries"] > r["tree_defs"], f"参数化条目没进名单：{r}"
-    assert r["pinned_commit"] == pinned and r["worktree_head"] != pinned, r
-    assert baseline["checks"]["content_parity_measured"]["ok"] is True
-    assert baseline["checks"]["counts_counted_from_roster"]["ok"] is True
+    assert r["pinned_commit"] == pinned and r["provenance_binds_report"] is True, r
 
 
-def test_the_only_roster_gap_is_uncommitted_work(baseline: dict) -> None:
-    """两个独立算出来的集合必须相等：名单里缺的测试文件 == 工作区未提交的测试文件。
+def test_roster_gap_equals_tests_changed_since_the_report(pinned: str) -> None:
+    """名单缺的测试文件，必须恰好等于"报告那次提交以来被增改的测试文件"。
 
-    写成"差额为空"在这一轮必红；写成"差额随便"就又是恒真。等号两边都自己算，
-    任何一侧多算/漏算都会翻。
+    写成"差额为空"在途时必红，写成"差额随便"就是恒真；两边都由 git 现算，任何一侧
+    多算或漏算都会翻。报告一旦被重新绑定并提交，`git diff rc..HEAD -- tests` 就是空集。
     """
     data = json.loads(REPORT.read_text(encoding="utf-8"))
+    report_commit = _git("log", "-1", "--format=%H", "--", REPORT_REL)
+    assert report_commit, "报告没在任何提交里？"
+    changed = {ln for ln in _git("diff", "--name-only", "--diff-filter=AM",
+                                 f"{report_commit}..HEAD", "--", "tests").splitlines()
+               if _is_pytest_file(ln)}
+    tree = cov.tree_roster(ROOT / "tests")[0]
     measured = _report_files(data)
-    tree = set(cov.tree_roster(ROOT / "tests")[0])
     never_ran = {f for f in tree if f not in measured}
-    uncommitted = _uncommitted_test_files()
-    assert never_ran == uncommitted, (sorted(never_ran), sorted(uncommitted))
-    assert measured <= tree, sorted(measured - tree)
+    counts: dict[str, int] = {}
+    for node in data["tests"]:
+        f = node["nodeid"].split("::")[0]
+        counts[f] = counts.get(f, 0) + 1
+    short = {f for f in tree if f in measured and counts[f] < tree[f]}
+    assert never_ran | short == changed, (sorted(never_ran | short), sorted(changed))
+    ghosts = sorted(f for f in measured if f not in tree)
+    assert ghosts == [], f"报告里有个树上没有的文件（测的不是这棵树）：{ghosts}"
+    assert _git("rev-parse", "v5.6.0^{commit}") == data["source_commit"] == pinned
 
 
-def test_pinning_to_head_instead_of_the_tag_fires_only_that_check(pinned: str) -> None:
+def test_worktree_verdict_tracks_git_status_exactly(real_pair) -> None:
+    """C7 的开火与 `git status --porcelain` 的实际输出逐次同向（不许自造一套脏判据）。"""
+    dirty = bool([ln for ln in _git("status", "--porcelain").splitlines() if ln.strip()])
+    ok = real_pair()["checks"]["worktree_clean"]["ok"]
+    assert ok is not dirty, f"工作树 dirty={dirty} 而判据 ok={ok}"
+
+
+def test_pinning_to_head_instead_of_the_tag_fires_only_that_check(real_pair) -> None:
     """第 62 片的原件错误：锚点传成 HEAD。真分母上必须只多点亮 `pinned_source_binding`。"""
     head = _git("rev-parse", "HEAD")
+    pinned = _git("rev-parse", "v5.6.0^{commit}")
     assert head != pinned, "夹具前提：锚点不许已经漂到 HEAD"
-    rep = cov.audit(REPORT, ROOT, PROV, head, ROOT / "tests", [], list(cov.PARITY_TESTS), 0)
+    rep = real_pair(pinned_arg=head)
     fired = {v["check"] for v in rep["violations"]}
-    assert fired - {"worktree_clean", "roster_covers_tree"} == {"pinned_source_binding"}, fired
+    assert fired - STAGE_BOUND == {"pinned_source_binding"}, sorted(fired)
     assert "给定锚点" in rep["checks"]["pinned_source_binding"]["detail"]
 
 
@@ -173,11 +198,13 @@ def test_dropping_a_whole_resident_file_fires_only_the_roster(tmp_path: Path,
     report.write_text(json.dumps(src, ensure_ascii=False), encoding="utf-8")
     prov = tmp_path / "PROVENANCE.json"
     cov._bind_provenance(prov, report)
-    rep = cov.audit(report, ROOT, prov, pinned, ROOT / "tests", [], list(cov.PARITY_TESTS), 0)
+    rep = cov.audit(report, ROOT, prov, pinned, ROOT / "tests", ["tests/test_packaging.py"],
+                    list(cov.PARITY_TESTS), 0)
     fired = {v["check"] for v in rep["violations"]}
-    assert fired - {"worktree_clean", "roster_covers_tree"} == set(), sorted(
+    assert fired - {"worktree_clean"} == {"roster_covers_tree"}, sorted(
         (v["check"], v["detail"]) for v in rep["violations"])
-    assert "roster_covers_tree" in fired
+    assert rep["checks"]["counts_counted_from_roster"]["ok"] is True, \
+        "汇总数与两处副本同口径改小时，C2 不该被名单那一格牵连"
     assert victim in rep["checks"]["roster_covers_tree"]["detail"]
 
 
@@ -221,6 +248,27 @@ def test_empty_roster_missing_anchor_and_missing_dir_are_all_premature(tmp_path:
     assert cov.main(base + ["--tests-dir", str(repo / "nope")]) == 2, "读不到分母不是绿"
 
 
+def test_unbound_provenance_is_premature_not_two_violations(tmp_path: Path) -> None:
+    """重锚之后、绑定之前那段窗口每轮都要经过：没基准可比就读成前提塌。
+
+    这一条是第一次签出复算教我的：那时 `PROVENANCE.test_report` 是 `{"present": false}`，
+    量具报了两格判红，读者会去"修"一个本来正常的状态。
+    """
+    repo, _ev, report, prov, sha = _clean_fixture(tmp_path)
+    unbound = json.loads(prov.read_text(encoding="utf-8"))
+    unbound["test_report"] = {"present": False, "path": str(report)}
+    prov.write_text(json.dumps(unbound, ensure_ascii=False), encoding="utf-8")
+    rep = cov.audit(report, repo, prov, sha, repo / "tests", [], ["tests/test_one.py::test_x"], 0)
+    assert rep["problems"] and not rep["violations"], (rep["problems"], rep["violations"])
+    assert "provenance_binds_report" in rep["checks"]
+    assert "report_bound_to_provenance" not in rep["checks"], "没基准那一格不该进判红面"
+    assert rep["checks"]["counts_counted_from_roster"]["ok"] is True, "报告内部那一半照判"
+    assert cov.main(["--report", str(report), "--provenance", str(prov),
+                     "--worktree", str(repo), "--tests-dir", str(repo / "tests"),
+                     "--pinned-commit", sha, "--no-default-parity",
+                     "--parity-test", "tests/test_one.py::test_x"]) == 2
+
+
 def test_missing_plaintiff_fires_only_that_check(tmp_path: Path) -> None:
     repo, _ev, report, prov, sha = _clean_fixture(tmp_path)
     rep = cov.audit(report, repo, prov, sha, repo / "tests",
@@ -259,8 +307,8 @@ def test_problems_are_not_folded_into_violations(tmp_path: Path) -> None:
 
 
 def test_binding_decides_which_copy_of_the_report_is_authority(tmp_path: Path) -> None:
-    """报告只有一份是权威：PROVENANCE 记下 sha 的那份。仓库里另放的副本只要字节不同，
-    没被绑上就不能当第二张嘴（内容相同而字节不同的副本，也照样读成"不是那一份"）。
+    """报告只有一份是权威：PROVENANCE 记下 sha 的那份。字节不同的副本没被绑上，
+    就不能当第二张嘴（内容相同而字节不同的那份也照样读成"不是那一份"）。
     """
     payload = json.loads(REPORT.read_text(encoding="utf-8"))
     bound = tmp_path / "bound.json"
@@ -268,20 +316,16 @@ def test_binding_decides_which_copy_of_the_report_is_authority(tmp_path: Path) -
     unbound = tmp_path / "unbound.json"
     unbound.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     assert cov._sha256_path(bound) != cov._sha256_path(unbound), "夹具前提：两份字节得不同"
-    prov_src = json.loads(PROV.read_text(encoding="utf-8"))
-    prov_src["test_report"]["path"] = str(bound)
-    prov_src["test_report"]["sha256"] = cov._sha256_path(bound)
     prov = tmp_path / "PROVENANCE.json"
-    prov.write_text(json.dumps(prov_src, ensure_ascii=False), encoding="utf-8")
-    rep = cov.audit(bound, ROOT, prov, payload["source_commit"], ROOT / "tests", [], [], 0)
+    cov._bind_provenance(prov, bound)
+    rep = cov.audit(bound, ROOT, prov, payload["source_commit"], ROOT / "tests",
+                    ["tests/test_packaging.py"], [], 0)
     assert rep["checks"]["report_bound_to_provenance"]["ok"] is True, \
         rep["checks"]["report_bound_to_provenance"]
-    rep2 = cov.audit(unbound, ROOT, prov, payload["source_commit"], ROOT / "tests", [], [], 0)
+    rep2 = cov.audit(unbound, ROOT, prov, payload["source_commit"], ROOT / "tests",
+                     ["tests/test_packaging.py"], [], 0)
     fired2 = {v["check"] for v in rep2["violations"]}
-    assert "report_bound_to_provenance" in fired2, rep2["violations"]
-    # 只有 C1 因这份副本而多出来的判决：其余两格是开发树本来就有的（名单缺本轮新文件、树脏）
-    assert fired2 - {"worktree_clean", "roster_covers_tree"} == {"report_bound_to_provenance"}, \
-        sorted(fired2)
+    assert fired2 - STAGE_BOUND == {"report_bound_to_provenance"}, sorted(fired2)
 
 
 def test_the_instrument_itself_is_cited_in_the_tool_catalog() -> None:

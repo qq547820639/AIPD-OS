@@ -443,10 +443,12 @@ python scripts/closeout_verifier.py --tag v5.6.0 --expect-test tests/test_new_th
 #     汇总数是不是由名单自己数出来的、名单与树上的 `def test_` 是不是同一批。主线门
 #     （`production_release_gate._check_test_report`）只读 provenance 里抄过去的三个数字加一条
 #     STALE 判决，看不见「summary 被改过」「tests[] 被截断」「报告换了没重绑」这三件事。
-#     退码 0 全绿 / 4 判红 / 2 前提不成立（报告读不出、名单为空、没给锚点都算前提塌，
-#     不折算成零违规）。锚点是 **tag 指向的提交**而不是 HEAD——按约定发布锚点不重锚，
-#     传 HEAD 会被 `pinned_source_binding` 判红，这正是第 62 片真犯过的错。
-#     `--self-test` 是 17 臂合成电池（每臂只点亮自己那一格判决），常驻牙见
+#     退码 0 全绿 / 4 判红 / 2 前提不成立（报告读不出、**证据还没绑这份报告**、名单为空、
+#     没给锚点都算前提塌，不折算成零违规——重锚与绑定之间那段窗口每轮收尾都要经过，
+#     把"没有基准"读成两格判红会让人去修一个本来正常的状态）。锚点是 **tag 指向的提交**
+#     而不是 HEAD——按约定发布锚点不重锚，传 HEAD 会被 `pinned_source_binding` 判红，
+#     这正是第 62 片真犯过的错。
+#     `--self-test` 是 18 臂合成电池（每臂只点亮自己那一格判决），常驻牙 16 条见
 #     `tests/test_closeout_verifier.py`。
 aipd truth propagate --db state.db --project P --upstream T-001 --reason "载荷口径改了"
 #   ↑ 失效传播：沿血缘把下游 truth 标 stale、生成有界返工任务（rework_tasks，默认上限 3 次），
