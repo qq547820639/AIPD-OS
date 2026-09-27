@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-27T00:43:05+00:00",
+  "generated_at": "2026-09-27T01:00:15+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 254824,
-      "sha256": "ee71c3fbfca3831b462d4b5e89412ef6c1d5e8ee63a2c70a5081633f9c908cfc"
+      "size": 254838,
+      "sha256": "09f76e42a534b8ea2c20aa8cda15eef67bfcbb87d8562027eb380e044c82505e"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -1182,8 +1182,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 60735,
-      "sha256": "50a11b7924f61b8898b58de81e940c07f864621bd237918e070c0f940b491fd0"
+      "size": 60749,
+      "sha256": "dd34e539d0af3a51c6d2953c91ec2419c63d489fec86203a431f0a4c2fefb6c7"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
