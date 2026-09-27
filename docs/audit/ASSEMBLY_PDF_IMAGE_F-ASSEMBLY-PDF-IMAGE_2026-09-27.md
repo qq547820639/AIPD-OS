@@ -467,6 +467,28 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
    `PROVENANCE.json` 被改写过 **223** 次、相邻两次绑同一份报告内容 sha **42** 次、
    再加"两次之间 `tests/` 动过"**24** 次——口径是
    `git log --format=%H -- PROVENANCE.json` 行数与报告内容 sha256 现算，不是"绑定次数"。）
+   ⇒ **【第 83 片就地闭合这一半】** 上面那句"下一片该做的是"已经做完，两处按实测改了形状：
+   ① 字段名不叫 `source_manifest_sha256` 而叫 `source_manifest_fingerprint`——写"sha256"会让人以为
+   比的是清单文件的原始字节摘要，而 `release_evidence.py:133` 每次生成都重写 `generated_at`，
+   原始字节摘要每轮必变 ⇒ 判据必须比**内容规范摘要**（剥掉 `generated_at` 后 `sort_keys` 再 sha256）。
+   尺子只有一把：`scripts/release_fingerprint.py`，生产侧（`tests/conftest.py:69`）与
+   验签侧（`scripts/closeout_verifier.py:354,368`）都 import 它；另有一把**另写一遍**的盲尺
+   在 `tests/test_report_manifest_fingerprint.py:37` 断两边相等。
+   ② 加的不是"一格"而是两格：`report_fingerprint_recorded`（报告没带字段 ⇒ **前提塌，退 2**，
+   不是判红——判红会自锁：报告是不可变的历史产物，旧报告不出自新 conftest，于是任何
+   在它被换掉前跑出来的全量都带着这条红，0-failed 的证据永远拿不出来；这条改判由本片两次
+   实测逼出：常驻基线 `5 failed, 21 passed` 与干净全量 `2658 passed / 5 failed`、`exitcode=1` 拒绑）
+   与 `report_fingerprint_matches_disk`（对账磁盘当前那份；没基准时读成 skipped 而不连带判红，
+   磁盘清单读不出时退 2）。配了一条**假红控制**（两份字节不同而摘要相同的清单
+   必须判绿）与六臂变异电池（`docs/audit/s83/battery83.py`，KILLED 6/6，其中 Y3 就是
+   "把验签侧改成比原始字节 sha"——那一臂证明 ① 不是措辞选择而是有牙的判据）。
+   强制力因此挪到**写入侧**（收尾脚本绑定前逐位比对）＋**生产侧常驻用例**（真
+   `pytest --json-report` 端到端）；下一片要把它接进 `release_evidence.py` 本体（拒绑没有
+   字段或字段不同源的报告），否则"退 2"守的仍是"我记得跑这一步"。
+   本条剩下的**没做**部分照旧挂着：① 那一格降级成的"可选提示"仍没实现（不做也不影响正确性）；
+   ② `RELEASE_MANIFEST`/`BUNDLE_MANIFEST` 的同类指纹（第 83 片取证文档 §八.1 记了为什么不划算）。
+   出处：`docs/audit/REPORT_MANIFEST_FINGERPRINT_F-REPORT-MANIFEST-FINGERPRINT_2026-09-28.md`。
+
 6. §一之三 落的一条备选第二尺（**不是必做**）：
    `jscpd CHANGELOG.md --min-tokens 20 --min-lines 5 --threshold 0` 作为形状 1 的补充档。
    **本轮新增一条硬前提**：本机根本没有 jscpd（`which jscpd` 退 1，仓库里也没有

@@ -143,6 +143,39 @@ C11 那一格读成 `kind="skipped"`；有字段才做磁盘对账。
 终局读数：`合计 KILLED+CRASH-KILL 6 / 6；其余按判决分类：无`，
 落盘日志 `docs/audit/s83/battery83.log`。无 CRASH-KILL（六臂都是判决翻转）。
 
+## 六之二、终局读数（绑定那一跑，全部现读）
+
+| 格 | 读数 |
+|---|---|
+| 干净签出 | worktree `/Volumes/Extra/CodeProj/AI全链路自研/tmp/s83/final2` 检出 HEAD，`aipd_os` 真被加载自 `/Volumes/Extra/CodeProj/AI全链路自研/tmp/s83/final2/src/aipd_os/__init__.py` |
+| summary | `{'passed': 2663, 'skipped': 5, 'total': 2668, 'collected': 2668}`，`exitcode=0`，`duration=480.4 s` |
+| 跳过（与上一轮同一批） | 5 条：联网与真实邮件服务的既有用例 |
+| 报告指纹 | `source_manifest_fingerprint=74b031491f1a979b…` == 磁盘 `SOURCE_MANIFEST.json` 内容规范摘要 |
+| PROVENANCE 绑定 | `test_report.sha256=8a1d6b7db023…`，与磁盘那份逐字节一致；绑定提交 `7e631c9`（HEAD 当时 7e631c9，链后还有收尾提交） |
+| 清单分母 | SOURCE 683 个文件 / RELEASE 683 个文件（`docs/audit/` 整体排除 ⇒ 0 条） |
+| 发布门 | 链内第一轮 `release_ready=False`（红在 `workspace_clean`，见下面第 3 条）；链内第二轮 `release_ready=True`（8 项全过）；文档定稿后复跑 `release_ready=True`（8 项全过，退码 0） |
+| 收尾验签 | `closeout_verifier --tag v5.6.0 --expect-test tests/test_report_manifest_fingerprint.py --min-tests 2660` ⇒ 全部判据绿（十一格） |
+
+三条本片该记住的形状：
+
+1. **"报告与清单同源"这件事现在是两处读的**：绑定脚本在写之前就比（不等退 8，是 C11 的事前档），
+   `closeout_verifier` 在绑定之后照 C10/C11 复核。事前档现在只活在收尾脚本里 ⇒ 下一片接进
+   `release_evidence.py` 本体（§八.4），否则它守的是"我记得跑这一步"。
+2. **换绑之前那 5 条红不是判据坏，是判据在要求换绑**。第一版把它写成判红造成自锁，
+   改判前提塌之后配方仍然过不去（退 2），只是不再伪造"有 5 条违规"这个读数。
+   写这一节时报告已经带着字段，`problems` 为空，十一格全绿——那条限定放行
+   （`problems ⊆ {report_fingerprint_recorded}`）就此回到"必须绿"的名单里。
+
+3. **链上有两处非零退码，两条都是我自己的伤，归因写在这**：
+   ① 链内第一轮发布门 `release_ready=False`，红在 `workspace_clean`，未跟踪项是
+   `?? docs/audit/s83/terminal83.py`——我在链条跑到一半时把取数脚本写进了树里；
+   收尾提交把它一起收下之后，第二轮与文档定稿后的复跑都是 8/8。
+   ② `resident2_rc=1`：绑定那一步之后、提交之前那一小段窗口里
+   `test_fingerprint_verdict_always_has_a_content_level_explanation` 红——它拿
+   `git show <锚点>:SOURCE_MANIFEST.json` 当基准，而那一刻报告与清单都还没进提交，
+   锚点仍指向上一轮的绑定提交。这正是本文件开头那条老规矩（**常驻用例不许假设仓库处于
+   "刚绑定"那一小段窗口**）的第 N 次显形；提交之后该用例复跑为绿，判据没有为此放宽。
+
 ## 七、复算入口
 
 ```

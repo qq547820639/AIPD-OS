@@ -37,12 +37,16 @@ disk_fp, err = rf.fingerprint_from_file(R / "SOURCE_MANIFEST.json")
 rec_fp = str(bound.get("source_manifest_fingerprint") or "")
 g1 = gate(T / "gate_s83.json")
 g2 = gate(T / "gate_s83b.json")
+g3 = gate(T / "gate_s83c.json")
+gate1_reason = [c["detail"] for c in json.loads((T / "gate_s83.json").read_text(encoding="utf-8"))
+                ["checks"] if not c["passed"]]
 verifier_green = "全部判据绿" in log
 run_clean = bound["summary"].get("failed", 0) == 0 and bound["exitcode"] == 0
 dur = round(bound["duration"], 1)
 skips = [x["nodeid"] for x in bound["tests"] if x["outcome"] == "skipped"]
 head = sh(["git", "rev-parse", "HEAD"])
-bind_commit = sh(["log", "--format=%h", "-1", "--", "PROVENANCE.json"])
+bind_commit = sh(["git", "log", "--format=%h", "-1", "--", "PROVENANCE.json"])
+assert re.fullmatch(r"[0-9a-f]{7}", bind_commit or ""), f"绑定提交号取数失败：{bind_commit!r}"
 worktree = re.search(r"\[full\] worktree=(\S+)", log)
 loaded = re.search(r"\[full\] aipd_os 来自 (\S+)", log)
 src_n = len(json.loads((R / "SOURCE_MANIFEST.json").read_text(encoding="utf-8"))["files"])
@@ -59,8 +63,12 @@ if not run_clean:
     fail.append(f"绑定的那份不干净：{bound['summary']}")
 if not verifier_green:
     fail.append("closeout_verifier 那一行没打出「全部判据绿」")
-if not (g1[0] and g1[1] and g2[0] and g2[1]):
-    fail.append(f"发布门没两轮全过：{g1} / {g2}")
+if not (g2[0] and g2[1] and g3[0] and g3[1]):
+    fail.append(f"树干净之后的两轮门没全过：{g2} / {g3}")
+if g1[0]:
+    fail.append("第一轮门理应是被我自己的未跟踪件拒掉的——它过了说明这道门没在看工作树")
+if not any("terminal83" in str(x) for x in gate1_reason):
+    fail.append(f"第一轮门的红因归不到我头上，得单独查：{gate1_reason}")
 if bound_sha != actual_sha:
     fail.append(f"PROVENANCE 记的报告 sha {bound_sha} != 磁盘那份 {actual_sha}")
 if fail:
@@ -77,7 +85,7 @@ SEC = f"""## 六之二、终局读数（绑定那一跑，全部现读）
 | 报告指纹 | `source_manifest_fingerprint={rec_fp[:16]}…` == 磁盘 `SOURCE_MANIFEST.json` 内容规范摘要 |
 | PROVENANCE 绑定 | `test_report.sha256={bound_sha}…`，与磁盘那份逐字节一致；绑定提交 `{bind_commit}` |
 | 清单分母 | SOURCE {src_n} 个文件 / RELEASE {rel_n} 个文件（`docs/audit/` 整体排除 ⇒ 0 条） |
-| 发布门 | 第一轮 `release_ready={g1[0]}`（{g1[2]} 项全过）；第二轮 `release_ready={g2[0]}`（{g2[2]} 项全过） |
+| 发布门 | 链内第一轮 `release_ready={g1[0]}`（红在 `workspace_clean`，见下面第 3 条）；链内第二轮 `release_ready={g2[0]}`（{g2[2]} 项全过）；文档定稿后复跑 `release_ready={g3[0]}`（{g3[2]} 项全过，退码 0） |
 | 收尾验签 | `closeout_verifier --tag v5.6.0 --expect-test tests/test_report_manifest_fingerprint.py --min-tests 2660` ⇒ 全部判据绿（十一格） |
 
 两条本片该记住的形状：
@@ -89,6 +97,16 @@ SEC = f"""## 六之二、终局读数（绑定那一跑，全部现读）
    改判前提塌之后配方仍然过不去（退 2），只是不再伪造"有 5 条违规"这个读数。
    写这一节时报告已经带着字段，`problems` 为空，十一格全绿——那条限定放行
    （`problems ⊆ {{report_fingerprint_recorded}}`）就此回到"必须绿"的名单里。
+
+3. **链上有两处非零退码，两条都是我自己的伤，归因写在这**：
+   ① 链内第一轮发布门 `release_ready=False`，红在 `workspace_clean`，未跟踪项是
+   `?? docs/audit/s83/terminal83.py`——我在链条跑到一半时把取数脚本写进了树里；
+   收尾提交把它一起收下之后，第二轮与文档定稿后的复跑都是 8/8。
+   ② `resident2_rc=1`：绑定那一步之后、提交之前那一小段窗口里
+   `test_fingerprint_verdict_always_has_a_content_level_explanation` 红——它拿
+   `git show <锚点>:SOURCE_MANIFEST.json` 当基准，而那一刻报告与清单都还没进提交，
+   锚点仍指向上一轮的绑定提交。这正是本文件开头那条老规矩（**常驻用例不许假设仓库处于
+   "刚绑定"那一小段窗口**）的第 N 次显形；提交之后该用例复跑为绿，判据没有为此放宽。
 
 """
 
@@ -104,7 +122,7 @@ back = DOC.read_text(encoding="utf-8")
 order = [back.index(x) for x in ("## 六、电池", "## 六之二、终局读数",
                                  "## 七、复算入口", "## 八、本片没做的事")]
 assert order == sorted(order), order
-assert len(re.findall(r"^## ", back, head_re)) == len(re.findall(r"^## ", t, head_re)) + 1
+assert len(head_re.findall(back)) == len(head_re.findall(t)) + 1
 assert "@@" not in back and "'?'" not in back and "if worktree else" not in back
 print(f"[WROTE] §六 终局读数已补（HEAD {head[:7]}）；标题序 {order}")
 print(f"[读数] summary={bound['summary']} 指纹={rec_fp[:12]} 门={g1[0]}/{g2[0]} 清单={src_n}/{rel_n}")
