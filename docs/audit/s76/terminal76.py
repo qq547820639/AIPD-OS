@@ -15,7 +15,7 @@ TMP = Path("/Volumes/Extra/CodeProj/AI全链路自研/tmp/s76")
 DOC = REPO / "docs/audit/FULLTEXT_STEP_F-FULLTEXT-STEP_2026-09-27.md"
 REPORT = TMP / "final/report.json"
 PY = str(REPO / ".venv/bin/python")
-PLACEHOLDER = "## 四、终局读数（占位）"
+PLACEHOLDER = "## 五、终局读数（占位）"
 
 
 def sh(args, timeout=900):
@@ -193,14 +193,14 @@ def main() -> int:
         for one in fails:
             print("  -", one)
         return 2
-    body = "\n".join(["## 四、终局读数（由 `docs/audit/s76/terminal76.py` 从原件现跑生成，不手抄）",
+    body = "\n".join(["## 五、终局读数（由 `docs/audit/s76/terminal76.py` 从原件现跑生成，不手抄）",
                       ""] + rows)
     text = DOC.read_text(encoding="utf-8")
     if PLACEHOLDER not in text:
         print("占位不在，拒写")
         return 2
     merged = text.replace(PLACEHOLDER, body, 1)
-    assert sum(1 for ln in merged.splitlines() if ln.startswith("## 四、")) == 1, "标题重复"
+    assert sum(1 for ln in merged.splitlines() if ln.startswith("## 五、")) == 1, "标题重复"
     assert "?" not in body and "None" not in body, "读数里不许有占位符/None"
     DOC.write_text(merged, encoding="utf-8")
     print("WROTE 终局读数一节")
