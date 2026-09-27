@@ -100,7 +100,9 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
 而把窗口压到 1 行时，干净文件本身就报 98 个 clone。
 ⇒ 结论落地为两条：**(a)** 不把 jscpd 接成主判据（形状 2 结构上看不见，收紧就 98 误报）；
 **(b)** 记一条待办：若要"第二把尺"，`jscpd CHANGELOG.md --min-tokens 20 --min-lines 5 --threshold 0`
-是可行的补充档，但必须先验 `--threshold 0` 真能把它变红——不加就是假绿。已进 §七.7。
+是可行的补充档，但必须先验 `--threshold 0` 真能把它变红——不加就是假绿。已进 §七.6。
+   （上一版这里写 `§七.7` 是指不到的：本节的表外清单只到 6 项。这条编号没被任何机器读，
+   所以它是"人写的序号"漂移的又一例——动编号要连引用一起改，改完 grep 残留。）
 
 ## 二、两层都要有独立验法
 
@@ -331,13 +333,13 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
 
 ## 六、终局读数（由 `docs/audit/s81/terminal81.py` 从原件现跑生成，不手抄）
 
-- **签出那一跑**（`tmp/s81/final2`，报告产出于提交 `2ad5867`，主树当时 HEAD `2ad5867`）：`exitcode=0`、`collected=2657`、`passed=2652`、`skipped=5`、`failed=0`、`error=0`、`xfailed=0`、`xpassed=0`、用时 `329.8s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/final2`、`source_commit=a66040520139`
+- **签出那一跑**（`tmp/s81/final2`，报告产出于提交 `2ad5867`，主树当时 HEAD `223db51`）：`exitcode=0`、`collected=2657`、`passed=2652`、`skipped=5`、`failed=0`、`error=0`、`xfailed=0`、`xpassed=0`、用时 `329.8s`、`root=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/final2`、`source_commit=a66040520139`
 - **读数来处（两棵树不许互换引用）**：全量报告出自**干净签出树** `/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/final2`（未跟踪文件不在里面）；下面四把尺子与那条常驻门禁都跑在**主树** `/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`（cwd 就是主树），主树看得见本篇与 `docs/audit/s81/` 这些未跟踪件，签出树看不见 ⇒ 普查的历史面计数只在主树这一侧成立，别拿它去核对签出树的报告。
 - **报告 `summary` 原样与红名单**：`{'collected': 2657, 'passed': 2652, 'skipped': 5, 'total': 2657}`；逐条红面（outcome 为 failed/error）共 0 条 ⇒ 一条都没有
 - **`doc_command_census --self-test`**：`rc=0`，**7 条**合成读数全对上
-- **同族尺子 `doc_command_census --repo .`（README 这轮加了旗子 ⇒ 命令名普查是本片的主面）**：`rc=0`；权威面：90 条 argparse 路径（契约 deprecated 别名不并进权威面，由 alias_unregistered 单独核），15 个组名；判红面语料：run_command 86 段 / 速查行 97 行 / 生产代码 220 处（另有 6 处同行带否定标记 ⇒ 只报）；只报面（live，可行动）48 处；记录性引述（只数不列名）1026 处 {'CHANGELOG.md': 83, 'docs/audit': 832, 'tests': 65, '.trae': 46}；全量扫描 1404 处，live + record = 1074 处（与减去三档判红面覆盖后的行数同构）；现状面缺陷 0 条：文档与登记表点名的命令都注册着
+- **同族尺子 `doc_command_census --repo .`（README 这轮加了旗子 ⇒ 命令名普查是本片的主面）**：`rc=0`；权威面：90 条 argparse 路径（契约 deprecated 别名不并进权威面，由 alias_unregistered 单独核），15 个组名；判红面语料：run_command 86 段 / 速查行 97 行 / 生产代码 220 处（另有 6 处同行带否定标记 ⇒ 只报）；只报面（live，可行动）48 处；记录性引述（只数不列名）1027 处 {'CHANGELOG.md': 83, 'docs/audit': 833, 'tests': 65, '.trae': 46}；全量扫描 1405 处，live + record = 1075 处（与减去三档判红面覆盖后的行数同构）；现状面缺陷 0 条：文档与登记表点名的命令都注册着
 - **同族尺子 `absence_claim_census --repo .`（这轮翻了 `NOT_COVERED` 里那句假话 ⇒ 看有没有没处置的否定句）**：`rc=0`；语料：84 个能力，带否定词的句子 37 句；账本登记 14 条，未挂锚点 30 句（宽档，只报不判）；能力缺失句（窄档＝判据面）：17 句 = 登记 7 + 豁免 10 + **未处置 0**；被挡在窄档外的 20 句，按轴分开：无缺失谓词 11、无能力名词 6、谈判决/谈口径 3（三档各有常驻用例钉住它非空）；具名样本 8 句、样本问题 0 条；· 未挂锚点的否定句（前 8 条，供下一轮挑）：
-- **本片修过的那把尺子 `doc_reference_census --repo . --json doc_reference_census.json`**（`Ref.key()` 混着空串与整数两种行号形状，全序由 `_defect_sort_key` 给）：`rc=0`、`ok=True`、`docs=184` / `denominator=4875` / 分档 `{'elided': 65, 'resolved': 4009, 'external': 150, 'missing': 182, 'multi': 459, 'line_beyond_eof': 10}` / `live_defects=0` / `history_defects=163`（只报不判）/ `problems=[]`
+- **本片修过的那把尺子 `doc_reference_census --repo . --json doc_reference_census.json`**（`Ref.key()` 混着空串与整数两种行号形状，全序由 `_defect_sort_key` 给）：`rc=0`、`ok=True`、`docs=184` / `denominator=4881` / 分档 `{'elided': 65, 'resolved': 4015, 'external': 150, 'missing': 182, 'multi': 459, 'line_beyond_eof': 10}` / `live_defects=0` / `history_defects=163`（只报不判）/ `problems=[]`
 - **本片新增的常驻门禁**：`pytest tests/test_changelog_integrity.py -q` → `7 passed`（rc=0）
 - **变异电池（现读 `battery81.log`）**：`合计 KILLED 17 / 17；其余按判决分类：无`；逐臂现数 KILLED 17 / 共 17 臂，存活臂：无
 - **逐臂开火的用例名（日志原样 27 条）**：`tests/test_assembly_steps_pdf.py::test_absence_of_an_image_is_stated_in_the_document`、`tests/test_assembly_steps_pdf.py::test_absence_of_an_image_is_stated_in_the_document`、`tests/test_assembly_steps_pdf.py::test_image_without_pdf_is_refused_not_ignored`、`tests/test_assembly_steps_pdf.py::test_cli_refuses_blank_draw_image - ...`、`tests/test_assembly_steps_pdf.py::test_absence_of_an_image_is_stated_in_the_document`、`tests/test_assembly_steps_pdf.py::test_draw_image_lands_in_the_pdf_without_killing_the_text`、`tests/test_assembly_steps_pdf.py::test_a_legitimate_png_still_passes_that_gate`、`tests/test_assembly_steps_pdf.py::test_evidence_records_the_placed_size_not_just_the_source_pixels`、`tests/test_assembly_steps_pdf.py::test_draw_image_lands_in_the_pdf_without_killing_the_text`、`tests/test_assembly_steps_pdf.py::test_the_frame_and_the_body_declare_one_boundary`、`tests/test_cad_assembly_steps.py::TestEvidenceSidecar::test_evidence_names_what_the_document_does_not_carry`、`tests/test_assembly_steps_pdf.py::test_the_frame_and_the_body_declare_one_boundary`、`tests/test_doc_reference_census.py::test_history_face_sorts_when_line_shapes_mix`、`tests/test_assembly_steps_pdf.py::test_pdf_path_pointing_at_a_directory_is_refused_before_writing`、`tests/test_assembly_steps_pdf.py::test_decompression_bomb_is_a_rejection_not_a_traceback`、`tests/test_assembly_steps_pdf.py::test_draw_image_lands_in_the_pdf_without_killing_the_text`、`tests/test_assembly_steps_pdf.py::test_evidence_records_the_placed_size_not_just_the_source_pixels`、`tests/test_assembly_steps_pdf.py::test_blank_pdf_value_is_refused_not_treated_as_absent`、`tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag`、`tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag`、`tests/test_assembly_steps_pdf.py::test_unreadable_image_is_refused_before_anything_is_written[\u622a\u65ad\u7684 PNG]`、`tests/test_assembly_steps_pdf.py::test_unreadable_image_is_refused_before_anything_is_written[\u6587\u672c\u5192\u5145.png]`、`tests/test_assembly_steps_pdf.py::test_unreadable_image_is_refused_before_anything_is_written[\u96f6\u5b57\u8282]`、`tests/test_assembly_steps_pdf.py::test_decompression_bomb_is_a_rejection_not_a_traceback`、`tests/test_assembly_steps_pdf.py::test_cli_returns_two_for_unreadable_image[\u622a\u65ad\u7684 PNG]`、`tests/test_assembly_steps_pdf.py::test_cli_returns_two_for_unreadable_image[\u6587\u672c\u5192\u5145.png]`、`tests/test_assembly_steps_pdf.py::test_cli_returns_two_for_unreadable_image[\u96f6\u5b57\u8282]`
@@ -362,9 +364,18 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
   所以按配方走完 ③→④→⑤——先换绑本轮报告
   （提交里如实写"这一跑含 1 条在途红，红在这条自伤"），再跑第二次全量拿 0 failed 那份，
   最后再绑一次并交终局证据。代价：多一整个 700 秒量级的全量跑。
-- 立下来的规矩（已写进项目记忆的配方那条）：**本轮只允许跑一次 `release_evidence.py`**；
-  要刷清单用 `regenerate_release_manifest.py`（它只动 `RELEASE_MANIFEST.json`，不碰 PROVENANCE）。
-  真误绑了不要 revert——那个提交本身就是这条错法的证据。
+- 当时立下的规矩（也写进了项目记忆那条配方）：**本轮只允许跑一次 `release_evidence.py`**；
+  要刷清单就用 `regenerate_release_manifest.py`。这条**被本片自己的经过推翻了一半**，实际账是
+  本片跑了 **3 次** `release_evidence.py`：① 不带报告、只为把 `SOURCE_MANIFEST` 刷到当前树
+  （提交 0452798——不带报告时 `PROVENANCE.test_report` 读成 `{"present": false}`，
+  是配方认定的在途状态）；② 绑第一份 0 failed 报告（745e2a9）；③ 第三轮镜像更正又改了
+  `README.md`/`CHANGELOG.md`/`docs/security/…`——**这三个都在被哈希分母里**，于是清单再次过期，
+  只能重刷清单、重跑一次干净签出全量、再绑一次（223db51，2652 passed / 0 failed，329.8s）。
+  ⇒ 真正该守的不是"次数"，而是两条不变量：**被绑的报告必须覆盖定稿内容**（否则 gate 的
+  `source_manifest_zero_diff` 与"测的就是这棵树"那格会各说一套），
+  以及**不得为了刷清单而绑报告**（不带报告那一次是安全的）。
+  次数之所以能放开，前提是上面那条锚点修正：基准取最早一次绑定，重绑不再把基准前推，
+  所以也不会再制造在途红——那正是这条错法原先唯一能"自愈"的机制被拆掉之后剩下的洞。
 - 当时我没有去"修"那条判据，理由是它判得对、红的是我的顺序——这句**只对了一半**，
   收尾再撞上同一格时把另一半查清了：`_anchor_commit_for_this_report()` 取的是
   PROVENANCE 历史里**最近**一次绑着同一 sha 的提交。重绑（哪怕内容一字没改）会把基准推到
@@ -399,19 +410,37 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
    任何含"第…片"的 `- **v` 行必须带完整 `F-<ID>` 记号）。所以"登记 F-CHANGELOG-INTEGRITY"
    的正确形状是：**下一片的 CHANGELOG 条目自带这个 id**（新行的分母由那两条镜像断言现算，
    加行安全，界值是 `>=2000/>=1800/>=60/>=60`），而不是去某张不存在的表里加一行。
-3. README 那处"续行接另一条命令"的形状**没有常驻判据**，本轮已把它量成数（不再是要不要做的猜）：
-   主理人自己重跑的普查分母 **183 个 `.md` 文件 / 22,119 行**，其中
-   以 `\` 收尾的行 **58** 处；形状 a（`\` 后紧跟另一条 `aipd` 命令）今天 **0** 处，
-   形状 b（注释行以 `\` 收尾）今天 **0** 处；
-   **正向对照成立**：`git show 3784a0a:README.md` 上两处各命中 1 次
-   （`:271` 是形状 a、`:272` 是形状 b），即这条判据能咬本轮真实损坏、今天不误伤。
+3. README 那处"续行接另一条命令"的形状**没有常驻判据**，本轮已把它量成数（不再是要不要做的猜）。
+   分母由 `doc_command_census` 自己的遍历档现取（`SKIP_DIRS` 九项 + `SUFFIXES` 八项，
+   不是我另写一遍 walk——上一版那三个数 183/22,119/58 就是这么漂的：本轮同一把尺读
+   **224 个 `.md` / 27,915 行**，其中**以 `\` 收尾的行 61 处**；形状 a（一行以 `\` 收尾、
+   下一行又以 `aipd ` 或 `$` 开头）今天 **0** 处，形状 b 见下面重述）：
+   **正向对照要按被更正的那两处真实损坏逐行读**，不能只说"命中 1 次"——
+   `git show 3784a0a:README.md:271` 结尾是 `… --part ASSY-1 \`、`:272` 是**另一条**
+   `aipd drawing assembly-steps …` ⇒ 形状 a 为真；而 `:272` 自己以 `\` 收尾、
+   同一行尾部挂着 `# 顺带出 A4 图框矢量 PDF（中文可抽取）` ⇒ 原先写的"形状 b =
+   注释行以 `\` 收尾"与那处损坏**不同源**（那一行不是注释行，是命令行带尾注），
+   按旧定义去判会把合法续行也读成违规。⇒ 判据要做的是形状 a 那一条。
    ⇒ 结论：形状 a 可以做成常驻判据（挂进 `doc_command_census` 的一档或新常驻用例，
    必开火夹具用 `git show 3784a0a:README.md` 那一段的真实形状，不许手写相似片段）；
    形状 b 只报不判——它是词法巧合，没有结构第二半，任何合法的 `--flag  # 注 \` 都会红，
    今天 n=0 不足以证明它长期安静。
-4. 第 79 片两件仍挂着：其余开放来源主机的路径级收紧、`rerun_for_rework` 多轮失败/退避形状。
+4. 第 79 片两件仍挂着，本轮把"其余"点名，免得下一位再猜一遍：
+   ① **仍是主机级信任的 7 个域**（`src/aipd_os/research/fulltext.py:57` 的
+   `OPEN_ACCESS_DOMAINS`：`arxiv.org`、`openalex.org`、`pubmedcentral.nih.gov`、`core.ac.uk`、
+   `doabooks.org`、`creativecommons.org`、`zenodo.org`）——第 79 片只把 `ebi.ac.uk` 与
+   `europepmc.org` 降到主机+前缀级（`:72` 的 `OPEN_ACCESS_PREFIXES`，判据在 `:159`
+   `is_open_access_url`）。这 7 台里 `pubmedcentral.nih.gov`（整台 NCBI）与
+   `core.ac.uk`/`zenodo.org`（用户可上传仓储）最该先收；
+   ② `rerun_for_rework` 的多轮失败/退避形状仍未做：`src/aipd_os/supervisor/supervisor.py:591`
+   那个入口不读也不写 `attempts`（同文件里 `max_attempts`、`backoff` 各 **0** 命中，
+   `attempts` 的 4 处全在 `run_supervisor` 那条链上：schema `:53`、插入 `:244`、自增 `:291`/`:306`）
+   ⇒ 返工这一路的"失败几次就停 / 退避多久再来"仍靠调用方兜，而 truth 侧那套有界返工
+   （`attempts/max_attempts/backoff`）是另一套机制，两条没合。
 5. §六之二 那类自伤目前靠 roster 用例事后照出来（代价一整个全量）。**候选的"事前拦"已量过，
-   且量出来是"不能这样做"**：全仓 `PROVENANCE.json` 被改写过 217 次，其中
+   且量出来是"不能这样做"**：全仓 `PROVENANCE.json` 被改写过 **221** 次
+   （这条数每收口一次就涨，本片从 217 涨到 221 就是证据；口径是
+   `git log --format=%H -- PROVENANCE.json` 的行数，不是"绑定次数"），其中
    "相邻两次绑定同一份报告 sha256"**42 次**，再加一条"两次之间 `tests/*.py` 动过"仍剩
    **24 次**——把这个当判据红就是 24 条历史欠账当场炸响，而它们绝大多数是配方内正常的重跑。
    ⇒ 改法不是门禁而是**提示**：`release_evidence.py` 在准备写入时发现
@@ -421,6 +450,12 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
    （用合成 git 历史或临时仓库，别拿主仓历史当夹具）。
 6. §一之三 落的一条备选第二尺（**不是必做**）：
    `jscpd CHANGELOG.md --min-tokens 20 --min-lines 5 --threshold 0` 作为形状 1 的补充档。
+   **本轮新增一条硬前提**：本机根本没有 jscpd（`which jscpd` 退 1，仓库里也没有
+   `node_modules/.bin`，`scripts/` 与 `tests/` 零引用）⇒ 这一项今天**跑不动**，
+   接它之前必须先写"取不到可执行就 fail-closed 并点名缺什么"那一格
+   （照 `production_release_gate.py:600` 用 `shutil.which` 找 `pip-audit` 的形状），
+   否则"没装"会被读成"没有重复"——与 `[[feedback-instrument-validation]]`
+   那条"0 命中先怀疑探针看不见"是同一个坑的新载体。
    接之前必须先证 `--threshold 0` 真能让"有 clone"变非零退码——子代理实测不加它时
    有 clone 也 `rc=0`，那是一条假绿；本仓要的是判据会红，不是会打印。
    并且它只能当**副尺**：形状 2（部分重贴后条目记号重复）它结构上看不见。
