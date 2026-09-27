@@ -286,13 +286,36 @@ def duplicate_divergence(corpus: dict[str, dict[str, list[tuple[str, int, str]]]
     return out
 
 
+def classify_absence(body: str) -> tuple[str, str]:
+    """这句"带否定词的话"属于哪一档，以及为什么。
+
+    第 71/72 片之后才发现：判据必须落到**子句**粒度。
+    原来整句判，于是这两句被一起挡掉的其实是真正的能力缺失断言——
+      · 「…所以「没有执行器」不会被伪装成「返工失败三次」。
+         四类之外到今天仍没有执行器的是 quote_batch」——谈口径的那半
+         把同一句里真缺失的那半一起挡掉了
+      · 「C6 的「装配/维护」里**维护指引没有生产者**（内容要属主给）…读者不会把骨架当…」
+    按子句判之后，谈判决的那半被丢掉、缺失的那半留下，两侧都对了。
+
+    返回值：("narrow", axis) 或 (axis, "")，axis ∈
+    narrow / no-predicate / no-noun / non-claim。
+    """
+    clauses = [c for c in re.split(r"[。；;，、]", body) if c.strip()]
+    for clause in clauses:
+        if (any(p in clause for p in ABSENCE_PREDICATES)
+                and any(n in clause for n in CAPABILITY_NOUNS)
+                and not any(k in clause for k in NON_CLAIM_PATTERNS)):
+            return "narrow", ""
+    if not any(any(p in c for p in ABSENCE_PREDICATES) for c in clauses):
+        return "no-predicate", ""
+    if any(any(k in c for k in NON_CLAIM_PATTERNS) for c in clauses):
+        return "non-claim", ""
+    return "no-noun", ""
+
+
 def is_capability_absence(body: str) -> bool:
-    """这句是不是"某项能力还没有"（而不是"某种情况下不判/不写"）。"""
-    if not any(p in body for p in ABSENCE_PREDICATES):
-        return False
-    if any(p in body for p in NON_CLAIM_PATTERNS):
-        return False
-    return any(n in body for n in CAPABILITY_NOUNS)
+    """这句算不算"某项能力还没有"（子句粒度，理由见 `classify_absence`）。"""
+    return classify_absence(body)[0] == "narrow"
 
 
 def _norm(text: str) -> str:
@@ -804,7 +827,20 @@ def audit(root: Path, claims: tuple[dict[str, Any], ...]) -> dict[str, Any]:
     anchored = {_norm(str(c.get("anchor"))) for c in claims if c.get("anchor")}
     wide_unanchored = [s for s in sentences
                        if not any(a and a in _norm(s) for a in anchored if a)]
-    narrow = [s for s in sentences if is_capability_absence(s.split("|", 2)[-1])]
+    narrow: list[str] = []
+    dropped = {"no-predicate": 0, "no-noun": 0, "non-claim": 0, "unknown-axis": 0}
+    for s in sentences:
+        axis = classify_absence(s.split("|", 2)[-1])[0]
+        if axis == "narrow":
+            narrow.append(s)
+        elif axis in dropped:
+            dropped[axis] += 1
+        else:
+            dropped["unknown-axis"] += 1
+    if dropped["unknown-axis"]:
+        # 分类器吐出一个没登记的轴 ⇒ 词表被改坏了，不许当成"这句不算"
+        problems.append(f"classifier_unknown_axis: "
+                        f"{dropped['unknown-axis']} 句落进未登记的轴，词表改动没对齐")
     accounted: list[str] = []
     exempted: list[str] = []
     unaccounted: list[str] = []
@@ -848,6 +884,9 @@ def audit(root: Path, claims: tuple[dict[str, Any], ...]) -> dict[str, Any]:
         "corpus": {"capabilities": len(corpus),
                    "absence_sentences": len(sentences),
                    "capability_absence_sentences": len(narrow),
+                   "dropped_no_predicate": dropped["no-predicate"],
+                   "dropped_no_noun": dropped["no-noun"],
+                   "dropped_non_claim": dropped["non-claim"],
                    "narrow_registered": len(accounted),
                    "narrow_exempted": len(exempted),
                    "narrow_unaccounted": len(unaccounted),
@@ -871,6 +910,10 @@ def render(rep: dict[str, Any]) -> str:
     lines.append(f"能力缺失句（窄档＝判据面）：{c['capability_absence_sentences']} 句 = "
                  f"登记 {c['narrow_registered']} + 豁免 {c['narrow_exempted']} + "
                  f"**未处置 {c['narrow_unaccounted']}**")
+    lines.append(f"被挡在窄档外的 {c['absence_sentences'] - c['capability_absence_sentences']} 句，"
+                 f"按轴分开：无缺失谓词 {c['dropped_no_predicate']}、"
+                 f"无能力名词 {c['dropped_no_noun']}、谈判决/谈口径 {c['dropped_non_claim']}"
+                 f"（三档各有常驻用例钉住它非空，见 test_each_narrow_axis_is_load_bearing）")
     mark_map = {"HOLDS": "✓", "CONTRADICTED": "✗", "CLAIM_TEXT_ABSENT": "✗",
                 "UNACCOUNTED": "✗", "PRECONDITION": "!"}
     for row in rep["rows"]:
@@ -1162,6 +1205,22 @@ def _self_test(tmp: Path) -> int:
                  "只剩同文件自调用 ⇒ 判红（旗子被摘就响）")
     _mark(marks, "外部调用点档双向：只被同文件调 ⇒ 成立（commit_snapshot 的真实形状）；"
                  "被别的文件调 ⇒ 判红")
+    # ---- 第 73 片：分类器按子句判，四档各有一正一反 ----
+    cases = (
+        ("谈口径的半句不能挡掉真缺失",
+         "所以「没有执行器」不会被伪装成失败三次。四类之外仍没有执行器的是 quote_batch",
+         "narrow"),
+        ("整句都在谈判决 ⇒ 不进判据面",
+         "圆内没有图线即判未收口，不编号不画圈", "non-claim"),
+        ("有缺失谓词但没有能力名词 ⇒ 不算能力缺失",
+         "项目里还没有 BOM 版本记录时记录照写", "no-noun"),
+        ("没有缺失谓词（只是陈述范围）⇒ 不算",
+         "内置族为常用成年男女/儿童百分位示例，覆盖有限", "no-predicate"),
+    )
+    for label, body, want in cases:
+        assert classify_absence(body)[0] == want, (label, classify_absence(body), want)
+    _mark(marks, "分类器四档双向：同一句里谈口径的那半被丢掉、谈缺失的那半留下"
+                 "（第 73 片修的就是这个粒度）")
     _mark(marks, f"合计 {len(marks)} 条合成读数全部对上")
     return 0
 

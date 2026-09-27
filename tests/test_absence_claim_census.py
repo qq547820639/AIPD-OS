@@ -444,3 +444,26 @@ def test_external_callers_without_production_tree_is_precondition(tmp_path: Path
     rep = acc.audit(tmp_path, claims)
     assert verdicts(rep) == {"NOAUTH": acc.PRECONDITION}, rep["rows"]
     assert any(str(p).startswith("authority_thin") for p in rep["problems"]), rep["problems"]
+
+
+def test_a_real_absence_claim_cannot_be_dropped_by_a_co_located_clause() -> None:
+    """真缺失断言不能因为同一句里还有一句谈口径就消失（第 73 片修的正是这个粒度）。
+
+    钉的是语料里真实的那句「C6 的装配/维护里维护指引没有生产者（内容要属主给），
+    …读者不会把骨架当…」：前半是真缺失、后半是谈读者理解。
+    整句判 ⇒ 它被 NON_CLAIM 挡掉，连"要不要处置"都问不到；
+    子句判 ⇒ 它进窄档，然后必须显式选择登记或给豁免理由。
+    """
+    corpus, problems = acc.registry_strings(ROOT)
+    assert problems == [], problems
+    wide = acc.absence_sentences(corpus)
+    target = [s for s in wide if "维护指引没有生产者" in s]
+    assert target, "语料里那句被改了的话，请连这条控制一起改（别把它静默删掉）"
+    body = target[0].split("|", 2)[-1]
+    assert acc.classify_absence(body)[0] == "narrow", body
+    rep = acc.audit(ROOT, acc.CLAIMS)
+    narrow_bodies = [acc._norm(s.split("|", 2)[-1]) for s in wide
+                     if acc.classify_absence(s.split("|", 2)[-1])[0] == "narrow"]
+    assert any("维护指引没有生产者" in b for b in narrow_bodies), narrow_bodies[:3]
+    # 它在窄档里，且被显式豁免（不是被漏掉）——豁免理由非空由 rep 的 problems 保证
+    assert rep["corpus"]["narrow_exempted"] >= 1, rep["corpus"]
