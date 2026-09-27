@@ -1,0 +1,8 @@
+[
+ {"id":"REWORK-EXECUTOR-BOM","capability":"industrialize.quote_to_bom_cost","field":"current_limitation",
+  "anchor":"BOM 版本记录仍没有","check":{"kind":"artifact_executor","artifact":"bom"}},
+ {"id":"REWORK-EXECUTOR-SCOPE","capability":"industrialize.physical_writeback","field":"current_limitation",
+  "anchor":"执行器只认图纸声明这一类制品","check":{"kind":"artifact_executor","artifact":"drawing_dxf"}},
+ {"id":"PRODUCT-PROVIDER-UNWIRED","capability":"product.derive_insights","field":"current_limitation",
+  "anchor":"生产 Provider 未接入","check":{"kind":"identifier","paths":["src/aipd_os"],"symbols":["LlmProductIntelligenceProvider"]}}
+]
