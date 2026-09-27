@@ -101,6 +101,7 @@ from .commands_supply import cmd_quote
 from .commands_truth import (
     cmd_truth_ctq_add,
     cmd_truth_ctq_deprecate,
+    cmd_truth_ctq_list,
     cmd_truth_ctq_revise,
     cmd_truth_propagate,
     cmd_truth_rework,
@@ -545,6 +546,7 @@ COMMAND_FUNCS: dict[str, Any] = {
     "ctq add": cmd_truth_ctq_add,
     "ctq revise": cmd_truth_ctq_revise,      # 链头的改动入口（带旧值与审计行）
     "ctq deprecate": cmd_truth_ctq_deprecate,
+    "ctq list": cmd_truth_ctq_list,             # 链头的读面（第 62 片，只读）
     "outbox drain": cmd_outbox,
     "outbox review": cmd_outbox,
     "industrialize": cmd_industrialize,

@@ -167,6 +167,15 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
                              "--replaced-by 给了就必须真存在（指向不存在的记录会骗过"
                              "发布门禁那句「确认取代它的那条在名单里」）；"
                              "已不在有效名单里的记录不重复停用"),
+    CommandEntry("ctq list", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.23",
+                 requires_args=frozenset({"--db", "--project"}),
+                 description="列出作用域内的 CTQ 合格域声明——链头第一个面向人的读面。"
+                             "默认只列 active（与发布分母同口径），并自报排除了几条"
+                             "各是什么态，免得「1 条」被读成「库里只有 1 条」；"
+                             "--all 连 stale/superseded/expired/blocked 一起看，"
+                             "状态按库里原样报，不折算。投影复用生产面那份 _snapshot，"
+                             "带 drawing_feature（发布证据的 ctq 数组不带那一列）。"
+                             "只读命令：不写 audit_log——那条通道要留给『谁改了事实』"),
     CommandEntry("truth rework", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.11",
                  requires_args=frozenset({"--db", "--project"}),
                  description="按当前 active CTQ 重算图纸声明并跑一次返工："

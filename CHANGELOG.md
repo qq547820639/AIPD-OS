@@ -951,6 +951,37 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.23 F-CTQ-READER 第 62 片：新公开命令 `aipd ctq list`——链头第一个面向人的读面**：
+  第 56/59 片给链头配了三个写者（`ctq add` / `ctq revise` / `ctq deprecate`）与四个读者
+  （发布证据分母、图纸声明输入、出图返工、漂移扫描），但**没有任何一条命令能让人问出
+  「这个图纸尺寸上现在有效的是哪几条、限值与版本各是几」**——那条缺席是第 60 片那把
+  `doc_command_census` 写进 registry 限制句、由只报面持续可见化的。本片把它闭掉：
+  `src/aipd_os/product_truth/ctq.py:363 list_ctq` + `src/aipd_os/cli/commands_truth.py:543
+  cmd_truth_ctq_list`。三处形状：① 默认只列 `active`（与发布分母同口径）但**同时自报
+  排除了几条、各是什么态**（`excluded`），因为 `aipd release manifest` 的 `ctq` 数组正是
+  "只含 active 且不说明排除、条目不带 `drawing_feature`"那个形状，而"要求被撤了几条"
+  恰是属主最该看见的；② 投影复用审计行那份 `_snapshot`，等值断言 `records == _snapshot(活记录)`
+  钉住"读面不重抄字段"，生产面加列时读面跟着长；③ 只读不写，一行 `audit_log` 都不落
+  （那条通道要回答"谁改了事实"）。退码：读不出 2、成功 0，空作用域明写「0 条 + 作用域」。
+  **两处电池教自己的地方**（都写进 `docs/architecture/truth_architecture.md` 链头读面一节）：
+  (a) 给"读失败"写的**第一条**用例在变异对照下**活了下来**——`--db` 指向非 sqlite 文件时
+  异常在 `_open_store` 就被接住，命令里那段 try/except 根本没执行到；补第二条（让 `list_ctq`
+  真抛在手里）后三臂全 KILLED（还原后 10 passed、文件 sha 复原）；
+  (b) `aipd ctq list` 这个名字被第 60/61 片当过夹具里"仍然没有"的幻影，注册它的那一轮
+  两处用例当场报错、一处**静默空转**（否定例外那一支：那行仍带"没有"标记，只是标记指向的
+  命令已存在）——量具与用例的幻影名现统一由 `ghost()` 与 `zzz-` 前缀生成，并顺手量出
+  **真语料上今天已无"带否定标记且指向未注册命令"的代码行**（两档对照：撤掉例外违规数不变，
+  只有分母挪动），该条例外由夹具保持有牙。
+  命令面镜像：契约条目（PUBLIC / 5.23）、README 速查行、SKILL 分组与"主线共 63 个"、
+  registry 那一行的 run_command/input_output/unit_test/e2e_evidence/current_limitation、
+  `tests/test_command_surface_census.py` 分母（现算）；公开命令面 62 → 63、
+  argparse 声明树 89 条路径，两者都可由 `--self-test` 与契约现读。
+  常驻用例 **10 条**（`tests/test_truth_ctq_list.py`：注册面 / 默认视图自报排除 / 投影同源 /
+  `--json` 标签 / 空作用域 / 其他态按原样 / README 镜像 / 两层读失败 / 审计不写含反向对照）。
+  选型跳过声明（按最高指令的例外条款）：本片是给自己那三个写者补一个 `SELECT` + 格式化，
+  无新组件、无新依赖，`--all` 与状态口径沿用第 59 片已比过的 `TRUTH_STATUS` 五态。
+  证据见 `docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md`。
+
 - **v5.22 F-DOC-CMD-2 第 61 片：把第 60 片那把尺子自己的两处盲区补成判据**：
   起点是第 60 片绑定后一次独立只读普查（它报"三档之外还有看不见的位置"），
   我用**自己的夹具**重跑证实了两条，都落进 `docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md` §八。

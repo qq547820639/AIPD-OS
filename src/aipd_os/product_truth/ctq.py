@@ -358,3 +358,37 @@ def deprecate_ctq(store: Any, *, record_id: str, by: str, reason: str,
             "after": _snapshot(after), "feature": meta.get("feature"),
             "drawing_feature": meta.get("drawing_feature"),
             "limits": [meta.get("lower_limit"), meta.get("upper_limit")]}
+
+
+def list_ctq(store: Any, *, tenant_id: str | None = None, project_id: str | None = None,
+             include_all: bool = False) -> dict[str, Any]:
+    """列作用域内的 CTQ 声明：默认只列 `active`，并**报清排除了几条、各是什么态**。
+
+    为什么补这一格（第 62 片）：链头今天有三个写者（`aipd ctq add` / `ctq revise` /
+    `aipd ctq deprecate`）与四个读者（发布证据分母、图纸声明输入、出图返工、漂移扫描），
+    但**没有一条命令能让人问出「现在有效的是哪几条、限值与版本各是几」**。
+    第 60 片那把 `doc_command_census` 把这条缺席登记在 registry 的限制句里。
+
+    为什么不复用 `release_manifest._collect_ctq` 那份投影：它只含 `active`
+    且**不带 `drawing_feature`**——拿它当读面会把"库里还有别的态"和"这条尺寸归谁管"
+    一起藏掉，正是发布分母那份形状的两个已知缺口。
+
+    投影直接复用 `_snapshot`（审计行的 before/after 用的就是它）：读面不与生产面各抄一遍，
+    生产面加字段时读面跟着长，不会出现"库里有、列不出"。
+    """
+    scope = {"tenant_id": tenant_id, "project_id": project_id}
+    rows = list(store.query(record_type="ctq", **scope))
+    kept: list[dict[str, Any]] = []
+    excluded: dict[str, int] = {}
+    for rec in rows:
+        status = str(rec.status)
+        if include_all or status == "active":
+            kept.append(_snapshot(rec))
+        else:
+            excluded[status] = excluded.get(status, 0) + 1
+    kept.sort(key=lambda r: (str(r.get("feature") or ""), int(r.get("version") or 0),
+                             str(r.get("record_id") or "")))
+    return {"scope": {"tenant_id": tenant_id, "project_id": project_id},
+            "total": len(rows), "returned": len(kept),
+            "statuses": ("all" if include_all else "active"),
+            "excluded": excluded, "records": kept}

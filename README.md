@@ -467,6 +467,15 @@ aipd ctq deprecate --db state.db --project P --record T-001 --reason 客户取�
 #   ↑ `--reason` 必填（"没人说为什么就退掉了要求"是这一族最不能留的状态）；`--replaced-by` 给了就必须
 #     真存在——指向不存在的记录会骗过发布门禁那句「确认取代它的那条在名单里」，比不写更坏。
 #     已不在有效名单里的记录不重复停用（那会把 `superseded_at` 刷成今天，掩盖第一次改动的时刻）。
+aipd ctq list --db state.db --project P [--all] [--json]                        # 读面：现在有效的是哪几条
+#   ↑ 三个写者、四个读者，但此前没有任何一条命令能让人问出「这个作用域里 active 的 CTQ 是哪几条、
+#     各自的限值与版本是几」——第 60 片那把 `doc_command_census` 把这条缺席登记在 registry 的限制句里。
+#     默认视图与发布分母同口径（只算 active），并**自报排除了几条、各是什么态**：只说「1 条」
+#     而不说「另有 2 条不在有效名单里」，读面就成了第二个 `_collect_ctq`（它只含 active、
+#     且不带 `drawing_feature`，回答不了「这条图纸尺寸归哪条要求管」）。
+#     `--all` 把 stale/superseded/expired/blocked 一起列出且状态按库里原样报，不折算；
+#     投影复用生产面那份 `_snapshot`（与审计行的 before/after 同一份），读面不跟生产面各抄一遍。
+#     只读命令：不写 `audit_log`——那条通道要留给「谁改了事实」，把查看写进去它就答不出原问题了。
 aipd truth drift --db state.db --project P                                   # 只读扫描漂移
 #   ↑ 按**当前输入**重算每条制品记录的身份键，与记录里存的那份比，报出「该 stale 却还挂着 active」的清单
 #     （`src/aipd_os/product_truth/drift.py` 分四态：一致 / 漂移 / 不可判 / 没有可比对的键；

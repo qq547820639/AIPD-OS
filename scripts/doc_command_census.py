@@ -22,14 +22,19 @@
   ③ 生产代码（`src/`、`scripts/`、`state_service/`）里的提及——代码写出来就是要跑的，
      第 60 片实测到 `ctq.py` 把一条不存在的命令烙进了**每条**产出记录，比文档里的错更贵。
      这一档带一条**否定例外**：同行有"没有/不存在/尚未…"时按只报处理，
-     因为登记表限制句「没有 `aipd ctq list`」正是合法写法。
+     因为限制句「没有 `aipd X`」是合法写法。第 60 片立这条时的原件是登记表的
+     「没有 `aipd ctq list`」，第 62 片把那条命令接上之后，真仓库里**已经没有**
+     "带否定标记且指向未注册命令"的代码行——两档对照（把 `NEGATION_MARKERS`
+     置空再 `audit(ROOT)`，看 `violations` 与 `corpus.code_negated`）今天不变判决，
+     所以这条例外只由 `--self-test` 与常驻用例保持有牙，等下一个真缺口出现时才在实仓库开火。
      分母**不在本文抄**（抄一份就会漂——本轮就抓到自己的 docstring 抄了一份更早范围的读数）：
      现算值看 `--json` 的 `corpus.code_mentions / code_negated`，两个键非空由常驻用例
      `test_real_repo_clean_and_all_three_judging_faces_live` 钉下界。
 - **只报面**＝其余一切正文里的 `aipd` 提及。它必须只报不红，因为正文会**合法地**提到
-  不存在的命令：本轮实测 registry 的限制句「没有 `aipd ctq list`」与
-  CHANGELOG 里我引用来记错的 `aipd truth show` 都属于这一类——把它们判红，
-  等于惩罚"把缺口写下来"这件事，下一轮就会没人写。
+  不存在的命令：第 60 片实测的两处原件——registry 的限制句「没有 `aipd ctq list`」
+  （第 62 片已把它接成主线命令）与 CHANGELOG/取证文档里我引用来记错的
+  `aipd truth show`（至今未注册，是今天还在的活例）——都属于这一类；把它们判红，
+  等于惩罚"把缺口与错误写下来"这件事，下一轮就会没人写。
   量具自己与它的用例（`SELF_STEMS`）**四档全部排除**（第 61 片补一致）：它们**必须**写着幻影命令
   才能证明判据会开火。第 60 片只在判红面 ③ 排了它们，只报面照收 ⇒ 它们写的
   `aipd ghost cmd` 这类**夹具名**会混进"正文点到未注册命令"的名单，
@@ -74,8 +79,9 @@ QUICKREF_DIRS = ("docs/architecture", "docs/contracts", "references")
 
 # 判红面 ③ 生产代码里的提及。代码不像正文那样有权写"某命令不存在"——它写出来就是要跑的，
 #   所以这里的幻影比文档里的更贵（第 60 片实测：`ctq.py` 把 `aipd truth ctq add` 烙进了
-#   **每一条**产出的记录）。但同一行带否定标记时按只报处理：登记表的限制句
-#   「没有 `aipd ctq list`」就是这种合法写法。这条分档是量过假阳性才定的；
+#   **每一条**产出的记录）。但同一行带否定标记时按只报处理：限制句那种
+#   「没有 `aipd X`」是合法写法（立条原件与今天是否有原告见模块 docstring 档 ③ 一段）。
+#   这条分档是量过假阳性才定的；
 #   分母的现算值看 `--json` 的 corpus 两个键，本文不抄绝对数（抄一份就会漂）。
 CODE_DIRS = ("src", "scripts", "state_service")
 NEGATION_MARKERS = ("没有", "不存在", "尚未", "还没", "仍未", "刻意未", "仍未接",
@@ -383,30 +389,41 @@ def _self_test(tmp: Path) -> int:
     if problems or not paths:
         print(f"--self-test 前提不成立：{problems}")
         return 2
-    for probe, want in (("ctq add", True), ("usage", True), ("truth show", False),
-                        ("ctq list", False), ("truth", True)):
+    # 夹具幻影名一律带 `zzz-` 前缀，且**不写死将来可能被注册的名字**：第 60/61 片两处写的
+    # 是 `ctq list`，第 62 片把 `aipd ctq list` 注册成主线命令的那一轮，自测与常驻用例
+    # 一起崩（"仍然没有"的夹具读成了合法名）。`zzz-` 不进产品命名空间。
+    # 两个名字各司一职，且**不许同名**：ghost_bad 注入三档判红面，ghost_prose 只出现在
+    # "记录缺口"的写法里。同名时"只报面不判红"那条断言会被判红面上的同名违规先判红，
+    # 于是否定豁免失效与别档开火混成一条读数，分不清是哪一档没牙。
+    ghost_bad = "ctq zzz-phantom"
+    ghost_prose = "ctq zzz-unlisted"
+    for probe, want in (("ctq add", True), ("usage", True), ("truth", True),
+                        (ghost_bad, False), (ghost_prose, False),
+                        ("zzzghostcmd zzz", False)):
         got = resolve(probe.split()[0], probe.split()[1] if " " in probe else None,
                       paths, groups)
         assert (got is not None) is want, (probe, got, want)
-    _mark(marks, f"权威面按 parser 树判定（{len(paths)} 条路径；"
-                 "`usage` 算存在、`truth show` 与 `ctq list` 不算）")
+    assert "ctq" in groups, "夹具前提：ctq 必须是组（'组存在而子命令不存在'的形状）"
+    _mark(marks, f"权威面按 parser 树判定（{len(paths)} 条路径；`usage` 算存在，"
+                 f"`{ghost_bad}`/`{ghost_prose}` 这类组内假子命令与顶层不存在的 "
+                 f"`zzzghostcmd zzz` 都不算）")
 
     (tmp / "README.md").write_text(
-        "# t\naipd ctq add --db x --project p\naipd truth show --db x\n"
+        "# t\naipd ctq add --db x --project p\naipd " + ghost_bad + " --db x\n"
         "运行 `aipd usage` 列出全部命令\naipd <命令> --help\naipd-os 与 aipd_os 不算\n",
         encoding="utf-8")
     (tmp / "src/aipd_os").mkdir(parents=True, exist_ok=True)
     (tmp / "src/aipd_os/registry_data.py").write_text(
         'CAPABILITIES = [{"id": "a", "run_command": "aipd ctq revise --db x / '
-        'aipd truth show"},\n {"id": "b", "run_command": "aipd drawing spec --db x"}]\n',
+        'aipd ' + ghost_bad + '"},\n {"id": "b", "run_command": "aipd drawing spec --db x"}]\n',
         encoding="utf-8")
     (tmp / "src/aipd_os" / "handlers.py").write_text(
-        'NOTE = "declared via aipd ctq list"        # 本轮实测：这条命令仍然没有\n'
-        'BAD = "先跑 aipd truth show 再看"\n'
+        'NOTE = "declared via aipd ' + ghost_prose + '"   # 本轮实测：这条命令仍然没有\n'
+        'BAD = "先跑 aipd ' + ghost_bad + ' 再看"\n'
         'GOOD = "先跑 aipd ctq add 再看"\n', encoding="utf-8")
     (tmp / "docs").mkdir(exist_ok=True)
     (tmp / "docs/audit").mkdir(exist_ok=True)
-    (tmp / "docs/audit/x.md").write_text("本轮实测：库里 `aipd ctq list` 仍然没有\n",
+    (tmp / "docs/audit/x.md").write_text("本轮实测：库里 `aipd " + ghost_prose + "` 仍然没有\n",
                                          encoding="utf-8")
     saved = (REGISTRY_FILES, QUICKREF_FILES, QUICKREF_DIRS,
              REPORT_ONLY_FILES, REPORT_ONLY_DIRS, CODE_DIRS)
@@ -424,20 +441,20 @@ def _self_test(tmp: Path) -> int:
          globals_["REPORT_ONLY_FILES"], globals_["REPORT_ONLY_DIRS"],
          globals_["CODE_DIRS"]) = saved
     bad = {(v["written"], v["field"]) for v in rep["violations"]}
-    expect = {("aipd truth show", "quickref"), ("aipd truth show", "run_command"),
-              ("aipd truth show", "code")}
+    expect = {(f"aipd {ghost_bad}", "quickref"), (f"aipd {ghost_bad}", "run_command"),
+              (f"aipd {ghost_bad}", "code")}
     assert bad == expect, (sorted(bad), sorted(expect))
     _mark(marks, "三档判红面各抓到一条注入的假命令（速查行、run_command 段、生产代码）")
     assert not any("aipd ctq add" in b or "aipd usage" in b or "aipd drawing spec" in b
                    for b, _f in bad), bad
     _mark(marks, "真命令与占位符/`aipd-os` 一律不开火（反证：合规侧同批存在）")
-    assert ("aipd ctq list", "code") not in bad, bad
+    assert (f"aipd {ghost_prose}", "code") not in bad, bad
     assert rep["corpus"]["code_negated"] >= 1, rep["corpus"]
     _mark(marks, "生产代码里带否定标记的那行不判红（登记表的限制句就是这种写法）")
     prose_bad = {r["written"] for r in rep["report_only_unmatched"]}
-    assert "aipd ctq list" in prose_bad and not any(
-        r["written"] == "aipd ctq list" for r in rep["violations"]), rep
-    _mark(marks, "只报面记名而不判红（正文里合法写出的「没有 aipd ctq list」）")
+    assert f"aipd {ghost_prose}" in prose_bad and not any(
+        r["written"] == f"aipd {ghost_prose}" for r in rep["violations"]), rep
+    _mark(marks, f"只报面记名而不判红（正文里合法写出的「没有 aipd {ghost_prose}」）")
     assert rep["ok"] is False, rep
     assert rep["corpus"]["run_command_segments"] == 3, rep["corpus"]
     assert rep["corpus"]["quickref_lines"] == 3, rep["corpus"]

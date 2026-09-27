@@ -538,3 +538,59 @@ def cmd_truth_ctq_deprecate(args: Any) -> int:
             print(f"  未收口：审计行没写进去（{audit_error}），退码 4")
     _emit(args, payload, prose)
     return 4 if audit_error else 0
+
+
+def cmd_truth_ctq_list(args: Any) -> int:
+    """``aipd ctq list``：链头第一个**面向人**的读面（第 62 片）。
+
+    补的是第 60 片量具登记下的那条缺席：三个写者、四个读者，
+    但没人能问出"现在有效的是哪几条、限值与版本各是几"。
+
+    两条刻意的形状：
+    1. **默认只列 `active`，且必须自报排除了几条各是什么态**——只报"1 条"而不说
+       "另有 2 条不在有效名单里"，读面就成了第二个 `_collect_ctq`（它正是只含 active
+       且不说明排除），而"要求被撤了几条"恰是属主最该看见的东西；
+    2. **只读不写**：不碰 `audit_log`。那条通道记的是"谁改了事实"，
+       把每次查看都写进去会让它再也回答不出那个问题。
+    """
+    from aipd_os.product_truth.ctq import list_ctq
+
+    store, err = _open_store(args)
+    if err is not None:
+        return err
+    try:
+        result = list_ctq(store, tenant_id=args.tenant, project_id=args.project,
+                          include_all=args.all)
+    except Exception as exc:  # noqa: BLE001 - 读不出来必须点名，不能退成空清单
+        print(f"CTQ 读取失败：{type(exc).__name__}: {exc}")
+        return 2
+    payload = {"command": "ctq list", "ok": True, **result}
+
+    def prose():
+        scope = result["scope"]
+        view = "全部状态" if args.all else "只列 active"
+        print(f"CTQ 名单（tenant={scope['tenant_id']} project={scope['project_id']}，"
+              f"共 {result['total']} 条记录，{view}）")
+        if not result["records"]:
+            print("  0 条 —— 这个作用域里"
+                  + ("没有可列的" if args.all else "没有有效的")
+                  + " CTQ 声明；链条第二跳（aipd drawing spec）此刻没有输入")
+        for r in result["records"]:
+            low, high = r.get("lower_limit"), r.get("upper_limit")
+            limits = (f"[{low:g}, {high:g}]"
+                      if isinstance(low, (int, float)) and isinstance(high, (int, float))
+                      else f"[{low}, {high}]")
+            print(f"  {r['record_id']}  {r.get('feature')} @ {r.get('drawing_feature')}  "
+                  f"合格域 {limits}  标称 {r.get('nominal')}  "
+                  f"v{r.get('version')}  {r.get('status')}  信任级 {r.get('trust_level')}"
+                  f"  由 {r.get('declared_by')} 声明")
+        excluded = result["excluded"]
+        if excluded:
+            detail = "、".join(f"{k} {v}" for k, v in sorted(excluded.items()))
+            print(f"  另有 {sum(excluded.values())} 条未列出（排除：{detail}）"
+                  " —— 加 --all 看全部状态")
+        if not args.all:
+            print("  注：默认视图与发布分母同口径（只算 active）；"
+                  "superseded 是唯一能让一条要求退出分母的态")
+    _emit(args, payload, prose)
+    return 0

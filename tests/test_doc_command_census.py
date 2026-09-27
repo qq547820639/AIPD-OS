@@ -10,7 +10,7 @@
 ① 量具必须被真的 spawn（孤儿门禁与没有门禁看不出差别）；
 ② 真仓库上现状面干净**且三档分母都非空**——空读数不算绿；
 ③ 注入必须开火 / 合规侧必须不开火的两两对照，含两条最容易做假的方向：
-   组名存在而子命令不存在（`aipd truth show`）不许退化成"组存在就放行"，
+   组名存在而子命令不存在（第 59 片的原件是 `aipd truth show`，夹具现由 `ghost()` 生成）、
    契约别名（`aipd init-project`）不许被当幻影；
 ④ 本轮修掉的两处**代码里的幻影**（写进每条记录的 source.note、payload 自报的命令标签）
    由真数据反证钉住。
@@ -75,6 +75,23 @@ def fields(rep: dict, written: str) -> set[str]:
     return {v["field"] for v in rep["violations"] if v["written"] == written}
 
 
+def ghost(suffix: str) -> str:
+    """夹具幻影名：`ctq` 必须是组、`aipd ctq <suffix>` 今天必须仍不存在。
+
+    写死一个**将来可能被注册**的名字等于给自己埋定时炸弹，第 62 片实测两种坏法：
+    `aipd ctq list` 成为主线命令后，两处夹具当场报错（"判据把合法名判红了"，排查方向正好反了），
+    而 `test_negation_in_production_code_is_reported_not_judged` **静默变成空转**——
+    那行仍带否定标记所以 `code_negated` 照样为 1，只是标记指向的命令已经存在，
+    例外这一支再没有被任何东西验过。`zzz-` 前缀不进产品命名空间；
+    这里仍用真组名 `ctq`，是为了保住"组存在而子命令不存在"那个形状。
+    """
+    paths, groups, problems = census.valid_commands()
+    assert not problems, problems
+    assert "ctq" in groups, "夹具前提：ctq 必须是权威面上的组"
+    assert f"ctq {suffix}" not in paths, f"夹具名 ctq {suffix} 已注册成真命令，换后缀"
+    return f"aipd ctq {suffix}"
+
+
 def test_instrument_self_test_is_actually_run_and_green() -> None:
     proc = subprocess.run([sys.executable, str(TOOL), "--self-test"],
                           capture_output=True, text=True, cwd=str(ROOT), timeout=180)
@@ -99,17 +116,19 @@ def test_real_repo_clean_and_all_three_judging_faces_live() -> None:
 
 def test_injected_phantoms_fire_on_all_three_judging_faces(tmp_path: Path,
                                                            tmp_scope) -> None:
+    # 三个名字各写各的档：同名会让"这条只该在 X 档开火"的归因读不出来
+    qref, run_cmd = ghost("zzz-quickref"), ghost("zzz-listy")
     write_tree(
         tmp_path,
-        GOOD_README + "aipd truth show --db x\n",
+        GOOD_README + f"{qref} --db x\n",
         GOOD_REGISTRY.replace('"aipd ctq revise --db x"',
-                              '"aipd ctq revise --db x / aipd ctq listy"'),
+                              f'"aipd ctq revise --db x / {run_cmd}"'),
         code='BAD = "先跑 aipd ghost cmd 再看"\n',
     )
     rep = census.audit(tmp_path)
     # 三条注入各落在自己那一档：假命令写在速查行 / run_command 段 / 生产代码里
-    assert fields(rep, "aipd truth show") == {"quickref"}, rep["violations"]
-    assert fields(rep, "aipd ctq listy") == {"run_command"}, rep["violations"]
+    assert fields(rep, qref) == {"quickref"}, rep["violations"]
+    assert fields(rep, run_cmd) == {"run_command"}, rep["violations"]
     assert fields(rep, "aipd ghost cmd") == {"code"}, rep["violations"]
     assert census.main(["--repo", str(tmp_path)]) == 4
 
@@ -131,20 +150,26 @@ def test_compliant_side_does_not_fire(tmp_path: Path, tmp_scope) -> None:
 
 def test_group_with_missing_subcommand_is_not_degraded_to_ok(tmp_path: Path,
                                                              tmp_scope) -> None:
-    """`truth` 是个组不代表 `truth show` 存在——退化成"组存在就放行"就成了一把恒真的尺。"""
-    write_tree(tmp_path, "aipd truth show\n", GOOD_REGISTRY)
+    """组存在不代表组里每个子命令都存在——退化成"组存在就放行"就成了一把恒真的尺。
+
+    （第 59 片的原件是 `aipd truth show`；夹具改用 `ghost()` 生成的名字，理由见那里。）
+    """
+    show = ghost("zzz-show")
+    write_tree(tmp_path, show + "\n", GOOD_REGISTRY)
     rep = census.audit(tmp_path)
-    assert fields(rep, "aipd truth show") == {"quickref"}, rep["violations"]
+    assert fields(rep, show) == {"quickref"}, rep["violations"]
 
 
 def test_negation_in_production_code_is_reported_not_judged(tmp_path: Path,
                                                             tmp_scope) -> None:
-    """登记表的限制句「没有 `aipd ctq list`」是合法写法：判红等于惩罚写下缺口的人。"""
+    """带否定标记的行不许判红：限制句「没有 `aipd X`」是合法写法，判红等于惩罚写下缺口的人。"""
+    g = ghost("zzz-unlisted")
     write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
                code='GOOD = "先跑 aipd ctq add 再看"\n'
-                    '# 本轮实测：`aipd ctq list` 仍然没有，只能读库\n')
+                    f'# 本轮实测：`{g}` 仍然没有，只能读库\n')
     rep = census.audit(tmp_path)
     assert rep["ok"] is True, rep["violations"]
+    assert fields(rep, g) == set(), rep["violations"]
     assert rep["corpus"]["code_negated"] == 1, rep["corpus"]
 
 
@@ -262,8 +287,12 @@ def test_the_instruments_own_files_are_out_of_all_four_faces() -> None:
     assert own == [], own
     prose, _ = census.prose_mentions(ROOT)
     assert not [r for r in prose if Path(r[0]).stem in census.SELF_STEMS]
-    # 对照组：真仓库正文里合法写下的「没有 aipd ctq list」仍必须可见
-    assert any(r["written"] == "aipd ctq list" for r in rep["report_only_unmatched"]), rep
+    # 对照组：真仓库正文里合法记下的幻影仍必须可见。用 `aipd truth show` 是因为它是
+    # 今天**还在语料里**的活例（CHANGELOG 与取证文档记的是我引错名的经过）；
+    # 前提单独钉住，将来谁把它注册了，这里报的是"对照组名字过期"而不是"排除外溢了"。
+    paths, _g, _p = census.valid_commands()
+    assert "truth show" not in paths, "对照组名 `aipd truth show` 已注册，换一个仍在语料里的幻影"
+    assert any(r["written"] == "aipd truth show" for r in rep["report_only_unmatched"]), rep
 
 
 def test_those_two_dirs_are_actually_walked_in_the_real_repo() -> None:
@@ -287,13 +316,14 @@ def test_those_two_dirs_are_actually_walked_in_the_real_repo() -> None:
 
 def test_absence_written_in_prose_is_reported_not_judged(tmp_path: Path,
                                                          tmp_scope) -> None:
+    g = ghost("zzz-unlisted")
     write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
                code='GOOD = "先跑 aipd ctq add 再看"\n',
-               prose="本轮实测：`aipd ctq list` 仍然没有，只能读库。\n")
+               prose=f"本轮实测：`{g}` 仍然没有，只能读库。\n")
     rep = census.audit(tmp_path)
     assert rep["ok"] is True, rep["violations"]
     names = {r["written"] for r in rep["report_only_unmatched"]}
-    assert "aipd ctq list" in names, rep["report_only_unmatched"]
+    assert g in names, rep["report_only_unmatched"]
 
 
 def test_record_produced_by_the_command_names_a_real_command(tmp_path: Path) -> None:
