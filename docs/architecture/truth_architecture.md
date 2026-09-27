@@ -154,24 +154,34 @@ by consumers until they are disabled or removed."）与 django-simple-history 3.
 `doc_command_census` 登记在 registry 限制句里、由只报面持续可见化的东西。现在补
 `aipd ctq list`（`src/aipd_os/product_truth/ctq.py:363 list_ctq`、
 `src/aipd_os/cli/commands_truth.py:543 cmd_truth_ctq_list`）。三处形状值得记：① 默认只列
-`active`，但**必须同时自报排除了几条、各是什么态**（`excluded` 那格）——只报"1 条"会被读成
-"库里只有 1 条"，而 `aipd release manifest` 的 `ctq` 数组正是那个不说的形状，偏偏
+`active`（与发布分母**的 active 过滤**同口径——分母还额外要求 `metadata.feature`，缺它的
+active 记录门口判 `ctq_missing_feature` 阻断、这里照样列出），但**必须同时自报排除了几条、
+各是什么态**（`excluded` 那格）——只报"1 条"会被读成"库里只有 1 条"，而
+`aipd release manifest` 的 `ctq` 数组正是那个不说的形状，偏偏
 "要求被撤了几条"是属主最该看见的；② 投影**复用**审计行用的那份 `_snapshot`，不在 CLI 里
 重抄字段（等值断言 `records == _snapshot(活记录)` 是这条的钉子），所以生产面加列时读面跟着长，
 不会出现"库里有、列不出"；③ 只读不写，一行 `audit_log` 都不落——那条通道要回答"谁改了事实"，
 把每次查看都写进去它就答不出了（写侧的门是 `AIPDStateDB.add_audit`，`state/db.py:1073`）。
-退码：读不出 2、成功 0；空作用域退 0 且明写「0 条 + 作用域」，与"没跑到"分开。
+退码：读不出 2、成功 0；空作用域退 0 且明写「0 条 + 作用域」，与"没跑到"分开——
+这一档跟的是 `cmd_truth_tasks` 那个纯列表面的先例（它同样退 0，并且专门打一行
+"空列表不代表没有 stale 记录"），而不是 `truth drift` 那种扫描面的 `0/4`：
+把"存在被合法停用的要求"和"有要求今天没收口"折进同一个退码是新的谎。
 本轮电池留下一条排障账，记在这里因为它不是本项目独有的：给"读失败"写的**第一条**用例
 （`--db` 指到一个不是 sqlite 库的文件）在变异对照下**活了下来**——那个输入在
 `_open_store`（`commands_truth.py:24`）就被接住，命令里那段 try/except 根本没执行到，
 于是"把读失败读成空清单"这个改动没让任何用例变红。补了第二条（让 `list_ctq` 真的抛在手里）
-之后三臂全 KILLED，还原后复绿、文件 sha 复原。另有一条镜像卫生账：`aipd ctq list` 这个名字
+之后三臂全 KILLED，还原后复绿、文件 sha 复原；同一轮独立复核又抓出两处**读数说谎**并已修：
+合格域原先用 `f"{low:g}"` 打（实测 `format(8.050001, 'g') == '8.05'`，限值被格式化改了数），
+口径注原先写"superseded 是唯一能让一条要求退出分母的态"（重开 `release_manifest.py:67-103`：
+退出分母的是**全部**非 active 态，superseded 特殊的只是不阻断）——两处各补一条常驻用例加一支
+变异臂，终局 `6 KILLED / 0 SURVIVED`；复核提的第三项"有非 active 记录却退 0 不一致"经重开
+先例判为**不成立**，理由见上一段。另有一条镜像卫生账：`aipd ctq list` 这个名字
 被第 60/61 片当过夹具里"仍然没有"的那个幻影，注册它的那一轮两处用例当场报错、一处**静默空转**
 （否定例外那一支——那行仍带"没有"标记，只是标记指向的命令已经存在），现在量具与用例的幻影名
 统一由 `ghost()` 与 `zzz-` 前缀生成，`scripts/doc_command_census.py --self-test` 复绿。
 命令面镜像：契约 `cli/command_contract.py`（PUBLIC / 5.23）、README 速查行、SKILL 分组与
 "主线共 63 个"、registry 那一行、`tests/test_command_surface_census.py` 分母 72 → 73
-（数字一律现算，别抄这里）。钉子见 `tests/test_truth_ctq_list.py`（10 条）。
+（数字一律现算，别抄这里）。钉子见 `tests/test_truth_ctq_list.py`（14 条：注册面 / 默认视图自报排除 / 投影同源 / `--json` 标签 / 空作用域 / 其他态按原样 / README 镜像 / 两层读失败 / 审计不写含反向对照 / 限值原样 / 计数守恒 / 口径注不说满 / 失败面不出成功件）。
 另一处现状（2026-09-26 更新，F-LINEAGE-DXF 第 46 片）：血缘边有**三个**生产者——
 `product_intelligence/gate.commit_snapshot`（PI 需求 / Feature → truth 记录）、
 `aipd drawing spec`（`src/aipd_os/cad/spec_lineage.py`：按声明正文**实际引用到**的

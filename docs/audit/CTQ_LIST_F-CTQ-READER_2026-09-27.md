@@ -70,30 +70,73 @@ PYTHONPATH=src:scripts .venv/bin/python scripts/skill_quality_audit.py          
 | 8 | `test_unreadable_store_is_not_reported_as_zero_records` | 非 sqlite 文件 ⇒ 退 2 且不产出「0 条」（钉 `_open_store`） |
 | 9 | `test_mid_read_failure_is_not_a_zero_reading` | 库打得开而 `list_ctq` 抛 ⇒ 同样退 2（钉命令里那段 try/except，见 §五臂 1） |
 | 10 | `test_listing_writes_no_audit_row` | 一行审计都不写，同批用 `ctq deprecate` 做反向对照证明通道本来就通 |
+| 11 | `test_limits_print_verbatim_not_six_significant_digits` | 合格域原样打（`:g` 会把 8.050001 印成 8.05）——见 §五之二 |
+| 12 | `test_counts_are_self_consistent_across_the_two_views` | `total == returned + Σexcluded` 在两种视图各算一遍，`statuses` 跟着视图走 |
+| 13 | `test_default_note_does_not_claim_superseded_is_the_only_retirement` | 口径注不许把例外说满（第一版写错，见 §五之二） |
+| 14 | `test_failure_paths_emit_no_success_payload` | 两条读失败面都带 `--json` 复跑：退 2 且 stdout 上没有 `"ok": true` 的成功件 |
 
 `PYTHONPATH=src:scripts .venv/bin/python -m pytest tests/test_truth_ctq_list.py -q`
-→ `10 passed`。
+→ `14 passed`。
 
-## 五、变异电池（三臂，脚本 `/tmp/s62/battery62.py`）
+## 五、变异电池（六臂）
 
-先立对照组再判开火：锚点命中数必须恰好 1、变异落地必须先证 sha 变了、
-每臂跑完立刻还原，最后整文件复绿且 sha 复原（`df6501c5a852 → df6501c5a852`）。
+先立对照组再判开火：锚点命中数必须恰好 1、`new` 在原文件里必须为 0（空改写永远绿）、
+变异落地必须先证 sha 变了、每臂跑完立刻还原，最后整文件复绿且两份源 sha 各自复原
+（`ctq.py a134b8bdf882→a134b8bdf882`、`commands_truth.py ce256c8f7192→ce256c8f7192`）。
 
-| 臂 | 改坏的是什么 | 首轮判定 | 终局判定 |
+| 臂 | 改坏的是什么（对着哪条常驻用例） | 首轮判定 | 终局判定 |
 | --- | --- | --- | --- |
-| 1 | 读失败不退 2，而是当成「0 条」空清单继续走到成功 | **SURVIVED** —— 用例当时只喂"非 sqlite 文件"，异常在 `_open_store` 就被接住，命令里那段 try/except 没执行到 | **KILLED** —— 补用例 9（让 `list_ctq` 真抛在手里）后 `pytest_rc=1` |
-| 2 | `_open_store` 的读不出退码 2 → 0 | 未测（臂 1 暴露问题后才补） | **KILLED**（`pytest_rc=1`，钉用例 8） |
-| 3 | 读面顺手往 `audit_log` 落一行 | 未测 | **KILLED**（`pytest_rc=1`，钉用例 10） |
+| 1 | 读失败不退 2，改成"0 条"空清单继续走到成功（用例 9） | **SURVIVED** —— 当时没有用例 9，臂只喂"非 sqlite 文件"，异常在 `_open_store` 就被接住，命令里那段 try/except 没执行到 | **KILLED**（补用例 9 后 `pytest_rc=1`） |
+| 2 | `_open_store` 的读不出退码 2 → 0（用例 8） | 未测 | **KILLED** |
+| 3 | 读面往 `audit_log` 落一行（用例 10） | 未测 | **KILLED** |
+| 4 | 合格域退回 `f"{low:g}"` 格式化（用例 11） | 未测（§五之二那条缺陷带来的） | **KILLED** |
+| 5 | 口径注改回"superseded 是唯一退出分母的态"（用例 13） | 未测 | **KILLED** |
+| 6 | 非 active 记录既计数又列出（破坏 `total == returned + Σexcluded`，用例 12） | 未测 | **KILLED** |
 
-三臂 `py_compile` 全 0（变异自身语法成立，不是 INJECT-INVALID），终局 `3 KILLED / 0 SURVIVED`。
+六臂 `py_compile` 全 0（变异自身语法成立，不是 INJECT-INVALID），终局
+`6 KILLED / 0 SURVIVED / 0 INJECT-INVALID`，还原后 `14 passed`。
 臂 1 那一次存活是本片最值钱的读数：它说明"我给读失败写了用例"和"读失败真的被钉住了"
 是两件事，前者可以完全空转。
 
-电池脚本本身**未入库**（宿主重启即没），但三个改动点写死在这里，按表可原地重放：
-臂 1 改 `cli/commands_truth.py:543` 里 `except Exception` 那支的 `return 2`；
-臂 2 改同文件 `_open_store`（`:24`）里 Product Truth 读取失败那支的 `return None, 2`；
-臂 3 在 `cmd_truth_ctq_list` 的 `_emit(args, payload, prose)` 之前插一次
-`AIPDStateDB(str(args.db)).add_audit(actor=…, action="ctq.list", …)`。
+电池脚本本身**未入库**（宿主重启即没），但六个改动点写死在这里，按表可原地重放：
+臂 1 改 `cli/commands_truth.py` 里 `cmd_truth_ctq_list` 的 `except Exception` 那支 `return 2`；
+臂 2 改同文件 `_open_store` 里 Product Truth 读取失败那支的 `return None, 2`；
+臂 3 在 `_emit(args, payload, prose)` 之前插一次 `AIPDStateDB(...).add_audit(...)`；
+臂 4 把合格域那行的 `[{lower}, {upper}]` 改回带 `:g` 的写法；
+臂 5 把"注："那三行改回第一版的"superseded 是唯一能让一条要求退出分母的态"；
+臂 6 在 `product_truth/ctq.py:list_ctq` 的 `else` 分支里既 `excluded[...] += 1` 又
+`kept.append(_snapshot(rec))`。
+
+## 五之二、独立复核抓出的三处（都在实现落地之后、绑定之前）
+
+派了一个只读复核（禁改文件、禁跑套件），交回一份缺陷清单。逐条亲手重开源码后：
+**两处成立并已修**，**一处不成立**，按最高指令第四档如实分开记。
+
+1. **合格域被格式化改了数**（成立）。原写法 `f"[{low:g}, {high:g}]"`，实测
+   `format(8.050001, 'g') == '8.05'`、`format(1234567.8, 'g') == '1.23457e+06'`——
+   一条读面的存在理由就是把限值说准，它却把 8.050001 印成 8.05。
+   顺带 `format(10**400, 'g')` 会 `OverflowError`；但那条**不可达**：
+   `declare_ctq` 在 `ctq.py:70` 就把 inf/NaN 拒了，超大整数走不进生产者，
+   所以本轮没为它造用例（不为打不到的分支写测试）。
+   修：原样打印，并删掉那个从不生效的 `isinstance` 分支；用例 11 + 臂 4 钉住。
+2. **口径注把例外说满了**（成立）。原句"superseded 是唯一能让一条要求退出分母的态"。
+   重开 `release_manifest.py:67-103`：`by_id` 只收 active，**全部**非 active 态都退出分母，
+   superseded 特殊的只有一点——对它只出**非阻断**点名；另外缺 `metadata.feature` 的
+   active 记录门口判 `ctq_missing_feature` 阻断，而本视图照样列出。
+   修：注释句改成两差别都点明；`README.md:473`、`command_contract.py:173`、
+   `registry_data.py` 那行里"与发布分母同口径"的措辞一并收窄成"与发布分母的 active 过滤同口径"
+   （三处镜像同源同错，一处错就会三处传）；用例 13 + 臂 5 钉住。
+3. **"有非 active 记录还退 0 是不一致"**（不成立，记理由）。复核引 `truth drift` 的
+   `return 0 if report["clean"] else 4` 作对照。但 `ctq list` 对着的是另一个先例：
+   `cmd_truth_tasks`（同为纯列表面）读失败退 2、其余一律退 0，且它专门打一行
+   "空列表只说明本作用域没有**任务**行，不代表没有 stale 记录"。
+   列表面把"存在被停用的要求"（正常事件）与"有要求没收口"（异常事件）混进同一个退码，
+   反而是新的谎；本片照 `truth tasks` 的形状办，并把那句"空 ≠ 不存在"的告警补进
+   0 条读数（拼错 `--project` 也会读到 0 条）。
+
+同一批复核还指出四条测试空洞（弱断言 `"1" in text`、`total/returned/excluded` 守恒未钉、
+`isinstance` 兜底分支从不执行、失败面未带 `--json` 复跑），四条分别由用例 2 收紧、
+用例 12、修 1 顺带删除、用例 14 闭合。
 
 ## 六、量具自己的三笔账（注册一个曾被当幻影的名字会撞出什么）
 

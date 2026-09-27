@@ -575,13 +575,15 @@ def cmd_truth_ctq_list(args: Any) -> int:
             print("  0 条 —— 这个作用域里"
                   + ("没有可列的" if args.all else "没有有效的")
                   + " CTQ 声明；链条第二跳（aipd drawing spec）此刻没有输入")
+            print("  （0 条只说明这个作用域没有 CTQ 声明行，不保证作用域本身存在——"
+                  "`--project`/`--tenant` 拼错也会读到 0 条）")
         for r in result["records"]:
-            low, high = r.get("lower_limit"), r.get("upper_limit")
-            limits = (f"[{low:g}, {high:g}]"
-                      if isinstance(low, (int, float)) and isinstance(high, (int, float))
-                      else f"[{low}, {high}]")
+            # 限值一律原样打：`:g` 会把 8.050001 印成 8.05，而这条面存在的理由就是
+            # 回答"限值到底是几"；format(10**400, 'g') 还会 OverflowError——
+            # 展示层既不许改数也不许崩（两条都是第 62 片复核时实测出来的）。
             print(f"  {r['record_id']}  {r.get('feature')} @ {r.get('drawing_feature')}  "
-                  f"合格域 {limits}  标称 {r.get('nominal')}  "
+                  f"合格域 [{r.get('lower_limit')}, {r.get('upper_limit')}]"
+                  f"  标称 {r.get('nominal')}  "
                   f"v{r.get('version')}  {r.get('status')}  信任级 {r.get('trust_level')}"
                   f"  由 {r.get('declared_by')} 声明")
         excluded = result["excluded"]
@@ -590,7 +592,10 @@ def cmd_truth_ctq_list(args: Any) -> int:
             print(f"  另有 {sum(excluded.values())} 条未列出（排除：{detail}）"
                   " —— 加 --all 看全部状态")
         if not args.all:
-            print("  注：默认视图与发布分母同口径（只算 active）；"
-                  "superseded 是唯一能让一条要求退出分母的态")
+            print("  注：退出发布分母的是**全部**非 active 态，不是只有 superseded——"
+                  "superseded 特殊的只有一点：门口对它只出非阻断点名"
+                  "（stale/expired/blocked 都算\"今天没收口的要求\"）。"
+                  "另一处差别：缺 metadata.feature 的 active 记录这里仍会列出，"
+                  "门口判 ctq_missing_feature 阻断")
     _emit(args, payload, prose)
     return 0

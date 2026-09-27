@@ -966,7 +966,8 @@
   **两处电池教自己的地方**（都写进 `docs/architecture/truth_architecture.md` 链头读面一节）：
   (a) 给"读失败"写的**第一条**用例在变异对照下**活了下来**——`--db` 指向非 sqlite 文件时
   异常在 `_open_store` 就被接住，命令里那段 try/except 根本没执行到；补第二条（让 `list_ctq`
-  真抛在手里）后三臂全 KILLED（还原后 10 passed、文件 sha 复原）；
+  真抛在手里）后三臂全 KILLED；连同复核带来的两臂与守恒那一臂，终局 **6 臂 KILLED / 0 SURVIVED**
+  （`py_compile` 全 0，不是 INJECT-INVALID；还原后 14 passed、两份源 sha 各自复原）；
   (b) `aipd ctq list` 这个名字被第 60/61 片当过夹具里"仍然没有"的幻影，注册它的那一轮
   两处用例当场报错、一处**静默空转**（否定例外那一支：那行仍带"没有"标记，只是标记指向的
   命令已存在）——量具与用例的幻影名现统一由 `ghost()` 与 `zzz-` 前缀生成，并顺手量出
@@ -976,8 +977,19 @@
   registry 那一行的 run_command/input_output/unit_test/e2e_evidence/current_limitation、
   `tests/test_command_surface_census.py` 分母（现算）；公开命令面 62 → 63、
   argparse 声明树 89 条路径，两者都可由 `--self-test` 与契约现读。
-  常驻用例 **10 条**（`tests/test_truth_ctq_list.py`：注册面 / 默认视图自报排除 / 投影同源 /
-  `--json` 标签 / 空作用域 / 其他态按原样 / README 镜像 / 两层读失败 / 审计不写含反向对照）。
+  同一轮**独立复核**（只读、禁改、禁跑套件）交回的清单里两处成立并已修，各配一条常驻用例
+  加一支变异臂：① 合格域原先用 `f"{low:g}"` 打，实测 `format(8.050001, 'g') == '8.05'` ——
+  一条回答"限值到底是几"的面把数改了；② 口径注原先写"superseded 是唯一能让一条要求退出
+  分母的态"，重开 `release_manifest.py:67-103` 后是"退出分母的是全部非 active 态，
+  superseded 只是不阻断"，另有一处差别（缺 `metadata.feature` 的 active 记录这里仍列出、
+  门口判 `ctq_missing_feature` 阻断）一并写清，README/契约/registry 三处镜像里"与发布分母
+  同口径"的措辞同步收窄成"与发布分母的 active 过滤同口径"。复核提的第三项（"有非 active
+  记录却退 0"与 `truth drift` 不一致）经重开先例判**不成立**：纯列表面跟的是
+  `cmd_truth_tasks`（读不出 2、其余 0，并打一行"空列表不代表没有 stale 记录"），
+  把"存在合法停用的要求"和"有要求没收口"折进同一个退码是新的谎。
+  常驻用例 **14 条**（`tests/test_truth_ctq_list.py`：注册面 / 默认视图自报排除 / 投影同源 /
+  `--json` 标签 / 空作用域 / 其他态按原样 / README 镜像 / 两层读失败 / 审计不写含反向对照 /
+  限值原样 / 计数守恒 / 口径注不说满 / 失败面不出成功件）。
   选型跳过声明（按最高指令的例外条款）：本片是给自己那三个写者补一个 `SELECT` + 格式化，
   无新组件、无新依赖，`--all` 与状态口径沿用第 59 片已比过的 `TRUTH_STATUS` 五态。
   证据见 `docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md`。

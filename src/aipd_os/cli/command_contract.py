@@ -170,7 +170,7 @@ _COMMAND_REGISTRY: list[CommandEntry] = [
     CommandEntry("ctq list", CommandStatus.PUBLIC, CommandCategory.PRODUCT, "5.23",
                  requires_args=frozenset({"--db", "--project"}),
                  description="列出作用域内的 CTQ 合格域声明——链头第一个面向人的读面。"
-                             "默认只列 active（与发布分母同口径），并自报排除了几条"
+                             "默认只列 active（与发布分母的 active 过滤同口径），并自报排除了几条"
                              "各是什么态，免得「1 条」被读成「库里只有 1 条」；"
                              "--all 连 stale/superseded/expired/blocked 一起看，"
                              "状态按库里原样报，不折算。投影复用生产面那份 _snapshot，"
