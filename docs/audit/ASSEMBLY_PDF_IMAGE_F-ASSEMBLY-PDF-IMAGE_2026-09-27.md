@@ -442,17 +442,31 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
    `attempts` 的 4 处全在 `run_supervisor` 那条链上：schema `:53`、插入 `:244`、自增 `:291`/`:306`）
    ⇒ 返工这一路的"失败几次就停 / 退避多久再来"仍靠调用方兜，而 truth 侧那套有界返工
    （`attempts/max_attempts/backoff`）是另一套机制，两条没合。
-5. §六之二 那类自伤目前靠 roster 用例事后照出来（代价一整个全量）。**候选的"事前拦"已量过，
-   且量出来是"不能这样做"**：全仓 `PROVENANCE.json` 被改写过 **221** 次
-   （这条数每收口一次就涨，本片从 217 涨到 221 就是证据；口径是
-   `git log --format=%H -- PROVENANCE.json` 的行数，不是"绑定次数"），其中
-   "相邻两次绑定同一份报告 sha256"**42 次**，再加一条"两次之间 `tests/*.py` 动过"仍剩
-   **24 次**——把这个当判据红就是 24 条历史欠账当场炸响，而它们绝大多数是配方内正常的重跑。
-   ⇒ 改法不是门禁而是**提示**：`release_evidence.py` 在准备写入时发现
-   "同一份报告 sha 已在更早的 PROVENANCE 提交里绑过、且此后 `tests/` 动过"，就在 stdout
-   打一行警告（说明这次重绑会前推报告锚点、`test_roster_gap…` 会因此红），
-   不改退码、不阻断。下一片按这个形状做，并给它一条"警告必须打出来"的常驻用例
-   （用合成 git 历史或临时仓库，别拿主仓历史当夹具）。
+5. §六之二 那类自伤**这条入口项的前提已经在第 82 片被拆掉一半**，如实改记。
+   原本设计的是"事前提示"——发现"同一份报告 sha 已绑过、且此后 `tests/` 动过"就打一行警告，
+   当时的危害说明写的是"这次重绑会前推报告锚点、`test_roster_gap…` 会因此红"。
+   **那句危害说明现在不成立了**：锚点已改成取**最早**一次绑定
+   （`tests/test_closeout_verifier.py:_pick_anchor()`，落地提交 `7761c7c`），重绑不再前推基准。
+   但支撑这句的形状要说清：**主仓历史里"修正之后再绑同一份报告"的实例是 0 条**
+   （修正后一共只有 3 次绑定：745e2a9→da57cfe12145, 223db51→8ed70856ff69, 3c2b5a6→474c00ed9892，内容 sha 各不相同），
+   所以依据不是历史而是合成历史控制
+   `test_rebinding_the_same_report_does_not_move_the_anchor`（本轮读数 1 passed；它断"同一份报告
+   绑两次时取最早那次，且以最早为基准 roster 缺口非空、以最新为基准为空"）。
+   ⇒ "警告"从"防假红"降级为可选提示，不再列为下一片必做项。
+   **但同一格里还留着一个真缺口，且它比警告值钱**：报告并不携带"我是在哪一份
+   `SOURCE_MANIFEST` 之下跑出来的"这一事实。实测（第 82 片）：`tests/conftest.py:18-52` 的
+   `pytest_json_modifyreport` 只注入 `source_commit`/`package_version`/`generated_at`，报告顶层键
+   读出来是 created/duration/environment/exitcode/generated_at/package_version/root/source_commit/
+   summary/warnings——没有清单指纹。`closeout_verifier` 的 C6 只证明"那份报告里两条 manifest
+   哈希用例过了"，而清单一旦被之后的绑定重写，这句证明说的就是旧哈希。付过的代价可数：
+   第 81 片为"先绑报告、后面又改了参与哈希的文档"把全量跑了三次（6ca9c41（2636 passed/1 failed，701.4s）、745e2a9（2652 passed/0 failed，318.7s）、223db51（2652 passed/0 failed，329.8s））。
+   ⇒ 下一片该做的是：conftest 往报告里写 `source_manifest_sha256`（现读磁盘那份），
+   `closeout_verifier` 加一格"报告记的清单指纹 == 磁盘当前清单"，配一条必开火注入
+   （改清单一个字节）与一条合规侧；这条判据把"报告与清单同源"从"我记得顺序"变成机器读的数。
+   （旧文那三格计数按同一口径于本轮重算，只作参考、不再是任何入口项的依据：
+   `PROVENANCE.json` 被改写过 **223** 次、相邻两次绑同一份报告内容 sha **42** 次、
+   再加"两次之间 `tests/` 动过"**24** 次——口径是
+   `git log --format=%H -- PROVENANCE.json` 行数与报告内容 sha256 现算，不是"绑定次数"。）
 6. §一之三 落的一条备选第二尺（**不是必做**）：
    `jscpd CHANGELOG.md --min-tokens 20 --min-lines 5 --threshold 0` 作为形状 1 的补充档。
    **本轮新增一条硬前提**：本机根本没有 jscpd（`which jscpd` 退 1，仓库里也没有
