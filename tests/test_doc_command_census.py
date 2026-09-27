@@ -209,6 +209,33 @@ def test_legal_continuation_does_not_fire(tmp_path: Path, tmp_scope) -> None:
     assert rep["violations"] == [], rep["violations"]
 
 
+def test_broken_continuation_is_also_judged_under_quickref_dirs(
+        tmp_path: Path, monkeypatch) -> None:
+    """钉住"② 与 ②b 共用同一份遍历"这件事本身。
+
+    两档各写一遍语料遍历是本仓记过的老坑（排除档一漂就出现"一档看得见、一档看不见"）。
+    上一条用例的断掉的续行写在 `README.md`（`QUICKREF_FILES` 档），只测它就允许 ②b 偷偷
+    只读 files 不读 dirs——所以这一条把它放进 `QUICKREF_DIRS` 那一侧，并要求同一格开火。
+    """
+    monkeypatch.setattr(census, "REGISTRY_FILES", ("src/aipd_os/registry_data.py",))
+    monkeypatch.setattr(census, "QUICKREF_FILES", ("README.md",))
+    monkeypatch.setattr(census, "QUICKREF_DIRS", ("docs/architecture",))
+    monkeypatch.setattr(census, "CODE_DIRS", ("src",))
+    monkeypatch.setattr(census, "REPORT_ONLY_FILES", ())
+    monkeypatch.setattr(census, "REPORT_ONLY_DIRS", ("docs", "src"))
+    broken, following = _pair(_readme_at("3784a0a"), want_next_command=True)
+    (tmp_path / "docs" / "architecture").mkdir(parents=True)
+    (tmp_path / "docs/architecture/guide.md").write_text(
+        "# 指南\n" + broken + "\n" + following + "\n", encoding="utf-8")
+    write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+               code='GOOD = "先跑 aipd ctq add 再看"\n')
+    rep = census.audit(tmp_path)
+    hits = [v for v in rep["violations"] if v["field"] == "续行"]
+    assert [h["doc"] for h in hits] == ["docs/architecture/guide.md"], rep["violations"]
+    assert rep["corpus"]["continuation_breaks"] == 1, rep["corpus"]
+    assert rep["corpus"]["quickref_lines"] >= 2, rep["corpus"]      # ② 也真的看见了同一份语料
+
+
 def test_group_with_missing_subcommand_is_not_degraded_to_ok(tmp_path: Path,
                                                              tmp_scope) -> None:
     """组存在不代表组里每个子命令都存在——退化成"组存在就放行"就成了一把恒真的尺。

@@ -67,10 +67,25 @@
 `scripts/doc_command_census.py` 是**未提交状态**被改的，所以备份用 `cp` 而不是 `git checkout`
 （后者会把本轮实现一起清掉）。变异内容：`continuation_breaks()` 照样扫语料、结果一律返回空表。
 
-| 变异 | 结果 |
-|---|---|
-| 清空 `continuation_breaks` 的返回 | **两条红**：`--self-test`（`expect` 集合少了那一格）＋ `test_broken_continuation_fires_on_the_real_historical_shape` |
-| 还原 | `sha256` 前后 `ddbe33b84b0e` → `ddbe33b84b0e` 一致；`tests/test_doc_command_census.py` **19 passed**、`--self-test` 8 条合成读数全对上 |
+先做了一条就地单变量变异（清空返回、`cp` 备份后逐字节还原，sha `ddbe33b84b0e` 前后一致），
+再按本仓惯例把牙齿沉成电池 `docs/audit/s82/battery82.py`（4 臂，每臂都证 sha 落地再还原）：
+
+| 臂 | 撤掉的牙 | 结果 |
+|---|---|---|
+| Z1 | 扫到了但不记（`out.append(...)` → `pass`） | KILLED，红 3 条 |
+| Z2 | 判决不进 `violations`（删掉那两行） | KILLED，红 3 条 |
+| Z3 | 判决字段改名 `续行` → `续X` | KILLED，红 3 条 |
+| Z4 | ②b 自己另写一遍遍历、只读 `QUICKREF_FILES` | KILLED，**只红 1 条**（`test_broken_continuation_is_also_judged_under_quickref_dirs`） |
+
+终局 `合计 KILLED 4 / 4；其余按判决分类：无`（`BAD-*` 0 条、开火用例名共 10 条）。Z4 是这支电池存在的理由之一：
+它**只**红 `QUICKREF_DIRS` 那一侧的用例——没有那条用例，"② 与 ②b 共用同一份遍历"就只是
+docstring 里的一句话，谁也看不见它被拆开。
+
+两处过程账（不美化）：Z4 的锚点第一次只写两行，结果在尺子里**命中 2 次**
+（`quickref_lines` 与 `continuation_breaks` 的开头逐字相同）⇒ 电池判 `BAD-ANCHOR`，
+没有假装成"这条牙没人守"；第二次我拼漏了一行 `    for rel, lines in files:`，
+编译期被 `BAD-MUTATION: unexpected indent (line 288)` 拦下。两次都是**没落盘的廉价失败**，
+改法沿用第 81 片那条：锚点由被改文件本体取出，不手抄转义。
 
 一处要如实记的不对称：合规侧那条（`test_legal_continuation_does_not_fire`）在变异下**仍然绿**——
 清空判据只会让它更容易通过。反向对照天生没有这个方向的牙，别把"它照绿"读成判据没牙，
@@ -82,7 +97,7 @@
   `--json` 的 `corpus.continuation_breaks = 0`、`violations = []`、`ok = true`。
 - `scripts/doc_command_census.py --self-test`：`--self-test：8 条合成读数全部对上`（分母从 7 涨到 8，
   新增的两条标记分别是"断续行抓到历史原件那一行"与"合法续行不开火"）。
-- `pytest tests/test_doc_command_census.py -q`：**19 passed**（本轮新增 2 条常驻用例）。
+- `pytest tests/test_doc_command_census.py -q`：**20 passed**（本轮新增 3 条常驻用例）。
 - 历史原件取证：`git show 3784a0a:README.md` 的 `:271` 以 `\\` 收尾、`:272` 是
   `aipd drawing assembly-steps … --pdf   # 顺带出 A4 图框矢量 PDF（中文可抽取）\`。
 
