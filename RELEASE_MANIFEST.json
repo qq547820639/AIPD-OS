@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 287243,
-      "sha256": "0d4f7f944173e521576a3934f8dba7b3332749b29a2d90bbea311fb94303bc4f"
+      "size": 289895,
+      "sha256": "2c3e7c26b24d90423d514192f57187636c6a246d7a211b420acad3113b47c561"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -158,7 +158,7 @@
     {
       "path": "README.md",
       "size": 59492,
-      "sha256": "6ab870a0a63e7210b6fd90b432e4b6748a406f516dd1b2159b61e8d9d6965828"
+      "sha256": "e46af23ebbbbce5cfb64ef45b338318ac5218385f01aecbbd6795aaea4b61053"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -672,8 +672,8 @@
     },
     {
       "path": "scripts/absence_claim_census.py",
-      "size": 66078,
-      "sha256": "ebd478dad3189550c472f26400a5ed61272d0172d3ee09fe1d07186d9e9f1816"
+      "size": 66650,
+      "sha256": "e176803ec88eead44b563e1e43f70d27dd573c338ea7c73d46abd51467760d63"
     },
     {
       "path": "scripts/aipd_state.py",
@@ -1182,8 +1182,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_truth.py",
-      "size": 37175,
-      "sha256": "bcf8a9a497b6d0a237eec396f9c3f3b788741cc6223e3fd628e9ece2d1d64088"
+      "size": 38789,
+      "sha256": "67271de3aadeaf0f684f5a512cddc8b45129cbfe05004e20d9c593eccbbaac57"
     },
     {
       "path": "src/aipd_os/cli/commands_validation.py",
@@ -1672,8 +1672,8 @@
     },
     {
       "path": "src/aipd_os/product_truth/sweep.py",
-      "size": 5291,
-      "sha256": "406ae282e33c158feb0702b0a448822583b042475b4f3e95bfa6cf1f5734bed2"
+      "size": 5338,
+      "sha256": "6276f393946a17e5eb35b0acd8214da1e3f1854d07991d3f956a86ec5ce7c2ed"
     },
     {
       "path": "src/aipd_os/providers/__init__.py",
@@ -1702,8 +1702,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 106145,
-      "sha256": "ff671a568c650fcf2ab34fa9d27fe171bef6306e0feea22df4d3a68e4c814087"
+      "size": 106364,
+      "sha256": "8b1fd36196a198c1816ef6437552f0e7522831619e72e6d4e29b3ce90a449348"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -1946,9 +1946,14 @@
       "sha256": "c212e3acab030bfdf09a163a7d99f99bd40e8d6b09b89d5440fc054645518ab5"
     },
     {
+      "path": "src/aipd_os/supervisor/evidence_rework.py",
+      "size": 6939,
+      "sha256": "afafc2ebfb555da4eac144ac8d6a5f21ed616921fec17851691d6bffd46a7c58"
+    },
+    {
       "path": "src/aipd_os/supervisor/fact_lineage.py",
-      "size": 6955,
-      "sha256": "f815581b8d997d505ee2e3984d0bbced0503fee2d02a0e17063887d6f298131c"
+      "size": 7466,
+      "sha256": "fbe1240f50e83b40e8b47d0ce576011a3c4e7659bfc6c0e8cd5932b301d502e8"
     },
     {
       "path": "src/aipd_os/supervisor/idea_capabilities.py",
@@ -1957,8 +1962,8 @@
     },
     {
       "path": "src/aipd_os/supervisor/supervisor.py",
-      "size": 40336,
-      "sha256": "58b6ce1428a7c206476be67d796c2754c14f981ec8105050d88d6f3db2998d91"
+      "size": 42249,
+      "sha256": "3e82628b26130d9fc74a54694674fa6d934a3b796c2a56a6388e9196eeaadb74"
     },
     {
       "path": "src/aipd_os/supply_chain/__init__.py",
@@ -2582,8 +2587,8 @@
     },
     {
       "path": "tests/test_cost_rework.py",
-      "size": 17599,
-      "sha256": "4441b5f2c01f5a36fbf44058d41d6234b7ff77e022c1069ff52da41b0706ae01"
+      "size": 17699,
+      "sha256": "3415489fef45ac2b842f83af82e4ec791a4d3965e44b5b5503fa51a19bf31cdd"
     },
     {
       "path": "tests/test_credibility.py",
@@ -2642,8 +2647,8 @@
     },
     {
       "path": "tests/test_dxf_rework.py",
-      "size": 22687,
-      "sha256": "aa930b31a1adcd6b4d6a31f73d958970e9cda86ce853277b227dd38a2665934c"
+      "size": 22794,
+      "sha256": "62c867b0168f5426c9b8382bd4f4179e0163bbfac0bb35c6b06fd17763c6f4e1"
     },
     {
       "path": "tests/test_encryption_key_policy.py",
@@ -2679,6 +2684,11 @@
       "path": "tests/test_evidence_relation_lineage_review.py",
       "size": 11689,
       "sha256": "db41ef5945a3ee049a820c9db6db51743373e15b1100660d4b3f77ecd40c723c"
+    },
+    {
+      "path": "tests/test_evidence_rework.py",
+      "size": 7895,
+      "sha256": "0308cec2825166d6dde2c6ed81c2f92d1132930c58cc11227e3ed40184a0cfc4"
     },
     {
       "path": "tests/test_evidence_sidecar_paths.py",
