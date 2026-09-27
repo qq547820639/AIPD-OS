@@ -73,7 +73,7 @@ def main() -> int:
     if rc2 != 0 or marks < 21:
         fails.append(f"--self-test rc={rc2} marks={marks}")
     rows.append(f"- **`--self-test`**：`rc={rc2}`，**{marks} 条**合成读数全对上"
-                "（含存在式登记、去处台账与 `table_ddl` 双向）")
+                "（本片未加合成读数，这条沿用第 71 片的档位）")
 
     rc3, out3 = sh([PY, "-m", "pytest", "tests/test_supervisor_execution.py",
                     "tests/test_absence_claim_census.py", "-q"])
@@ -123,7 +123,7 @@ def main() -> int:
     gate_ids = {str(c["id"]) for c in gate_claims}
     gate_verdicts = sorted({str(r["verdict"]) for r in acc.audit(REPO, gate_claims)["rows"]
                             if str(r["id"]) in gate_ids})
-    rows.append("- **本片新档的读数**：`external_callers` 对 "
+    rows.append("- **沿第 71 片那条轴的读数（本片未加新档）**：`external_callers` 对 "
                 "`commit_approved` / `commit_snapshot` 判 "
                 + ",".join(gate_verdicts) +
                 "，正向对照 `record_dxf_lineage` 判 "
