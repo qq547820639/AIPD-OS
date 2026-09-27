@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-27T10:39:33+00:00",
+  "generated_at": "2026-09-27T11:08:27+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 298743,
-      "sha256": "1856566322e201c3383b0a279aa4cd50ff479ae90f092d5389f38f1b127fde01"
+      "size": 302011,
+      "sha256": "5d6e191d95e446e08aafc70a7380d84ad1973990ea746223656568f34d7a077e"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 59845,
-      "sha256": "514f2292d8c75eae594b61671d1648fde538a72c2e16652d7b5e5a5f8fdd64b3"
+      "size": 60228,
+      "sha256": "c66c799106237ee8387ca9cf54c1e126de645a339a711e5ffea01dc489c71689"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -672,8 +672,8 @@
     },
     {
       "path": "scripts/absence_claim_census.py",
-      "size": 75417,
-      "sha256": "427eacd7912aef3f5391a2585a5fa6b2566801084c8217675576d7416c0edd7f"
+      "size": 75927,
+      "sha256": "a700336161fcf58d16b8bc1a4b70e0ade3894a7a4bbc26b84fd53a12baff493d"
     },
     {
       "path": "scripts/aipd_state.py",
@@ -856,6 +856,11 @@
       "sha256": "bfbbf76a8bb4c7bb0b0f1eb68d2c7a1c8b307449aa2a645435e7c67a96907604"
     },
     {
+      "path": "scripts/research/fetch_fulltexts.py",
+      "size": 7162,
+      "sha256": "c78387ebda7c576092227cb28245a6be4a036aec636940513fe3f1928ff3eed1"
+    },
+    {
       "path": "scripts/research/postprocess.py",
       "size": 6013,
       "sha256": "cc91b05c55f06832483a655a0cdcf0980da6b3c1102342c4020e379927b0f036"
@@ -887,8 +892,8 @@
     },
     {
       "path": "scripts/research/search_papers_by_open_alex.py",
-      "size": 3977,
-      "sha256": "df12ed36f22eb67233840b154278b94578a3ea5781056c597794778915848eb3"
+      "size": 4542,
+      "sha256": "330f744e04aa5feaf3d32f72825a5bf3690c19754ad43c3d6ddf9d05f1231c45"
     },
     {
       "path": "scripts/research/search_papers_by_openreview.py",
@@ -1702,8 +1707,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 106364,
-      "sha256": "8b1fd36196a198c1816ef6437552f0e7522831619e72e6d4e29b3ce90a449348"
+      "size": 106777,
+      "sha256": "2f70aaa03a35e4e19059921f1b5e56d4acb01da1ce53fac94bded6870575c88b"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2327,8 +2332,8 @@
     },
     {
       "path": "tests/test_absence_claim_census.py",
-      "size": 29283,
-      "sha256": "e6b5855e98e1c47dab7cd41f1881f6713b84649184fcac8cf460c919da3237b8"
+      "size": 30107,
+      "sha256": "fd24273c0a73946b367af6d565fa7d0e2c8984e31649e1611ea1f9566910e668"
     },
     {
       "path": "tests/test_actor_columns_no_default.py",
@@ -3149,6 +3154,16 @@
       "path": "tests/test_research_fulltext.py",
       "size": 8970,
       "sha256": "1d557d4f4ddf58cba662a6ae81285da8fac94df10c2c49e0946cf5e7f627f126"
+    },
+    {
+      "path": "tests/test_research_fulltext_fetcher.py",
+      "size": 3362,
+      "sha256": "e68f9fcbe5f0fef8cfbe0b5896cf7c20fcea33068d294401accf559a79222c9b"
+    },
+    {
+      "path": "tests/test_research_fulltext_step.py",
+      "size": 4965,
+      "sha256": "38cd920b7a1e454b929d08387c8bfd6af6aa5073b7ef0b78c33a371148364a91"
     },
     {
       "path": "tests/test_research_integration_idea.py",
