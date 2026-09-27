@@ -9,7 +9,7 @@ from pathlib import Path
 REPO = Path("/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS")
 TMP = Path("/Volumes/Extra/CodeProj/AI全链路自研/tmp/s69")
 DOC = REPO / "docs/audit/GATE_COMMIT_CLI_F-GATE-COMMIT-CLI_2026-09-27.md"
-REPORT = TMP / "checkout/report-s69.json"
+REPORT = TMP / "final/report.json"
 PY = str(REPO / ".venv/bin/python")
 PLACEHOLDER = "## 六、终局读数（占位）"
 
@@ -43,9 +43,9 @@ def main() -> int:
         rep = json.loads(REPORT.read_text(encoding="utf-8"))
         s = rep.get("summary", {})
         other = {k: v for k, v in s.items() if k not in ("passed", "collected", "total")}
-        wt = subprocess.run(["git", "-C", str(TMP / "checkout"), "rev-parse", "--short", "HEAD"],
+        wt = subprocess.run(["git", "-C", str(TMP / "final"), "rev-parse", "--short", "HEAD"],
                             capture_output=True, text=True).stdout.strip()
-        rows.append(f"- **签出那一跑**（`tmp/s69/checkout`，报告产出于提交 `{wt}`，"
+        rows.append(f"- **签出那一跑**（`tmp/s69/final`，报告产出于提交 `{wt}`，"
                     f"主树当时 HEAD `{git('rev-parse', '--short', 'HEAD')}`）："
                     f"`exitcode={rep.get('exitcode')}`、`collected={s.get('collected')}`、"
                     f"`passed={s.get('passed')}`、`skipped={s.get('skipped')}`、"
