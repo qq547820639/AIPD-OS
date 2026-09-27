@@ -46,7 +46,13 @@ def claim(cid: str, capability: str, anchor: str, check: dict) -> dict:
 
 
 def verdicts(rep: dict) -> dict[str, str]:
-    return {str(r["id"]): str(r["verdict"]) for r in rep["rows"]}
+    """账本条目各自的判决。
+
+    滤掉两类**语料级**行（`UNACCOUNTED:*` / `EXEMPT:*`）：它们不是某条登记的判决，
+    而是"这句现状文本有没有去处"的判决，喂半份账本进来时必然会多出来。
+    """
+    return {str(r["id"]): str(r["verdict"]) for r in rep["rows"]
+            if not str(r["id"]).startswith(("UNACCOUNTED:", "EXEMPT:"))}
 
 
 # ------------------------------------------------------------------ ① 真 spawn
@@ -56,9 +62,10 @@ def test_instrument_self_test_is_actually_run_and_green() -> None:
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "条合成读数全部对上" in proc.stdout, proc.stdout
     assert "✓立住" in proc.stdout, proc.stdout
-    for face in ("[HOLDS]", "[CONTRADICTED]", "[CLAIM_TEXT_ABSENT]", "[PRECONDITION]"):
-        assert face in proc.stdout, (face, proc.stdout)
-    assert "四档分桶之和 == 登记条数" in proc.stdout, proc.stdout
+    for face in ("[HOLDS]", "[CONTRADICTED]", "[CLAIM_TEXT_ABSENT]",
+                "[PRECONDITION]", "[UNACCOUNTED]"):
+        assert face in proc.stdout, (face, proc.stdout.splitlines()[-4:])
+    assert "分档之和 == 登记条数" in proc.stdout, proc.stdout.splitlines()[-4:]
 
 
 def test_exit_code_zero_on_the_real_repo_and_the_faces_are_named() -> None:
@@ -121,7 +128,57 @@ def test_document_face_claim_is_checked_against_the_same_authority() -> None:
     docs = tuple(c for c in acc.CLAIMS if c.get("file"))
     assert len(docs) == 1, [c["id"] for c in docs]
     rep = acc.audit(ROOT, docs)
-    assert [r["verdict"] for r in rep["rows"]] == [acc.HOLDS], rep
+    assert list(verdicts(rep).values()) == [acc.HOLDS], rep["rows"]
+
+
+# ------------------------------------------------------------------ ⑦ 去处台账（第 67 片）
+def test_real_corpus_all_capability_absences_have_a_home() -> None:
+    """真仓库上「登记 + 豁免 + 未处置 == 窄档分母」且未处置为 0。
+
+    这条才是本片的验收：不是"我多登记了几条"，而是**没有一句能力缺失的话无人认领**。
+    """
+    rep = acc.audit(ROOT, acc.CLAIMS)
+    c = rep["corpus"]
+    assert c["narrow_unaccounted"] == 0, rep["unaccounted"]
+    assert c["capability_absence_sentences"] == \
+        c["narrow_registered"] + c["narrow_exempted"] + c["narrow_unaccounted"], c
+    assert c["capability_absence_sentences"] >= 12, c
+    # 窄档必须比宽档小：收窄本身就是交付，否则"每条都要有去处"只会逼出一堆空豁免
+    assert c["capability_absence_sentences"] < c["absence_sentences"], c
+    assert not [r for r in rep["rows"] if str(r["id"]).startswith("EXEMPT:")], rep["rows"]
+
+
+def test_partial_ledger_makes_the_missing_home_fire() -> None:
+    """真语料上的永久开火对照：抽掉一条登记 ⇒ 那句话立刻"没去处" ⇒ 退 4。
+
+    不用改登记表文本就能开火，证明这一面不是靠造句子撑起来的。
+    """
+    target = next(c for c in acc.CLAIMS
+                  if c.get("capability") == "cad.2d_drawings"
+                  and c.get("check", {}).get("kind") == "identifier")
+    partial = tuple(c for c in acc.CLAIMS if c is not target)
+    rep = acc.audit(ROOT, partial)
+    assert rep["corpus"]["narrow_unaccounted"] >= 1, rep["corpus"]
+    un = [r for r in rep["rows"] if r["verdict"] == acc.UNACCOUNTED]
+    assert any(str(target["anchor"]) in str(r["detail"]) for r in un), un
+    assert rep["ok"] is False, rep
+    assert rep["problems"] == [], rep["problems"]
+
+
+def test_exemption_without_a_referent_is_itself_a_violation() -> None:
+    """豁免台账不许留僵尸条目：语料里没这句话了就必须响（与悬空账同形）。"""
+    saved = dict(acc.EXEMPTIONS)
+    acc.EXEMPTIONS.clear()
+    acc.EXEMPTIONS["这句在语料里根本不存在-第67片对照"] = "一条写给机器看的、足够长的理由"
+    try:
+        rep = acc.audit(ROOT, acc.CLAIMS)
+    finally:
+        acc.EXEMPTIONS.clear()
+        acc.EXEMPTIONS.update(saved)
+    stale = [r for r in rep["rows"] if str(r["id"]).startswith("EXEMPT:")]
+    assert len(stale) == 1, stale
+    assert stale[0]["verdict"] == acc.CLAIM_TEXT_ABSENT, stale
+    assert rep["ok"] is False, rep
 
 
 def test_count_unreadable_is_precondition_not_green(tmp_path: Path) -> None:
@@ -180,7 +237,7 @@ def test_divergent_duplicate_is_judged_on_its_own(tmp_path: Path, monkeypatch) -
                     {"kind": "identifier", "paths": ["src"],
                      "symbols": ["zzz-not-a-symbol"]}),)
     rep = acc.audit(tmp_path, claims)
-    assert [r["verdict"] for r in rep["rows"]] == [acc.HOLDS], rep
+    assert list(verdicts(rep).values()) == [acc.HOLDS], rep["rows"]
     assert len(rep["divergence"]) == 1, rep["divergence"]
     assert rep["ok"] is False and rep["problems"] == [], rep
     with contextlib.redirect_stdout(io.StringIO()):
@@ -204,9 +261,12 @@ def test_dangling_ledger_fires_on_the_real_repo() -> None:
                                                 "symbols": ["LineageGraph"]})
                    for k, v in sorted(DELETED_SENTENCES.items()))
     rep = acc.audit(ROOT, claims)
-    assert len(rep["rows"]) == 3, rep
-    assert all(r["verdict"] == acc.CLAIM_TEXT_ABSENT for r in rep["rows"]), rep
-    assert len(rep["judged"]) == 3, rep["judged"]
+    assert len([r for r in rep["rows"] if not str(r["id"]).startswith(
+        ("UNACCOUNTED:", "EXEMPT:"))]) == len(claims), rep["rows"]
+    assert all(r["verdict"] == acc.CLAIM_TEXT_ABSENT for r in rep["rows"]
+               if str(r["id"]) in {c["id"] for c in claims}), rep["rows"]
+    assert len([r for r in rep["judged"] if not str(r["id"]).startswith(
+        ("UNACCOUNTED:", "EXEMPT:"))]) == 3, rep["judged"]
 
 
 def test_present_falsifier_contradicts_on_the_real_corpus() -> None:
