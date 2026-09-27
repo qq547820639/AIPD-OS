@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 250200,
-      "sha256": "6b08dc4827e02b4452599ed77af5a2f1671863e3437b4b6d3e1aa139f1285c64"
+      "size": 253483,
+      "sha256": "11fdee244442973a2f87be7aa72a23b9508a00b98289ad0c9ee131a91f40d3d8"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 52581,
-      "sha256": "b805fb55633765f7501c2d9afe14bb534b761fb204f8875c6de7d3d3a5b02bb2"
+      "size": 53696,
+      "sha256": "a6436739c58523d32d0e7f0b74e3658ed8592f1c7e5756b7a56ec394786e0920"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -177,8 +177,8 @@
     },
     {
       "path": "SKILL.md",
-      "size": 4524,
-      "sha256": "be55e99ebcbfd5d4a16ce4b209675da2176c3369fe56078bcacb602c0ac39f4b"
+      "size": 4777,
+      "sha256": "ba066c307e5c9a265d74f43ecf286924b6587274d472c1c751cfe097e9018c68"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 22087,
-      "sha256": "ca506247fc71de0f01a1b8e17d66ee69ab9a3527fc29cee9d96e88261f699e21"
+      "size": 24861,
+      "sha256": "7a2fe87b1244f1a70af8793d1817d52b11a76ffa81de7fe2ce7713a7d0bfa0d8"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -752,8 +752,8 @@
     },
     {
       "path": "scripts/doc_command_census.py",
-      "size": 26306,
-      "sha256": "d766ecbb15852d540c61680022d69cfa91b2feabfa18bdf27c46b94519420645"
+      "size": 28022,
+      "sha256": "7bd50e2ad7fbd2080b0da03c6afb57349c6e0e489858d23327fae68991960986"
     },
     {
       "path": "scripts/doc_reference_census.py",
@@ -1102,13 +1102,13 @@
     },
     {
       "path": "src/aipd_os/cli/command_contract.py",
-      "size": 21655,
-      "sha256": "b626a283a7a5c1cf1a6483e375ce828fae3d04e05e975a0e4aed01b7463b2502"
+      "size": 22542,
+      "sha256": "5e7b03034278b6a5e43adf68e6b598deb8c2654cc65edaad38d25f21d2bdaf26"
     },
     {
       "path": "src/aipd_os/cli/commands.py",
-      "size": 24135,
-      "sha256": "98711e7f236c9cfc9c8ea910886584fa8aad21ca7113afdcbae6f719dd48a648"
+      "size": 24250,
+      "sha256": "5657e3e5ee1d185b9dff41d087daa88b33f9d5f11396bd2441ba12f3cdb577de"
     },
     {
       "path": "src/aipd_os/cli/commands_cad.py",
@@ -1172,8 +1172,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_truth.py",
-      "size": 27463,
-      "sha256": "f956822d41c27b6b7aec62ec8530568de4f577deba14a3ed528d860ebae84a94"
+      "size": 30425,
+      "sha256": "a947d585d95fe0759b8da6e866677b0b290ce2b7f29db211b9c0e1a0b71403e8"
     },
     {
       "path": "src/aipd_os/cli/commands_validation.py",
@@ -1182,8 +1182,8 @@
     },
     {
       "path": "src/aipd_os/cli/main.py",
-      "size": 59926,
-      "sha256": "f79e3fe2894facd5d66708daaa37f13a9090decde6bafda4d383e7f9debf0241"
+      "size": 60735,
+      "sha256": "50a11b7924f61b8898b58de81e940c07f864621bd237918e070c0f940b491fd0"
     },
     {
       "path": "src/aipd_os/cli/product_commands.py",
@@ -1632,8 +1632,8 @@
     },
     {
       "path": "src/aipd_os/product_truth/ctq.py",
-      "size": 20669,
-      "sha256": "b8935ee9f2cede9d5ea2a7322f254cca9e00b8c01921a346de0cf441a1f142a8"
+      "size": 22642,
+      "sha256": "bfdef56de671d359ac0027a0cb1d931dc1aa923ce4127775aea8be2dd13f96c4"
     },
     {
       "path": "src/aipd_os/product_truth/drift.py",
@@ -1692,8 +1692,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 102607,
-      "sha256": "a5632924ae3555185113b00bd560a1920f9af5e42013981744d6174ff0dbb0f1"
+      "size": 103381,
+      "sha256": "70c229b882f4d20aa8baed3da86acfb2342a99f00860229f74a825497639afde"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -2537,8 +2537,8 @@
     },
     {
       "path": "tests/test_command_surface_census.py",
-      "size": 8998,
-      "sha256": "2ce984384c3f3f976d10cccfe87630312814030f5a1eb349ebce28e6e517d176"
+      "size": 9084,
+      "sha256": "d992f22fc121a717fbcae9dbad7c797220d614948cea86d8ff726d66e6c87ace"
     },
     {
       "path": "tests/test_completion_endpoint.py",
@@ -2597,8 +2597,8 @@
     },
     {
       "path": "tests/test_doc_command_census.py",
-      "size": 18941,
-      "sha256": "fbd235dff60683d33bc966aaa64929a0b338dcc787cdcc44ea264636667cb109"
+      "size": 20801,
+      "sha256": "376aeaec024f9a5fe7c27720ef8827bea795e1b1855adf16401c8640d7836b7d"
     },
     {
       "path": "tests/test_doc_reference_census.py",
@@ -3254,6 +3254,11 @@
       "path": "tests/test_truth_ctq_add.py",
       "size": 21007,
       "sha256": "83248a0f3e0c7148aaf4fb57d3e8b96e0d77cf9f87b338c812587ba8d469ab1e"
+    },
+    {
+      "path": "tests/test_truth_ctq_list.py",
+      "size": 10510,
+      "sha256": "68ec23d4f3480bf30cece7e52797c2a1e85b7878b7bf42e4867cd821d216d8b9"
     },
     {
       "path": "tests/test_truth_ctq_revise.py",

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T07:21:29",
+  "generated_at": "2026-09-27T08:24:00",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -85,7 +85,7 @@
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 206
+      "tests": 207
     }
   },
   "tags": [
@@ -117,26 +117,86 @@
     "version": "5.6.0",
     "parsed": true,
     "total_files": 663,
-    "hash_matches": 660,
-    "hash_mismatch_count": 3,
+    "hash_matches": 650,
+    "hash_mismatch_count": 13,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "27acf147137a274be48b1ce989fb925a19fa14dc38fb3d4a02c3341b6a9fe1c2",
-        "actual": "2eadfffda9a2d665b952ef65d84e2efa50ddb3b1b060b295461272020811c7b1"
+        "expected": "6b08dc4827e02b4452599ed77af5a2f1671863e3437b4b6d3e1aa139f1285c64",
+        "actual": "11fdee244442973a2f87be7aa72a23b9508a00b98289ad0c9ee131a91f40d3d8"
+      },
+      {
+        "path": "README.md",
+        "reason": "hash_mismatch",
+        "expected": "b805fb55633765f7501c2d9afe14bb534b761fb204f8875c6de7d3d3a5b02bb2",
+        "actual": "a6436739c58523d32d0e7f0b74e3658ed8592f1c7e5756b7a56ec394786e0920"
+      },
+      {
+        "path": "SKILL.md",
+        "reason": "hash_mismatch",
+        "expected": "be55e99ebcbfd5d4a16ce4b209675da2176c3369fe56078bcacb602c0ac39f4b",
+        "actual": "ba066c307e5c9a265d74f43ecf286924b6587274d472c1c751cfe097e9018c68"
+      },
+      {
+        "path": "docs/architecture/truth_architecture.md",
+        "reason": "hash_mismatch",
+        "expected": "ca506247fc71de0f01a1b8e17d66ee69ab9a3527fc29cee9d96e88261f699e21",
+        "actual": "7a2fe87b1244f1a70af8793d1817d52b11a76ffa81de7fe2ce7713a7d0bfa0d8"
       },
       {
         "path": "scripts/doc_command_census.py",
         "reason": "hash_mismatch",
-        "expected": "77a458df3c18a49faa498d0b274c9d8e616b9f0935f4f97807c8c55d1cea0b4a",
-        "actual": "f6a27409846146398052f8cce74ad7777df3e6b3e2152bf1f657a06f16bb82b2"
+        "expected": "d766ecbb15852d540c61680022d69cfa91b2feabfa18bdf27c46b94519420645",
+        "actual": "7bd50e2ad7fbd2080b0da03c6afb57349c6e0e489858d23327fae68991960986"
+      },
+      {
+        "path": "src/aipd_os/cli/command_contract.py",
+        "reason": "hash_mismatch",
+        "expected": "b626a283a7a5c1cf1a6483e375ce828fae3d04e05e975a0e4aed01b7463b2502",
+        "actual": "5e7b03034278b6a5e43adf68e6b598deb8c2654cc65edaad38d25f21d2bdaf26"
+      },
+      {
+        "path": "src/aipd_os/cli/commands.py",
+        "reason": "hash_mismatch",
+        "expected": "98711e7f236c9cfc9c8ea910886584fa8aad21ca7113afdcbae6f719dd48a648",
+        "actual": "5657e3e5ee1d185b9dff41d087daa88b33f9d5f11396bd2441ba12f3cdb577de"
+      },
+      {
+        "path": "src/aipd_os/cli/commands_truth.py",
+        "reason": "hash_mismatch",
+        "expected": "f956822d41c27b6b7aec62ec8530568de4f577deba14a3ed528d860ebae84a94",
+        "actual": "a947d585d95fe0759b8da6e866677b0b290ce2b7f29db211b9c0e1a0b71403e8"
+      },
+      {
+        "path": "src/aipd_os/cli/main.py",
+        "reason": "hash_mismatch",
+        "expected": "f79e3fe2894facd5d66708daaa37f13a9090decde6bafda4d383e7f9debf0241",
+        "actual": "50a11b7924f61b8898b58de81e940c07f864621bd237918e070c0f940b491fd0"
+      },
+      {
+        "path": "src/aipd_os/product_truth/ctq.py",
+        "reason": "hash_mismatch",
+        "expected": "b8935ee9f2cede9d5ea2a7322f254cca9e00b8c01921a346de0cf441a1f142a8",
+        "actual": "bfdef56de671d359ac0027a0cb1d931dc1aa923ce4127775aea8be2dd13f96c4"
+      },
+      {
+        "path": "src/aipd_os/registry_data.py",
+        "reason": "hash_mismatch",
+        "expected": "a5632924ae3555185113b00bd560a1920f9af5e42013981744d6174ff0dbb0f1",
+        "actual": "70c229b882f4d20aa8baed3da86acfb2342a99f00860229f74a825497639afde"
+      },
+      {
+        "path": "tests/test_command_surface_census.py",
+        "reason": "hash_mismatch",
+        "expected": "2ce984384c3f3f976d10cccfe87630312814030f5a1eb349ebce28e6e517d176",
+        "actual": "d992f22fc121a717fbcae9dbad7c797220d614948cea86d8ff726d66e6c87ace"
       },
       {
         "path": "tests/test_doc_command_census.py",
         "reason": "hash_mismatch",
-        "expected": "de24493310759191f804ffbe5d92f4196a5c1805be05a835f0b6782bdae48119",
-        "actual": "fbd235dff60683d33bc966aaa64929a0b338dcc787cdcc44ea264636667cb109"
+        "expected": "fbd235dff60683d33bc966aaa64929a0b338dcc787cdcc44ea264636667cb109",
+        "actual": "376aeaec024f9a5fe7c27720ef8827bea795e1b1855adf16401c8640d7836b7d"
       }
     ]
   },
