@@ -72,7 +72,7 @@ def test_html_body_is_extracted_into_cacheable_text() -> None:
     html = ("<html><head><title>T</title><style>b{color:red}</style></head>"
             "<body><h1>协作机器人与老年康复</h1>"
             "<p>本文研究智能手环在居家场景下的应用。</p>"
-            "<script>alert(1)</script></body></html>").encode("utf-8")
+            "<script>alert(1)</script></body></html>").encode()
     rep = ff.fetch_all([{"source": "arxiv", "arxiv_id": "9999.00001",
                          "is_oa": True,
                          "oa_url": "https://arxiv.org/html/9999.00001",
@@ -90,9 +90,9 @@ def test_html_body_is_extracted_into_cacheable_text() -> None:
 
 def test_script_and_style_text_never_leaks_into_the_extracted_body() -> None:
     """抽取器不许把 <script>/<style> 里的字当正文（那是代码，不是文章内容）。"""
-    raw = ("<html><body><p>REAL BODY TEXT</p>"
-           "<script>var secretToken = 'abc'</script>"
-           "<style>.hidden{display:none}</style></body></html>").encode("utf-8")
+    raw = (b"<html><body><p>REAL BODY TEXT</p>"
+           b"<script>var secretToken = 'abc'</script>"
+           b"<style>.hidden{display:none}</style></body></html>")
     text = ff.html_to_text(raw)
     assert "REAL BODY TEXT" in text, text
     assert "secretToken" not in text and "display:none" not in text, text
@@ -147,7 +147,7 @@ def test_offline_cli_run_still_reports_honestly(tmp_path: Path) -> None:
 def test_a_short_html_landing_page_is_not_reported_as_full_text() -> None:
     """arXiv 的 /abs 页也是合法 HTML：抽出来只有摘要长度时不许说"拿到全文"。"""
     landing = ("<html><body><h1>论文标题</h1><p>一小段摘要。</p>"
-               "<a href=/pdf>PDF</a></body></html>").encode("utf-8")
+               "<a href=/pdf>PDF</a></body></html>").encode()
     rep = ff.fetch_all([{"source": "arxiv", "arxiv_id": "9999.00002",
                          "is_oa": True, "oa_url": "https://arxiv.org/abs/9999.00002",
                          "title": "T"}], getter=lambda _u: landing)

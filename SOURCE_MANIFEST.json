@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-27T11:23:17+00:00",
+  "generated_at": "2026-09-27T12:02:53+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 302011,
-      "sha256": "5d6e191d95e446e08aafc70a7380d84ad1973990ea746223656568f34d7a077e"
+      "size": 304578,
+      "sha256": "efc703acbaa8bc65c94faa528bfb871ca7159a8eff6bf6624dec15d8d81ad6a7"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 60228,
-      "sha256": "c66c799106237ee8387ca9cf54c1e126de645a339a711e5ffea01dc489c71689"
+      "size": 60510,
+      "sha256": "00dce2ab8493f904e282ae802c65932ac82a48a50f30babc0d99cb3b737e383c"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -482,8 +482,8 @@
     },
     {
       "path": "pyproject.toml",
-      "size": 2737,
-      "sha256": "93becd9738374e7a8b2bce419aa4489b5c2951156dcc7735a7ead2fbdd63a3b2"
+      "size": 3057,
+      "sha256": "a20ebb027edaee80a6c13bbd4ccce78a210b5308e5f12619733baae6cc566377"
     },
     {
       "path": "references/AIPD-OS-v4.0.docx",
@@ -857,8 +857,8 @@
     },
     {
       "path": "scripts/research/fetch_fulltexts.py",
-      "size": 7162,
-      "sha256": "c78387ebda7c576092227cb28245a6be4a036aec636940513fe3f1928ff3eed1"
+      "size": 13834,
+      "sha256": "6ce32f2ca847a064ef1dac6fb00cc65cee2eef60467cd44912d6aa010b3692c2"
     },
     {
       "path": "scripts/research/postprocess.py",
@@ -867,8 +867,8 @@
     },
     {
       "path": "scripts/research/requirements.txt",
-      "size": 85,
-      "sha256": "bbc83f43851fd901e27a60d8d8239b81f8a0d505ed16a1b5b166c4cfcd8b087d"
+      "size": 187,
+      "sha256": "418d8a440def25369b4f21d41ddd9da9624199ea8a1369a313b1023e3aa4562b"
     },
     {
       "path": "scripts/research/search_papers.py",
@@ -1707,8 +1707,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 106777,
-      "sha256": "2f70aaa03a35e4e19059921f1b5e56d4acb01da1ce53fac94bded6870575c88b"
+      "size": 106996,
+      "sha256": "0af4825e78d9e7d53a2906646ab35f47719e30a9b52ebd348b8da17750d2895e"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -3161,9 +3161,14 @@
       "sha256": "f50205f5b1a8a7dd07a692fd985b58546c1df1f5daf08a0dbd798c9257b7331c"
     },
     {
+      "path": "tests/test_research_fulltext_live.py",
+      "size": 1565,
+      "sha256": "0f3955da65d3f6375543d828647bbd58b20b3335af4254dba383fdcfa5433561"
+    },
+    {
       "path": "tests/test_research_fulltext_step.py",
-      "size": 4965,
-      "sha256": "38cd920b7a1e454b929d08387c8bfd6af6aa5073b7ef0b78c33a371148364a91"
+      "size": 9634,
+      "sha256": "2c1a5b1f979faa868e03da8e77ffa6ea698a2f478cf60e28b9af3afa1cfd79ea"
     },
     {
       "path": "tests/test_research_integration_idea.py",
