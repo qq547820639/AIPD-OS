@@ -951,6 +951,35 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.43 F-DOC-CONTINUATION 第 82 片：文档里"续行接另一条命令"第一次有了常驻判据**：
+  第 81 片手查出来的那处 README 损坏（一行以 `\` 收尾、下一行另起一条 `aipd` 命令 ⇒ 照抄只会
+  跑到半条命令）当时只登记成待办并把代价量成数；本片把它接成 `doc_command_census` 的
+  **判红面 ②b**。判的是"能不能照抄"，不是"名字存不存在"，所以它不进 `record()` 的名字去重，
+  直接落 `violations`（`field=续行`），分母自报在 `corpus.continuation_breaks`。
+  **语料与判红面 ② 同一份遍历**（新增 `quickref_corpus()`，`quickref_lines()` 改为消费它）——
+  两档各写一遍 rglob 是本仓记过的老坑，排除档一漂就出现"一档看得见、一档看不见"。
+  **选型检索先做，结论是"外部现成的判不了这一档"**：markdownlint 官方规则全表（MD001…MD060）
+  与 remark-lint 规则清单逐条读过，两家**都没有**解析 shell 语义的规则，且 remark-lint 明说这些
+  插件只 inspect mdast；两家 `license.spdx_id` 都是 MIT、都活跃（`pushed_at` 分别 2026-09-26 /
+  2026-01-05），所以淘汰理由不是 License 也不是质量，而是①不解析 shell 语义、②本机实验证明
+  **连 shell 自己都看不见**（把 `3784a0a:README.md:271/272` 原样喂给 `bash -n` ⇒ **退码 0**，
+  续行把两行拼成一条命令、第二条的词全变成第一条的参数）、③权威面（哪些 `aipd …` 真的存在）
+  只有本仓 argparse 树知道。第三个外部候选**未检索到**。借的是 markdownlint 的规则文档形状
+  （一条规则一个字段、带正反例），不引 Node 依赖。
+  **两极都从 git 现取，必开火夹具不手写**：`test_broken_continuation_fires_on_the_real_historical_shape`
+  用 `git show 3784a0a:README.md` 里逐字相邻的那两行；`test_legal_continuation_does_not_fire`
+  用 `HEAD` 的 README 里合法那一型（下一行是 `  --db state.db --bom BOM-1`）；真仓库侧
+  `continuation_breaks == 0` 由 `test_real_repo_clean_and_all_three_judging_faces_live` 钉住，
+  而"0 处"与"看不见"的区别由那条历史原件用例负责。
+  **牙齿由单变量变异证明**：把 `continuation_breaks()` 的返回清空 ⇒ `--self-test` 与那条
+  必开火用例同时红；`cp` 备份后逐字节还原（sha `ddbe33b84b0e` 前后一致），
+  `tests/test_doc_command_census.py` 17 → **19 条**、`--self-test` 7 → **8 条**合成读数。
+  一处不对称记在账上：合规侧那条在变异下**照绿**（清空判据只会让它更容易通过）——
+  反向天生没有这个方向的牙，别拿它当变异检测器。
+  今天真仓库 0 处开火；形状 b（命令行尾注以 `\` 收尾）**仍只报不判**，理由沿用第 81 片 §七.3
+  那一版：它是词法巧合面，任何合法的"`--flag  # 注 \`"都会红，今天 n=0 不足以证明长期安静。
+  证据见 `docs/audit/DOC_CONTINUATION_GUARD_F-DOC-CONTINUATION_2026-09-28.md`。
+
 - **v5.42 F-ASSEMBLY-PDF-IMAGE 第 81 片：PDF 加上图片层，并把两条"记账面"的静默损坏修了**：
   `--draw-image PATH` 把**作者提供的**装配示意图排进 A4 图框版式：按容器等比缩放
   （上限 78 mm 高、**只缩不放**）、描边、下面两行说明（`IMAGE_CAPTION`「装配示意图（由作者提供）」
