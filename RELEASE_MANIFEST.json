@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 304578,
-      "sha256": "efc703acbaa8bc65c94faa528bfb871ca7159a8eff6bf6624dec15d8d81ad6a7"
+      "size": 306840,
+      "sha256": "5da8fd28ff70324331010f8a5961bf062b91a774bf7d3c34500cad84240a1e26"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 60510,
-      "sha256": "00dce2ab8493f904e282ae802c65932ac82a48a50f30babc0d99cb3b737e383c"
+      "size": 60714,
+      "sha256": "1cd6b45b85c05a5d64e52860c1d73c3262a3a9e554dedebecbf1a220f8f269af"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -857,8 +857,8 @@
     },
     {
       "path": "scripts/research/fetch_fulltexts.py",
-      "size": 13834,
-      "sha256": "6ce32f2ca847a064ef1dac6fb00cc65cee2eef60467cd44912d6aa010b3692c2"
+      "size": 16799,
+      "sha256": "a642434aa79e53063710a86e5c85c950c92303d1495a332a5c3fbc55f45a5fd2"
     },
     {
       "path": "scripts/research/postprocess.py",
@@ -892,8 +892,8 @@
     },
     {
       "path": "scripts/research/search_papers_by_open_alex.py",
-      "size": 4542,
-      "sha256": "330f744e04aa5feaf3d32f72825a5bf3690c19754ad43c3d6ddf9d05f1231c45"
+      "size": 4813,
+      "sha256": "2550366afbdfaa87bbd054bd43b0c8abff0fac59abdc3692872ed5038543b628"
     },
     {
       "path": "scripts/research/search_papers_by_openreview.py",
@@ -1742,8 +1742,8 @@
     },
     {
       "path": "src/aipd_os/research/fulltext.py",
-      "size": 15924,
-      "sha256": "ab2721fd91cf28ef250f67c000b62956175d4a7a9f6f79e369c01d20888d292e"
+      "size": 16379,
+      "sha256": "cc5c9fdddcccbeefe8744748ec852dbae85a00ec52bc5e971c7f76819c804c80"
     },
     {
       "path": "src/aipd_os/research/models.py",
@@ -3162,13 +3162,13 @@
     },
     {
       "path": "tests/test_research_fulltext_live.py",
-      "size": 1565,
-      "sha256": "0f3955da65d3f6375543d828647bbd58b20b3335af4254dba383fdcfa5433561"
+      "size": 2154,
+      "sha256": "f894cdf2af6f2cc9909fcc3abb2fc7b7c91ae067fbde65f7ea79947d82485c3f"
     },
     {
       "path": "tests/test_research_fulltext_step.py",
-      "size": 9634,
-      "sha256": "2c1a5b1f979faa868e03da8e77ffa6ea698a2f478cf60e28b9af3afa1cfd79ea"
+      "size": 15536,
+      "sha256": "6648e0c937415781caf00cd3f00389a489790f7212fd4c096c6e1cbb440306af"
     },
     {
       "path": "tests/test_research_integration_idea.py",
