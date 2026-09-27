@@ -33,13 +33,17 @@
 按其 XML 实现：本机只取到一份中文导读（不含 FWA/CTA 细节），其「标准可在 s1000d.org
 免费下载」的说法未能验证（该站点抓取失败）。
 
-版式用 Markdown + ``.evidence.json`` sidecar，不用 PDF/docx：reportlab 5.0.0 本机实测
-能用 ``STSong-Light`` 出中文（2374 字节 PDF），所以 PDF 不是不能做，是**本轮不做**
-（要再加一套排版与分页判据）；``python-docx`` 未安装，且本仓契约把 .docx 当外部输入
-拒绝（``supply_chain/lab.py``）。Markdown 能被逐字断言、能被门哈希，就够 C6 这一项了。
+版式两条都在（第 80 片补上 PDF，第 81 片补上图片层）：Markdown + ``.evidence.json`` sidecar，
+以及 ``--pdf`` 的 A4 图框矢量 PDF（中文用 reportlab 内置 CID 字体 ``STSong-Light``，不需要字体
+文件，且**文字可抽取**——验收就是拿 pypdf 独立解码回来核，不看文件大小）。PDF 那一面还能排
+``--draw-image`` 给的**作者提供**的装配示意图；本仓没有 STEP → 栅格那条路，所以既不猜图也不
+画一张没证过的示意图。``python-docx`` 仍不在依赖里，且本仓契约把 .docx 当外部输入拒绝
+（``supply_chain/lab.py``）。
 
 明确**未实现**：维护指引（要属主给内容）、工时/工序成本、扭矩值、按检验项逐点检的
-检验步骤、PDF 版式。
+检验步骤、装配示意图的自动生成。（这一句原先结尾还挂着"PDF 版式"，第 80 片交付之后
+它就成了一句假话——每份带 PDF 的产物都在自称没有 PDF；第 81 片撤掉，
+账本 `CAD-ASSEMBLY-RASTER-ABSENT` 钉住"没有栅格那条路"这半句。）
 """
 from __future__ import annotations
 

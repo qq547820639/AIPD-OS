@@ -1020,6 +1020,25 @@
   `tests/test_doc_reference_census.py` 7 → 8 条；
   `docs/audit/s81/battery81.py` **10 臂 KILLED 10 / 存活 0**（逐臂打出开火用例名，读数在 `battery81.log`；
   Y3/Y4 还各自多打红一条普查的"落盘读数==内存读数"用例，那是同树耦合而不是判据串味，取证文档 §六 记了来处）。
+  **独立复核抓出五处过期镜像**（派只读子代理按镜像清单审本轮提交，主理人逐条重开并跑机器）：
+  ①`assembly_steps.py` 模块 docstring 仍写"PDF 本轮不做/未实现 PDF 版式"；②README:297 仍把
+  "PDF 版式"列进 not_covered 的四项；③**真红**——我新写进登记表那句"本仓没有装配 2D/轴测栅格化
+  那条路"没挂账，`absence_claim_census` 判 `✗ UNACCOUNTED:cad.assembly_instructions`，
+  `tests/test_absence_claim_census.py` **4 条常驻用例红**（第一次干净签出全量跑里最早那批 F 就是它们，
+  我原本准备把早段红归因给宿主 load 42，是逐条开用例名才没让这次归因出错）；
+  ④`docs/security/dependency-cve-review.md` 的 pillow 行仍承诺"不经手不可信第三方图片、
+  输入均来自受控生成流程"，而 `assembly_steps_pdf.py:132` 的 `Image.open` 读的是命令行给的路径
+  ——按新事实改写那一格，并如实记**升级受阻**：`pillow@12.3.0` 要 `requires_python>=3.10`（PyPI 现读），
+  本机 venv 是 `Python 3.9.6`，升 pillow 得先动本仓 Python 下限，那是属主裁决项；
+  ⑤`commands_drawing.py:751` 的函数 docstring 还说这条命令只出"Markdown + sidecar"。
+  ①②③⑤本轮改掉，登记项 `CAD-ASSEMBLY-RASTER-ABSENT` 的反证锚点是 `src/aipd_os/cad` 里出现
+  `to_png / export_png / save_png / rasterize / SetOffScreenRendering / vtkPNGWriter` 任一
+  （本轮逐条 grep 实测这 6 个在该目录 0 处命中）；登记后重跑 `rc=0`、
+  "判红 0 条：登记的 14 句仍缺着"、`pytest tests/test_absence_claim_census.py` **31 passed in 145.78s**。
+  顺带两处早于本轮的欠账也复核并改掉：README:241"爆炸图与装配约束仍未做"被同文件的 `--explode`
+  反驳（第 4x 片漏改，本轮就地更正、只留仍成立的"装配约束/配合没做"），
+  `scripts/c6_coverage.py` 给 `cad.assembly_instructions` 列的 producers/tests 欠
+  `assembly_steps_pdf.py` 与 `test_assembly_steps_pdf.py` 两项（本轮补齐，与登记表同源）。
   证据见 `docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md`。
 
 - **v5.41 F-ASSEMBLY-PDF 第 80 片：装配步骤文档的 PDF 版式与图框补上（第 56 片那句"本轮不排"排上了）**：

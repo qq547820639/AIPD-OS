@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 319276,
-      "sha256": "63b7b3fff1d02a89e7a2f49f6b729da330bf0c5d112ec8e6997a58e3be53caf7"
+      "size": 321399,
+      "sha256": "af290ddfa0f99ef2709466d558b656361232b032583445f1ac8f3332fe9909a5"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 62376,
-      "sha256": "446d3b8e543a05eeb63db5a16ebe06c89c9fd381f4321ae521327321037612ea"
+      "size": 62923,
+      "sha256": "ee4d1cf87504007db6bdd914e999022a62f8c7c4391775813582404a728d604f"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -402,8 +402,8 @@
     },
     {
       "path": "docs/security/dependency-cve-review.md",
-      "size": 6840,
-      "sha256": "cca37bf93ded9ba4ed569d051a6fa19825ef7f72f37dd96ece975177aad8130b"
+      "size": 7555,
+      "sha256": "46e72f61dfc433294a0e7d52463e06926d65ac5e77b970a99daa3e95623f6b64"
     },
     {
       "path": "evals/cad_evals.json",
@@ -672,8 +672,8 @@
     },
     {
       "path": "scripts/absence_claim_census.py",
-      "size": 75968,
-      "sha256": "d3984ac5eddcd0829874f6211cb39053e95243ffd834cb719f26012c9ceca7c3"
+      "size": 76923,
+      "sha256": "b073a6cacba3188132b3a3e1e574a1d40a9cb01db246eba8d9c4b59a7e15a918"
     },
     {
       "path": "scripts/aipd_state.py",
@@ -707,8 +707,8 @@
     },
     {
       "path": "scripts/c6_coverage.py",
-      "size": 26483,
-      "sha256": "aaafb05dd194e87e8675e1eb841822d549b0dbf7db70510f35afc96220505f8c"
+      "size": 26582,
+      "sha256": "28caa941ea6d79d8e90efc898421acd9fa89463fcd55ddf09cbbf009fe67597a"
     },
     {
       "path": "scripts/cad_convergence.py",
@@ -1027,8 +1027,8 @@
     },
     {
       "path": "src/aipd_os/cad/assembly_steps.py",
-      "size": 17766,
-      "sha256": "c891db11e408495dd9b22969e455f6f77782925d7fbe34b4e9337ab4c96934ba"
+      "size": 18243,
+      "sha256": "2e17eaacb8dd27bfeb03b7eac022fb7df6f2d78531fc7686dcf067e3731ab675"
     },
     {
       "path": "src/aipd_os/cad/assembly_steps_pdf.py",
@@ -1142,8 +1142,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_drawing.py",
-      "size": 41800,
-      "sha256": "7185ce2533b32fcb26629542617a4070045e309092e751d2a83c99bcc416828a"
+      "size": 41922,
+      "sha256": "787c9abc67556143ceceac326e06c0eac3a4a54b827cc7da22f83fc84db984f5"
     },
     {
       "path": "src/aipd_os/cli/commands_drift.py",

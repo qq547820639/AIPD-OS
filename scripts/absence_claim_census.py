@@ -111,6 +111,20 @@ CLAIMS: tuple[dict[str, Any], ...] = (
         "why": "约束对象/求解器一旦出现（本仓不建约束对象是这句话的内容本身），这句要就地改",
     },
     {
+        "id": "CAD-ASSEMBLY-RASTER-ABSENT",
+        "capability": "cad.assembly_instructions",
+        "field": "current_limitation",
+        "anchor": "本仓没有装配 2D/轴测栅格化那条路",
+        "check": {"kind": "identifier", "paths": ["src/aipd_os/cad"],
+                  "symbols": ["to_png", "export_png", "save_png", "rasterize",
+                              "SetOffScreenRendering", "vtkPNGWriter"]},
+        "why": "第 81 片写 `--draw-image` 时立的那句裁决：图只能由作者供，因为本仓没有 "
+               "STEP → 栅格那条路（选型读数见 docs/audit/ASSEMBLY_PDF_IMAGE…§一：cadquery@2.8 "
+               "要 Python>=3.11、本机 venv 3.9.6，装不进本仓声明的 >=3.9 下限）。"
+               "哪天离屏栅格真接进 src/aipd_os/cad，这些标识符就是反证 ⇒ 这句必须就地改，"
+               "而不是让登记表继续说『没有那条路』",
+    },
+    {
         "id": "QUOTE-FX-CONVERSION",
         "capability": "industrialize.quote_to_bom_cost",
         "field": "current_limitation",

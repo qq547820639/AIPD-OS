@@ -748,7 +748,8 @@ def cmd_drawing_dfm(args):
 
 
 def cmd_drawing_assembly_steps(args):
-    """``aipd drawing assembly-steps`` —— 装配步骤文档（Markdown + 证据 sidecar）。
+    """``aipd drawing assembly-steps`` —— 装配步骤文档（Markdown，可加 `--pdf` 的 A4 图框矢量
+    PDF，PDF 那一面还能排 `--draw-image` 的作者示意图；两条版式都带证据 sidecar）。
 
     这一步**不投影几何**（文档不需要视图），所以不检查 CadQuery/ezdxf 在不在；
     但零件的 STEP 文件存在性照样要过 —— 连模型都不存在的零件，步骤里引用它就是空话。

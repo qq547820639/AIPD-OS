@@ -238,7 +238,10 @@ aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 
 #     不接 BOM 时明细表只有 ITEM/PART 两列：数量、单位与材料的权威都在 BOM，
 #     没接线就一个猜测值都不印。
 #     只报「包络投影重叠面积」，**不是干涉判定**（本轮不做实体求交）；
-#     装配视图上 `--section/--detail` 直接拒绝（2），爆炸图与装配约束仍未做。
+#     装配视图上 `--section/--detail` 直接拒绝（2）。
+#     【第 81 片就地更正】这句原本还挂着"爆炸图……仍未做"，而下面几行就在讲 `--explode` 已经能出——
+#     一句假话写在同一个命令块里，是第 4x 片接上爆炸图时漏改的。
+#     仍然成立的那一半是：**装配约束/配合没做**（本仓不建约束对象，见下面 explode 的说明）。
 aipd drawing assembly --manifest assembly.json --out out/assy.dxf --part ASSY-1 \
                       --db state.db --bom BOM-001 --project P --explode   # 接上 BOM + 爆炸视图
 #   ↑ 给 --db/--bom 就交叉核对球标↔BOM 行，明细表长出 QTY/UNIT/MATERIAL/PROCESS 四列；不给就维持
@@ -294,7 +297,9 @@ aipd drawing assembly-steps --manifest assembly.json --out assembly.md --part AS
 #     图纸编了号、说明书里没人装这一件，是缺陷不是崩。
 #     数量/单位/材料/工艺仍只来自绑上的 BOM 行（与装配图同一个 bind_bom、同一条「两格不许互相顶」）；
 #     没接 --db/--bom 时零件清单只有 ITEM/PART 两列，一个猜测值都不印。
-#     证据侧车 not_covered 逐条写明不含维护指引/工时/扭矩/PDF 版式，读者不会把骨架当全文。
+#     证据侧车 not_covered 逐条写明不含维护指引/工时/扭矩/检验点与点检项，读者不会把骨架当全文
+#     （这四项与代码里的 NOT_COVERED 同源：第 80 片交付 PDF 后，原先列在里面的「PDF/图框版式」
+#     已被撤掉——留着它，每份带 PDF 的产物都在自称没有 PDF）。
 aipd drawing assembly-step --manifest assembly.json --out assy.step --part ASSY-1
 #   ↑ 总装 STEP（C6「总装/单件STEP」里的总装那一半；单件一直是零件自己的 .step）：
 #     按 manifest 逐件导入再摆放，**摆放只用清单里声明的 offset**——与出图、爆炸视图同一个位置事实。

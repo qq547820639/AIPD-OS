@@ -143,8 +143,9 @@ MAPPING: dict[str, dict[str, Any]] = {
     "装配/维护": {
         "verdict": "producer", "capabilities": ["cad.assembly_instructions"],
         "producers": ["src/aipd_os/cad/assembly_steps.py",
+                      "src/aipd_os/cad/assembly_steps_pdf.py",
                       "src/aipd_os/release_manifest.py"],
-        "tests": ["tests/test_cad_assembly_steps.py"],
+        "tests": ["tests/test_cad_assembly_steps.py", "tests/test_assembly_steps_pdf.py"],
         "note": "**只装配那一半**：步骤序列、各步引用的球标都由 manifest 声明，"
                 "断档/引用未声明的号/写了不承载的字段一律拒（rc=2），文档与侧车进 "
                 "release manifest 的 assembly_instructions。维护指引仍无生产者（要属主给内容），"
