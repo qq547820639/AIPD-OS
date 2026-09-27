@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 253483,
-      "sha256": "11fdee244442973a2f87be7aa72a23b9508a00b98289ad0c9ee131a91f40d3d8"
+      "size": 254824,
+      "sha256": "ee71c3fbfca3831b462d4b5e89412ef6c1d5e8ee63a2c70a5081633f9c908cfc"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 53696,
-      "sha256": "a6436739c58523d32d0e7f0b74e3658ed8592f1c7e5756b7a56ec394786e0920"
+      "size": 53694,
+      "sha256": "c749fbbfe9c1fced7674ca4448a3728fafe766f18fe630edf31d7e9eddbdffc3"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 24861,
-      "sha256": "7a2fe87b1244f1a70af8793d1817d52b11a76ffa81de7fe2ce7713a7d0bfa0d8"
+      "size": 26192,
+      "sha256": "55c25ee09d1671dcbcd0a5c07b3bc3eca93c90a9e5eb29285fc3d92007f4e4d7"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -1102,8 +1102,8 @@
     },
     {
       "path": "src/aipd_os/cli/command_contract.py",
-      "size": 22542,
-      "sha256": "5e7b03034278b6a5e43adf68e6b598deb8c2654cc65edaad38d25f21d2bdaf26"
+      "size": 22559,
+      "sha256": "ea611898388af2072498779c101b9f736d613167e12fcf743e26e59eeacddff9"
     },
     {
       "path": "src/aipd_os/cli/commands.py",
@@ -1172,8 +1172,8 @@
     },
     {
       "path": "src/aipd_os/cli/commands_truth.py",
-      "size": 30425,
-      "sha256": "a947d585d95fe0759b8da6e866677b0b290ce2b7f29db211b9c0e1a0b71403e8"
+      "size": 31003,
+      "sha256": "2abe8a2c38dc54cd3fb2a46c426fa212ff3e73537fb732f6eda9654d0186ef50"
     },
     {
       "path": "src/aipd_os/cli/commands_validation.py",
@@ -1692,8 +1692,8 @@
     },
     {
       "path": "src/aipd_os/registry_data.py",
-      "size": 103381,
-      "sha256": "70c229b882f4d20aa8baed3da86acfb2342a99f00860229f74a825497639afde"
+      "size": 103398,
+      "sha256": "b2ea6aea5d1b786e0230990b8ce2e51044ce15ace78f8f15fe0e5fd5e3577cfe"
     },
     {
       "path": "src/aipd_os/release_manifest.py",
@@ -3257,8 +3257,8 @@
     },
     {
       "path": "tests/test_truth_ctq_list.py",
-      "size": 10510,
-      "sha256": "68ec23d4f3480bf30cece7e52797c2a1e85b7878b7bf42e4867cd821d216d8b9"
+      "size": 14215,
+      "sha256": "0c6160ece7dd99aa668d6533f0f8a48f63bc1d913b5350e01879adbc62f9ebd0"
     },
     {
       "path": "tests/test_truth_ctq_revise.py",
