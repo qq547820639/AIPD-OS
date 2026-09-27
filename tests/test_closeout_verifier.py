@@ -41,9 +41,10 @@ ALL_CHECKS = {
     "report_bound_to_provenance", "counts_counted_from_roster", "terminal_clean",
     "roster_covers_tree", "pinned_source_binding", "content_parity_measured",
     "worktree_clean", "plaintiffs_measured", "size_ratchet",
+    "report_fingerprint_recorded", "report_fingerprint_matches_disk",
 }
-# 与"这份报告新不新、这棵树干不干净"有关的三格：其余六格与仓库阶段无关，必须绿
-STAGE_BOUND = {"roster_covers_tree", "worktree_clean"}
+# 与"这份报告新不新、这棵树干不干净、清单被刷写过没有"有关的三格：其余八格与仓库阶段无关，必须绿
+STAGE_BOUND = {"roster_covers_tree", "worktree_clean", "report_fingerprint_matches_disk"}
 
 
 def _git(*args: str) -> str:
@@ -89,14 +90,24 @@ def real_pair(tmp_path: Path, pinned: str):
 
 
 def _clean_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path, str]:
-    """一座干净的仓库 + 树外的证据目录（对照组的 C7 不该被自己的夹具弄脏）。"""
+    """一座干净的仓库 + 树外的证据目录（对照组的 C7 不该被自己的夹具弄脏）。
+
+    仓库里必须有一份真形状的 `SOURCE_MANIFEST.json`，报告也得盖上它的指纹：
+    没有这两步，合规对照组会红在 C10，而 C11 永远没有可比对象（第 83 片）。
+    """
     repo = tmp_path / "repo"
     (repo / "tests").mkdir(parents=True)
     (repo / "tests/test_one.py").write_text("def test_x():\n    assert True\n", encoding="utf-8")
+    (repo / "SOURCE_MANIFEST.json").write_text(json.dumps({
+        "name": "AIPD-OS source manifest", "version": "0.0.0", "source_commit": "pre",
+        "generated_at": "2020-01-01T00:00:00+00:00", "coverage": "fixture",
+        "files": [{"path": "tests/test_one.py", "size": 30, "sha256": "c" * 64}]},
+        ensure_ascii=False, indent=1), encoding="utf-8")
     sha = cov._git_init(repo, "fixture")
     evidence = tmp_path / "evidence"
     evidence.mkdir(exist_ok=True)
-    report = cov._pristine_report(evidence, ["tests/test_one.py::test_x"], sha)
+    report = cov._pristine_report(evidence, ["tests/test_one.py::test_x"], sha,
+                                  manifest=repo / "SOURCE_MANIFEST.json")
     prov = evidence / "PROVENANCE.json"
     cov._bind_provenance(prov, report)
     return repo, evidence, report, prov, sha
@@ -108,19 +119,19 @@ def test_instrument_self_test_is_actually_run_and_green() -> None:
     assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-2000:]
     assert "条合成读数全部对上" in proc.stdout, proc.stdout
     marks = proc.stdout.count("[OK]")
-    assert marks >= 18, f"--self-test 的臂从 18 条缩水成 {marks} 条：注入没跑满就别谈判据"
+    assert marks >= 23, f"--self-test 的臂从 23 条缩水成 {marks} 条：注入没跑满就别谈判据"
 
 
-def test_check_names_are_the_documented_nine(real_pair) -> None:
+def test_check_names_are_the_documented_eleven(real_pair) -> None:
     """判据名字是文档与 CHANGELOG 引用的面；改名必须在这里一起翻。"""
     names = set(real_pair()["checks"])
     assert names >= ALL_CHECKS, sorted(ALL_CHECKS - names)
     assert names <= ALL_CHECKS, sorted(names - ALL_CHECKS)
 
 
-def test_six_checks_are_green_on_the_real_corpus_regardless_of_stage(real_pair,
-                                                                     pinned: str) -> None:
-    """真语料 2524 条上，与新鲜度无关的六格必须全绿；只有两格允许因本轮在途而红。"""
+def test_eight_checks_are_green_on_the_real_corpus_regardless_of_stage(real_pair,
+                                                                       pinned: str) -> None:
+    """真语料（两千六百条量级的绑定报告）上，与新鲜度无关的八格必须全绿；只有三格允许因本轮在途而红。"""
     rep = real_pair()
     fired = {v["check"] for v in rep["violations"]}
     assert fired <= STAGE_BOUND, sorted((v["check"], v["detail"]) for v in rep["violations"])
@@ -473,3 +484,42 @@ def test_the_instrument_itself_is_cited_in_the_tool_catalog() -> None:
     lines = [ln.strip() for ln in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()]
     assert any(ln.startswith("python scripts/closeout_verifier.py") for ln in lines), \
         "README 里要有 `python scripts/closeout_verifier.py …` 这一行（行首、可复制执行）"
+
+
+def test_bound_production_report_carries_its_manifest_fingerprint() -> None:
+    """C10 的牙落在真产物上：绑进证据的那份报告必须自带 64 位清单指纹。
+
+    手写夹具能盖上指纹也能不盖，只有真报告证明 `tests/conftest.py` 的注入在生产里跑过。
+    第 83 片换绑之前这条是红的——那是有意的强制装置（旧报告出自没有注入的 conftest），
+    不是判据写坏了；它红了就把报告重跑重绑，别把判据改宽。
+    """
+    data = json.loads(REPORT.read_text(encoding="utf-8"))
+    fp = data.get("source_manifest_fingerprint")
+    assert isinstance(fp, str) and len(fp) == 64 and fp == fp.lower(), sorted(data)
+
+
+def test_fingerprint_verdict_always_has_a_content_level_explanation(real_pair) -> None:
+    """C11 允许在途红，但红与绿都得能由清单**内容**解释——解释不了就是判据在造假读数。
+
+    绿的一侧：报告记的指纹 == 报告锚点那次提交里那份清单的内容摘要（证明"报告测的确实是
+    那一份"）。红的一侧：磁盘清单的 `files` 与锚点那次必然不同（同一片内容只换 `generated_at`
+    却判红，就是判据写成了比原始字节 sha 那种病）。
+    """
+    payload = json.loads(REPORT.read_text(encoding="utf-8"))
+    anchor = _anchor_commit_for_this_report()
+    at_anchor = json.loads(_git("show", f"{anchor}:SOURCE_MANIFEST.json"))
+    disk = json.loads((ROOT / "SOURCE_MANIFEST.json").read_text(encoding="utf-8"))
+    rep = real_pair()
+    fired = {v["check"] for v in rep["violations"]}
+    kind = rep["checks"]["report_fingerprint_matches_disk"]["kind"]
+    if kind == "skipped":
+        assert "report_fingerprint_recorded" in fired, \
+            "C11 因为报告没带指纹而沉默时，必须由 C10 开火——两处都沉默等于这条判据被删了"
+        return
+    if "report_fingerprint_matches_disk" in fired:
+        assert disk["files"] != at_anchor["files"], \
+            "清单内容与锚点那次同一份（只换 generated_at）却判红 ⇒ C11 在造假红"
+    else:
+        assert payload["source_manifest_fingerprint"] == \
+            cov.release_fingerprint.fingerprint_of_document(at_anchor), \
+            "判绿但报告记的指纹对不上锚点那次的清单内容 ⇒ C11 在造假绿"

@@ -30,6 +30,19 @@
   C8 plaintiffs_measured          本轮新补的用例（`--expect-test`）确实在名单里跑过并且过了
   C9 size_ratchet                 `--min-tests` 下界（借 dorny/test-reporter 的 `fail-on-empty` 语义，
                                   但把它从"空就红"收紧成"低于下界就红"，因为本仓分母是 2 千量级）
+  C10 report_fingerprint_recorded  报告自带 `source_manifest_fingerprint`——生产者没记就是红，
+                                  不能读成"值恰好为空的绿"（第 83 片之前 conftest 不写这个键，
+                                  所以这条会把那条旧报告打红，直到换绑一份新的）
+  C11 report_fingerprint_matches_disk
+                                  报告记的清单指纹 == 磁盘当前 `SOURCE_MANIFEST.json` 的内容摘要。
+                                  C6 只能证"那份报告里两条清单哈希用例过了"，而清单一旦被之后的
+                                  刷新重写，那句证明说的就是旧哈希——这一格把"报告测的是当前这份
+                                  清单"变成机器读的数
+
+C11 比的为什么**不是**清单文件的原始 sha256（本轮实测）：`release_evidence.py:133` 每次生成
+都重写 `generated_at`，所以"刷清单 → 跑全量 → 绑定"这三步之间原始字节的摘要必然变红。
+摘要求 `scripts/release_fingerprint.py` 的**规范摘要**（剥掉 `generated_at` 后排序取 sha256），
+"只换时间戳"读成同一份清单，"某个文件的 sha256 变了"才读成不同。
 
 两处形状是本轮实测出来的，不是推的：
 - 名单文件面必须同时吃 `test_*.py` **和** `*_test.py`：pytest 默认 `pythonFunctions`/
@@ -53,6 +66,13 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
+# 兄弟模块：`release_fingerprint` 是清单指纹的唯一一把尺（生产侧 tests/conftest.py 用同一个）。
+# 直接被 import 时（tests 已把 scripts/ 放进 sys.path）这条是幂等的，脚本方式运行时它才必要。
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
+import release_fingerprint  # noqa: E402
 
 # pytest 默认收集两种文件名，只写一种会让 C4 把合法文件读成"树上没有"
 PYTEST_FILE_PATTERNS = ("test_*.py", "*_test.py")
@@ -143,9 +163,12 @@ def tree_roster(tests_dir: Path) -> tuple[dict[str, int], list[str]]:
 
 def audit(report_path: Path, worktree: Path, provenance_path: Path,
           pinned: str, tests_dir: Path, expect_tests: list[str],
-          parity_tests: list[str], min_tests: int) -> dict[str, Any]:
+          parity_tests: list[str], min_tests: int,
+          manifest_path: Path | None = None) -> dict[str, Any]:
     rep: dict[str, Any] = {"command": "closeout verify", "problems": [],
                            "violations": [], "checks": {}, "readings": {}}
+    if manifest_path is None:
+        manifest_path = worktree / "SOURCE_MANIFEST.json"
 
     def problem(check: str, detail: str) -> None:
         rep["problems"].append({"check": check, "detail": detail})
@@ -323,6 +346,31 @@ def audit(report_path: Path, worktree: Path, provenance_path: Path,
           "；".join(missing) if missing else
           f"{len(parity_tests)} 条清单哈希用例都在名单里并 passed：测的就是这棵树")
 
+    # C10/C11 报告自证「测的是哪一份清单」。C6 只能证"报告里那两条哈希用例过了"，
+    # 而清单在跑完之后被重写时，那句证明说的是旧哈希——这两格把它换成可比的数。
+    rec_fp = report.get("source_manifest_fingerprint")
+    rec_fp = str(rec_fp) if rec_fp else ""
+    rep["readings"]["report_fingerprint"] = rec_fp[:12]
+    judge("report_fingerprint_recorded", bool(rec_fp),
+          "报告里没有 source_manifest_fingerprint——生产它的 conftest 没抄清单指纹"
+          "（第 83 片之前的旧报告就是这个形状，或注入被人删了）" if not rec_fp else
+          f"报告自带清单指纹 {rec_fp[:12]}")
+    disk_fp, fp_err = release_fingerprint.fingerprint_from_file(manifest_path)
+    rep["readings"]["disk_manifest_fingerprint"] = disk_fp[:12]
+    if fp_err:
+        problem("manifest_fingerprint_readable", f"{manifest_path}：{fp_err}"
+                "——磁盘清单读不出就没有可比基准，判前提塌而不是违规")
+    elif not rec_fp:
+        rep["checks"]["report_fingerprint_matches_disk"] = {
+            "ok": True, "kind": "skipped",
+            "detail": "报告没带指纹（C10 已判红），这一格没有可比基准"}
+    else:
+        judge("report_fingerprint_matches_disk", rec_fp == disk_fp,
+              f"报告记的清单指纹 {rec_fp[:12]} != 磁盘当前清单 {disk_fp[:12]}"
+              f"（{manifest_path.name} 在跑完全量之后被重写过：那份报告测的是旧内容，"
+              f"要么重跑要么把改动退回报告之前）" if rec_fp != disk_fp else
+              f"报告指纹与磁盘清单 {disk_fp[:12]} 同源（只换 generated_at 不算变）")
+
     # C7 工作树干净
     st = _run_git(worktree, ["status", "--porcelain"])
     if st[0] != 0:
@@ -399,11 +447,14 @@ def _resolve_pinned(args: argparse.Namespace, worktree: Path) -> tuple[str, str]
 
 def _pristine_report(base: Path, nodeids: list[str], source_commit: str,
                      summary_overrides: dict | None = None,
-                     outcomes: dict | None = None, root: str = "") -> Path:
+                     outcomes: dict | None = None, root: str = "",
+                     manifest: Path | None = None) -> Path:
     """写一份形状与 pytest-json-report 一致的报告（`--self-test` 与常驻用例共用）。
 
     `failed`/`error` 键在计数为 0 时**不写**：第 63 片就是把缺键读成了红，夹具必须复现
     生产形状，否则量具对自己的那笔反证是假的。
+    `manifest` 给了就照 `tests/conftest.py` 的做法把那份清单的内容指纹抄进报告——
+    不抄的话合规对照组会先红在 C10，读起来像判据有病。
     """
     tests = [{"nodeid": n, "outcome": (outcomes or {}).get(n, "passed"),
               "setup": {"outcome": "passed"}, "call": {"outcome": "passed"},
@@ -419,6 +470,10 @@ def _pristine_report(base: Path, nodeids: list[str], source_commit: str,
     payload = {"exitcode": 0, "source_commit": source_commit, "root": root or str(base),
                "package_version": "0.0.0", "duration": 1.0,
                "summary": summary, "tests": tests}
+    if manifest is not None:
+        fp, _err = release_fingerprint.fingerprint_from_file(manifest)
+        if fp:
+            payload["source_manifest_fingerprint"] = fp
     out = base / "pytest-report.json"
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
     return out
@@ -454,7 +509,7 @@ def _git_init(repo: Path, message: str) -> str:
 
 
 def _self_test(tmp: Path) -> int:
-    """一支合规对照 + 十一支逐格注入 + 四支前提退 2（参数化那条已并进对照组）。
+    """一支合规对照 + 十四支逐格注入 + 五支前提退 2 + 一支「只换时间戳必须绿」的假红控制。
 
     每支注入都断言"开火的判据集合恰好等于该开的那一格"。这条规矩是第 61 片量出来的：
     一次注入点亮三格时，你分不清是判据强还是夹具脏——第 63 片电池里那支 SURVIVED
@@ -478,14 +533,32 @@ def _self_test(tmp: Path) -> int:
     (repo / "tests/test_gamma.py").write_text(
         "class TestG:\n    def test_g1(self):\n        assert True\n\n\n"
         "def not_a_test():\n    def test_inner():\n        pass\n", encoding="utf-8")
+    # C11 的对照物：一座真清单（形状照 `release_evidence.generate_source_manifest`）。
+    # 必须在 `_git_init` 之前建，否则工作树脏，对照组先红在 C7。
+    repo_manifest = repo / "SOURCE_MANIFEST.json"
+    manifest_doc = {
+        "name": "AIPD-OS source manifest", "version": "0.0.0", "source_commit": "pre",
+        "generated_at": "2020-01-01T00:00:00+00:00", "coverage": "fixture",
+        "files": [{"path": "tests/test_alpha.py", "size": 64, "sha256": "a" * 64}]}
+    repo_manifest.write_text(json.dumps(manifest_doc, ensure_ascii=False, indent=1),
+                             encoding="utf-8")
     pinned = _git_init(repo, "fixture")
+
+    def prist(*args: Any, **kw: Any) -> Path:
+        """重写报告并当场盖上夹具清单的指纹。
+
+        每支注入都会整份重写报告，指纹必须跟着重写走；不盖的话合规对照组与后面十几支
+        注入会一起红在 C10，读起来像判据有病而不是夹具缺一步。
+        """
+        kw.setdefault("manifest", repo_manifest)
+        return _pristine_report(*args, **kw)
 
     nodeids = ["tests/test_alpha.py::test_a1", "tests/test_alpha.py::test_a2",
                "tests/test_alpha.py::test_a1[x=1]",   # 参数化：名单 5 > 树上 def 4
                "tests/beta_test.py::test_b1", "tests/test_gamma.py::TestG.test_g1"]
     report = evidence / "pytest-report.json"
     prov = evidence / "PROVENANCE.json"
-    _pristine_report(evidence, nodeids, pinned)
+    prist(evidence, nodeids, pinned)
     _bind_provenance(prov, report)
 
     roster, _ = tree_roster(repo / "tests")
@@ -526,24 +599,24 @@ def _self_test(tmp: Path) -> int:
     assert not now()["problems"]
     _mark("合规夹具不开火（对照：参数化条目、`*_test.py` 命名、类层用例都在名单里且 passed）")
 
-    _pristine_report(evidence, nodeids, pinned, summary_overrides={"passed": 99})
+    prist(evidence, nodeids, pinned, summary_overrides={"passed": 99})
     _bind_provenance(prov, report)
     arm("C2 注入：summary.passed 被改大", {"counts_counted_from_roster"})
 
-    _pristine_report(evidence, nodeids, pinned, summary_overrides={"total": 99})
+    prist(evidence, nodeids, pinned, summary_overrides={"total": 99})
     _bind_provenance(prov, report)
     arm("C2 注入：summary.total 与名单条数不符（provenance 同口径抄了假汇总）",
         {"counts_counted_from_roster"})
 
-    _pristine_report(evidence, [n for n in nodeids if n != "tests/beta_test.py::test_b1"], pinned)
+    prist(evidence, [n for n in nodeids if n != "tests/beta_test.py::test_b1"], pinned)
     _bind_provenance(prov, report)
     arm("C4 注入：树上有文件一次都没被测", {"roster_covers_tree"})
 
-    _pristine_report(evidence, nodeids + [nodeids[0]], pinned)
+    prist(evidence, nodeids + [nodeids[0]], pinned)
     _bind_provenance(prov, report)
     arm("C4 注入：报告里有重复 nodeid", {"roster_covers_tree"})
 
-    _pristine_report(evidence, nodeids, "f" * 40)
+    prist(evidence, nodeids, "f" * 40)
     _bind_provenance(prov, report)
     arm("C5 注入：报告绑在别的提交上（STALE）", {"pinned_source_binding"})
 
@@ -551,12 +624,12 @@ def _self_test(tmp: Path) -> int:
     (other / "src").mkdir(parents=True, exist_ok=True)
     (other / "src/x.py").write_text("x = 1\n", encoding="utf-8")
     foreign = _git_init(other, "foreign")
-    _pristine_report(evidence, nodeids, foreign)
+    prist(evidence, nodeids, foreign)
     _bind_provenance(prov, report)
     arm("C5 注入：锚点在这棵树的历史之外（祖先那一支单独翻）",
         {"pinned_source_binding"}, ["--pinned-commit", foreign])
 
-    _pristine_report(evidence, nodeids, pinned)
+    prist(evidence, nodeids, pinned)
     _bind_provenance(prov, report)
     (repo / "dirty.txt").write_text("dirty\n", encoding="utf-8")
     arm("C7 注入：工作树有未提交改动", {"worktree_clean"})
@@ -565,27 +638,62 @@ def _self_test(tmp: Path) -> int:
     report.write_text(report.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     arm("C1 注入：报告字节动过而证据没重绑", {"report_bound_to_provenance"})
 
-    _pristine_report(evidence, [n for n in nodeids if n != "tests/test_alpha.py::test_a1"], pinned)
+    prist(evidence, [n for n in nodeids if n != "tests/test_alpha.py::test_a1"], pinned)
     _bind_provenance(prov, report)
     arm("C6 注入：清单哈希替身用例没被测到", {"content_parity_measured"})
 
-    _pristine_report(evidence, nodeids, pinned,
+    prist(evidence, nodeids, pinned,
                      outcomes={"tests/test_alpha.py::test_a1[x=1]": "failed"})
     _bind_provenance(prov, report)
     arm("C3 注入：终态里有一条 failed", {"terminal_clean"})
 
     # 复位夹具：上一支留下的 failed 终态若不清掉，这一支会读出两格开火
     # （第 61 片同类坑——退码优先级会把"没复位"伪装成"判据开火"）
-    _pristine_report(evidence, nodeids, pinned)
+    prist(evidence, nodeids, pinned)
     _bind_provenance(prov, report)
     arm("C8 注入：本轮原告不在测过的名单里", {"plaintiffs_measured"},
         ["--expect-test", "test_zzz_never_written"])
 
-    _pristine_report(evidence, nodeids, pinned)
+    prist(evidence, nodeids, pinned)
     _bind_provenance(prov, report)
     arm("C9 注入：名单低于 --min-tests", {"size_ratchet"}, ["--min-tests", "50"])
 
-    _pristine_report(evidence, [], pinned)
+    # ---- C10 / C11（第 83 片）：报告自证「测的是哪一份清单」----
+    _pristine_report(evidence, nodeids, pinned)     # 故意不盖指纹＝第 83 片之前 conftest 的形状
+    _bind_provenance(prov, report)
+    arm("C10 注入：报告没带清单指纹", {"report_fingerprint_recorded"})
+    assert now()["checks"]["report_fingerprint_matches_disk"]["kind"] == "skipped", \
+        now()["checks"]["report_fingerprint_matches_disk"]
+    _mark("报告没带指纹时只有 C10 开火，C11 读成「没有可比基准」而不是连带判红")
+
+    prist(evidence, nodeids, pinned)
+    _bind_provenance(prov, report)
+    drifted = json.loads(json.dumps(manifest_doc))
+    drifted["files"].append({"path": "tests/test_beta.py", "size": 7, "sha256": "b" * 64})
+    drift_path = tmp / "SOURCE_MANIFEST-drift.json"
+    drift_path.write_text(json.dumps(drifted, ensure_ascii=False, indent=1), encoding="utf-8")
+    arm("C11 注入：磁盘清单的内容与报告记的指纹不同（多一个文件条目）",
+        {"report_fingerprint_matches_disk"}, ["--manifest", str(drift_path)])
+
+    # 假红控制：`release_evidence.py:133` 每次生成都重写 `generated_at`，所以"只换时间戳"
+    # 必须读成同一份清单——否则每轮「刷清单 → 跑全量 → 绑定」都会红在正常流程上。
+    regen = json.loads(json.dumps(manifest_doc))
+    regen["generated_at"] = "2026-01-01T00:00:00+00:00"
+    regen_path = tmp / "SOURCE_MANIFEST-regen.json"
+    regen_path.write_text(json.dumps(regen, ensure_ascii=False, indent=1), encoding="utf-8")
+    assert _sha256_path(repo_manifest) != _sha256_path(regen_path), "夹具前提：两份字节得不同"
+    assert run(["--manifest", str(regen_path)]) == 0, now()["violations"]
+    _mark("原始字节不同而规范摘要相同 ⇒ 拿文件 sha256 当判据会给正常流程判一条假红；"
+          "C11 用内容规范摘要，这一支必须绿")
+
+    assert run(["--manifest", str(tmp / "nope.json")]) == 2, now()
+    assert not now()["violations"], now()["violations"]
+    _mark("磁盘清单读不出 → 退 2（前提塌），既不折算成「没违规」也不折算成判红")
+
+    prist(evidence, nodeids, pinned)
+    _bind_provenance(prov, report)
+
+    prist(evidence, [], pinned)
     _bind_provenance(prov, report)
     assert run() == 2, now()
     assert not now()["violations"], now()["violations"]
@@ -596,7 +704,7 @@ def _self_test(tmp: Path) -> int:
     _mark("报告读不出 → 退 2，不折算成「没违规」")
 
     # 证据没绑这份报告（重锚与绑定之间那段窗口，每轮收尾都要经过）：算前提塌，不算违规
-    _pristine_report(evidence, nodeids, pinned)
+    prist(evidence, nodeids, pinned)
     unbound = json.loads(prov.read_text(encoding="utf-8"))
     unbound["test_report"] = {"present": False, "path": str(report)}
     prov.write_text(json.dumps(unbound, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -610,7 +718,7 @@ def _self_test(tmp: Path) -> int:
     _mark("证据没绑这份报告 → 退 2（前提塌），C1 不进判红面而 C2 的 summary↔名单那一半照判")
     _bind_provenance(prov, report)
 
-    _pristine_report(evidence, nodeids, pinned)
+    prist(evidence, nodeids, pinned)
     _bind_provenance(prov, report)
     buf = sys.stdout
     sys.stdout = open(os.devnull, "w")
@@ -643,6 +751,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-default-parity", action="store_true",
                     help="不吃那两条默认替身（夹具仓库里没有 test_packaging.py 时用）")
     ap.add_argument("--min-tests", type=int, default=0)
+    ap.add_argument("--manifest", default="",
+                    help="被验那棵树里的 SOURCE_MANIFEST.json（默认取 <worktree> 下同名文件）")
     ap.add_argument("--json", default="", help="把读数写成 JSON")
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args(argv)
@@ -667,7 +777,8 @@ def main(argv: list[str] | None = None) -> int:
     parity = (list(args.parity_test) if args.no_default_parity
                 else list(PARITY_TESTS) + list(args.parity_test))
     rep = audit(Path(report_arg).resolve(), worktree, prov_path, pinned,
-                tests_dir, args.expect_test, parity, args.min_tests)
+                tests_dir, args.expect_test, parity, args.min_tests,
+                Path(args.manifest).resolve() if args.manifest else None)
     print(render(rep))
     if args.json:
         Path(args.json).write_text(json.dumps(rep, ensure_ascii=False, indent=1),
