@@ -1001,7 +1001,7 @@
   （`""` 与 `int` 照原样出，`for doc, target, line in report["live_defects"]` 那类消费方不动），
   并加常驻用例 `test_history_face_sorts_when_line_shapes_mix`（合成语料同时喂裸引与带行号引同一个
   指不回的目标，改前的实现在这条上抛 TypeError）。电池 **Y10** 就是把 `key=_defect_sort_key` 撤掉。
-  **第 80 片留下的两处不一致一并修**：① `NOT_COVERED` 里那句"PDF/图框版式"是假话——第 80 片
+  **第 80 片留下的三处不一致一并修**：① `NOT_COVERED` 里那句"PDF/图框版式"是假话——第 80 片
   已经把 PDF 与图框交付了，而每一项都会印进 Markdown、PDF 正文、CLI 收尾行与证据侧车，
   于是每份带 PDF 的产物都在自称没有 PDF；撤掉该项，并补上标题栏一直单独宣称的「检验点与点检项」。
   ② 同一个边界事实在 `_frame()` 标题栏与正文两份清单里各写一遍（"工时、扭矩值、检验点、维护指引"
@@ -1009,6 +1009,13 @@
   并新增 `test_the_frame_and_the_body_declare_one_boundary` 钉成断言。
   `tests/test_cad_assembly_steps.py::TestEvidenceSidecar` 那条钉四项清单的断言同批翻，
   配两条反向对照（旧那项不许出现在证据与 Markdown 里）。
+  ③ **同一句假话还住在第 56 片的取证件里**：
+  `docs/audit/CAD_ASSEMBLY_STEPS_F-DRAW-01_2026-09-25.md:122` 那行"PDF/图框版式：…缺的是排版与分页判据"
+  第 80 片就该改而没改（那轮只动了登记表与 README）——本轮就地接一段更正、原文不删，并写明是谁漏的。
+  这类行不在任何常驻用例的射程内：`absence_claim_census` 读的是登记表与产品代码的叙述面，
+  `docs/audit/` 在它作用域外，而 `doc_reference_census` 只判"引用指得回盘上吗"、不判"这句话还成立吗"。
+  全仓普查（`grep -rl "PDF/图框版式"`，去掉 `.venv/ .git/ releases/`）**7 个文件**，逐条重开无一为活叙述；
+  第一遍我漏把 `CHANGELOG.md` 写进 grep 的路径清单、读到 6，差点把这个数当读数交出去。
   常驻 `tests/test_assembly_steps_pdf.py` 6 → 13 条、`tests/test_changelog_integrity.py` 新 7 条、
   `tests/test_doc_reference_census.py` 7 → 8 条；
   `docs/audit/s81/battery81.py` **10 臂 KILLED 10 / 存活 0**（逐臂打出开火用例名，读数在 `battery81.log`；
