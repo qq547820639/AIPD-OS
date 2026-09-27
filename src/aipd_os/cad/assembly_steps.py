@@ -248,6 +248,17 @@ def generate_assembly_steps(out_path: Path | str, *, manifest: str, part_name: s
     if draw_image is not None and pdf_path is None:
         raise ValueError("--draw-image 只在同时出 PDF 时有意义（Markdown 版式不嵌图）")
 
+    if draw_image is not None:
+        # 第四条：文件在但内容不是可读图片（文本冒充 .png、零字节、截断、超大图）。
+        # 判据与排版侧同一个来源 `read_image_size`，坏图同样必须在任何字节落盘之前被拒。
+        from aipd_os.cad.assembly_steps_pdf import read_image_size
+
+        read_image_size(draw_image)
+    if pdf_path is not None and Path(pdf_path).is_dir():
+        # 同一格的另一半：PDF 目标是个目录时，reportlab 要到 canvas 创建才炸，
+        # 那时 Markdown 已经落盘 —— 与上面四条不同源，判的是"能不能写"而不是"内容对不对"。
+        raise ValueError(f"--pdf 要的是一个文件路径，它现在是个目录：{pdf_path}")
+
     path = Path(out_path)
     man = Path(manifest)
     parts = parse_assembly_manifest(man)

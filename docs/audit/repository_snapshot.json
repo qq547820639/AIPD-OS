@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-28T00:47:31",
+  "generated_at": "2026-09-28T02:42:46",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
@@ -116,96 +116,75 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 680,
-    "hash_matches": 669,
-    "hash_mismatch_count": 11,
+    "total_files": 681,
+    "hash_matches": 673,
+    "hash_mismatch_count": 8,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "aaad7bb8e706ce75ca3c1500068951cd3c21c43afd763024ffc23af766829bd0",
-        "actual": "7861589459cc9e13e2b9e84180b2db9534c0e4fef02430633bd99090d7777071"
+        "expected": "af290ddfa0f99ef2709466d558b656361232b032583445f1ac8f3332fe9909a5",
+        "actual": "09d280d7633bb7e91da1b4a4a369db3f35c912df194922cf1cba6186fd14e1e2"
       },
       {
         "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "2ef7cdde419aedf5dabce7c3c85efc3dd07fb54feceb78bee5bb5fbbb5030882",
-        "actual": "446d3b8e543a05eeb63db5a16ebe06c89c9fd381f4321ae521327321037612ea"
+        "expected": "ee4d1cf87504007db6bdd914e999022a62f8c7c4391775813582404a728d604f",
+        "actual": "ec0531183b59018ae4deb566129e386bfac09e3ba00665c69dd8d98f4b28bb8b"
       },
       {
-        "path": "scripts/doc_reference_census.py",
+        "path": "docs/security/dependency-cve-review.md",
         "reason": "hash_mismatch",
-        "expected": "4b5b7f6ef6b807dbd51ae65df2fee21d87f9c8774036a13b6c53ecf5403cf756",
-        "actual": "96f46d4fb6b73186eeeb9640e898403a6344b5050ddcea7ac66075fd0fe1f9d5"
+        "expected": "46e72f61dfc433294a0e7d52463e06926d65ac5e77b970a99daa3e95623f6b64",
+        "actual": "158ceceac858176605e023a4c19885bc298983fb6f7c91c034e2e01dc8064a3d"
       },
       {
         "path": "src/aipd_os/cad/assembly_steps.py",
         "reason": "hash_mismatch",
-        "expected": "864f744cc9420220a6e5f380c66ebe6b1b8eaa25039dad7deccfd1c9316e0eb7",
-        "actual": "c891db11e408495dd9b22969e455f6f77782925d7fbe34b4e9337ab4c96934ba"
+        "expected": "2e17eaacb8dd27bfeb03b7eac022fb7df6f2d78531fc7686dcf067e3731ab675",
+        "actual": "78833a25babcc02b9478ab93c1b283d03044446d56bb2014dabf922d3e0a4e81"
       },
       {
         "path": "src/aipd_os/cad/assembly_steps_pdf.py",
         "reason": "hash_mismatch",
-        "expected": "5d64c881ad9e160e157507f98ec8e5d24969a72e1022ddc5bdc40eb4b8f5cc72",
-        "actual": "96371b7b5d418dd703baaeac9ace181bc469b676648ebc7ee905081bc75dd043"
+        "expected": "96371b7b5d418dd703baaeac9ace181bc469b676648ebc7ee905081bc75dd043",
+        "actual": "f11553a6d37a9366f59c9c1dcf2eeba866c43ea84b09ef0b80b749dad2b83458"
       },
       {
         "path": "src/aipd_os/cli/commands_drawing.py",
         "reason": "hash_mismatch",
-        "expected": "559dcde03d7a2d6302be5e9bf4037411772f6c3722fdef1f1ef108940bcd9e40",
-        "actual": "7185ce2533b32fcb26629542617a4070045e309092e751d2a83c99bcc416828a"
-      },
-      {
-        "path": "src/aipd_os/cli/main.py",
-        "reason": "hash_mismatch",
-        "expected": "7498ce8913df05f150e81d00bd7981d79850efd18b0b8a0b5e1bbd6319c8abf7",
-        "actual": "359e57b55a6d06c751ad5ce306cdcd64a1f276210310a6bdc8395e65aea6963c"
+        "expected": "787c9abc67556143ceceac326e06c0eac3a4a54b827cc7da22f83fc84db984f5",
+        "actual": "128352fba1a6853c5f639af23caf764cbb790f2839fe7d489a3d0706dc8546c4"
       },
       {
         "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "d24d3443dc9d35124da0b6772f268d51992583e0cd5fd94f663c0861d176ded4",
-        "actual": "f97e8ab74108faf84b180aa95c80593154e7b16bd7386db486b60353b61f0188"
+        "expected": "f97e8ab74108faf84b180aa95c80593154e7b16bd7386db486b60353b61f0188",
+        "actual": "a86599b53901083aadd69902a4c8fd0183cd43c19888347d69670c4b10a9b764"
       },
       {
         "path": "tests/test_assembly_steps_pdf.py",
         "reason": "hash_mismatch",
-        "expected": "56366a39514aaa92422aa8afaf3aebe66c7ccc06811d79f458d5f29ad5434df1",
-        "actual": "b9a7f40532375b452a604d42fbd95a7b08e12952608048933a61ad22759d4755"
-      },
-      {
-        "path": "tests/test_cad_assembly_steps.py",
-        "reason": "hash_mismatch",
-        "expected": "5f7cb502e67ab50dfe4b4527c2d3f5867e402fe4959fe92ca1737d2f8192e8c3",
-        "actual": "4f8759290b889bcbf9fd721dd79463b7d4ee4be7d6eaa6de2e95f21e2376577a"
-      },
-      {
-        "path": "tests/test_doc_reference_census.py",
-        "reason": "hash_mismatch",
-        "expected": "db5c4fa6f428050a644a55342a3ceef81ca0d9113f6d93eee1e4691d96d46bdd",
-        "actual": "41cabf7024153f721d62eab23463acc21f35e7b92401f6338867e56251d414cb"
+        "expected": "b9a7f40532375b452a604d42fbd95a7b08e12952608048933a61ad22759d4755",
+        "actual": "b8acf9d4c26de360e37a1661491de4e4eec9fb32e2d716931727c213208c4937"
       }
     ]
   },
   "untracked_or_generated": [
     " M CHANGELOG.md",
     " M README.md",
+    " M docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md",
     " M docs/audit/capability_matrix.json",
     " M docs/audit/capability_matrix.md",
     " M docs/audit/repository_snapshot.json",
-    " M scripts/doc_reference_census.py",
+    " M docs/audit/s81/battery81.log",
+    " M docs/audit/s81/battery81.py",
+    " M docs/security/dependency-cve-review.md",
     " M src/aipd_os/cad/assembly_steps.py",
     " M src/aipd_os/cad/assembly_steps_pdf.py",
     " M src/aipd_os/cli/commands_drawing.py",
-    " M src/aipd_os/cli/main.py",
     " M src/aipd_os/registry_data.py",
     " M tests/test_assembly_steps_pdf.py",
-    " M tests/test_cad_assembly_steps.py",
-    " M tests/test_doc_reference_census.py",
-    "?? docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md",
-    "?? docs/audit/s81/",
-    "?? tests/test_changelog_integrity.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

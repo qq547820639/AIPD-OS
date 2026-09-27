@@ -36,7 +36,7 @@ MARGIN = 18 * mm
 LINE_H = 6.2 * mm
 IMAGE_CAPTION = "装配示意图（由作者提供）"
 
-__all__ = ["FONT", "IMAGE_CAPTION", "render_assembly_steps_pdf", "wrap_cjk"]
+__all__ = ["FONT", "IMAGE_CAPTION", "read_image_size", "render_assembly_steps_pdf", "wrap_cjk"]
 
 
 def _ensure_font() -> None:
@@ -88,6 +88,32 @@ def _frame(c: Any, page_no: int, part_name: str, revision: str,
     return top - LINE_H
 
 
+def read_image_size(path: Path | str) -> tuple[int, int]:
+    """量一张要排进 PDF 的图；读不出格式或被截断就抛 ``ValueError``。
+
+    这一格不是防御性包装，是本轮自己欠的：原先只有"文件在不在"这道前置检查，
+    内容坏（文本冒充 .png、零字节、截断）要到排版时 ``Image.open`` 才炸
+    ``PIL.UnidentifiedImageError``——那时 Markdown 已经落盘、PDF 还没写、侧车没写，
+    而 CLI 只接 ``ValueError``，于是用户看到一段 traceback 加一个孤儿 .md。
+    `verify()` 走的是格式识别与 chunk 完整性，不解码像素，所以量大也不贵。
+    """
+    from PIL import Image, UnidentifiedImageError
+
+    p = Path(path)
+    try:
+        with Image.open(p) as im:
+            im.verify()
+        with Image.open(p) as im:
+            return int(im.size[0]), int(im.size[1])
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+        # DecompressionBombError 既不是 OSError 也不是 UnidentifiedImageError（它直接继承
+        # Exception），PIL 的默认上限是 89,478,485 像素 —— 不接这一支，超大图会绕过
+        # CLI 的 `except ValueError` 变成 traceback。
+        raise ValueError(
+            f"--draw-image 的文件不是可读图片：{p}"
+            f"（{type(exc).__name__}: {exc}）") from exc
+
+
 def render_assembly_steps_pdf(out_pdf: Path | str, *, part_name: str, revision: str,
                               manifest: str, columns: Sequence[str],
                               table: Sequence[Sequence[str]],
@@ -126,17 +152,19 @@ def render_assembly_steps_pdf(out_pdf: Path | str, *, part_name: str, revision: 
     if draw_image is not None:
         # 图是**作者给的**：本仓不自动出装配图 PNG（没有 2D/轴测栅格化那条路），
         # 所以这里既不猜图也不画一张没证过的示意图，只在有图时排版它。
-        from PIL import Image  # 只用来量尺寸与判是否可读，不做转换
-
+        # 尺寸只走 `read_image_size` 一个来源：它与"落盘前那道校验"判的是同一件事，
+        # 两处各写一遍时，一边认了这张图、另一边不认，就又是一次孤儿产物。
         img_path = Path(draw_image)
-        with Image.open(img_path) as im:
-            iw, ih = im.size
+        iw, ih = read_image_size(img_path)
         box_w = text_w - 6 * mm
         box_h = 78 * mm
         scale = min(box_w / iw, box_h / ih, 1.0) if iw and ih else 1.0
         draw_w, draw_h = iw * scale, ih * scale
-        if y - draw_h < MARGIN + 34 * mm:
-            new_page()
+        # 这里原先有一条"放不下就整块换页"的分支，实测不可达：进这一支时 y=682.0 pt，
+        # draw_h 被 78 mm(=221.1 pt) 上限压住，而触发条件是 y - draw_h < MARGIN + 34 mm，
+        # 要 draw_h > 534.6 pt 才成立。留着它就等于在账上宣称了一种不会发生的行为
+        # （CHANGELOG 那句"放不下就整块换页"因此也一并改掉）。图固定在首页顶部；
+        # 若将来把图挪到正文中段，需要重做分页判据并配用例，而不是指望这行还活着。
         c.saveState()
         c.rect(MARGIN + 3 * mm, y - draw_h, draw_w, draw_h, stroke=1, fill=0)
         c.drawImage(str(img_path), MARGIN + 3 * mm, y - draw_h,
@@ -147,7 +175,11 @@ def render_assembly_steps_pdf(out_pdf: Path | str, *, part_name: str, revision: 
         img_sha = hashlib.sha256(img_path.read_bytes()).hexdigest()
         image_info = {"path": str(img_path), "sha256": img_sha,
                     "pixels": [int(iw), int(ih)],
-                    "bytes": img_path.stat().st_size}
+                    "bytes": img_path.stat().st_size,
+                    # 排版后的实际毫米尺寸：等比缩放上限 1.0（不放大，放大是造像素），
+                    # 所以一张 1×1 的图会在这里现成 0.4 mm 的小点——图注说"示意图"，
+                    # 这一格负责让读者看得见它到底排了多大。
+                    "placed_mm": [round(draw_w / mm, 1), round(draw_h / mm, 1)]}
         line(f"示意图文件：{img_path.name}"
              f"（{image_info['bytes']} 字节，sha256 {img_sha[:16]}…）")
         line("")

@@ -785,11 +785,26 @@ def cmd_drawing_assembly_steps(args):
     if draw_image is not None and not Path(draw_image).is_file():
         print(f"--draw-image 指向的文件不存在：{draw_image}")
         return 2
+    if draw_image is not None:
+        # 文件在不等于图能用：内容坏（文本冒充 .png、零字节、截断）也要在这里就 rc=2，
+        # 判据与库侧同一个来源，不许两边各写一遍。
+        from aipd_os.cad.assembly_steps_pdf import read_image_size
+
+        try:
+            read_image_size(draw_image)
+        except ValueError as exc:
+            print(str(exc))
+            return 2
+    pdf_arg = getattr(args, "pdf", None)
+    if pdf_arg is not None and not str(pdf_arg).strip():
+        # 与 --draw-image 的空值同一条纪律：不给 --pdf 就不出 PDF（pdf_path=None，合法），
+        # 给了 --pdf "" 是"要 PDF 但路径写错了"，静默读成"没要"就丢掉了作者的请求。
+        print("--pdf 给了空值：不给这个旗子就是不出 PDF；要出就给路径（裸 --pdf 走同名 .pdf）")
+        return 2
     if draw_image is not None and not getattr(args, "pdf", None):
         print("--draw-image 要和 --pdf 一起给：Markdown 版式不嵌图，"
               "只给图就等于把这张图丢掉")
         return 2
-    pdf_arg = getattr(args, "pdf", None)
     pdf_path = None
     if pdf_arg:
         pdf_path = (out.with_suffix(".pdf") if pdf_arg == "@AUTO@" else Path(pdf_arg))

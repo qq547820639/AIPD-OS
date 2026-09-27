@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-28T00:47:39",
+  "generated_at": "2026-09-28T02:42:48",
   "repo": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
   "latest_commit_sha": "a66040520139405095648461f7144d4f00629924",
@@ -1105,7 +1105,7 @@
           "unit_test": "tests/test_cad_assembly_steps.py",
           "integration_test": "tests/test_assembly_steps_pdf.py",
           "e2e_evidence": "命令行出文档与侧车（tests/test_cad_assembly_steps.py::TestCliSurface）；发布证据文档带上 assembly_instructions 与侧车哈希（同文件 TestReleaseManifestSeesTheDocument）；C6 覆盖度普查把「装配/维护」升为 producer 并被棘轮钉住（tests/test_c6_coverage.py）",
-          "current_limitation": "**只交装配那一半**：C6 的「装配/维护」里维护指引没有生产者（内容要属主给），证据的 not_covered 里逐条写明本文档不承载什么，读者不会把骨架当成完整作业指导书。步骤只承载「这一步动哪些球标 + 作者原话」：工时、工序成本、扭矩/拧紧值一律不建模——清单里写 torque 这类字段是 rc=2 拒绝而不是静默丢（丢掉等于交一份少了一格还自称完整的文档）；多工序工艺路线仍未建 operations 表（与 cad.2d_drawings 同一裁决）。序号要求 1..N 连续：断档当场拒绝并点名缺哪个号，不补号也不按遍历顺序代发（顺序是作者的声明）。不做逐步骤的检验项接线（步骤里没有点检项，检验事实仍走 CTQ/图纸那条线）；版式两条都在（第 80 片）：Markdown 与 `--pdf` 的 A4 图框矢量 PDF——中文用 reportlab 内置 CID 字体 STSong-Light，不需要字体文件，且**文字可抽取**（验收用 pypdf 独立解码回来核，不看文件大小）；两份版式共用同一份投影，PDF 不重新解析清单；`--draw-image` 排的是**作者提供的**装配示意图（本仓没有装配 2D/轴测栅格化那条路，所以既不猜图也不画一张没证过的示意图），图与 sha256 一起进证据；没给图时文档自己写明「本档没有装配示意图」（证据里 `pdf.image` 写 None 而不是省键）；三条拒绝都在写任何产物之前：图文件不存在、给了空值、只给 --draw-image 不给 --pdf，一律 rc=2",
+          "current_limitation": "**只交装配那一半**：C6 的「装配/维护」里维护指引没有生产者（内容要属主给），证据的 not_covered 里逐条写明本文档不承载什么，读者不会把骨架当成完整作业指导书。步骤只承载「这一步动哪些球标 + 作者原话」：工时、工序成本、扭矩/拧紧值一律不建模——清单里写 torque 这类字段是 rc=2 拒绝而不是静默丢（丢掉等于交一份少了一格还自称完整的文档）；多工序工艺路线仍未建 operations 表（与 cad.2d_drawings 同一裁决）。序号要求 1..N 连续：断档当场拒绝并点名缺哪个号，不补号也不按遍历顺序代发（顺序是作者的声明）。不做逐步骤的检验项接线（步骤里没有点检项，检验事实仍走 CTQ/图纸那条线）；版式两条都在（第 80 片）：Markdown 与 `--pdf` 的 A4 图框矢量 PDF——中文用 reportlab 内置 CID 字体 STSong-Light，不需要字体文件，且**文字可抽取**（验收用 pypdf 独立解码回来核，不看文件大小）；两份版式共用同一份投影，PDF 不重新解析清单；`--draw-image` 排的是**作者提供的**装配示意图（本仓没有装配 2D/轴测栅格化那条路，所以既不猜图也不画一张没证过的示意图），图与 sha256 一起进证据；没给图时文档自己写明「本档没有装配示意图」（证据里 `pdf.image` 写 None 而不是省键）；六道拒绝都在写任何产物之前：图文件不存在、`--draw-image` 给了空值、只给 --draw-image 不给 --pdf、文件在但内容不是可读图片（文本冒充 PNG、零字节、截断）、`--pdf` 指向目录、`--pdf` 给了空值——一律 rc=2 且不落任何产物（第四条与第六条是本轮补的：原先坏图会先把 Markdown 写出去再炸 PIL 栈；原先 `if pdf_arg:` 把空值读成「没要 PDF」，改前在 HEAD 6ca9c41 的工作树上实测照样落 Markdown 与侧车、退码是清单自己的读数）",
           "probe": {
             "implementation_file_exists": true,
             "entry_callable": true,

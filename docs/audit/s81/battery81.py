@@ -87,6 +87,46 @@ ARMS = [
                '                             key=_defect_sort_key)',
                '    history_defects = sorted({r.key() for r in refs\n'
                '                              if r.klass in defect_kinds and _is_history(r.doc)})')]},
+    {"id": "Y13-pdf-target-is-a-directory-untouched", "file": GEN,
+     "note": "撤掉「--pdf 是目录」这条前置拒绝 ⇒ 又回到「先写 Markdown 再在 canvas 处炸」",
+     "reps": [('    if pdf_path is not None and Path(pdf_path).is_dir():\n'
+               '        # 同一格的另一半：PDF 目标是个目录时，reportlab 要到 canvas 创建才炸，\n'
+               '        # 那时 Markdown 已经落盘 —— 与上面四条不同源，判的是"能不能写"而不是"内容对不对"。\n'
+               '        raise ValueError(f"--pdf 要的是一个文件路径，它现在是个目录：{pdf_path}")\n', '')]},
+    {"id": "Y14-bomb-error-escapes-the-rejection", "file": PDF,
+     "note": "从 except 里摘掉 DecompressionBombError ⇒ 超大图绕过 ValueError，CLI 变成 traceback",
+     "reps": [('    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:',
+               '    except (UnidentifiedImageError, OSError) as exc:')
+     ]},
+    {"id": "Y15-placed-size-not-recorded", "file": PDF,
+     "note": "证据里去掉实际排版尺寸 ⇒ 一张 1×1 的图被缩成 0.35 mm 小点，读者只看 pixels 会被误导",
+     "reps": [('                    "placed_mm": [round(draw_w / mm, 1), round(draw_h / mm, 1)]}',
+               '                    "placed_mm": [0.0, 0.0]}')
+     ]},
+    {"id": "Y16-cli-reads-blank-pdf-as-no-pdf", "file": CLI,
+     "reps": [('    if pdf_arg is not None and not str(pdf_arg).strip():\n        # 与 --draw-image 的空值同一条纪律：不给 --pdf 就不出 PDF（pdf_path=None，合法），\n        # 给了 --pdf "" 是"要 PDF 但路径写错了"，静默读成"没要"就丢掉了作者的请求。\n        print("--pdf 给了空值：不给这个旗子就是不出 PDF；要出就给路径（裸 --pdf 走同名 .pdf）")\n        return 2\n', '')],
+     "note": "撤掉 --pdf 空值检查 ⇒ 只给 `--pdf \"\"` 照样落 Markdown+侧车、退码是清单自己的读数（HEAD 6ca9c41 实测 rc=4），不是拒绝专用的 rc=2 ⇒ 作者的请求被静默丢掉"},
+    {"id": "Y17-check-order-lets-the-pairing-line-win", "file": CLI,
+     "reps": [('    pdf_arg = getattr(args, "pdf", None)\n    if pdf_arg is not None and not str(pdf_arg).strip():\n        # 与 --draw-image 的空值同一条纪律：不给 --pdf 就不出 PDF（pdf_path=None，合法），\n        # 给了 --pdf "" 是"要 PDF 但路径写错了"，静默读成"没要"就丢掉了作者的请求。\n        print("--pdf 给了空值：不给这个旗子就是不出 PDF；要出就给路径（裸 --pdf 走同名 .pdf）")\n        return 2\n    if draw_image is not None and not getattr(args, "pdf", None):\n        print("--draw-image 要和 --pdf 一起给：Markdown 版式不嵌图，"\n              "只给图就等于把这张图丢掉")\n        return 2\n', '    if draw_image is not None and not getattr(args, "pdf", None):\n        print("--draw-image 要和 --pdf 一起给：Markdown 版式不嵌图，"\n              "只给图就等于把这张图丢掉")\n        return 2\n    pdf_arg = getattr(args, "pdf", None)\n    if pdf_arg is not None and not str(pdf_arg).strip():\n        # 与 --draw-image 的空值同一条纪律：不给 --pdf 就不出 PDF（pdf_path=None，合法），\n        # 给了 --pdf "" 是"要 PDF 但路径写错了"，静默读成"没要"就丢掉了作者的请求。\n        print("--pdf 给了空值：不给这个旗子就是不出 PDF；要出就给路径（裸 --pdf 走同名 .pdf）")\n        return 2\n')],
+     "note": "把 ③『只给图不给 --pdf』挪回 ⑥ 之前 ⇒ 叠用 `--pdf \"\"` + 图时读者拿到的是"                    "『要和 --pdf 一起给』，被支去补一个已经写过的旗子；退码两条都是 2，"                    "所以只有话术用例抓得到"},
+    {"id": "Y11-library-stops-probing-the-image-bytes", "file": GEN,
+     "note": "撤掉落盘前的图片可读性校验（第 81 片补的第四条拒绝）⇒ 坏图又变成「写完 .md 才炸 PIL 栈」",
+     "reps": [('    if draw_image is not None:\n'
+               '        # 第四条：文件在但内容不是可读图片（文本冒充 .png、零字节、截断、超大图）。\n'
+               '        # 判据与排版侧同一个来源 `read_image_size`，坏图同样必须在任何字节落盘之前被拒。\n'
+               '        from aipd_os.cad.assembly_steps_pdf import read_image_size\n\n'
+               '        read_image_size(draw_image)\n', '')]},
+    {"id": "Y12-cli-lets-the-library-word-the-rejection", "file": CLI,
+     "note": "撤掉 CLI 侧的图片校验 ⇒ 坏图仍被拒，但话被套成「装配步骤声明不合法」，读者会去改 manifest",
+     "reps": [('    if draw_image is not None:\n'
+               '        # 文件在不等于图能用：内容坏（文本冒充 .png、零字节、截断）也要在这里就 rc=2，\n'
+               '        # 判据与库侧同一个来源，不许两边各写一遍。\n'
+               '        from aipd_os.cad.assembly_steps_pdf import read_image_size\n\n'
+               '        try:\n'
+               '            read_image_size(draw_image)\n'
+               '        except ValueError as exc:\n'
+               '            print(str(exc))\n'
+               '            return 2\n', '')]},
 ]
 
 
@@ -149,7 +189,14 @@ def main():
         for f in fired:
             print(f"              开火: {f}")
     killed = sum(1 for _r, v, _d, _f in rows if v == "KILLED")
-    print(f"合计 KILLED {killed} / {len(ARMS)}，其余 {len(rows) - killed}")
+    # "其余"必须分类抄：BAD-MUTATION/BAD-ANCHOR 是电池自己的问题，不是"臂存活"——
+    # 混成一格会把"这条变异没落地"读成"这条牙没人守"。
+    other: dict[str, int] = {}
+    for _r, v, _d, _f in rows:
+        if v != "KILLED":
+            other[v] = other.get(v, 0) + 1
+    print(f"合计 KILLED {killed} / {len(ARMS)}；其余按判决分类："
+          + ("、".join(f"{k} {n}" for k, n in sorted(other.items())) or "无"))
     return 0 if killed == len(ARMS) else 1
 
 

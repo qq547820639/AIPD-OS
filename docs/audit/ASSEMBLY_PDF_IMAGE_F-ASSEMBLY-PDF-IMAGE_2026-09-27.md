@@ -3,10 +3,10 @@
 产物：`src/aipd_os/cad/assembly_steps_pdf.py`（图片层 + 图框边界句单点化 + `image` 读数）、
 `assembly_steps.generate_assembly_steps(draw_image=…)`（拒绝时机挪到落盘之前、`NOT_COVERED` 撤掉过期那一项）、
 `--draw-image` 旗子（`cli/main.py` + `commands_drawing.py` 三条前置检查）、
-`tests/test_assembly_steps_pdf.py` 6 → 13 条、`tests/test_changelog_integrity.py`（新常驻门禁 7 条）、
+`tests/test_assembly_steps_pdf.py` 6 → 23 个 def / 27 条收集实例、`tests/test_changelog_integrity.py`（新常驻门禁 7 条）、
 `tests/test_cad_assembly_steps.py` 一条断言翻转、`scripts/doc_reference_census.py` 的全序修复
 配 `tests/test_doc_reference_census.py` 7 → 8 条、README、登记表、
-`docs/audit/s81/battery81.py`（10 臂）。
+`docs/audit/s81/battery81.py`（17 臂）。
 
 ## 一、为什么不自动出图（选型面）
 
@@ -42,6 +42,66 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
 更正后结论不变（交互器无条件构造、官方警告、3.11 门槛三条都还在），但**依据换了**：
 从"它不支持离屏"改成"它支持离屏但功能自带 bug 警告、且装不进本仓的 Python 下限"。
 
+## 一之二、本轮哪些改动**没有**做选型检索，理由逐条写清
+
+规则允许"影响范围明确的局部修复"跳过检索，但要求主动说明跳过了什么、为什么。
+本轮 8 处改动分三档：
+
+- **跳过，理由是候选集只有一个**（不是"我懒得查"）：六道拒绝时机的改动（①-⑥）与
+  `doc_reference_census` 的全序修复。这两处要定的不是"用哪个方案"，而是"判据放在落盘前还是落盘后"，
+  没有第二个技术形状可比；引入任何库都不解决这个问题。
+- **跳过，理由是沿用上一片已检索过的通路**：图片层的 reportlab `drawImage` +
+  `STSong-Light` 与 78 mm 缩放上限。依赖与字体方案第 80 片已定案，本轮只多一个 API 调用；
+  版本与 License 本轮仍自己重开 PyPI 对过（`reportlab@5.0.1` `requires_python "<4,>=3.9"`、
+  `pillow@12.3.0` `MIT-CMU` + `>=3.10`）。**没有**重读 reportlab 的图形手册页 ——
+  那一页只有子代理读过，所以本文档任何地方都不引它的原话（grep 得到 0 处，是刻意的）。
+- **该查而当时没查，本轮补**：`tests/test_changelog_integrity.py` 这面新判据。
+  它是"新量具"形状的改动，按规则必须先检索成熟实现再决定自研；我第一轮直接自研了。
+  补做的检索（keep-a-changelog 的机检器、corgibytes 的 changelog linter、markdownlint/remark 的
+  重复行与重复标题规则、pylint `R0801` 等）由第二个只读子代理在跑，
+  **结论未回来之前本节记为"检索进行中"**，回来后按四段式补进 §一 的表里；
+  如果答案是"有现成工具能判这两形状"，那把门禁就该换成它或借它的判据命名，
+  而不是因为我已经写了 370 行就保留。
+
+## 一之三、补做的选型：CHANGELOG 门禁该不该用现成工具（结论：主判据留自研，借语义）
+
+§一之二 把这一格记成"检索进行中"。检索回来后按四段式补在这里——
+**动手前我没查，这是流程违规，不因为结论支持自研就改写成一个没犯过的错**。
+标注规则：`[亲验]` = 我本轮自己打开过那个源；`[子代理]` = 只读子代理打开并跑过，我没重开。
+
+**候选清单（都是真实存在、可打开的）**
+
+| 候选 | 功能匹配度（形状 1＝连续重复块 / 形状 2＝条目记号重复） | License | 维护活跃度 | 安全 | 代码质量 | 适配成本 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `jscpd@5.3.2`（copy/paste 检测，Rust 引擎） | 形状 1 **能**（按 token 游程 + `--min-lines`）；形状 2 **不能** | MIT `[亲验]`（`registry.npmjs.org/jscpd/latest` 的 `license` 字段） | npm latest 5.3.2 `[亲验]`；发布日期 `[子代理]` 2026-09-23 | 扫描时不联网（`--semantic` 才要下载模型）`[子代理]` | 8 个平台 optionalDependencies `[子代理]` | 要 Node；**退出码有陷阱**：子代理实测有 clone 时仍 `rc=0`，必须加 `--threshold 0`/`--exit-code` 才会红 ⇒ 直接接进 CI 就是一条假绿 |
+| `chavacava/changelog-lint`（Go，`*-repetition` 一族规则） | 两条形状都**不能**：规则键在 `## <semver>` 标题上，而本仓 106 条记账是 9 个标题下的 `- **v…` 项目符号 | MIT `[子代理]` | 仓库已 archived、迁 Codeberg，最后 push 2025-04-04 `[子代理]` | 本地二进制 | — | 结构上看不见本仓的条目形状 |
+| `markdownlint@0.41.1` 的 MD024 | 只判"相同**标题**文本"（`no-duplicate-heading`，还有 `siblings_only` 这个专为 changelog 允许重复的开关）⇒ 与形状 2 的"条目记号唯一"不是一回事 | MIT `[子代理]` | 2026-07-13 `[子代理]` | 本地 | — | `MD024` 文档页 `[亲验]`（`raw.githubusercontent.com/.../doc/md024.md`，读到 `siblings_only` 参数与其用途） |
+| `@metamask/auto-changelog@6.2.1` 的 `validate` | 判的是 unreleased/未归类/缺当前版本/缺 PR 链接/缺依赖 bump——**没有**任何重复检测；且要求 Node `package.json` + git tag 才能跑 | `(MIT OR Apache-2.0)` `[子代理]`（我这次取 `bin` 字段时 JSON 形状看错，license 未亲验） | 2026-08-18 `[子代理]` | 本地 | — | 本仓不是 Node 项目，装不上这个前提 |
+| `pylint` R0801 `duplicate-code` | 判的是**多文件之间**的相似 token 流，不是单文件内的重复块 | GPL-2.0-or-later `[子代理]` | 活跃 `[子代理]` | 本地 | — | 用错工具：它连"同一份文件里贴了两遍"都不报 |
+| `keep-a-changelog` 规范本身 | 只是格式约定；仓库不提供机检器 | MIT `[子代理]`（我打 GitHub API 那次返回空，**未亲验**） | — | — | — | 不能判红 |
+
+**择一决定：自研判据留下，但明确借了什么。**
+没有任何候选覆盖形状 2（"同一片段被部分重贴、条目记号重复"），而形状 2 恰恰是部分重贴能活下来的那一半；
+覆盖形状 1 的 `jscpd` 又是"有 clone 也退 0"的语义，接进 CI 得先配 `--threshold 0`。
+所以主判据继续是 `tests/test_changelog_integrity.py`。从这些工具里借的是四件事，不是一句"参考了"：
+
+1. **`chavacava/changelog-lint` 的"按结构键判 repetition"粒度**——本仓的 `find_duplicate_entry_headings`
+   判 `(vN.M, F-号, 第 N 片)` 三元组唯一，正是 `-repetition` 的按键判法，而不是按字节游程判；
+2. **它的"语法错 ≠ 规则失败"退码分离**——反映成本守卫的两条分母断言：读不到文件/条目行与记号数
+   不等时**拒绝报 0**，而不是安静地判"没有重复"；
+3. **markdownlint 的规则单责与 `MDxxx` 命名习惯**——两把判据各管一种形状、各自带必不开火的控制；
+4. **`jscpd` 的"最小游程窗口"语义**——本守卫的 `min_run=6` 就是同一族旋钮，只是实现成精确行比较而非
+   Rabin-Karp token 哈希（正因为按精确行比，才有 6 行灵敏度与今天 0 误报的余量）。
+
+**子代理实测的关键对照（我没重跑 jscpd，标 `[子代理]`，但它改变了我的结论）**：
+真文件 3132 行在 `--min-tokens 20/30/50/80` 下 0 clone；追加 30 行尾巴 ⇒ 报 29 行 484 token；
+追加 6 行 ⇒ 在 20/30 档开火、**50 档静默**；重复一条条目行 ⇒ 0；
+同一 `v5.10 F-DRAW-01 第 2 片` 换了措辞 ⇒ 连 `min-tokens 1 / min-lines 1` 都**不开火**；
+而把窗口压到 1 行时，干净文件本身就报 98 个 clone。
+⇒ 结论落地为两条：**(a)** 不把 jscpd 接成主判据（形状 2 结构上看不见，收紧就 98 误报）；
+**(b)** 记一条待办：若要"第二把尺"，`jscpd CHANGELOG.md --min-tokens 20 --min-lines 5 --threshold 0`
+是可行的补充档，但必须先验 `--threshold 0` 真能把它变红——不加就是假绿。已进 §七.7。
+
 ## 二、两层都要有独立验法
 
 - 有图：`page.images` 非空 **且** 文字仍可抽取（图文两层共存，不是把文字画成图）。
@@ -51,7 +111,7 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
   "没图那条路也 `drawImage` 一张真 PNG"（用仓库自带的 `assets/golden-references/wbx1/manual_montage.png`），
   落地后 `test_absence_of_an_image_is_stated_in_the_document` 翻红，还原后绿。
 
-## 三、拒绝形状（三条都在写任何产物之前）
+## 三、拒绝形状（六道都在写任何产物之前）
 
 1. `--draw-image` 指到不存在的文件：CLI 在生成之前 `rc=2`（用例断言 Markdown 也没落盘）。
 2. `--draw-image` 给了**空值**：`rc=2`。这条是本轮补的——原先 CLI 用 `if draw_image and …`
@@ -65,9 +125,76 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
    没有 PDF 的孤儿 `.md`（侧车还没写，但文档已经落盘）。现在判完参数才动盘，
    用例除了断 raise，还断 `not out.exists()` 与侧车不存在。
 
+4. **文件在，但内容不是可读图片**（第四条，收尾自查按形状补的）：本轮实测三档坏图——
+   文本内容冒充 `.png`、零字节文件、被截断的 PNG——三档都抛
+   `PIL.UnidentifiedImageError: cannot identify image file …`，而那时 **Markdown 已经落盘**
+   （实测残留 764 字节）、PDF 没写、侧车没写，且 CLI 只接 `ValueError`，
+   所以用户看到的是一段 traceback 加一个孤儿 `.md`。前三条检查判的都是"文件在不在"，
+   这一格正好漏在中间。
+   修法是给图片事实一个唯一判据 `read_image_size()`（`Image.open` + `verify()`，
+   走格式识别与 chunk 完整性、不解码像素，所以量大也不贵），三处共用：
+   库侧在任何写字节之前调它（坏图 ⇒ `ValueError` ⇒ 零产物）、CLI 侧用它给干净的话
+   （`rc=2` + "不是可读图片"，**不套**"装配步骤声明不合法"——方向报错读者会去改 manifest）、
+   排版侧也读它拿尺寸（原先自己 `Image.open`，两边各写一遍时一边认这张图另一边不认，
+   就又是一次孤儿产物）。常驻用例：三档坏图 × 库/CLI 两面 = 6 条，加一条
+   "合规 PNG 不许被这道门误拒"；电池 **Y11**（撤库侧校验）与 **Y12**（撤 CLI 校验）各钉一面。
+5. `--pdf` 给的位置已经是个目录：`rc=2`。同一类时机 bug 的另一半——reportlab 要到创建
+   canvas 才炸，那时 Markdown 已落盘；现在前置判"能不能写"。用例先 `mkdir()` 把目录造出来再
+   拒，因为"路径不存在"是合法形状、不是这一格要判的东西。
+6. `--pdf` 给了**空值**：`rc=2`。`if pdf_arg:` 把空值读成"没给旗子"，请求于是被静默丢掉。
+   改前形状我在 HEAD `6ca9c41` 的工作树上亲手重开过（`PYTHONPATH` 顶到那份 `src/`，读数打了真正
+   被加载的文件路径）：Markdown 与侧车**都落了盘**、退码是那份清单自己的 4（球标未收口），
+   不是拒绝专用的 2。库侧不动（不给旗子是合法路径，`pdf_path=None`），CLI 侧先拒；常驻用例两面
+   都钉，电池 **Y16** 撤掉这条检查必须开火。
+   顺序也改了：这条检查挪到第③条**之前**，于是 `--pdf ""` 同时给图时读者拿到的是"给了空值"而不是"要和 --pdf 一起给"（后者支人去补一个已写的旗子）。两条都 `rc=2`、都零残留，退码分不出好坏 ⇒ 常驻用例钉话术（`test_pdf_blank_together_with_an_image_names_the_blank_flag`），电池 **Y17** 把顺序换回去必须开火。
+
 `image_caption` 这个"可改图注"的参数本轮删了：没有任何调用方传它，也没有用例走它——
 留着一个没人转的旋钮就是给下一位读者的假承诺。图注改成模块常量 `IMAGE_CAPTION`，
 正向用例直接 import 它来断，字面量不在测试里抄第二遍。
+
+## 三之二、独立复核第二轮：reviewer 又抓出五处，一处是它自己的电池替我说话
+
+派第二个只读子代理审 `2075eac..HEAD` 的全量 diff（六类问题：崩溃路径、拒绝一致性、
+证据真实性、`NOT_COVERED` 波及面、CHANGELOG 判据能漏什么、本轮新造的假陈述）。
+它是在途树与我已提交树混着看的，所以有一句"修复未提交"——那是事实，不是误判。
+逐条我自己重开/重跑后的账：
+
+| 编号 | 它的发现（[READ]＝它给了探针输出） | 我这边的复算 | 处置 |
+| --- | --- | --- | --- |
+| A | 坏内容图片：`.md` 先落盘，`Image.open` 才抛 `UnidentifiedImageError`；CLI `except ValueError` 接不住 → `rc=1` + 孤儿 `.md` | 我同一形状的三档探针（文本冒充/零字节/截断）都是这个结果 | 就是 §三 的第④条，本轮已修；补 3 档 × 2 面 + 合规侧 1 条 |
+| B | `--pdf adir`（目录）同样先写 `.md` 再炸 | 复算：`Path.is_dir()` 为真时才炸，不存在的路径是合法新建——我第一版用例把这条写错（没建目录），改后 `DID NOT RAISE` 消失 | 新增第⑤条拒绝 + 用例（建目录做夹具，注释写明为什么） |
+| C | `DecompressionBombError` 不继承 OSError/UnidentifiedImageError，会逃出 `except ValueError`；PIL 默认上限 89,478,485 px | 用 `monkeypatch` 把 `MAX_IMAGE_PIXELS` 压到 100 px 真触发（不造 9000 万像素图），确认异常类别与逃逸路径 | 并入第④条的 except；用例断消息里同时有「不是可读图片」与 `DecompressionBomb` |
+| D | 只缩不放：1×1 的图被排成 1 pt(≈0.35 mm) 的小点，图注却仍写"示意图"；4000×20 排成 2.3 mm 高 | 认同"不放大"是对的（放大=造像素），错在**证据只报源像素** | 证据加 `placed_mm`；断言取精确换算值——我先写成 `< 0.5`，被自己的电池臂 Y15 打回（写 `[0.0, 0.0]` 也能过），改成 `[round(1/mm,1), …]` |
+| E | 图片分支里那条"放不下就换页"不可达：进分支 y=682.0 pt，`draw_h` 被 78 mm(221.1 pt) 压住，触发要 `draw_h > 534.6 pt` | 按它的数复算成立 | 删分支 + 改掉 CHANGELOG 那句"放不下就整块换页"；图固定在首页，由用例钉形状 |
+| F | 模式面（P/1/L/RGBA/CMYK/I;16）与 0 高：它测到"全部能嵌"和"0×0 根本存不出来" | 我未重跑这一项（它的探针已给出 PIL 的 `SystemError: tile cannot extend outside image`） | **未找到**需要修的；`if iw and ih` 那个保护按不可达留着不动 |
+| G | 成本：6000×6000 PNG（文件仅 0.12 MB）→ maxrss 703 MB、2.48 s；句柄观察是 5 次 `'rb'` + 一次整文件 `read_bytes` | 我改成 `verify()` + 取尺寸两次打开，加 reportlab 自己那次仍是三次打开、一次整文件读；**没省掉读次**，也不假称优化过 | 记账，不改 |
+
+证据真实性那一格另有一条：`pdf.chars` 只数正文写入的字符，不含图框标题栏那两行
+（实测 sidecar `chars=276` vs pypdf 抽出 372 个非空白字符），原先只被断成 `chars > 0`。
+现在补 `test_chars_counts_body_lines_not_everything_pypdf_can_see`，把这个字段的名字与它真正量的东西对齐。
+
+**`NOT_COVERED` 的波及面**它逐条查了：唯一钉死清单的是 `tests/test_cad_assembly_steps.py:277`
+（本轮已翻），其余 8 个读点是复制透传或长度无关（`release_manifest.py:407/460/612` 等），
+`--json` 形状无人钉 ⇒ `pdf.image` 新键不破坏任何契约。这一格我复核后同意，没有额外改动。
+
+**电池替我说话的一次**：上一轮 12 臂里 **Y4 存活**——我把第④条加进去之后，
+`--draw-image ""` 即使撤掉"空值检查"也会被读图那一步兜住，`rc` 照样是 2。
+这正是本仓记过的"一条复合改动要逐支配原告"：一条臂的红被另一条守卫吃掉，
+不等于那条守卫有牙。改法是让空值那条**判它自己的话**（CLI 必须说"给了空值"，
+不许借读图判据说"不是可读图片"），于是 Y4 重新有目标；这也顺手暴露出
+`--pdf ""` 的处理与 `--draw-image ""` 相反（一个当场拒、一个静默当没给）。
+**这一条本轮改完了**（不是下一片的事）：`commands_drawing.py` 在生成之前判 `if pdf_arg is not None and not str(pdf_arg).strip():` ⇒ 打印"`--pdf` 给了空值…"并 `return 2`；库侧不动（不给旗子仍是合法路径，`pdf_path=None`）。常驻用例三面都钉：空值拒、不给旗子照常只出 Markdown 且 `pdf` 键写 None、以及叠用时的话术（顺序），电池 **Y16**（撤检查）与 **Y17**（换顺序）各钉一面。
+
+**但 reviewer 交来的读数我重开后作废了一半**：它写"只给 `--pdf ""` 时 `rc=0` 且只出 Markdown"。我在 HEAD `6ca9c41` 的工作树上用 `PYTHONPATH` 顶到那份 `src/`、读数打了真正被加载的文件路径，实测是 **Markdown 与侧车都落了盘、退码 4**（那份清单自己的球标未收口读数）——"静默丢掉请求"这件事成立，"`rc=0`"不成立。退码随清单覆盖度变（全覆盖就是 0），所以这条不能用退码当判据，用例钉的是"拒绝必须给 2""产物必须不在盘上"与"话说对了没有"。
+
+**电池的形状（原写在 §六，那一节整节由 `terminal81.py` 重写，所以搬到这里）**：- 终局 `合计 KILLED 17 / 17；其余按判决分类：无`（臂 17、开火用例名 27 条、`BAD-*` 0 条、存活 0 条）。- 一臂多红本轮 6 支：Y11 4 条、Y12 3 条、Y15 2 条、Y16 2 条、Y6 3 条、Y8 2 条；  上一轮 Y3/Y4 各多红一条普查的"落盘读数==内存读数"用例，本轮没复现  （各 1/1 条），所以那件事记成"同树耦合可复现性未定"，  不记成契约。- Y16 只有一个原告（``tests/test_assembly_steps_pdf.py::test_blank_pdf_value_is_refused_not_treated_as_absent`、`tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag``），Y17 也只有一个（``tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag``）⇒ 新增的两面各自单点承重。- Y10 的读数形状就是 §四之二 那个症状本身：`1 failed, 57 passed, 24 warnings, 6 errors`——撤掉 `key=_defect_sort_key` 后  崩溃回到 setup 阶段，6 条用例连断言都没跑到；这条臂同时是"新用例有牙"与"旧故障可复现"两份证据。
+
+**两条我自己犯的**（记下来免得只记别人的）：
+① 上一轮我普查过期句用的关键词是 `PDF/图框版式`，匹配不到第 56 片取证件里
+   写作「PDF 版式」的那一行，于是同一份文档 `:122` 改口、`:24` 还在说没做——
+   已就地第二次更正，并落进记忆："否证一处之后要按事实关键词把全文再扫一遍"。
+② 我在文档里写的 `assembly_steps_pdf.py:132/:147` 会因这轮插入的行号漂移而失效，
+   安全文档那一格的引用要在收尾前重新一遍（已重取）。
 
 ## 四、记账面：CHANGELOG 被静默重贴了 2074 行（新常驻门禁）
 
@@ -262,6 +389,11 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
    打一行警告（说明这次重绑会前推报告锚点、`test_roster_gap…` 会因此红），
    不改退码、不阻断。下一片按这个形状做，并给它一条"警告必须打出来"的常驻用例
    （用合成 git 历史或临时仓库，别拿主仓历史当夹具）。
+6. §一之三 落的一条备选第二尺（**不是必做**）：
+   `jscpd CHANGELOG.md --min-tokens 20 --min-lines 5 --threshold 0` 作为形状 1 的补充档。
+   接之前必须先证 `--threshold 0` 真能让"有 clone"变非零退码——子代理实测不加它时
+   有 clone 也 `rc=0`，那是一条假绿；本仓要的是判据会红，不是会打印。
+   并且它只能当**副尺**：形状 2（部分重贴后条目记号重复）它结构上看不见。
 
 ## 八、真产物一侧的独立读数（走真 CLI，不是常驻用例）
 
@@ -275,9 +407,23 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
   抽取文本里 `装配示意图（由作者提供）`、`示意图文件：assy.png`、步骤原文 `支架贴合基面` 都在。
 - 证据读数与文件本体对账：`pdf.image = {pixels:[1140,1728], bytes:2300614,
   sha256:f3f31f50…c812}`，与 `sha256(assy.png 字节)` 与 `len(字节)` **逐项相等**（不是抄 CLI 的话）。
-- 三条拒绝各自走真 CLI（`python -m aipd_os.cli.main …`，逐个看 rc 与产物是否存在）：
-  缺图文件 / 空值 / 只给图不给 `--pdf` ⇒ 三条都 `rc=2`，且 `.md` **都没落盘**，
-  首行分别是"指向的文件不存在""给了空值""要和 --pdf 一起给"。
+- 六道拒绝走真 CLI（`tmp/s81/probe6.py`：每条一个进程、跑前删干净同名产物、跑后按 glob 数残留），
+  **9 次拒绝调用全部 `rc=2` 且盘上零残留**，逐条首行原样抄：
+  ① `--draw-image 指向的文件不存在：…/nope.png`；② `--draw-image 给了空值：要么给图片路径，要么别给这个旗子`；
+  ③ `--draw-image 要和 --pdf 一起给：Markdown 版式不嵌图，只给图就等于把这张图丢掉`；
+  ④ 三档坏图（文本冒充 PNG / 零字节 / 截断）都是 `--draw-image 的文件不是可读图片：…
+  （UnidentifiedImageError: cannot identify image file …）`；
+  ⑤ `装配步骤声明不合法：--pdf 要的是一个文件路径，它现在是个目录：…/adir`——
+  只有这一条套在通用前缀下（句子来自库侧 `ValueError`，不是 CLI 自己写的）；
+  ⑥ `--pdf 给了空值：不给这个旗子就是不出 PDF；要出就给路径（裸 --pdf 走同名 .pdf）`。
+- **检查顺序的读数**：`--pdf ""` **同时**给 `--draw-image` 那一格（probe 里的 `r6b`）今天拿到的是⑥的话，
+  改顺序之前拿到的是③的话。两条都 `rc=2`、都零残留，所以这件事在退码面上是看不见的，
+  只有话术用例 `test_pdf_blank_together_with_an_image_names_the_blank_flag` 抓得到（电池 Y17 反向钉）。
+- 正例在改完顺序后**又重开了一次**（`tmp/s81/e2echeck.py`，1140×1728 的真 PNG）：`rc=0`、
+  `fin.md` / `fin.md.evidence.json` / `fin.pdf` 三份齐、pypdf 独立解码每页图片对象 `[1, 0]`、
+  图注/图文件名/步骤原文/"本文档不承载"四段文字都抽得到，`pdf.image` 的
+  `pixels=[1140,1728]`、`bytes=2300614`、`sha256=f3f31f50…c812` 与文件本体逐项相等，
+  `placed_mm=[51.5, 78.0]`（纸面毫米，与源像素两根轴）。
 - 无图正例：`--pdf` 不给图 ⇒ `rc=0`、每页图片对象 `[0]`、文本写明"本档没有装配示意图"、
   证据里 `pdf.image` 这个键**在**且值为 `None`。
 - 一条顺带读数：`本文档不承载：` 在 2 页 PDF 里出现 **3 次**（每页图框标题栏各 1 次 + 正文清单 1 次）。

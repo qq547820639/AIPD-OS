@@ -1,28 +1,50 @@
-基线 assembly_steps_pdf.py sha=96371b7b5d41
-基线 assembly_steps.py sha=c891db11e408
-基线 commands_drawing.py sha=7185ce2533b3
+基线 assembly_steps_pdf.py sha=f11553a6d37a
+基线 assembly_steps.py sha=78833a25babc
+基线 commands_drawing.py sha=128352fba1a6
 基线 doc_reference_census.py sha=96f46d4fb6b7
-[KILLED     ] Y1-absent-image-gets-a-placeholder  1 failed, 49 passed, 24 warnings in 76.85s (0:01:16)
+[KILLED     ] Y1-absent-image-gets-a-placeholder  1 failed, 63 passed, 24 warnings in 12.88s
               开火: tests/test_assembly_steps_pdf.py::test_absence_of_an_image_is_stated_in_the_document
-[KILLED     ] Y2-document-stops-stating-the-absence  1 failed, 49 passed, 24 warnings in 34.98s
+[KILLED     ] Y2-document-stops-stating-the-absence  1 failed, 63 passed, 24 warnings in 5.25s
               开火: tests/test_assembly_steps_pdf.py::test_absence_of_an_image_is_stated_in_the_document
-[KILLED     ] Y3-rejection-moved-back-after-the-write  2 failed, 48 passed, 24 warnings in 42.56s
+[KILLED     ] Y3-rejection-moved-back-after-the-write  1 failed, 63 passed, 24 warnings in 5.02s
               开火: tests/test_assembly_steps_pdf.py::test_image_without_pdf_is_refused_not_ignored
-              开火: tests/test_doc_reference_census.py::test_json_artifact_matches_in_process_reading
-[KILLED     ] Y4-cli-treats-blank-flag-as-not-given  2 failed, 48 passed, 24 warnings in 47.12s
+[KILLED     ] Y4-cli-treats-blank-flag-as-not-given  1 failed, 63 passed, 24 warnings in 4.96s
               开火: tests/test_assembly_steps_pdf.py::test_cli_refuses_blank_draw_image - ...
-              开火: tests/test_doc_reference_census.py::test_json_artifact_matches_in_process_reading
-[KILLED     ] Y5-image-key-omitted-not-none  1 failed, 49 passed, 24 warnings in 35.58s
+[KILLED     ] Y5-image-key-omitted-not-none  1 failed, 63 passed, 24 warnings in 5.03s
               开火: tests/test_assembly_steps_pdf.py::test_absence_of_an_image_is_stated_in_the_document
-[KILLED     ] Y6-pixel-reading-fabricated  1 failed, 49 passed, 24 warnings in 43.36s
+[KILLED     ] Y6-pixel-reading-fabricated  3 failed, 61 passed, 24 warnings in 5.15s
               开火: tests/test_assembly_steps_pdf.py::test_draw_image_lands_in_the_pdf_without_killing_the_text
-[KILLED     ] Y7-image-sha-not-the-real-file  1 failed, 49 passed, 24 warnings in 28.28s
+              开火: tests/test_assembly_steps_pdf.py::test_a_legitimate_png_still_passes_that_gate
+              开火: tests/test_assembly_steps_pdf.py::test_evidence_records_the_placed_size_not_just_the_source_pixels
+[KILLED     ] Y7-image-sha-not-the-real-file  1 failed, 63 passed, 24 warnings in 5.60s
               开火: tests/test_assembly_steps_pdf.py::test_draw_image_lands_in_the_pdf_without_killing_the_text
-[KILLED     ] Y8-stale-boundary-item-put-back  2 failed, 48 passed, 24 warnings in 19.61s
+[KILLED     ] Y8-stale-boundary-item-put-back  2 failed, 62 passed, 24 warnings in 5.21s
               开火: tests/test_assembly_steps_pdf.py::test_the_frame_and_the_body_declare_one_boundary
               开火: tests/test_cad_assembly_steps.py::TestEvidenceSidecar::test_evidence_names_what_the_document_does_not_carry
-[KILLED     ] Y9-frame-keeps-its-own-copy-of-the-boundary  1 failed, 49 passed, 24 warnings in 13.31s
+[KILLED     ] Y9-frame-keeps-its-own-copy-of-the-boundary  1 failed, 63 passed, 24 warnings in 6.19s
               开火: tests/test_assembly_steps_pdf.py::test_the_frame_and_the_body_declare_one_boundary
-[KILLED     ] Y10-census-sort-lost-its-total-order  1 failed, 43 passed, 24 warnings, 6 errors in 12.83s
+[KILLED     ] Y10-census-sort-lost-its-total-order  1 failed, 57 passed, 24 warnings, 6 errors in 4.23s
               开火: tests/test_doc_reference_census.py::test_history_face_sorts_when_line_shapes_mix
-合计 KILLED 10 / 10，其余 0
+[KILLED     ] Y13-pdf-target-is-a-directory-untouched  1 failed, 63 passed, 24 warnings in 6.69s
+              开火: tests/test_assembly_steps_pdf.py::test_pdf_path_pointing_at_a_directory_is_refused_before_writing
+[KILLED     ] Y14-bomb-error-escapes-the-rejection  1 failed, 63 passed, 24 warnings in 7.66s
+              开火: tests/test_assembly_steps_pdf.py::test_decompression_bomb_is_a_rejection_not_a_traceback
+[KILLED     ] Y15-placed-size-not-recorded  2 failed, 62 passed, 24 warnings in 6.66s
+              开火: tests/test_assembly_steps_pdf.py::test_draw_image_lands_in_the_pdf_without_killing_the_text
+              开火: tests/test_assembly_steps_pdf.py::test_evidence_records_the_placed_size_not_just_the_source_pixels
+[KILLED     ] Y16-cli-reads-blank-pdf-as-no-pdf  2 failed, 62 passed, 24 warnings in 7.36s
+              开火: tests/test_assembly_steps_pdf.py::test_blank_pdf_value_is_refused_not_treated_as_absent
+              开火: tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag
+[KILLED     ] Y17-check-order-lets-the-pairing-line-win  1 failed, 63 passed, 24 warnings in 7.55s
+              开火: tests/test_assembly_steps_pdf.py::test_pdf_blank_together_with_an_image_names_the_blank_flag
+[KILLED     ] Y11-library-stops-probing-the-image-bytes  4 failed, 60 passed, 24 warnings in 6.68s
+              开火: tests/test_assembly_steps_pdf.py::test_unreadable_image_is_refused_before_anything_is_written[\u622a\u65ad\u7684 PNG]
+              开火: tests/test_assembly_steps_pdf.py::test_unreadable_image_is_refused_before_anything_is_written[\u6587\u672c\u5192\u5145.png]
+              开火: tests/test_assembly_steps_pdf.py::test_unreadable_image_is_refused_before_anything_is_written[\u96f6\u5b57\u8282]
+              开火: tests/test_assembly_steps_pdf.py::test_decompression_bomb_is_a_rejection_not_a_traceback
+[KILLED     ] Y12-cli-lets-the-library-word-the-rejection  3 failed, 61 passed, 24 warnings in 5.60s
+              开火: tests/test_assembly_steps_pdf.py::test_cli_returns_two_for_unreadable_image[\u622a\u65ad\u7684 PNG]
+              开火: tests/test_assembly_steps_pdf.py::test_cli_returns_two_for_unreadable_image[\u6587\u672c\u5192\u5145.png]
+              开火: tests/test_assembly_steps_pdf.py::test_cli_returns_two_for_unreadable_image[\u96f6\u5b57\u8282]
+合计 KILLED 17 / 17；其余按判决分类：无
+battery_rc=0
