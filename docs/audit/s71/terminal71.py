@@ -156,10 +156,11 @@ def main() -> int:
     gone = sorted(tag_files - now_files)
     rows.append(f"- **锚点与哈希面**：`SOURCE_MANIFEST.source_commit` = "
                 f"`{str(man['source_commit'])[:12]}` == tag；被哈希文件数 "
-                f"`{len(man['files'])}`；相对 tag 的清单：新增 {len(added)} 个、"
-                f"消失 {len(gone)} 个")
+                f"`{len(man['files'])}`；**相对 tag v5.6.0** 的清单：新增 {len(added)} 个、"
+                f"消失 {len(gone)} 个（这是 25 片的累计漂移，不是本片增量——"
+                f"本片增量看 `chore(sN): 清单再锚` 那两条提交里的文件数）")
     if added:
-        rows.append("- **新增的被哈希文件**：" + "、".join(f"`{a}`" for a in added))
+        rows.append("- **相对 tag 新增的被哈希文件（前 5 个）**：" + "、".join(f"`{a}`" for a in added[:5]))
     dirty = git("status", "--porcelain")
     rows.append(f"- **工作树**：`git status --porcelain` 输出 {len(dirty.splitlines())} 行")
 
