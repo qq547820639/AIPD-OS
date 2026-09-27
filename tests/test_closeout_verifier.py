@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import shutil
 import subprocess
@@ -131,18 +132,74 @@ def test_six_checks_are_green_on_the_real_corpus_regardless_of_stage(real_pair,
     assert r["pinned_commit"] == pinned and r["provenance_binds_report"] is True, r
 
 
+def _defs_differ(old_src: str | None, new_src: str) -> bool:
+    """`def test_` 的条数是否变了（`old_src=None` 表示报告那次提交时还没有这个文件）。
+
+    为什么按"条数"而不是按"文件被 touch 过"：名单能观测的只有"树上有几条、报告里出现几条"，
+    一个只改了实现细节、`def test_` 数量不变的修改**不产生任何名单缺口**，
+    拿它去要求缺口非空就是把"名字被碰过"当成"覆盖变了"
+    （第 69 片实测：加了一条旗子的常驻控制、1:1 替换了两个用例，
+    旧写法让收口全量多出 1 条假红，连带把绑定成红报告后又放大成 4 条）。
+    已知够不着的地方也写在这：等量改名（删一条加一条）本判据看不见——它的分母是条数。
+    """
+    def count(src: str) -> int:
+        return sum(1 for ln in src.splitlines() if ln.startswith(("def test_", "    def test_")))
+    return old_src is None or count(old_src) != count(new_src)
+
+
+def test_helper_only_fires_when_def_counts_move() -> None:
+    """判据自己的双向控制：新增文件 / 加用例 ⇒ 真；1:1 改实现 ⇒ 假。"""
+    nl = chr(10)
+    two = nl.join(["def test_one():", "    pass", "", "", "def test_two():", "    pass", ""])
+    three = two + nl.join(["", "def test_three():", "    pass", ""])
+    one = nl.join(["def test_one():", "    pass", ""])
+    assert _defs_differ(None, two) is True, "新增文件必须算缺口来源"
+    assert _defs_differ(two, two) is False, "内容变了但 def 条数没变 ⇒ 名单没有缺口"
+    assert _defs_differ(two, three) is True, "多一条用例要算"
+    assert _defs_differ(two, one) is True, "少一条用例也要算（条数动了）"
+
+
+def _anchor_commit_for_this_report() -> str:
+    """这份报告"从哪一次提交起算权威"：PROVENANCE 历史里最近一次绑着同一份 sha256 的提交。
+
+    不能用 `git log -1 -- 报告文件`：报告被重新提交过（例如误绑定之后 revert）就会把 touch 点
+    推到代码改动**之后** ⇒ "报告以来改过的测试文件"算成空集，而名单缺口还在 ⇒ 假红。
+    第 69 片就是这么把 1 条在途红放大成 4 条的。按 sha256 找绑定那次提交，
+    在途（PROVENANCE 尚未绑定）与已绑定两种状态都落在同一个基准上。
+    """
+    digest = hashlib.sha256(REPORT.read_bytes()).hexdigest()
+    for c in [x for x in _git("log", "--format=%H", "--", "PROVENANCE.json").splitlines() if x]:
+        try:
+            doc = json.loads(_git("show", f"{c}:PROVENANCE.json"))
+        except (ValueError, subprocess.CalledProcessError):
+            continue      # 早期的提交里 PROVENANCE.json 还不存在
+        bound = str(((doc.get("test_report") or {}).get("sha256")) or "")
+        if bound and bound == digest:
+            return c
+    return _git("log", "-1", "--format=%H", "--", REPORT_REL)
+
+
 def test_roster_gap_equals_tests_changed_since_the_report(pinned: str) -> None:
-    """名单缺的测试文件，必须恰好等于"报告那次提交以来被增改的测试文件"。
+    """名单缺的测试文件，必须恰好等于"报告那次提交以来 **def 条数动过**的测试文件"。
 
     写成"差额为空"在途时必红，写成"差额随便"就是恒真；两边都由 git 现算，任何一侧
     多算或漏算都会翻。报告一旦被重新绑定并提交，`git diff rc..HEAD -- tests` 就是空集。
     """
     data = json.loads(REPORT.read_text(encoding="utf-8"))
-    report_commit = _git("log", "-1", "--format=%H", "--", REPORT_REL)
+    report_commit = _anchor_commit_for_this_report()
     assert report_commit, "报告没在任何提交里？"
-    changed = {ln for ln in _git("diff", "--name-only", "--diff-filter=AM",
-                                 f"{report_commit}..HEAD", "--", "tests").splitlines()
-               if _is_pytest_file(ln)}
+    changed: set[str] = set()
+    for ln in _git("diff", "--name-only", "--diff-filter=AM",
+                   f"{report_commit}..HEAD", "--", "tests").splitlines():
+        if not _is_pytest_file(ln):
+            continue
+        new_src = (ROOT / ln).read_text(encoding="utf-8")
+        try:
+            old_src = _git("show", f"{report_commit}:{ln}")
+        except (AssertionError, subprocess.CalledProcessError, ValueError):
+            old_src = None          # 报告那次提交时还没有这个文件
+        if _defs_differ(old_src, new_src):
+            changed.add(ln)
     tree = cov.tree_roster(ROOT / "tests")[0]
     measured = _report_files(data)
     never_ran = {f for f in tree if f not in measured}
