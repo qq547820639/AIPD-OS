@@ -406,11 +406,18 @@ def script_rows(root: Path) -> tuple[list[tuple[str, int, str, list[str]]],
 
 
 ENTRY_INTERP = r"(?:\.venv/bin/python|python3?|bash|sh|zsh)"
+# 路径字符集：第 90 片把 CJK 基本区放进来。理由是**对称**而不是现状——本仓取证文档的
+# 文件名一半是中文（`docs/audit/DRIFT_SCAN_COST_F-DRIFT-4_2026-09-26.md` 这类），
+# 而 `tracked_paths()` 那一侧第 89 片已经修成能读非 ASCII 入库名
+# （`-c core.quotePath=false`），识别面却还只认 ASCII ⇒ 一条中文命名的入口脚本
+# 会被整条**看不见**（不是误判，是漏判，而漏判不留读数）。
+# 范围只到 CJK 统一表意文字基本区：假名/谚文/生僻扩展区仍不认，写在 §二 的已知边界里。
+ENTRY_PATH_CHARS = r"A-Za-z0-9_\u4e00-\u9fff./-"
 # 前缀用"否定型 lookbehind"而不是固定字符类：中文文档里这条常写成
 # 「复算入口：bash x.sh」「跑 `python foo.py`」，只列 ASCII 空白/反引号/竖线会把
 # 全角冒号后面的那些整批漏掉——一种拼写≠全部形态（第 78 片记过的文本面病）。
 ENTRY_LINE_RE = re.compile(r"(?<![A-Za-z0-9_./-])" + ENTRY_INTERP +
-                           r"\s+([A-Za-z0-9_./-]+\.(?:py|sh))\b")
+                           r"\s+([" + ENTRY_PATH_CHARS + r"]+\.(?:py|sh))\b")
 # 模板/区间/变量形态不是"给人照抄的具体命令"：写了 X.py、sNN、`..`、尖括号、通配、
 # `${VAR}` 的都走**不判**，单列读数。第 85 片量分母时 README:508 那行
 # `python scripts/X.py` 就是这种形状——把它判红等于让尺子咬自己：

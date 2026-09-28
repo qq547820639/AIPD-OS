@@ -1,0 +1,6 @@
+原文件 sha=bc5f0ff6c2e4
+[ANCHORS OK] 1 支臂各命中 1 次
+[CONTROL OK] Z0 原样全绿
+[KILLED]   Z1-cjk-charset-removed（把 CJK 基本区从路径字符集里收回（D 族重新变隐形））被抓住：tests/test_doc_command_census.py::test_non_ascii_entrypoint_is_recognised_and_judged
+合计 KILLED 1 / 1；其余按判决分类：无
+收尾复算 sha=bc5f0ff6c2e4（应等于 bc5f0ff6c2e4）

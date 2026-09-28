@@ -1115,6 +1115,36 @@ def test_absolute_path_is_dead_even_when_that_file_exists(tmp_path: Path,
     assert not any(v["field"] == "入口未入库" for v in rep["violations"]), rep["violations"]
 
 
+def test_non_ascii_entrypoint_is_recognised_and_judged(tmp_path: Path,
+                                                       tmp_scope) -> None:
+    """识别面的字符集也要看得见中文名脚本：认不出＝漏判，而漏判不留任何读数。
+
+    第 89 片修的是**跟踪面**（`git ls-tree` 把非 ASCII 名转义成八进制串 ⇒ 入库的件被读成
+    未入库）；这一条修的是对称的另一半：`ENTRY_LINE_RE` 的路径字符集只列 ASCII 时，
+    一条 `python 脚本/取数.py` 连"是个入口"都不算，既不 tracked 也不 dead，
+    在 `corpus.entry_points` 里根本不存在——**分母里消失比判红更难发现**。
+    两极都在：文件真在 HEAD 的树里 ⇒ 合规；文件压根没有 ⇒ 必须开火「入口不可解析」。
+    """
+    doc = "docs/audit/中文说明.md"
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      code="# 参见 aipd usage 的说明\nVALUE = 1\n")
+    (tree / "docs" / "audit" / "脚本").mkdir(parents=True, exist_ok=True)
+    (tree / "docs" / "audit" / "脚本" / "取数.py").write_text("print(1)\n", encoding="utf-8")
+    (tree / doc).write_text("复算入口：python docs/audit/脚本/取数.py\n", encoding="utf-8")
+    _seed_git(tree, ["README.md", "src/aipd_os/registry_data.py", doc,
+                     "docs/audit/脚本/取数.py"])
+    rows, git_unknown, probs = census.entry_points(tree)
+    assert not probs and git_unknown is False, (probs, git_unknown)
+    assert ("docs/audit/中文说明.md", 1, "docs/audit/脚本/取数.py", "tracked") in rows, rows
+    assert not [v for v in census.audit(tree)["violations"]
+                if v["field"].startswith("入口")], census.audit(tree)["violations"]
+
+    (tree / "docs" / "audit" / "脚本" / "取数.py").unlink()
+    gone = census.audit(tree)
+    assert "入口不可解析" in fields(gone, "docs/audit/脚本/取数.py"), gone["violations"]
+    assert census.main(["--repo", str(tree)]) == 4, gone["violations"]
+
+
 def test_tracked_face_reads_non_ascii_paths_unescaped(tmp_path: Path) -> None:
     """非 ASCII 文件名必须原样出现在跟踪面里：git 默认把它们转义成八进制串。
 
