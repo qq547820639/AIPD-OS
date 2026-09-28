@@ -154,7 +154,7 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
 | `scripts/doc_command_census.py` | 面 ⑤ 的五个函数（entry_corpus / tracked_paths / load_entry_register / entry_points / emit_register）、`audit()` 接线与 `entry_states` 读数、`render()` 三行判决文案、`--emit-register` |
 | `scripts/doc_command_census.py` 模块 docstring | 补上第 85 片漏写的面 ④，新增面 ⑤ 段；把两处**抄在文中的旧分母**（"88 条路径"、"1389/1012/73%"）改成"由 `--json` 现读"并标所属轮次 |
 | `tests/test_doc_command_census.py` | +7 条常驻用例（含一把比判据宽的独立尺）；补 `import re` |
-| `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json` | 新建，13 条死链逐条带 `cited_by` 与 note |
+| `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json` | 新建，13 条死链逐条带 `cited_by` 与 note（**第 88 片改名**：那一列现在是 `cited_by_at_emit_time`，五段说明文字改由 `REGISTER_*` 常量生成，见 §八.5） |
 | `README.md` | 量具目录里 `doc_command_census` 那块加面 ⑤ 的说明与分母口径 |
 | `CHANGELOG.md` | v5.48 条目 |
 | `docs/audit/s87/battery87.py` + `battery87.log` | 电池与执行读数（`.log` 被 `.gitignore` 第 43 行挡着 ⇒ 入库要 `git add -f`） |
@@ -211,6 +211,11 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
 3. **`--emit-register` 不做幂等合并**：它整体覆盖目标文件，重跑会丢掉人工写的 note。
    本轮用法是"先生成草案、再由人填 note"，没打算让它长期当同步器；要做成增量合并得先定
    键与冲突语义（同一 path 被不同文档引用多次时的取舍）。
+   **→ 第 88 片按"path 就是键"做了最小合并**：`emit_register` 先读目标、按 `path` 把旧 note
+   带进新草案，返回 `{"written", "missing_notes", "refused"}`，note 仍空的条目逐条打印出来
+   逼人补；目标存在但读不出时**整批不落盘**（否则一个半坏的册子会被草案洗成"没有依据的豁免"）。
+   冲突语义只解决了"同一 path 的 note"这一种；同一 path 被多篇文档引用的取舍仍按去重后的
+   快照列处理，见 §八.5。
 4. **面 ⑤ 的语料只有 `.md`**：`QUICKREF_DIRS` 里的 `.rst`/`.txt` 与 `templates/` 没进
    `ENTRY_DIRS`。今天没有那种写法，所以登记不建档。
 5. **登记册的 `cited_by` 是一列会自证的过期快照**——本轮实测到：登记后我又写了本文两行
@@ -218,6 +223,18 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
    在文件里写明"权威是判据现读，常驻用例只核『在册/仍不可解析/仍被引用』，不读这一列"。
    **永久修法要动 `scripts/`**（参与发布哈希，正在跑的认证会被作废）：要么把这列改名
    `cited_by_at_emit_time`，要么整列删掉，让"引用位置"只能由现读得到。排在第 88 片。
+   **→ 第 88 片按"改名"这一支做了**（删列会把读者定位原文的路标一起丢掉，不值）：
+   列名改 `cited_by_at_emit_time`，登记册的五段说明文字（`what` / `rule` /
+   `cited_by_at_emit_time_semantics` / `note_semantics` / `shape_borrowed_from`）
+   由 `scripts/doc_command_census.py` 的 `REGISTER_*` 常量单点生成，常驻用例
+   `test_real_repo_register_shares_the_instrument_constants` 逐字段比；
+   `test_the_snapshot_column_is_decoration_not_authority` 用"填对 / 填错 / 用旧键名 / 整列缺"
+   四种写法读出**同一份判决**，把这列"不参与判决"钉成事实而不是注释。
+   原来那句谎话（"`cited_by` 为空 ⇒ 判据会以「登记册该撤」反向开火"）从 `rule` 里删掉了；
+   「该撤」两半的触发条件现在写在同一句里并明说它由语料现算。
+   顺带一处**本轮新发现的同类病**：`rule` 原文说"必须在**本文**列出"、快照说明说"**本文档**
+   自己新增一行"，而这两段话现在住在 `.json` 里，"本文"没有指涉对象 ⇒ 改成"本册 `entries`"
+   与"取证文档每多写一行引用"。
 
 ## 九、只读复核交回的缺陷清单（每条都自己重验过，不含推测）
 
@@ -228,12 +245,12 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
 | --- | --- | --- | --- |
 | 1 | `scripts/…` 让给面 ④ 是**空头让渡**：面 ④ 的语料不含 `docs/audit/`，且它的 `SCRIPT_ROW_RE` 要行首、要扁平 `scripts/X.py` ⇒ 从取证文档里点名的 `scripts/gone.py` **谁都不判** | 合成树 `docs/audit/n.md` 写 `python scripts/gone.py --flag 1` ⇒ 状态 `delegated`、**判决 `[]`**；对照：同一棵树 README 里同一写法会出 `脚本缺失` | 真缺陷，必修 |
 | 2 | `git` 读不出时的降级**自己造出违规**：降级把"磁盘上有"记成 `tracked`，而登记册反向臂的条件是"处处都是 `tracked`" ⇒ 相对路径条目被判「登记册该撤」并附一句从没证实过的"文件已入库" | 无 `.git` 的合成树 + 登记册写 `docs/audit/lab.py` ⇒ 判决 `登记册该撤 docs/audit/lab.py \| 现在处处都能解析（文件已入库）`，而 `entry_states.git_unknown=1` 同时被打印出来 | 真缺陷，必修（与"不知道≠违规"这条自己写的纪律正面冲突） |
-| 3 | 「再没被引用」那一半 keyed 在**判据自己的可见性**上而不是引用上，且建议是破坏性的：把最后一处命令形态改写成叙述（§八.1 正鼓励这么写，今天有 66 处叙述型 `/tmp/*.py`）就会开火，照建议删掉登记 ⇒ 下一轮再写命令形态时 20 条重开 | 代码路径 `states` 只来自 `erows`（`doc_command_census.py:687`）；配合 #4 的 `cited_by` 无人读，等于这半边的判据没有任何独立事实支撑 | 真缺陷，必修（措辞＋降级为读数） |
-| 4 | `cited_by` **只写不读**，而登记册自己的 `rule` 文本声称"它为空 ⇒ 反向开火" | `load_entry_register` 只取 `path`/`note`（`:475-482`）；`emit_register` 仍写 `cited_by`（`:1071`）⇒ 文档与实现两套说法 | 已部分处理（本轮刷了数据并写明非权威），**文本仍要说谎**，必修 |
+| 3 | 「再没被引用」那一半 keyed 在**判据自己的可见性**上而不是引用上，且建议是破坏性的：把最后一处命令形态改写成叙述（§八.1 正鼓励这么写，今天有 66 处叙述型 `/tmp/*.py`）就会开火，照建议删掉登记 ⇒ 下一轮再写命令形态时 20 条重开 | 代码路径 `states` 只来自 `erows`（`doc_command_census.py:689`，第 88 片加常量后由 `:687` 后移）；配合 #4 的快照列无人读，等于这半边的判据没有任何独立事实支撑 | 真缺陷，必修（措辞＋降级为读数） |
+| 4 | `cited_by` **只写不读**，而登记册自己的 `rule` 文本声称"它为空 ⇒ 反向开火" | `load_entry_register` 只取 `path`/`note`（`:463-482`）；`emit_register` 仍写 `cited_by`（当时在 `:1071`）⇒ 文档与实现两套说法 | **第 88 片已修**：改名 `cited_by_at_emit_time`、`rule` 由 `REGISTER_RULE` 单点生成、四种写法的判决由常驻用例钉成相同（见 §八.5）；改名后 `emit_register` 的写入位在 `:1119` |
 | 5 | 识别面漏整族写法：解释器与路径之间不许有任何旗子/引号、不认版本后缀、绝对路径的解释器被 lookbehind 里的 `/` 挡掉 | 探针：`跑 /Volumes/X/AIPD-OS/.venv/bin/python scripts/x.py` ⇒ `[]`；`python3.11 scripts/x.py` ⇒ `[]`；`python -u /tmp/x.py` ⇒ `[]`；而 `` `.venv/bin/python docs/audit/s87/battery87.py` `` ⇒ 命中 | 真缺陷，必修（`/abs/…/.venv/bin/python` 那型本仓真有） |
 | 6 | `placeholder` 的 7 个分支里 **4 个不可达**（捕获字符类根本容不下 `…`/`<}`/`${`/`*`），而 `..` 是**消音开关**：`python scripts/a/../gone.py` 被捕获并免判 | 探针：`python scripts/a/../gone.py` ⇒ 命中且走免判；`docs/audit/capability_matrix.md:50` 的 `python scripts/research/search_papers_by_{arxiv,…}.py` ⇒ **连一行都不产生**（既不计占位也不判） | 真缺陷：可达性要清、`..` 要么收窄要么在文档里明写它是已知逃逸口 |
 | 7 | `tracked` 取的是 **git 索引**不是 HEAD ⇒ `git add` 未 `commit` 的取证件被当成"干净签出也拿得到" | 探针（临时仓库里 `b.py` 只 add 不 commit）：`ls-files=[a.py,b.py]`、`ls-tree HEAD=[a.py]`、差=`[b.py]`。本片所有夹具都是 add+commit，所以**没有一条用例能分辨这两者** | 真缺陷，必修（改 `ls-tree -r HEAD`），且这正是面 ⑤ 想抓的那一类 |
-| 8 | 三处"看着是牙、其实咬不到"：真仓库用例 `untracked == 0` 没配 `git_unknown` 断言（在无 git 的副本里恒真）；登记册可解析性那条 `startswith("/") or not exists()` 对今天 13 条**全是绝对路径**的条目短路；自测的"五档之和 == 总读数"是**结构恒等式**（每行只加一次计数），而它的标记文案声称能抓"把已登记的漏计"——`dead_registered` 不在求和键里 | 代码：`e_counts[state] += 1` 每行一次（`:670`）⇒ 和恒等于 `len(erows)`；`tests/test_doc_command_census.py:656`、`:664` 形状同上 | 必修（换成能开火的判据）；**本文 §四 与自测标记文案此前把这条说成有效牙，属over-claim，在此更正** |
+| 8 | 三处"看着是牙、其实咬不到"：真仓库用例 `untracked == 0` 没配 `git_unknown` 断言（在无 git 的副本里恒真）；登记册可解析性那条 `startswith("/") or not exists()` 对今天 13 条**全是绝对路径**的条目短路；自测的"五档之和 == 总读数"是**结构恒等式**（每行只加一次计数），而它的标记文案声称能抓"把已登记的漏计"——`dead_registered` 不在求和键里 | 代码：`e_counts[state] += 1` 每行一次（`:672`）⇒ 和恒等于 `len(erows)`；`tests/test_doc_command_census.py:742`、`:750` 形状同上（第 88 片由 `:656`/`:664` 后移） | 必修（换成能开火的判据）；**本文 §四 与自测标记文案此前把这条说成有效牙，属over-claim，在此更正** |
 
 **结论与顺序**：面 ⑤ 今天仍然交付了价值（18 处真死链被登记、README 那处占位被免判、
 `入口未入库` 那档确实抓住我本轮自己犯的错，电池 7 臂 7 杀也是真的），但**它的覆盖比本文

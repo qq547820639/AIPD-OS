@@ -90,14 +90,16 @@ def _make_repo(tmp_path, commit_evidence: bool, tag: str | None):
 
     bundle = repo / "aipd-os-5.6.0.zip"
     # 第一轮：生成 SOURCE_MANIFEST / PROVENANCE（无 bundle）
-    release_evidence.write_evidence(repo, repo, "5.6.0", None, report)
+    # 第 88 片：`write_evidence` 的锚点必填，这里传的就是上面那对 `pending`/报告所用的 HEAD，
+    # 换个值会让自记指纹与即将写出的清单不同源，绑定会被第 84 片的闸拒掉。
+    release_evidence.write_evidence(repo, repo, "5.6.0", None, report, head)
     # 用仓库内所有非 zip 文件构建发布包（保证解压后 SOURCE_MANIFEST 可复现）
     with zipfile.ZipFile(bundle, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in sorted(repo.rglob("*")):
             if p.is_file() and p.suffix != ".zip" and p.name != bundle.name:
                 zf.write(p, arcname=p.relative_to(repo).as_posix())
     # 第二轮：带 bundle 重新生成，写入 BUNDLE_MANIFEST 与带 bundle_hash 的 PROVENANCE
-    release_evidence.write_evidence(repo, repo, "5.6.0", bundle, report)
+    release_evidence.write_evidence(repo, repo, "5.6.0", bundle, report, head)
 
     # Ed25519 签名 bundle
     sign_release.keygen()

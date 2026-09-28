@@ -1,8 +1,8 @@
 {
- "cited_by_semantics": "这一列是 `--emit-register` 生成/刷新时的快照，不是权威：面 ⑤ 的语料含 docs/audit/，所以本文档自己新增一行引用就会让它过期。权威是判据现读的结果（常驻用例核的是『每条都在册、每条都仍不可解析且仍被引用』，不是这一列）。",
+ "cited_by_at_emit_time_semantics": "`cited_by_at_emit_time` 只在 `--emit-register` 那一刻写一次，判据不读它：「再没被引用」那一半由语料现算（`entry_points` 的行集），不由这一列决定。面 ⑤ 的语料含 `docs/audit/` 下的 `.md`，所以取证文档每多写一行引用就会让这一列过期（本册是 `.json`，不在语料里）——它是给读者定位原文的路标，不是账。",
  "entries": [
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/CAD_ASSEMBLY_BALLOONS_F-DRAW-01_2026-09-25.md:214",
     "docs/audit/CAD_ASSEMBLY_BOM_LINK_F-DRAW-01_2026-09-25.md:135"
    ],
@@ -10,59 +10,59 @@
    "path": "/tmp/mutate_assembly.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/CAD_ASSEMBLY_BOM_LINK_F-DRAW-01_2026-09-25.md:134"
    ],
    "note": "第 45 片 BOM 血缘变异电池（14 臂，读数 14/14 killed，见 CAD_ASSEMBLY_BOM_LINK…:134）。同上：宿主 /tmp，不可再生。",
    "path": "/tmp/mutate_bom_link.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/RELEASE_EVIDENCE_ASSEMBLY_F-DRAW-01_2026-09-25.md:126"
    ],
    "note": "第 46 片发布证据变异电池（8 臂，8/8 killed，见 RELEASE_EVIDENCE_ASSEMBLY…:126）。",
    "path": "/tmp/mutate_release_manifest.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/SUPERVISOR_FACT_WRITEBACK_F-FACT-WB_2026-09-26.md:79"
    ],
    "note": "第 42 片 SUPERVISOR 事实回写的撤改电池（6 条，见 SUPERVISOR_FACT_WRITEBACK…:79）。",
    "path": "/tmp/s42/battery.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/DRAWING_SPEC_LINEAGE_F-LINEAGE-PROD_2026-09-26.md:85"
    ],
    "note": "第 43 片图纸规格血缘的撤改电池（6 条，见 DRAWING_SPEC_LINEAGE…:85）。",
    "path": "/tmp/s43/battery.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/RELEASE_EVIDENCE_CTQ_STATUS_F-CTQ-STALE_2026-09-26.md:72"
    ],
    "note": "第 44 片发布证据 CTQ 状态的撤改电池（4 条，见 RELEASE_EVIDENCE_CTQ_STATUS…:72）。",
    "path": "/tmp/s44/battery.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/TRUTH_REWORK_F-REWORK_2026-09-26.md:110"
    ],
    "note": "第 45 片真相重做的撤改电池（5 条，见 TRUTH_REWORK…:110）。",
    "path": "/tmp/s45/battery.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md:130",
     "docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md:146",
-    "docs/audit/RECOMPUTE_ENTRYPOINTS_F-RECOMPUTE-ENTRYPOINTS_2026-09-28.md:18",
-    "docs/audit/RECOMPUTE_ENTRYPOINTS_F-RECOMPUTE-ENTRYPOINTS_2026-09-28.md:82"
+    "docs/audit/RECOMPUTE_ENTRYPOINTS_F-RECOMPUTE-ENTRYPOINTS_2026-09-28.md:20",
+    "docs/audit/RECOMPUTE_ENTRYPOINTS_F-RECOMPUTE-ENTRYPOINTS_2026-09-28.md:84"
    ],
-   "note": "第 46 片 DXF 血缘变异电池（10 条：杀 10 / 存活 0 / 注入无效 0 / 对照臂 rc=0，见 DRAWING_DXF_LINEAGE…:130 与 :146 判决表）。本轮本文 §一 也引了它一次，所以这条的引用数在涨而判决仍是 0——正是 cited_by 只能现读的原因。",
+   "note": "第 46 片 DXF 血缘变异电池（10 条：杀 10 / 存活 0 / 注入无效 0 / 对照臂 rc=0，见 DRAWING_DXF_LINEAGE…:130 与 :146 判决表）。本轮本文 §一 也引了它一次，所以这条的引用数在涨而判决仍是 0——正是 `cited_by_at_emit_time` 只能现读的原因。",
    "path": "/tmp/s46/battery.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md:131",
     "docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md:148"
    ],
@@ -70,7 +70,7 @@
    "path": "/tmp/s46/bytes_probe.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md:132",
     "docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md:147"
    ],
@@ -78,7 +78,7 @@
    "path": "/tmp/s46/sig_gap.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/DXF_REWORK_F-REWORK-DXF_2026-09-26.md:126",
     "docs/audit/DXF_REWORK_F-REWORK-DXF_2026-09-26.md:139"
    ],
@@ -86,22 +86,22 @@
    "path": "/tmp/s47/battery.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/DRIFT_SCAN_COST_F-DRIFT-4_2026-09-26.md:74"
    ],
    "note": "第 55 片漂移扫描的形态探针：直接调那条常驻用例里的同一个探针（见 DRIFT_SCAN_COST…:74）。",
    "path": "/tmp/s55/shape.py"
   },
   {
-   "cited_by": [
+   "cited_by_at_emit_time": [
     "docs/audit/CONTRACT_BINDING_F-C6_2026-09-25.md:206"
    ],
    "note": "第 30 片契约绑定的变异集（21/21，见 CONTRACT_BINDING…:206）。这是宿主重启把 /tmp 清空那一批里最早的证据之一，也是第 63 片造 closeout_verifier 的直接动因。",
    "path": "/tmp/slice30-mutations.py"
   }
  ],
- "note_semantics": "每条必须自己说清三件事：它是哪一片的什么量具、它当时的判决读数是多少、那个读数抄在哪篇取证文档的哪一行。缺任何一件就退化成本轮上一版那种十三份同一句话的占位文本（常驻用例只保证非空，不保证有信息量）。",
- "rule": "面 ⑤ 对每一条 `<解释器> 路径.py|.sh` 形态的入口判四种归属；落不到仓库里的必须在本文列出，否则判红。列进来不等于放过： `cited_by` 为空或某条现在已能解析时，判据会以「登记册该撤」反向开火。",
+ "note_semantics": "每条 note 必须自己说清三件事：它是哪一片的什么量具、它当时的判决读数是多少、那个读数抄在哪篇取证文档的哪一行。缺任何一件就退化成占位文本（常驻用例只保证非空，不保证有信息量）。",
+ "rule": "面 ⑤ 对每一条 `<解释器> 路径.py|.sh` 形态的入口判五种归属（tracked / untracked / dead / delegated / placeholder）；落不到仓库里的必须在本册 `entries` 里逐条列出，否则判红。列进来不等于放过：判据每次现读语料，某条现在又能解析了、或现读扫不到任何引用它的行时，会以「登记册该撤」反向开火。",
  "shape_borrowed_from": "lychee 的 --exclude/--exclude-path/.lycheeignore（豁免是一份显式配置文件而不是行内注释）；mdBook 的 ignore/no_run/compile_fail（把「不跑」说成一种被记录的形状）",
  "what": "文档里点名、但在干净签出中不可解析的复算入口登记册（判红面 ⑤ 的 grandfather 名单）"
 }

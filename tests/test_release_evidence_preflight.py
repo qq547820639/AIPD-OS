@@ -10,6 +10,9 @@
 "present 但 parsed=false"就是把操作员最容易犯的那件事说错了）；
 合规侧要证"只换 `generated_at` 照样能绑"（否则每轮正常收尾都被自己拒掉），
 还要证**拒写不半写**（树里已经躺着的证据不许被动过一半）。
+
+本文件后来成为"绑定前拒绝"这一族的落点：第 86 片把 `--source-commit` 提成操作员必填、
+第 88 片把同一半闸推到 `write_evidence()` 的 API 侧，两族各带自己的合规侧（见下面分节）。
 """
 from __future__ import annotations
 
@@ -19,6 +22,8 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -300,3 +305,58 @@ def test_explicit_anchor_lands_verbatim_and_is_not_head(tmp_path: Path) -> None:
     for name in ("SOURCE_MANIFEST.json", "PROVENANCE.json"):
         doc = json.loads((out / name).read_text(encoding="utf-8"))
         assert doc["source_commit"] == anchor, (name, doc["source_commit"])
+
+
+# ---------------------------------------------------------------------------
+# 第 88 片：同一半闸的 API 侧。
+# 第 86 片关的是操作员入口，`write_evidence()` 的 `source_commit` 仍带 `= None` 默认，
+# 而 `generate_source_manifest` / `generate_provenance` 里那句
+# `source_commit or _default_source_commit(repo)` 会把它静默写成当时的 HEAD——
+# 锚点是清单内容的一部分，所以这条通道不当场报错，只在下一轮绑定读成"清单被改过"。
+# `generate_*` 那一层的默认值**有意保留**：`production_release_gate` 的
+# `source_manifest_zero_diff` 要按"当前树"现算一份清单再比 (path, sha256)，
+# 它不消费锚点；收紧到必填只会让那把尺在没有 tag 的树上无路可走。
+
+
+def test_api_has_no_anchor_default(tmp_path: Path) -> None:
+    """少传锚点是 `TypeError`，不是"按 HEAD 算一份"：默认值本身已被删掉。"""
+    repo = _repo(tmp_path)
+    out = tmp_path / "out"
+    with pytest.raises(TypeError) as exc:
+        ev.write_evidence(repo, out, "5.6.0", None, None)  # type: ignore[call-arg]
+    assert "source_commit" in str(exc.value), str(exc.value)
+    assert not out.exists(), "签名面失败时也不该留半个目录"
+
+
+@pytest.mark.parametrize("bad", [None, "", "a660405", "z" * 40, " " + "a" * 39])
+def test_api_refuses_a_malformed_anchor_before_any_write(tmp_path: Path, bad) -> None:
+    """显式传 `None`／空串／短 SHA／非十六进制都在任何落盘之前抛 `BindPreflightError`。
+
+    用 `out` 目录不存在来判"排在 mkdir 之前"：本函数原来的形状正是先 `mkdir` 再算，
+    第 84 片为此专门把两阶段顺序钉过一次（`test_gate_is_wired_into_write_evidence_before_any_write`）。
+    """
+    repo = _repo(tmp_path)
+    out = tmp_path / "out"          # tmp_path 每个参数化实例都是新目录，不必再拼唯一名
+    with pytest.raises(ev.BindPreflightError) as exc:
+        ev.write_evidence(repo, out, "5.6.0", None, None, bad)
+    assert "40 位十六进制" in str(exc.value), str(exc.value)
+    assert not out.exists(), str(exc.value)
+
+
+def test_api_writes_the_explicit_anchor_verbatim_and_it_is_not_head(tmp_path: Path) -> None:
+    """合规侧：走 API 的显式锚点逐字落进两份清单，且不等于该仓库 HEAD。
+
+    没有这一支，"必填"可能只是把一个错误的值传到底——本仓第 62 片就是这么红的。
+    """
+    repo = _repo(tmp_path)
+    head = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"],
+                          capture_output=True, text=True).stdout.strip()
+    anchor = "c" * 40
+    assert anchor != head, "夹具前提：锚点要与 HEAD 不同形，否则这条测不出"
+    out = tmp_path / "out"
+    got = ev.write_evidence(repo, out, "5.6.0", None, None, anchor)
+    assert set(got) >= {"SOURCE_MANIFEST.json", "PROVENANCE.json"}, sorted(got)
+    for name in ("SOURCE_MANIFEST.json", "PROVENANCE.json"):
+        doc = json.loads((out / name).read_text(encoding="utf-8"))
+        assert doc["source_commit"] == anchor, (name, doc["source_commit"])
+        assert doc["source_commit"] != head, name

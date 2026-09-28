@@ -519,6 +519,12 @@ python scripts/doc_command_census.py
 #     上线前量的分母：命令形态 107 处，其中真死链 18 处全部来自历轮写在宿主 `/tmp` 的
 #     电池/探针脚本（内容已不可再生 ⇒ 逐条登记），占位模板 5 处（`scripts/X.py` 这类
 #     描述判据自己的写法）⇒ 不判那一档必须先有，否则新尺一上线就咬自己。
+#     上面那三个数是**第 87 片那一次的**，不是当前值：这一面语料含 `docs/audit/`，
+#     文档多写一行引用分母就往前走（第 88 片同一把尺读成 119 / 死链 20 / 占位 8）。
+#     当前值一律由 `--json` 的 `corpus.entry_points / corpus.entry_states` 现读。
+#     册子里那列引用位置现在叫 `cited_by_at_emit_time`（第 88 片降级）：它只在
+#     `--emit-register` 那一刻写一次，判据不读它，「再没被引用」由语料现算；
+#     `--emit-register` 刷新时按 `path` 带旧 note，目标读不出就整批不落盘。
 #     git 读不出的树（合成语料、无 .git 的镜像）自动退成「存在即合规」并把 git_unknown
 #     记进读数，不把未入库那档折成违规。
 python scripts/absence_claim_census.py

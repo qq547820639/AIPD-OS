@@ -497,9 +497,11 @@ def entry_points(root: Path,
       delegated   —— `scripts/…`，那一批的存在性由判红面 ④ 负责，这里只数不判；
       placeholder —— 模板形态，不判，只数。
 
-    分母由本轮实测得到：命令形态引用 104 处 / 其中占位 5 处 /
-    真死链 18 处（全是 `/tmp/…battery.py` 这类历轮写在宿主 /tmp 的电池脚本）/
-    其余可解析。没有这个数就不上线，是第 85 片"先量再立"的同一条纪律。
+    分母**不在本文抄**（与面 ③ 同一条规矩，第 87 片立档时抄过一次、第 88 片复核时
+    那份 104/5/18 已经漂成 119/8/20）：现读值看 `--json` 的
+    `corpus.entry_points` 与 `corpus.entry_states`，五档之和等于总读数由 `--self-test`
+    钉住。立档前确实量过一轮（"先量再立"是第 85 片的纪律），但量到的数是**那一次的**，
+    而这一档的语料含 `docs/audit/` —— 文档每多写一行引用，分母就自己往前走。
     """
     files, problems = entry_corpus(root)
     if tracked_override is not None:
@@ -1052,28 +1054,77 @@ def _self_test(tmp: Path) -> int:
     return 0
 
 
-def emit_register(root: Path, dst: Path) -> int:
-    """把当前判为死链的入口写成登记册草案（note 留空，由人补"为什么不再可复算"）。"""
+# 登记册的五段说明文字**只在代码里写一次**：`emit_register` 把它们整批刷进册子，
+# 常驻用例 `test_real_repo_register_shares_the_instrument_constants` 逐字段比。
+# 第 87 片的教训是这两份各抄各的——册里的 `rule` 停在"四种归属"而代码写"五种"，
+# 没有任何判据看得见，直到本轮复核才读出来。
+REGISTER_WHAT = ("文档里点名、但在干净签出中不可解析的复算入口登记册"
+                 "（判红面 ⑤ 的 grandfather 名单）")
+
+REGISTER_RULE = (
+    "面 ⑤ 对每一条 `<解释器> 路径.py|.sh` 形态的入口判五种归属"
+    "（tracked / untracked / dead / delegated / placeholder）；"
+    "落不到仓库里的必须在本册 `entries` 里逐条列出，否则判红。列进来不等于放过："
+    "判据每次现读语料，某条现在又能解析了、或现读扫不到任何引用它的行时，"
+    "会以「登记册该撤」反向开火。")
+
+REGISTER_SNAPSHOT_SEMANTICS = (
+    "`cited_by_at_emit_time` 只在 `--emit-register` 那一刻写一次，判据不读它："
+    "「再没被引用」那一半由语料现算（`entry_points` 的行集），不由这一列决定。"
+    "面 ⑤ 的语料含 `docs/audit/` 下的 `.md`，所以取证文档每多写一行引用就会让这一列过期"
+    "（本册是 `.json`，不在语料里）——它是给读者定位原文的路标，不是账。")
+
+REGISTER_NOTE_SEMANTICS = (
+    "每条 note 必须自己说清三件事：它是哪一片的什么量具、它当时的判决读数是多少、"
+    "那个读数抄在哪篇取证文档的哪一行。缺任何一件就退化成占位文本"
+    "（常驻用例只保证非空，不保证有信息量）。")
+
+REGISTER_SHAPE_BORROWED_FROM = (
+    "lychee 的 --exclude/--exclude-path/.lycheeignore（豁免是一份显式配置文件"
+    "而不是行内注释）；mdBook 的 ignore/no_run/compile_fail"
+    "（把「不跑」说成一种被记录的形状）")
+
+
+def emit_register(root: Path, dst: Path) -> dict:
+    """把当前判为死链的入口写成/刷新登记册。
+
+    `--emit-register` 的产物里 note 是空的，由人补"为什么不再可复算"。刷新时**按 path
+    把旧 note 带过去**：note 是判据真正消费的豁免理由，草案覆盖式重写会把历轮手写的
+    依据一起抹掉（第 87 片复核登记过这条，本轮连同快照列降级一并处理）。
+    返回 `{"written": n, "missing_notes": [path…], "refused": ""|"…"}`；
+    目标存在但读不出时整批不写。
+    """
     erows, _git_unknown, _p = entry_points(root)
     by: dict[str, list[str]] = {}
     for rel, no, path, state in erows:
         if state == "dead":
             by.setdefault(path, []).append(f"{rel}:{no}")
+    old_notes: dict[str, str] = {}
+    if dst.is_file():
+        try:
+            existing = json.loads(dst.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            return {"written": 0, "missing_notes": [],
+                    "refused": f"目标登记册读不出，草案不落盘以免抹掉手写依据：{exc}"}
+        for e in existing.get("entries", []):
+            note = str(e.get("note") or "")
+            if note:
+                old_notes[str(e.get("path") or "")] = note
     doc = {
-        "what": ("文档里点名、但在干净签出中不可解析的复算入口登记册"
-                 "（判红面 ⑤ 的 grandfather 名单）"),
-        "rule": ("面 ⑤ 对每一条 `<解释器> 路径.py|.sh` 形态的入口判五种归属；"
-                 "落不到仓库里的必须在本文列出，否则判红。列进来不等于放过： "
-                 "`cited_by` 为空或某条现在已能解析时，判据会以「登记册该撤」反向开火。"),
-        "shape_borrowed_from": ("lychee 的 --exclude/--exclude-path/.lycheeignore（豁免是一份"
-                                "显式配置文件而不是行内注释）；mdBook 的 ignore/no_run/compile_fail"
-                                "（把「不跑」说成一种被记录的形状）"),
-        "entries": [{"path": k, "cited_by": v, "note": ""} for k, v in sorted(by.items())],
+        "what": REGISTER_WHAT,
+        "rule": REGISTER_RULE,
+        "cited_by_at_emit_time_semantics": REGISTER_SNAPSHOT_SEMANTICS,
+        "note_semantics": REGISTER_NOTE_SEMANTICS,
+        "shape_borrowed_from": REGISTER_SHAPE_BORROWED_FROM,
+        "entries": [{"path": k, "cited_by_at_emit_time": v,
+                     "note": old_notes.get(k, "")} for k, v in sorted(by.items())],
     }
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(json.dumps(doc, ensure_ascii=False, indent=1, sort_keys=True) + "\n",
                    encoding="utf-8")
-    return len(doc["entries"])
+    return {"written": len(doc["entries"]),
+            "missing_notes": [e["path"] for e in doc["entries"] if not e["note"]],
+            "refused": ""}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1082,7 +1133,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", default="", help="把读数写成 JSON")
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--emit-register", default="",
-                    help="把当前死链入口写成登记册草案（人工补 note 后入库）")
+                    help="把当前死链入口写成登记册草案（人工补 note 后入库；"
+                         "已存在的册按 path 保留旧 note）")
     args = ap.parse_args(argv)
     if args.self_test:
         import tempfile
@@ -1090,8 +1142,15 @@ def main(argv: list[str] | None = None) -> int:
             return _self_test(Path(td))
     root = Path(args.repo).resolve()
     if args.emit_register:
-        n = emit_register(root, Path(args.emit_register).resolve())
-        print(f"登记册草案：{n} 条死链入口 → {args.emit_register}")
+        got = emit_register(root, Path(args.emit_register).resolve())
+        if got["refused"]:
+            print(f"拒绝：{got['refused']}")
+            return 2
+        miss = got["missing_notes"]
+        print(f"登记册草案：{got['written']} 条死链入口 → {args.emit_register}"
+              f"（note 待补 {len(miss)} 条）")
+        for p in miss:
+            print(f"  缺 note：{p}")
         return 0
     rep = audit(root)
     print(render(rep))

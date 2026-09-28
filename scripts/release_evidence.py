@@ -25,6 +25,8 @@
 退 2 有两种：锚点缺失或不是 40 位 SHA（第 86 片），以及带 ``--test-report`` 时那道
 同源闸没过（第 84 片）。不带 ``--test-report`` 时同源闸不成立（配方第一步"只刷清单"
 本来就没有报告可比），但**锚点那一半照样要过**——漂到 HEAD 的清单正是从那一步开始的。
+第 88 片把同一半闸也放到 ``write_evidence()`` 自己手上：命令行不再是唯一入口，
+直接调 API 的脚本此前仍能靠"参数缺省 = None"落到 HEAD 的静默通道上。
 
 用法（`--source-commit` 必填，见下）：
     python scripts/release_evidence.py --repo . --out . --version 5.6.0 \
@@ -364,13 +366,25 @@ def preflight_report_vs_source(report_info: dict, source_doc: dict) -> str:
 
 def write_evidence(repo: Path, out_dir: Path, version: str,
                    bundle: Path | None, test_report: Path | None,
-                   source_commit: str | None = None) -> dict:
+                   source_commit: str) -> dict:
     """生成并写出三份证据文件，返回 (path -> manifest dict)。
+
+    `source_commit` **没有默认值**（第 88 片）：命令行那一侧第 86 片就必填了，
+    但这个 API 仍可被别的脚本直接调，缺锚点会一路走到 `generate_*` 里的
+    `or _default_source_commit(repo)` 而静默写成当时的 HEAD——锚点是清单内容的一部分，
+    所以它不当场报错，只在下一轮绑定时读成"清单被改过"（第 52/62 片各为此多跑一个全量）。
+    现在缺参是 `TypeError`，传 `None`／空串／截断 SHA 都在任何落盘之前抛 `BindPreflightError`。
 
     两阶段：先把要写的内容全算出来、过一遍 `preflight_report_vs_source`，
     任何拒绝都发生在**任何落盘动作之前**——连输出目录都不建，
     因为半写会让树里留一份与清单不同源的证据。
     """
+    if not re.fullmatch(r"[0-9a-fA-F]{40}", source_commit or ""):
+        raise BindPreflightError(
+            f"拒绝：`source_commit` 必须是 40 位十六进制的最终 tag SHA，实得 "
+            f"{source_commit!r}。本函数不给默认值，也不接受"
+            "『先按 HEAD 算、回头再改』——漂掉的锚点不报错，只会让下一轮绑定读成"
+            "「清单在跑完全量之后被改过」（由 `git rev-parse <tag>^{commit}` 现读）。")
     source = generate_source_manifest(repo, source_commit)
     source["version"] = version
     prov = generate_provenance(repo, bundle, test_report, source_commit)
@@ -408,8 +422,9 @@ def main(argv=None) -> int:
     ap.add_argument("--bundle", default="", help="发布压缩包路径")
     ap.add_argument("--test-report", default="", help="pytest 机器可读 JSON 报告路径")
     ap.add_argument("--source-commit", default="",
-                    help="最终 tag SHA（预置到 SOURCE_MANIFEST/PROVENANCE 的 source_commit，"
-                         "默认为当前 HEAD）")
+                    help="最终 tag SHA，**必填**（预置到 SOURCE_MANIFEST/PROVENANCE 的 "
+                         "source_commit）；留空或非 40 位十六进制一律退 2，"
+                         "不默认成当前 HEAD（第 86 片关命令行、第 88 片关 API）")
     a = ap.parse_args(argv)
 
     repo = Path(a.repo).resolve()

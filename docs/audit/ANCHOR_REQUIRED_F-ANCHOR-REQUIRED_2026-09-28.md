@@ -75,6 +75,13 @@ X3 不是 X2 的重复：X2 撤掉整条校验，X3 把「恰好 40 位」退化
    因为 `tests/test_release_evidence.py` 的 `_make_repo` 直接用它、且那里"锚点 = 临时仓库 HEAD"是**正确语义**。
    本轮只关操作员入口（`main`），没有把 API 一并收紧——收紧要先把那套夹具改成显式传锚点，
    那是另一次改契约，不该混在这一片里顺手做。
+   **→ 第 88 片已闭合**：夹具改成显式传 `head`（`tests/test_release_evidence.py:95,102`），
+   `write_evidence()` 的默认值删掉、缺锚点在任何落盘之前抛 `BindPreflightError`
+   `scripts/release_evidence.py:367`（校验体在 `:382`），牙在 `tests/test_release_evidence_preflight.py`
+   末尾三条（`:321`/`:332`/`:346`，含把"恰好 40 位"退化成"至少 7 位"那一臂）。
+   `generate_source_manifest()` / `generate_provenance()` 的 `or _default_source_commit(repo)`
+   **有意保留**：`production_release_gate` 的 `source_manifest_zero_diff` 要按当前树现算一份
+   清单再只比 `(path, sha256)`，那条通道既不写盘也不消费锚点。
 2. 第 85 片 §八.1 那条（脚本目录豁免清单）与 §八.2、§八.3 都还开着，本轮没动。
 
 ## 五、终局读数（绑定那一跑，全部现读）

@@ -7,7 +7,12 @@
 ## 1. 三份证据
 
 生成入口：`scripts/release_evidence.py`，`--source-commit` **必填**（第 86 片）：
-留空或不是 40 位十六进制一律退 2、整批不写。三份证据都以**最终 tag SHA**
+留空或不是 40 位十六进制一律退 2、整批不写。第 88 片把同一半闸放到 API 上：
+`write_evidence(..., source_commit)` **没有默认值**，少传是 `TypeError`，
+传 `None`／空串／短 SHA 在任何落盘之前抛 `BindPreflightError`；
+底层 `generate_source_manifest()` / `generate_provenance()` 仍保留"默认取当前 HEAD"，
+因为发布门的 `source_manifest_zero_diff` 要按当前树现算清单再只比 `(path, sha256)`，
+那条通道既不写盘也不消费锚点。三份证据都以**最终 tag SHA**
 （`git rev-parse v5.6.0^{commit}` 现读，**不是** `git rev-parse HEAD`）为锚点，互不依赖、互不自引用。
 
 | 证据文件 | 覆盖范围 | 关键字段 |

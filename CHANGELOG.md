@@ -951,19 +951,70 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.49 F-SILENT-EXPIRY 第 88 片：两处"写下去就没人再判"的面——锚点的 API 默认值、登记册里只写不读的那一列**：
+  这一片不动判据形状，专门收"文档说了一套、实现做了另一套"与"参数留了默认、默认就是错的那一值"。
+  **A. `write_evidence()` 去锚点默认值**：第 86 片把 `--source-commit` 提成操作员必填，但
+  `scripts/release_evidence.py:367` 那个 API 仍有 `source_commit: str | None = None`，
+  而下游 `generate_*` 里 `or _default_source_commit(repo)` 会把缺省的锚点**静默写成当时的 HEAD**——
+  锚点是清单内容的一部分，所以它不当场报错，只在下一轮绑定读成「清单在跑完全量之后被改过」
+  （第 52 片与第 62 片各为此多跑一整个全量）。现在参数无默认值（少传是 `TypeError`），
+  传 `None`／空串／短 SHA 在任何落盘之前抛 `BindPreflightError`（连输出目录都不建）。
+  `generate_source_manifest()` / `generate_provenance()` 的默认**有意保留**并由常驻用例说明理由：
+  发布门的 `source_manifest_zero_diff`（`scripts/production_release_gate.py:414`）要按当前树现算
+  一份清单再只比 `(path, sha256)`，那条通道既不写盘也不消费锚点。
+  夹具那侧同批改掉：`tests/test_release_evidence.py:95,102` 显式传 `head`。
+  新常驻 3 条（`tests/test_release_evidence_preflight.py:321`/`:332`/`:346`）＝缺省必红、
+  五种坏形状逐档必红、显式锚点逐字落地且**不等于** HEAD。
+  **B. 登记册的 `cited_by` 降级**：第 87 片那本册子的 `rule` 文本声称"`cited_by` 为空 ⇒
+  判据会以「登记册该撤」反向开火"，而 `load_entry_register`（`scripts/doc_command_census.py:463-482`）
+  只取 `path`/`note`——那一列**只写不读**，文档在说谎。修法取"改名"而不是"删列"
+  （删列会连读者定位原文的路标一起丢）：列名 `cited_by_at_emit_time`，
+  册子的五段说明文字改由 `REGISTER_*` 常量单点生成，
+  `test_real_repo_register_shares_the_instrument_constants` 逐字段比（当场抓出另一处同族病：
+  册里 `rule` 写"四种归属"而代码写"五种"，两份手抄各漂各的、谁都不判）；
+  `test_the_snapshot_column_is_decoration_not_authority` 用"填对／填错／用旧键名／整列缺"
+  四种写法读出**同一份判决**，把"不参与判决"钉成事实而不是注释。
+  `emit_register` 顺带补了两条它本来没有的前提：刷新时按 `path` 带旧 note（原来整体覆盖，
+  重跑就抹掉历轮手写的豁免依据），目标读不出时整批不落盘。登记册已由 `--emit-register` 自己刷新一次
+  （13 条，note 逐字未变，`docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json`）。
+  **C. 抄在文中的分母与失效配方**：`entry_points()` docstring 的"104/5/18"、
+  README 与本篇 v5.48 条目的"107 处"，全部改成"由 `--json` 的 `corpus.entry_points / entry_states`
+  现读"并保留带轮次标签的历史读数（本轮同一把尺现读 **119 处 / 死链 20 / 占位 8**，
+  `--json` 键非空由常驻用例钉下界）；v5.48 的 144/122 更正为第 87 片复核后的 143/127，
+  `closeout_verifier` 的立档轮次由"第 63 片"改回 **第 64 片**（v5.25 那行就是它自己的出生记录）。
+  `docs/audit/RELEASE_FIX_PLAN_2026-08-14.md:59` 那行配方写的是字面量 `--source-commit HEAD`，
+  第 86 片起照抄必退 2 ⇒ 改成 `git rev-parse v5.6.0^{commit}` 并注明原文意图。
+  电池 `docs/audit/s88/battery88.py`：**KILLED 7 / 7**，对照臂 X0 原样全绿，两支被改文件
+  收尾复算 sha 与开局一致（`release_evidence.py e55cb9d8ee60`、`doc_command_census.py 43c9a166cc1e`）；
+  其中 X3 是第 86 片 X3 那条"把恰好 40 位退化成至少 7 位"的腐化路径在 API 侧重演，
+  X4 反过来把快照列接回判据 ⇒ 被三条用例同时抓住（含量具自己的 `--self-test`）。
+  选型跳过声明（按最高指令第三节例外条款）：本片只关两条已存在的通道的默认值与说谎文本，
+  不引入新技术栈、不改会影响多个文件的方案形状，候选对比无新增决策可改；
+  第 87 片已就面 ⑤ 的选型做过 lychee / mdBook / markdown-link-check 六维对比并记在
+  `docs/audit/RECOMPUTE_ENTRYPOINTS_F-RECOMPUTE-ENTRYPOINTS_2026-09-28.md` §一之二，本轮沿用。
+  本轮新量到、**没在本片动**的一条：锚点旗子有两个名字——`tests/conftest.py:54` 读
+  `AIPD_SOURCE_COMMIT`，而 `tests/test_golden_projects_e2e.py:75` 读 `AIPD_PIN_COMMIT`，
+  全仓没有任何配方或文档设置后者（只有 `tests/test_golden_isolation.py:68` 用 `"deadbeef"` 当夹具值）
+  ⇒ 黄金项目产物的"锚定到最终 tag"在真实发布路径上从没生效过。产物落在 `releases/`（不参与发布哈希），
+  且黄金件按属主决定停在修复前几何，故记为第 89 片候选而不是顺手改。
 - **v5.48 F-RECOMPUTE-ENTRYPOINTS 第 87 片：文档里的"复算入口"第一次有人判它落不落得了地**：
   第 86 片收口时顺手清点 `tmp/` 的 16 个 worktree 登记，量出一个比"要不要清理"大得多的问题——
   把 `docs/audit/*.md` + `CHANGELOG.md` + `README.md` 里所有 `tmp/sNN/...` 形态的路径片段
-  按整路径求差（144 个），**122 个**指向从没入库的工件：历轮的变异电池、探针脚本、`state.db`
-  写在宿主 `/tmp`，重启即没（第 63 片那把 `closeout_verifier` 的起因就是这件事，
+  按整路径求差，当时读到 **144** 个、其中 **122** 个指向从没入库的工件（第 87 片复核后更正为
+  **143 / 127**：另有 6 条先前按基名归成"陈旧指针"，实为基名巧合，并入不可再生一档，
+  见 `docs/audit/WORKTREE_INVENTORY_2026-09-28.md` §六）：
+  历轮的变异电池、探针脚本、`state.db`
+  写在宿主 `/tmp`，重启即没（第 64 片那把 `closeout_verifier` 的起因就是这件事，
   但那只解决了"验签脚本"一种，没人管"复算入口"这一整类主张）。
   本轮把这一类立成 `doc_command_census` 的判红面 ⑤：文档里 `<解释器> 路径.py|.sh` 的入口判五档
   `tracked / untracked / dead / delegated / placeholder`——**"文件在本地但 `git ls-files` 不列它"
   判红**（本轮自己就差点栽在这格：一份取证件写完没提交），绝对路径与仓库内不存在的算死链，
   必须逐条写进 `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json` 并说明为什么不再可复算，
   没登记就判红；登记册还双向对账（条目"现在又能解析了"或"再没被引用"都反向开火）。
-  上线前量的分母（不是抄的，现读）：命令形态 **107** 处 ⇒ 入库可解析 5 / 未入库 0 /
-  死链 18（全部已登记，去重 13 条）/ 占位模板 5 / 交给面 ④ 的 `scripts/…` 79。
+  上线前量的分母（**第 87 片那一次的现读**，不是当前值）：命令形态 **107** 处 ⇒ 入库可解析 5 /
+  未入库 0 / 死链 18（全部已登记，去重 13 条）/ 占位模板 5 / 交给面 ④ 的 `scripts/…` 79。
+  当前值由 `--json` 的 `corpus.entry_points / entry_states` 现读——这一档的语料含 `docs/audit/`，
+  所以本篇自己就把它往前推（第 88 片复核时同一把尺读成 119/8/20）。
   **占位那一档是被自测逼出来的**：不写它，README 里描述面 ④ 的那行 `python scripts/X.py`
   会让新尺一上线就咬自己。git 读不出的树（合成语料、无 `.git` 的镜像）自动退成"存在即合规"
   并把 `git_unknown` 记进读数——不知道不折成违规。选型（引依赖／借语义／自研）与六维对比、
@@ -991,6 +1042,8 @@
   `a660405` 重新通过；只有第二臂能抓住"以后有人嫌它严、顺手改成 `match`+`{7}`"这条最可能的腐化路径。
   `write_evidence()` 这条 **API 仍可传 `None`**（临时仓库夹具里"锚点=该仓库 HEAD"是正确语义），
   本轮只关操作员入口；把 API 一并收紧要先把那套夹具改成显式传锚点，那是另一次改契约，不混进本片。
+  **（第 88 片已按这段的前提做完那一半：夹具改成显式传锚点、`write_evidence` 的默认值删掉、
+  缺锚点在任何落盘之前抛 `BindPreflightError`，见 v5.49。）**
 - **v5.46 F-DOC-CMD-SCRIPTS 第 85 片：文档里 `python scripts/X.py …` 那一面第一次有人判，顺手量出一个**不该做**的门**：
   入口是第 84 片 §八.3 那句"README 量具目录里没有 `release_evidence.py` 这一行"。本轮去核实它时先量分母，
   结果**我那句话的前提是错的**：`scripts/*.py` 43 个，只有 **3** 个在 README 有行首可执行写法，36 个压根没提——
