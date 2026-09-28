@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 377319,
-      "sha256": "ca321d5d2ffbf98acc2aedf6a01b4ed1b5f75400810209edd29120c6969d9890"
+      "size": 380252,
+      "sha256": "47f403df1e66ae61e2b597be9f569caaa8ec90ca2cec5c9f60432b07cf5b90db"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 71331,
-      "sha256": "854a0bb8f77d40d02230ae6795cb03229fb64f969b31fafea200753de96daacb"
+      "size": 72942,
+      "sha256": "c185d6ca2950a8c430289aa1ce430b63b645ed23748c801ac807a1cafaa8c120"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -404,6 +404,11 @@
       "path": "docs/security/dependency-cve-review.md",
       "size": 8372,
       "sha256": "68870b8f2d6845081274df41cb4c94282ff18d4ae2edeb77c08672f165b9fd78"
+    },
+    {
+      "path": "docs/security/dependency-license-review.md",
+      "size": 5513,
+      "sha256": "6c3ba0c1f1ef7a78b8f690ca251c1b75365cd53c45d25d877515cb6c5dea5c63"
     },
     {
       "path": "evals/cad_evals.json",
@@ -764,6 +769,11 @@
       "path": "scripts/decision_policy.py",
       "size": 1671,
       "sha256": "371de81a1dfdd16e367cc5ee31d2aef4657830b3aa09ff95b0603d144002c864"
+    },
+    {
+      "path": "scripts/dependency_license_gate.py",
+      "size": 31715,
+      "sha256": "baf0eadb895dc99bb3d4414896482c8a1abaf5ac8905db854997e0c1e22b5342"
     },
     {
       "path": "scripts/doc_command_census.py",
@@ -2659,6 +2669,11 @@
       "path": "tests/test_delivery_baseline.py",
       "size": 7867,
       "sha256": "964907291c86456b35da0cd29de22ce32c2704e2e0667982f9535e64a3ef8b9c"
+    },
+    {
+      "path": "tests/test_dependency_license_gate.py",
+      "size": 9485,
+      "sha256": "92a09f091f9d45779934c7ee9033e94cbd91b58515ad9bd7a27a18ebc3d17178"
     },
     {
       "path": "tests/test_dispatcher.py",
