@@ -469,7 +469,7 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
    `git log --format=%H -- PROVENANCE.json` 行数与报告内容 sha256 现算，不是"绑定次数"。）
    ⇒ **【第 83 片就地闭合这一半】** 上面那句"下一片该做的是"已经做完，两处按实测改了形状：
    ① 字段名不叫 `source_manifest_sha256` 而叫 `source_manifest_fingerprint`——写"sha256"会让人以为
-   比的是清单文件的原始字节摘要，而 `release_evidence.py:133` 每次生成都重写 `generated_at`，
+   比的是清单文件的原始字节摘要，而 `release_evidence.py` → `generate_source_manifest` 每次生成都重写 `generated_at`，
    原始字节摘要每轮必变 ⇒ 判据必须比**内容规范摘要**（剥掉 `generated_at` 后 `sort_keys` 再 sha256）。
    尺子只有一把：`scripts/release_fingerprint.py`，生产侧（`tests/conftest.py:69`）与
    验签侧（`scripts/closeout_verifier.py:354,368`）都 import 它；另有一把**另写一遍**的盲尺
@@ -485,6 +485,11 @@ PyVista 的离屏配方要装 `libosmesa6`——那都是把"能不能出图"变
    强制力因此挪到**写入侧**（收尾脚本绑定前逐位比对）＋**生产侧常驻用例**（真
    `pytest --json-report` 端到端）；下一片要把它接进 `release_evidence.py` 本体（拒绑没有
    字段或字段不同源的报告），否则"退 2"守的仍是"我记得跑这一步"。
+   > 更正（第 84 片，2026-09-28）：最后一句已经不做数了——比对搬进
+   > `scripts/release_evidence.py` 的 `preflight_report_vs_source()`，在三份内容算完、
+   > 第一个字节落盘之前跑，坏报告一律退 2 且三份证据一个都不写。
+   > 本片那道闸自己的证据在 `docs/audit/s84/battery84.py`（七臂，KILLED 7/7）
+   > 与 `tests/test_release_evidence_preflight.py`（8 条常驻），与上面那六臂是两把不同的尺子。
    本条剩下的**没做**部分照旧挂着：① 那一格降级成的"可选提示"仍没实现（不做也不影响正确性）；
    ② `RELEASE_MANIFEST`/`BUNDLE_MANIFEST` 的同类指纹（第 83 片取证文档 §八.1 记了为什么不划算）。
    出处：`docs/audit/REPORT_MANIFEST_FINGERPRINT_F-REPORT-MANIFEST-FINGERPRINT_2026-09-28.md`。

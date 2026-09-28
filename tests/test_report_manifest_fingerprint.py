@@ -52,8 +52,9 @@ def test_module_digest_matches_an_independently_written_copy() -> None:
 def test_digest_ignores_only_generated_at_among_top_level_fields() -> None:
     """两极：只换时间戳 ⇒ 同一个数；动文件条目 ⇒ 不同的数。
 
-    "只换时间戳必须绿"这一格是本片存在的理由——`release_evidence.py:133` 每次生成
-    都重写 `generated_at`，用整份文件的 sha256 当判据会把每轮正常收尾判成假红。
+    "只换时间戳必须绿"这一格是本片存在的理由——
+    `release_evidence.py` → `generate_source_manifest` 每次生成都重写 `generated_at`，
+    用整份文件的 sha256 当判据会把每轮正常收尾判成假红。
     """
     doc = json.loads(MANIFEST.read_text(encoding="utf-8"))
     base = rf.fingerprint_of_document(doc)

@@ -1,6 +1,9 @@
 """发布证据体系：生成 Source / Bundle / Provenance 三份独立证据 (P0-1)。
 
-三份证据都以最终 tag SHA（``git rev-parse HEAD``）为锚点，互不依赖、互不自引用：
+三份证据都以**最终 tag SHA**（`--source-commit`，由 `git rev-parse v5.6.0^{commit}` 现读）
+为锚点，互不依赖、互不自引用。锚点不是 HEAD：本仓的发布锚点按约定停在 tag 上，
+传 HEAD 会被 `production_release_gate` 的 `commit_matches_head` 与收尾验签的
+`pinned_source_binding` 判红（第 62 片真犯过）。
 
 - ``SOURCE_MANIFEST.json``  —— 只覆盖“确定的源文件集合”（git ls-files 已跟踪文件），
   排除所有“生成后自身改变”的文件（本证据自身、BUNDLE_MANIFEST、PROVENANCE、
@@ -8,9 +11,17 @@
 - ``BUNDLE_MANIFEST.json``  —— 对最终发布压缩包逐条计算 sha256，记录 bundle 自身摘要、
   bundle 文件名与每个条目的 path/size/sha256。
 - ``PROVENANCE.json``       —— 记录 source_commit / build_environment / build_time /
-  dependency_lock / test_report / bundle_hash。
+  dependency_lock / test_report（含报告自记的 ``source_manifest_fingerprint``）/ bundle_hash。
 
 仅依赖标准库 + ``cryptography``（用于 build_environment 的包版本信息，非强制）。
+
+带 ``--test-report`` 时先过一道闸（第 84 片）：三份内容全部算完之后、**第一个字节落盘之前**，
+`preflight_report_vs_source` 核对"报告自记的清单**内容**摘要 == 即将写出的这份清单"，
+报告读不出 / 缺字段 / 不同源一律抛 `BindPreflightError` 并**整批不写**。
+比的是 `release_fingerprint` 的规范摘要而不是原始字节——`generated_at` 每轮都换。
+
+退码：0 写好 / 2 被这道闸拒（配方据此停下，不是"没活干"）/ 其它异常按 Python 默认。
+不带 ``--test-report`` 时闸不成立（配方第一步"只刷清单"本来就没有报告可比）。
 
 用法：
     python scripts/release_evidence.py --repo . \
@@ -29,6 +40,11 @@ import sys
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+# 清单指纹的算法只许有一处定义（`release_fingerprint.py`）：生产侧 tests/conftest.py、
+# 验签侧 closeout_verifier.py 与这里必须同一把尺，否则"报告记的"与"即将写出的"各算各的。
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import release_fingerprint  # noqa: E402
 
 _REPO = Path(__file__).resolve().parent.parent
 
@@ -275,6 +291,11 @@ def _parse_pytest_report(path: Path) -> dict:
                             if isinstance(data, dict) else None),
         "generated_at": (data.get("created") or data.get("generated_at")
                          if isinstance(data, dict) else None),
+        # 第 84 片：报告自记的清单**内容**摘要，一并抄进证据，让 PROVENANCE 自己
+        # 说明"这份 attestation 是在哪一份清单之下跑的"（source_commit 说不了这件事：
+        # 提交号在刷清单时不变，而清单会变）。
+        "source_manifest_fingerprint": (data.get("source_manifest_fingerprint")
+                                        if isinstance(data, dict) else None),
     }
 
 
@@ -302,21 +323,56 @@ def generate_provenance(repo: Path, bundle: Path | None = None,
 # --------------------------------------------------------------------------
 # 写出三份文件
 # --------------------------------------------------------------------------
+class BindPreflightError(RuntimeError):
+    """报告与"即将写出的这份清单"不同源 ⇒ 不许绑定（第 84 片）。"""
+
+
+def preflight_report_vs_source(report_info: dict, source_doc: dict) -> str:
+    """比对报告自记的清单**内容摘要**与即将写出的那份清单。
+
+    比的为什么不是清单文件的原始 sha256：`generate_source_manifest` 每次都重写
+    `generated_at`，原始字节每轮必变（`release_fingerprint` 的规范摘要正是为此）。
+    报告侧没有可比对象（缺字段、报告读不出）也一律拒：那种报告说不清自己测的是哪一份清单，
+    把它写成 attestation 就是一条无法归因的证据。
+    """
+    rec = str(report_info.get("source_manifest_fingerprint") or "")
+    want = release_fingerprint.fingerprint_of_document(source_doc)
+    if not report_info.get("parsed"):
+        raise BindPreflightError("报告读不出（present 但 parsed=false）——没有可比对象，拒绝绑定")
+    if not rec:
+        raise BindPreflightError(
+            "报告没有 source_manifest_fingerprint：它出自第 83 片之前的 conftest，"
+            "或那段注入被删了。这种报告无法自证测的是哪一份清单 ⇒ 拒绝绑定")
+    if rec != want:
+        raise BindPreflightError(
+            f"报告记的清单指纹 {rec[:12]} != 即将写出的这份清单 {want[:12]}"
+            "（清单在跑完全量之后被改过：那份报告测的是旧内容 ⇒ 重跑，或把改动退回报告之前）")
+    return want
+
+
 def write_evidence(repo: Path, out_dir: Path, version: str,
                    bundle: Path | None, test_report: Path | None,
                    source_commit: str | None = None) -> dict:
-    """生成并写出三份证据文件，返回 (path -> manifest dict)。"""
+    """生成并写出三份证据文件，返回 (path -> manifest dict)。
+
+    两阶段：先把要写的内容全算出来、过一遍 `preflight_report_vs_source`，
+    任何拒绝都发生在**第一个字节落盘之前**——半写会让树里留一份与清单不同源的证据。
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     source = generate_source_manifest(repo, source_commit)
     source["version"] = version
     prov = generate_provenance(repo, bundle, test_report, source_commit)
     prov["version"] = version
-
-    results = {}
     bundle_manifest = None
     if bundle is not None and bundle.is_file():
         bundle_manifest = generate_bundle_manifest(bundle, repo_root=repo)
         bundle_manifest["version"] = version
+
+    if test_report is not None:
+        preflight_report_vs_source(prov.get("test_report") or {}, source)
+
+    results = {}
+    if bundle_manifest is not None:
         (out_dir / "BUNDLE_MANIFEST.json").write_text(
             json.dumps(bundle_manifest, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8")
@@ -349,7 +405,11 @@ def main(argv=None) -> int:
     test_report = Path(a.test_report).resolve() if a.test_report else None
     source_commit = a.source_commit or None
 
-    results = write_evidence(repo, out, a.version, bundle, test_report, source_commit)
+    try:
+        results = write_evidence(repo, out, a.version, bundle, test_report, source_commit)
+    except BindPreflightError as exc:
+        print(f"拒绝写入证据（一个字节都没落盘）：{exc}")
+        return 2
     for name in results:
         print(f"wrote: {out / name}")
     return 0

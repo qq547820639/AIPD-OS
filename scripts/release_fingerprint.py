@@ -2,9 +2,10 @@
 """清单指纹：`SOURCE_MANIFEST.json` **内容**的规范摘要（去掉每次重生都会变的 `generated_at`）。
 
 为什么不是整份文件的 sha256（这是本轮实测出来的，不是推的）：
-`scripts/release_evidence.py:133` 每次生成都把 `generated_at` 写成当前时间，所以原始字节
-摘要在每轮收尾的「刷清单 → 跑全量 → 绑定」三步之间必然不同——拿它当判据就是给正常流程
-判一条假红。规范摘要只吃`version`/`source_commit`/`coverage`/`files`这些**内容**字段，
+`scripts/release_evidence.py` → `generate_source_manifest` 每次生成都把 `generated_at` 写成当前时间，
+所以原始字节摘要在每轮收尾的「刷清单 → 跑全量 → 绑定」三步之间必然不同——拿它当判据就是给正常流程
+判一条假红。规范摘要走的是**黑名单**（只剥 `VOLATILE_KEYS`），除 `generated_at` 之外的顶层键
+（`name`/`version`/`source_commit`/`coverage`/`files`）**全部进摘要**，
 于是「只换了时间戳」读成同一份清单，而「清单里某个文件的 sha256 变了」读成不同。
 
 这份模块被两头消费：`tests/conftest.py` 在生成报告时算一次并写进报告，

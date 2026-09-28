@@ -13,7 +13,7 @@
 | --- | --- | --- |
 | `SOURCE_MANIFEST.json` | 只覆盖「确定的源文件集合」（`git ls-files` 已跟踪文件），逐文件记录 `path/size/sha256` | `source_commit`、`version`、`coverage` |
 | `BUNDLE_MANIFEST.json` | 对最终发布压缩包逐条计算 `sha256`，并记录 bundle 自身摘要 | `bundle_sha256`、`entries[]`、`entry_count` |
-| `PROVENANCE.json` | 构建上下文与来源 | `source_commit`、`build_environment`、`build_time`、`dependency_lock`、`test_report`、`bundle_hash` |
+| `PROVENANCE.json` | 构建上下文与来源 | `source_commit`、`build_environment`、`build_time`、`dependency_lock`、`test_report`（含自记的 `source_manifest_fingerprint`）、`bundle_hash` |
 
 ### 排除规则（避免自引用/自变）
 
@@ -29,6 +29,18 @@
 2. 打包后第二轮：写 `BUNDLE_MANIFEST.json`，并把 `bundle_hash` 回填进 `PROVENANCE.json`。
 
 测试中这两轮生成已覆盖（见 `tests/test_release_evidence.py` 的 `_make_repo`）。
+
+### 带 `--test-report` 的那一步会先过一道闸（第 84 片）
+
+`write_evidence` 是两阶段的：先把三份文件的内容**全部算完**，再用
+`preflight_report_vs_source` 核对「报告自记的 `source_manifest_fingerprint`
+== 即将写出的这份 `SOURCE_MANIFEST` 的**内容**摘要」，任一不符即抛
+`BindPreflightError`、`main()` 退 **2**，且**一个字节都不落盘**（不是"写完再删"）。
+三种拒绝形状各配一条常驻用例：报告读不出、缺字段、清单内容在跑完之后被改过。
+比的是规范摘要而不是原始字节 sha——`generated_at` 每轮都换，比原始字节会把
+正常收尾全部拒掉（那条假红控制也在常驻用例里）。
+
+不带 `--test-report` 时这道闸不成立（第一轮刷清单本来就没有报告可比）。
 
 ## 2. 摘要 / MAC / 数字签名的区别
 
@@ -84,3 +96,7 @@ python scripts/sign_release.py aipd-os-5.6.0.zip           # 默认：MAC（HMAC
   函数级集成、干净 clone 与解压包审计可复现。
 - `tests/test_packaging.py`：`RELEASE_MANIFEST.json` 与 `SOURCE_MANIFEST.json` 内部一致性与
   磁盘哈希一致性（发布物齐全时执行；无清单时跳过）。
+- `tests/test_release_evidence_preflight.py`（第 84 片）：上面那道闸的 8 条常驻牙——三种坏形状
+  各一条、合规侧两条（指纹相同能绑、只换 `generated_at` 仍能绑）、"拒写不半写"一条
+  （先合法绑一次再拿坏报告去绑，磁盘字节必须逐字节不变）、不带报告不被闸一条，
+  以及一条 AST 接线断言（那道 `if` 必须排在第一个 `.write_text(` 之前）。

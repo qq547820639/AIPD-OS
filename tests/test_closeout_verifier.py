@@ -492,6 +492,33 @@ def test_binding_decides_which_copy_of_the_report_is_authority(tmp_path: Path) -
     assert fired2 - STAGE_BOUND == {"report_bound_to_provenance"}, sorted(fired2)
 
 
+def test_bind_provenance_fixture_shape_mirrors_production(tmp_path: Path) -> None:
+    """`_bind_provenance` 是生产侧 `_parse_pytest_report` 的手写替身，两侧键集不许各走各的。
+
+    第 84 片给生产侧加了 `source_manifest_fingerprint`；替身若不跟着加，夹具就与真实证据
+    形状脱钩——而量具只读其中几格，这种漂移不会让它红（"两处各写一遍"的标准失效方式）。
+    """
+    import release_evidence as ev  # noqa: PLC0415
+
+    report = tmp_path / "r.json"
+    report.write_text(json.dumps({
+        "source_commit": "b" * 40, "package_version": "9.9.9",
+        "summary": {"passed": 1, "total": 1, "collected": 1},
+        "tests": [{"nodeid": "tests/t.py::test_a", "outcome": "passed"}],
+        "source_manifest_fingerprint": "c" * 64}), encoding="utf-8")
+    prod = ev._parse_pytest_report(report)
+    prov = tmp_path / "PROVENANCE.json"
+    cov._bind_provenance(prov, report)
+    fixture = json.loads(prov.read_text(encoding="utf-8"))["test_report"]
+    shared = {"path", "sha256", "passed", "failed", "total", "present",
+              "source_manifest_fingerprint"}
+    assert shared <= set(prod), sorted(shared - set(prod))
+    assert prod["source_manifest_fingerprint"] == "c" * 64, prod
+    assert fixture["source_manifest_fingerprint"] == prod["source_manifest_fingerprint"], \
+        "替身没抄这个键：夹具与真实证据形状已经不同源"
+    assert fixture["sha256"] == prod["sha256"], (fixture["sha256"], prod["sha256"])
+
+
 def test_the_instrument_itself_is_cited_in_the_tool_catalog() -> None:
     """README 的量具目录要有行首可执行写法——第 60 片那把尺子判的就是这个面。"""
     lines = [ln.strip() for ln in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()]

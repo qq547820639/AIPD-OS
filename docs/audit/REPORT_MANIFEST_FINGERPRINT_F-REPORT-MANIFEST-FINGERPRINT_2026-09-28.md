@@ -77,7 +77,7 @@ ResourceDescriptor（`name` + `digest`）表达"在哪份配置下跑的"，是�
 ## 四、判据形状：三条实测出来的取舍，不是推的
 
 **① 摘要求的是"内容规范摘要"，不是清单文件的 sha256。**
-`scripts/release_evidence.py:133` 每次生成都把 `generated_at` 写成当前时间 ⇒ 原始字节摘要
+`scripts/release_evidence.py` → `generate_source_manifest` 每次生成都把 `generated_at` 写成当前时间 ⇒ 原始字节摘要
 在"刷清单 → 跑全量 → 绑定"这三步之间必然变。拿文件 sha 当判据＝每轮给正常流程判一条假红。
 规则写在 `scripts/release_fingerprint.py:24`（`VOLATILE_KEYS = ("generated_at",)`）、
 `:28`（只剥顶层）、`:31`（`sort_keys` 后 sha256）。
@@ -107,6 +107,10 @@ C11 那一格读成 `kind="skipped"`；有字段才做磁盘对账。
 定形是三态各归各位：缺席＝没有可比基准（退 2，配方过不去）；强制力放在**写入侧**
 （收尾脚本在绑定前逐位比对，下一片接进 `release_evidence.py` 本体，见 §八.4）
 与**生产侧常驻用例**（真 `pytest --json-report` 端到端那条，删掉注入就翻）。
+> 更正（第 84 片，2026-09-28）：括号里那句"下一片接进本体"已经做完——比对现在长在
+> `scripts/release_evidence.py` 自己的 `preflight_report_vs_source()` 里，`write_evidence`
+> 在**第一个字节落盘之前**调用它，缺席/读不出/不同源一律拒写并退 2。
+> 上面那句"由更靠前的一道闸拦下"从本片起才是真的（见 §八 第 4 项的同处更正）。
 格名集合与 `STAGE_BOUND` 同步改到十一格；`test_eight_checks…` 那条"真语料必须全绿"的用例
 现在**限定**地允许 `problems ⊆ {report_fingerprint_recorded}`，并要求这一判能由
 "报告里确实没有那个键"解释——换绑之后 `problems` 为空，该格回到必须绿的名单里。
@@ -161,6 +165,9 @@ C11 那一格读成 `kind="skipped"`；有字段才做磁盘对账。
 1. **"报告与清单同源"这件事现在是两处读的**：绑定脚本在写之前就比（不等退 8，是 C11 的事前档），
    `closeout_verifier` 在绑定之后照 C10/C11 复核。事前档现在只活在收尾脚本里 ⇒ 下一片接进
    `release_evidence.py` 本体（§八.4），否则它守的是"我记得跑这一步"。
+   > 更正（第 84 片）：这一条的"否则"已经不再成立——事前档搬进了 `release_evidence.py` 本体，
+   > 收尾脚本里那段逐位比对现在是**第二道**而不是唯一一道。读数：`tests/test_release_evidence_preflight.py`
+   > 8 条常驻用例 + `docs/audit/s84/battery84.py` 七臂全杀。
 2. **换绑之前那 5 条红不是判据坏，是判据在要求换绑**。第一版把它写成判红造成自锁，
    改判前提塌之后配方仍然过不去（退 2），只是不再伪造"有 5 条违规"这个读数。
    写这一节时报告已经带着字段，`problems` 为空，十一格全绿——那条限定放行
@@ -194,13 +201,26 @@ python docs/audit/s83/battery83.py                                   # 六臂，
 2. **缺字段读成前提塌（退 2），C11 同时沉默**。这一判的代价是：常驻用例在"旧报告还绑着"的那段
    窗口里对该格不判绿（限定成 `problems ⊆ {report_fingerprint_recorded}` 且必须能由"报告没那个键"
    解释）。所以强制力**必须在写入侧补上**，见第 4 项。
+   > 更正（第 84 片）：那一道闸已经补上，因此"沉默"现在只发生在**已经有一份带字段但被拒绑的报告**
+   > 这种不可能组合上；写侧的 `BindPreflightError` 会在任何字节落盘前把这种报告拦下（退 2）。
 3. **`environment` 恒为 `{}` 这件事本仓没修**。它是上游 issue #89；本仓不受影响（不读那一格），
    但值得知道：任何指望 `environment` 携带元数据的方案在本仓 pin 上都是空转。
-4. **下一片该做：把"拒绑没有指纹／指纹不同源的报告"接进 `scripts/release_evidence.py` 本体。**
+4. ~~**下一片该做：把"拒绑没有指纹／指纹不同源的报告"接进 `scripts/release_evidence.py` 本体。**~~
+   **已闭（第 84 片，2026-09-28）**。
    现在这道比对只在收尾脚本的前提核对里（`tmp/s83/s83b.sh` 第 2 步：报告指纹与磁盘清单逐位比对，
    不等就退 8），也就是说它守的是"我记得跑这一步"，不是工具自己。落点：`_parse_pytest_report`
-   （`release_evidence.py:236-278`）把 `source_manifest_fingerprint` 抄进
+   （`release_evidence.py` → `_parse_pytest_report`）把 `source_manifest_fingerprint` 抄进
    `PROVENANCE.test_report`，`write_evidence` 在写之前比"报告记的那份"与"即将落盘的这份"，
    不等就拒（不写文件、非零退码）。两极都要配：删掉 conftest 注入 ⇒ 必须拒；
    只刷 `generated_at` ⇒ 必须照绑。这一格补上之后，"缺席读成前提塌"才真正不是放水，
    而是"由更靠前的一道闸拦下"。
+   > 实际落点与上面这段的三点不同（读者按这段去找会找不到，所以逐条写明）：
+   > ① 比对**没有**放进 `_parse_pytest_report`——那个函数只做"读报告、抄字段"，把判决塞进去会让
+   > 它同时依赖"即将写出的清单"这个它本来看不到的参数；新增的是独立函数
+   > `preflight_report_vs_source(report_info, source_doc)`，由 `write_evidence` 在三份内容全部
+   > 算完、**第一个字节落盘之前**调用，抛 `BindPreflightError` → `main()` 退 2。
+   > ② 坏形状从一种变成三种：除"缺字段""不同源"外还补了"报告读不出（present 但 parsed=false）"，
+   > 因为那种报告根本没有可比对象，写成证据就是一条无法归因的记录。
+   > ③ 除"必须拒"两极外还补了第三极：**拒写不半写**——先合法绑一次，再拿坏报告去绑，
+   > 磁盘上已有的证据必须逐字节不变（这条是被 W4 那臂逼出来的）。
+   > 上面引用的 `release_evidence.py` → `_parse_pytest_report` 行号自本片起失效（该文件已增长），别按行号跳。

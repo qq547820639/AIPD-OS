@@ -951,6 +951,40 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.45 F-BIND-PREFLIGHT 第 84 片：绑定那道闸从"我记得跑一步"搬进工具本体，拒写不半写**：
+  第 83 片把 C10 从判红改成前提塌（判红会自锁，那一条到今天仍然对），代价是"报告没带清单指纹"
+  在验签侧只剩挡配方的分量——它挡的是**已经写完的证据**。本片把强制力补回写入侧：
+  `scripts/release_evidence.py` 带 `--test-report` 时，`write_evidence` 改成两阶段，三份内容全部
+  算完之后先过 `preflight_report_vs_source()`，比对"报告自记的 `source_manifest_fingerprint`"与
+  "即将写出的这份 `SOURCE_MANIFEST` 的**内容**摘要"，三种坏形状（报告读不出 / 缺字段 / 清单在跑完
+  之后被动过）一律抛 `BindPreflightError` → `main()` 退 2，**一个字节都不落盘**。
+  **选型沿用第 83 片已经对过权威源的那条思路，本轮不开新轮子**：比对逻辑复用
+  `scripts/release_fingerprint.py`（同一把尺，生产者/验签者/绑定者三方共用其
+  `fingerprint_of_document`），新增的只有"在写之前调它"这一步。落点为什么不在
+  `_parse_pytest_report`：那个函数只做"读报告、抄字段"，把判决塞进去要它看见"即将写出的清单"
+  这个它本来没有的参数——第 83 片取证文档 §八.4 原本就把落点写成那里，本片按实测改判并就地更正。
+  **三条实测而不是推的**：① 比的必须是规范摘要而不是原始字节——`generate_source_manifest`
+  每轮重写 `generated_at`，比原始字节会把"刷清单→跑全量→绑定"这条正常链每轮拒掉；
+  这一条由 `test_only_generated_at_moving_still_binds` 钉住，电池臂 W3 把实现改成比原始字节后
+  三条用例同时翻红。② **拒写不半写**要有独立原告：`test_refusal_does_not_touch_evidence_already_on_disk`
+  先合法绑一次、再拿坏报告去绑，磁盘字节必须逐字节相同——这一条是被电池臂 W4（把闸挪到
+  `SOURCE_MANIFEST` 落盘之后）逼出来的，只有 AST 那条接线断言证不了字节面。
+  ③ **这道闸的第一个真实靶子就是上一片自己**：由 git blob 现算，第 83 片在 `3d5e0f6`
+  换入的那份报告自记 fp=`424e343708fd`，而 §七 改判重锚（`1f46a21`）之后的清单是
+  `74b031491f1a`——两者不同源。当年靠 C11 在**绑定之后**读成红，本片之后是**写之前**直接拒。
+  **电池自身的缺陷也算本轮读数**：第一次跑 `docs/audit/s84/battery84.py` 记 `KILLED 6/7 + BAD-ANCHOR 1`，
+  那条 BAD-ANCHOR 是假读数——它的 preflight 判据写作 `if new and new in src`，而**删除型 rep 的
+  `new` 天然是 `old` 的子串**，于是把一条合法注入判成"空改写"，W4 因此从未落地过。
+  收窄成 `if old in new and new in src`（只对纯插入成立）后复跑 `KILLED 7/7`；两版日志都留着
+  （`battery84.run1.log` 是错读数本身）。记分面第 81 片已经留过一条同族纪律（那一轮终局读数里的"一臂多红 6 支"，
+  `docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md:195`）；这次是它的**反向**：
+  不是把一笔注入记成多红，而是**判据过严把一条有牙的臂读成没牙**。
+  镜像面这一圈：`tests/conftest.py` 那句"缺席由 `report_fingerprint_recorded` 判红"是第 83 片
+  自己留下的过期话，本片就地改齐；`PROVENANCE.test_report` 新增抄一份指纹，验签侧
+  `_bind_provenance` 那份手写替身同步加键，并加一条**跨文件键集对照**常驻用例
+  （`test_bind_provenance_fixture_shape_mirrors_production`）——替身与生产脱钩这种漂移
+  量具自己永远看不见，只有另一把尺读得到。常驻 +9 条（新文件 8 条 + `tests/test_closeout_verifier.py` 1 条，`grep -c '^def test_'` 现算），
+  被哈希文件 683 → 684（`docs/audit/s84/` 整体不参与）。
 - **v5.44 F-REPORT-MANIFEST-FINGERPRINT 第 83 片：报告从此自证"测的是哪一份清单"，C6 那句替身证明被换成机器读的数**：
   第 81 片 §七.5 那条入口项在本片开头按事实拆成两半——"事前警告"那一半的危害说明（重绑会把报告锚点
   前推、`test_roster_gap…` 因此红）已被 `7761c7c` 的"锚点取最早一次绑定"拆掉，降级为可选提示；
@@ -972,7 +1006,7 @@
   ResourceDescriptor（`name`+`digest`），**借它"配置资源也用内容摘要"这一个思路**，不借 JSON 形状
   （本仓两个读者都按顶层键读）；SLSA provenance 讲构建产物，不对题。
   **判据形状三条是实测不是推的**：① 指纹是**内容规范摘要**而不是清单文件的 sha256——
-  `release_evidence.py:133` 每次生成都重写 `generated_at`，比原始字节就是给每轮"刷清单→跑全量→绑定"
+  `release_evidence.py` → `generate_source_manifest` 每次生成都重写 `generated_at`，比原始字节就是给每轮"刷清单→跑全量→绑定"
   判一条假红（`scripts/release_fingerprint.py:24,28,31` 定规则，`--self-test` 里"两份字节不同而摘要相同
   必须判绿"那一臂钉住，电池臂 Y3 把验签侧改成比原始字节 sha 后那一臂当场红）；
   ② 新增两格各管一件事：`report_fingerprint_recorded` 判"生产者记没记"——**缺字段读成前提塌（退 2）而不是判红**（这条改判是本轮实测逼出来的，见下面那段自锁），
@@ -1609,7 +1643,7 @@
   宿主重启把 `/tmp` 清掉之后，下一轮只能从提交摘要重推配方，于是同一格里连踩两次**已有记录**的红
   （`AIPD_SOURCE_COMMIT` 传成本轮 HEAD ⇒ gate 判 STALE；PATH 缺 `.venv/bin` ⇒ `pip-audit` fail-closed 假红），
   各多烧一整套全量。这台机器判九格，三格是主线结构上看不见的：
-  ① **报告字节 ↔ 证据**——`release_evidence.py:236-278` 早把报告 `sha256` 写进 `PROVENANCE`，
+  ① **报告字节 ↔ 证据**——`release_evidence.py` → `_parse_pytest_report` 早把报告 `sha256` 写进 `PROVENANCE`，
   却没人事后重算（C1）；② **汇总数是不是现数的**——`production_release_gate._check_test_report`（`:503-542`）
   只读 provenance 里抄过去的三个数字，而其中 `failed` 是 `total - passed - skipped` **推导**的，
   于是「summary 被改过」与「`tests[]` 被截断而 summary 留着」今天无人可见（C2 由 `tests[]` 现数直方图，

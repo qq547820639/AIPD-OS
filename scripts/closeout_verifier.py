@@ -11,7 +11,7 @@
 - **不是** `scripts/production_release_gate.py`。它的 `_check_test_report`（本轮重开
   `:503-542`）只读 `provenance["test_report"]` 里那几个**已经抄过一遍**的数字，加一条
   `report_sc != anchor` 的 STALE 判决；它既不数 `tests[]`，也不重算报告自己的 sha256。
-- 而 `scripts/release_evidence.py:236-278` 的 `failed` 是由 `total - passed - skipped`
+- 而 `scripts/release_evidence.py` → `_parse_pytest_report` 的 `failed` 是由 `total - passed - skipped`
   **推导**的——所以"summary 被人改过"与"`tests[]` 被截断但 summary 留着"这两件事，
   现有主线一条都看不见。本量具的 C2 就是把计数**由名单自己数出来**再与两处副本对。
 - provenance 记了报告的 `sha256` 却没人事后重算：C1 补上，证明"绑进证据的报告"与
@@ -30,19 +30,22 @@
   C8 plaintiffs_measured          本轮新补的用例（`--expect-test`）确实在名单里跑过并且过了
   C9 size_ratchet                 `--min-tests` 下界（借 dorny/test-reporter 的 `fail-on-empty` 语义，
                                   但把它从"空就红"收紧成"低于下界就红"，因为本仓分母是 2 千量级）
-  C10 report_fingerprint_recorded  报告自带 `source_manifest_fingerprint`。缺字段读成**前提塌（退 2）**
-                                  而不是违规：报告是不可变的历史产物，把缺席判红会自锁
-                                  ——attestation 必须 0 failed，而任何"旧报告还在树里"时跑出来的
-                                  全量都带着这条红，于是永远拿不到可绑的报告（第 83 片实测到）。
-                                  退 2 一样挡住收尾配方；强制力在写入侧（绑定脚本拒绑没有字段的报告）
-                                  与生产侧常驻用例（真 `pytest --json-report` 那条）。
+  C10 report_fingerprint_recorded  报告自带 `source_manifest_fingerprint`。
+                                  缺字段读成**前提塌（退 2）**而不是违规：报告是不可变的历史产物，
+                                  把缺席判红会自锁——attestation 必须 0 failed，而任何
+                                  "旧报告还在树里"时跑出来的全量都带着这条红，于是永远
+                                  拿不到可绑的报告（第 83 片实测到）。
+                                  退 2 一样挡住收尾配方；强制力的另一半在**写入侧**——
+                                  `release_evidence.py` 的 `preflight_report_vs_source`
+                                  （第 84 片）在绑定时对没有字段/读不出/不同源的报告**整批拒写并退 2**，
+                                  另有生产侧常驻用例（真 `pytest --json-report` 那条）。
   C11 report_fingerprint_matches_disk
                                   报告记的清单指纹 == 磁盘当前 `SOURCE_MANIFEST.json` 的内容摘要。
                                   C6 只能证"那份报告里两条清单哈希用例过了"，而清单一旦被之后的
                                   刷新重写，那句证明说的就是旧哈希——这一格把"报告测的是当前这份
                                   清单"变成机器读的数
 
-C11 比的为什么**不是**清单文件的原始 sha256（本轮实测）：`release_evidence.py:133` 每次生成
+C11 比的为什么**不是**清单文件的原始 sha256（本轮实测）：`release_evidence.py` → `generate_source_manifest` 每次生成
 都重写 `generated_at`，所以"刷清单 → 跑全量 → 绑定"这三步之间原始字节的摘要必然变红。
 摘要求 `scripts/release_fingerprint.py` 的**规范摘要**（剥掉 `generated_at` 后排序取 sha256），
 "只换时间戳"读成同一份清单，"某个文件的 sha256 变了"才读成不同。
@@ -361,8 +364,9 @@ def audit(report_path: Path, worktree: Path, provenance_path: Path,
         # 报告是不可变的历史产物，"带指纹"只有新 conftest 跑出来的报告才可能满足。
         # 把缺席判成违规会自锁：attestation 必须 0 failed，而任何在"旧报告还在树里"时跑出来的
         # 全量都带着这条红 ⇒ 永远拿不到可绑的报告。缺席也不读成通过：退 2 一样挡住收尾配方，
-        # 真正的牙挪到写入侧（绑定脚本与 `release_evidence.py` 拒绑没有字段的报告）
-        # 与生产侧常驻用例（`tests/test_report_manifest_fingerprint.py` 那条真 pytest 端到端）。
+        # 真正的拦截在**写入侧**：`release_evidence.preflight_report_vs_source`（第 84 片）
+        # 在第一个字节落盘之前就对没有字段/读不出/不同源的报告整批拒写并退 2
+        # 另有生产侧常驻用例（`tests/test_report_manifest_fingerprint.py` 那条真 pytest 端到端）。
         problem("report_fingerprint_recorded",
                 "报告没有 source_manifest_fingerprint：它出自第 83 片之前的 conftest，"
                 "或那段注入被删了。这一格要求的是「换绑一份带字段的报告」，"
@@ -376,7 +380,8 @@ def audit(report_path: Path, worktree: Path, provenance_path: Path,
     elif not rec_fp:
         rep["checks"]["report_fingerprint_matches_disk"] = {
             "ok": True, "kind": "skipped",
-            "detail": "报告没带指纹（已由 report_fingerprint_recorded 判为前提塌），这一格没有可比基准"}
+            "detail": "报告没带指纹（已由 report_fingerprint_recorded 判为前提塌），"
+                      "这一格没有可比基准"}
     else:
         judge("report_fingerprint_matches_disk", rec_fp == disk_fp,
               f"报告记的清单指纹 {rec_fp[:12]} != 磁盘当前清单 {disk_fp[:12]}"
@@ -493,7 +498,7 @@ def _pristine_report(base: Path, nodeids: list[str], source_commit: str,
 
 
 def _bind_provenance(prov: Path, report: Path) -> None:
-    """按 `release_evidence.py:236-278` 的口径重绑证据（`failed` 由汇总推导）。
+    """按 `release_evidence.py` → `_parse_pytest_report` 的口径重绑证据（`failed` 由汇总推导）。
 
     夹具必须照抄生产侧那套推导：否则"summary 说谎"这一支会同时点亮两处副本，
     读起来像 C2 抓到了两个独立缺陷，而实际只有一个来源。
@@ -508,7 +513,9 @@ def _bind_provenance(prov: Path, report: Path) -> None:
         "source_commit": data.get("source_commit"),
         "test_report": {"present": True, "parsed": True, "path": str(report),
                         "sha256": _sha256_path(report), "passed": passed,
-                        "failed": max(total - passed - skipped, 0), "total": total}},
+                        "failed": max(total - passed - skipped, 0), "total": total,
+                        "source_manifest_fingerprint":
+                            data.get("source_manifest_fingerprint")}},
         ensure_ascii=False, indent=1), encoding="utf-8")
 
 
@@ -694,7 +701,7 @@ def _self_test(tmp: Path) -> int:
     arm("C11 注入：磁盘清单的内容与报告记的指纹不同（多一个文件条目）",
         {"report_fingerprint_matches_disk"}, ["--manifest", str(drift_path)])
 
-    # 假红控制：`release_evidence.py:133` 每次生成都重写 `generated_at`，所以"只换时间戳"
+    # 假红控制：`release_evidence.py` → `generate_source_manifest` 每次生成都重写 `generated_at`，所以"只换时间戳"
     # 必须读成同一份清单——否则每轮「刷清单 → 跑全量 → 绑定」都会红在正常流程上。
     regen = json.loads(json.dumps(manifest_doc))
     regen["generated_at"] = "2026-01-01T00:00:00+00:00"

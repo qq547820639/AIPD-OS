@@ -22,7 +22,7 @@
 
 | 格 | 判什么 | 主线为什么看不见 |
 | --- | --- | --- |
-| C1 `report_bound_to_provenance` | 报告字节 sha256 == `PROVENANCE.test_report.sha256`（证据**还没绑**这份报告时读成前提塌，见 §四 第 4 条） | `release_evidence.py:236-278` 写入这条 sha，但**没有任何一处事后重算** |
+| C1 `report_bound_to_provenance` | 报告字节 sha256 == `PROVENANCE.test_report.sha256`（证据**还没绑**这份报告时读成前提塌，见 §四 第 4 条） | `release_evidence.py` → `_parse_pytest_report` 写入这条 sha，但**没有任何一处事后重算** |
 | C2 `counts_counted_from_roster` | 汇总数由 `tests[]` 现数，再与 `summary` 与 `PROVENANCE` **两处副本**对账 | `production_release_gate._check_test_report`（`:503-542`）只读 provenance 里抄过去的三个数字；而那三个数字里的 `failed` 是 `total - passed - skipped` **推导**的 |
 | C3 `terminal_clean` | `exitcode == 0` 且没有 `failed`/`error` 终态（setup/call/teardown 三相都查） | 门读的是"推导出来的 failed 数"，相位级 error 会被折进同一个数 |
 | C4 `roster_covers_tree` | 树上测试文件 ↔ 名单文件**双向求差**为空；每文件「名单 ≥ 树上 def 数」；重复 nodeid 单列 | 没有任何常驻件把"报告里的名单"与"树上的 `def test_`"对上过——少跑一个文件今天读成 2512 条全绿 |
