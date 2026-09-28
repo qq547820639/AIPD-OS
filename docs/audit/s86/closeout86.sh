@@ -79,17 +79,27 @@ bad = [c["check"] for c in d["checks"] if not c.get("passed")]     # 键叫 chec
 print("release_ready:", d.get("release_ready"), "| 未过:", bad or "无", "| 项数:", len(d["checks"]))
 PY
 
+# ---- 2 之后：先把发布门的取证件入库，再跑收尾验签。
+#      顺序不能颠倒——验签器自带 `worktree_clean`，上一步刚写的 gate.json
+#      若还是未跟踪，这一档必然判红（本轮第一次执行就是 CV_RC=4，只红这一条；
+#      把它们提交后再跑同一个验签器，11/11 全绿）。----
+cp "$X/gate.log" docs/audit/s86/
+git add docs/audit/s86/gate.json docs/audit/repository_snapshot.json
+git add -f docs/audit/s86/gate.log
+git commit -q -m "chore(s86): 收下发布门读数与重算的 repository_snapshot"
+echo "GATE_COMMIT_RC=$?"
+
 # ---- 3. 收尾验签（同样 stdout 落树外）----
 "$PY" scripts/closeout_verifier.py --tag v5.6.0 \
     --expect-test tests/test_release_evidence_preflight.py \
     --min-tests 2685 --json docs/audit/s86/closeout.json > "$X/closeout.log" 2>&1
 CV_RC=$?
 echo "CV_RC=$CV_RC  （0 全绿 / 4 判红 / 2 前提塌）"
-cp "$X/gate.log" "$X/closeout.log" docs/audit/s86/
+cp "$X/closeout.log" docs/audit/s86/
 tail -8 docs/audit/s86/closeout.log
 
-git add docs/audit/s86/gate.json docs/audit/s86/closeout.json docs/audit/repository_snapshot.json
-git add -f docs/audit/s86/gate.log docs/audit/s86/closeout.log
-git commit -q -m "chore(s86): 收下发布门与收尾验签的读数（取证件一并入库）"
+git add docs/audit/s86/closeout.json
+git add -f docs/audit/s86/closeout.log
+git commit -q -m "chore(s86): 收下收尾验签的读数（取证件一并入库）"
 echo "FINAL_COMMIT_RC=$?"
 echo "=== 收口链结束：GATE_RC=$GATE_RC CV_RC=$CV_RC ==="

@@ -76,3 +76,44 @@ X3 不是 X2 的重复：X2 撤掉整条校验，X3 把「恰好 40 位」退化
    本轮只关操作员入口（`main`），没有把 API 一并收紧——收紧要先把那套夹具改成显式传锚点，
    那是另一次改契约，不该混在这一片里顺手做。
 2. 第 85 片 §八.1 那条（脚本目录豁免清单）与 §八.2、§八.3 都还开着，本轮没动。
+
+## 五、终局读数（绑定那一跑，全部现读）
+
+| 步骤 | 命令 | 实际读数 |
+| --- | --- | --- |
+| 干净签出 | `git worktree add --detach .wt-s86 HEAD`（HEAD=`052f60b`） | 建树后 `release_fingerprint.py .wt-s86/SOURCE_MANIFEST.json` = `f39fdbb2cffc`，与主树同一值 |
+| 全量 | `PYTHONPATH=$PWD/src AIPD_SOURCE_COMMIT=<tag SHA> python -m pytest -q --json-report` | `PYTEST_RC=0`，`2680 passed, 5 skipped in 395.35s`，报告 `summary.collected=2685`、`len(tests)=2685`、`exitcode=0`、`source_commit=a660405201394050…`（= `v5.6.0^{commit}`，不是 HEAD）、`source_manifest_fingerprint=f39fdbb2cffc…` |
+| 绑定 | `release_evidence.py --repo . --out . --version 5.6.0 --source-commit <tag SHA> --test-report …` | `BIND_RC=0`（锚点必填与 40 位校验都放行）、回读 `PROVENANCE.test_report = present/parsed 均 True，2680p/0f/2685t`，指纹格 `f39fdbb2cffc…`；提交 `9555a84` |
+| 发布门 | `production_release_gate.py --release-ready --tag v5.6.0 --test-report …` | `GATE_RC=0`，`release_ready: True`，8/8 项全过（`workspace_clean=clean`、`source_manifest_zero_diff=zero diff`、`test_numbers_from_report passed=2680 failed=0 total=2685`、`signature_verifiable=Ed25519 signature verified`、`no_unacknowledged_cve=pip-audit: no unacknowledged CVE`） |
+| 收尾验签（第一次，随收口脚本） | `closeout_verifier.py --tag v5.6.0 --expect-test tests/test_release_evidence_preflight.py --min-tests 2685` | **`CV_RC=4`**，11 档里只红 `worktree_clean：工作树有 1 处未提交改动：['?? docs/audit/s86/gate.json']`，其余 10 档绿 |
+| 收尾验签（提交取证件后重跑同一个验签器） | 同上，HEAD=`77ac3f5` | **`CV_RC=0`，全部判据绿**：`worktree_clean：工作树干净`、`roster_covers_tree 树 218 文件 / 2595 个 def，报告 218 文件 / 2685 条，双向差集为空`、`size_ratchet 名单 2685 条 ≥ 下界 2685`、`report_bound_to_provenance sha256=3d3e3800cff1` |
+
+## 六、两处本轮实测到的链条性质（值得留在配方里）
+
+1. **`worktree_clean` 这一档管的是"取证件的落盘顺序"，不是产品质量**。第一次 `CV_RC=4`
+   不是发布门坏了：脚本把 `gate.json` 的 `git add` 排在了收尾验签**之后**，于是验签器
+   正好看见自己上一步留下的未跟踪件。判红内容与 s85 配方（先提交门读数、再验签）唯一的差别
+   就是那一次 `git add` 的位置——同一把尺、同一棵树，把 `gate.json`/`gate.log` 先入库再跑就 11/11。
+   已按此顺序改正 `docs/audit/s86/closeout86.sh`。两份执行读数**并存不覆盖**：判红那一跑的日志
+   是已入库的 `docs/audit/s86/closeout.log`（里面那条 `✗ worktree_clean` 原样留着），
+   全绿那一跑的 JSON 落在 `docs/audit/s86/closeout.json`、日志落在
+   `docs/audit/s86/closeout-recheck.log`，不把 4 判红改写成"看起来一直绿"。
+2. **提交 `docs/audit/**` 不会作废在飞的报告**：`SOURCE_EXCLUDE_PREFIXES` 含 `docs/audit/`
+   （`scripts/release_evidence.py` 第 74 行），实测在提交 `0186665`（新增 `closeout86.sh`）之后
+   `release_fingerprint.py SOURCE_MANIFEST.json` 仍是 `f39fdbb2cffc` = 报告所记，
+   所以绑定照样放行。反过来说：**改 `README.md`/`CHANGELOG.md`/`scripts/`/`tests/` 才会**——
+   那是第 84 片 §四之二 烧掉一整轮的原因，这条性质是它的安全侧对照。
+3. **`--min-tests` 从 2680 提到 2685**：`size_ratchet` 比的是报告 `tests` 名单条数
+   （`closeout_verifier.py` 第 419 行 `len(nodes) >= min_tests`）。上一轮（第 85 片）的名单是 2682，
+   本轮新增 3 条用例后实测 2685。写 2680 时它比上一轮还低，等于"本片新增用例没跑到"也不会红——
+   棘轮下界必须按本轮实测数现取，不能沿用一个更松的旧数。
+
+## 七、复算入口
+
+```bash
+cd AIPD-OS
+.venv/bin/python scripts/release_fingerprint.py SOURCE_MANIFEST.json | cut -c1-12   # 应为 f39fdbb2cffc
+.venv/bin/python -c "import json;d=json.load(open('docs/audit/s86/closeout.json'));print(d['readings'])"
+bash docs/audit/s86/closeout86.sh     # 整条链的配方；重跑会再绑一次（同内容 ⇒ 同指纹 ⇒ 仍放行）
+```
+电池：`docs/audit/s86/battery86.py`（三臂 X1/X2/X3，`合计 KILLED+CRASH-KILL 3 / 3`）。

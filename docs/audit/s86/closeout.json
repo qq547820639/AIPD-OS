@@ -1,12 +1,7 @@
 {
  "command": "closeout verify",
  "problems": [],
- "violations": [
-  {
-   "check": "worktree_clean",
-   "detail": "工作树有 1 处未提交改动：['?? docs/audit/s86/gate.json']"
-  }
- ],
+ "violations": [],
  "checks": {
   "report_bound_to_provenance": {
    "ok": true,
@@ -30,7 +25,7 @@
   },
   "pinned_source_binding": {
    "ok": true,
-   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD 9555a84a 的祖先",
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD 77ac3f55 的祖先",
    "kind": "violation"
   },
   "content_parity_measured": {
@@ -49,8 +44,8 @@
    "kind": "violation"
   },
   "worktree_clean": {
-   "ok": false,
-   "detail": "工作树有 1 处未提交改动：['?? docs/audit/s86/gate.json']",
+   "ok": true,
+   "detail": "工作树干净",
    "kind": "violation"
   },
   "plaintiffs_measured": {
@@ -76,10 +71,10 @@
   "tree_files": 218,
   "tree_defs": 2595,
   "report_files": 218,
-  "worktree_head": "9555a84aea7a905fe065179563c8198fe78c4aca",
+  "worktree_head": "77ac3f5524f77a2aaf3b53da6d68d65836968903",
   "pinned_commit": "a66040520139405095648461f7144d4f00629924",
   "report_fingerprint": "f39fdbb2cffc",
   "disk_manifest_fingerprint": "f39fdbb2cffc"
  },
- "ok": false
+ "ok": true
 }
