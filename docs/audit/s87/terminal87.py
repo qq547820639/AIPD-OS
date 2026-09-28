@@ -66,25 +66,26 @@ def main() -> int:
               f"{tr.get('passed')}p/{tr.get('failed')}f/{tr.get('total')}t / "
               f"指纹 {str(tr.get('source_manifest_fingerprint'))[:12]}")
 
-    gate = load(S / "gate.json")
-    if gate is None:
-        missing += 1
-    else:
-        bad = [c["check"] for c in gate["checks"] if not c.get("passed")]
-        print(f"4) 发布门：release_ready={gate.get('release_ready')} / "
-              f"{len(gate['checks'])} 项 / 未过：{bad or '无'}")
-
-    cv = load(S / "closeout.json")
-    if cv is None:
-        missing += 1
-    else:
-        checks = cv.get("checks", {})
-        red = [k for k, v in checks.items() if not v.get("ok")]
-        print(f"5) 收尾验签：ok={cv.get('ok')} / 判据 {len(checks)} 档 / 红：{red or '无'} / "
-              f"violations {len(cv.get('violations', []))} / problems {len(cv.get('problems', []))}")
-        r = cv.get("readings", {})
-        print(f"   读数：报告 {r.get('report_entries')} 条 / 终态 {r.get('terminal')} / "
-              f"min_tests {r.get('min_tests')}")
+    # 两代证件都在库里（第一版是作废的那次），所以必须逐份点名报，
+    # 绝不能只报其中一份还装作"当前状态"——那正是本件自己刚犯过的错。
+    for label, names in (("4) 发布门", ("gate.json", "gate-rerun.json")),
+                         ("5) 收尾验签", ("closeout.json", "closeout-final.json"))):
+        for n in names:
+            g = load(S / n)
+            if g is None:
+                continue
+            if "checks" in g:      # 发布门形状：checks 是列表，项键叫 check
+                bad = [c["check"] for c in g["checks"] if not c.get("passed")]
+                print(f"{label} [{n}] release_ready={g.get('release_ready')} / "
+                      f"{len(g['checks'])} 项 / 未过：{bad or '无'}")
+            else:                  # 验签形状：checks 是字典，另有 readings
+                chk = g.get("checks", {})
+                red = [k for k, v in chk.items() if not v.get("ok")]
+                r = g.get("readings", {})
+                print(f"{label} [{n}] ok={g.get('ok')} / {len(chk)} 档 / "
+                      f"红：{red or '无'} / 报告 {r.get('report_entries')} 条 / "
+                      f"终态 {r.get('outcome_hist')} / HEAD {str(r.get('worktree_head'))[:10]}")
+    print("   （同名两代时，判红的那代不覆盖：先看哪代是绿的，再认它对应的运行）")
 
     try:
         out = subprocess.run([sys.executable,
