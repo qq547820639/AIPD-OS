@@ -1,12 +1,7 @@
 {
  "command": "closeout verify",
  "problems": [],
- "violations": [
-  {
-   "check": "worktree_clean",
-   "detail": "工作树有 2 处未提交改动：['M docs/audit/s84/closeout84.sh', ' M docs/audit/s84/terminal84.py']"
-  }
- ],
+ "violations": [],
  "checks": {
   "report_bound_to_provenance": {
    "ok": true,
@@ -30,7 +25,7 @@
   },
   "pinned_source_binding": {
    "ok": true,
-   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD c9590b11 的祖先",
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD d5a521c0 的祖先",
    "kind": "violation"
   },
   "content_parity_measured": {
@@ -49,8 +44,8 @@
    "kind": "violation"
   },
   "worktree_clean": {
-   "ok": false,
-   "detail": "工作树有 2 处未提交改动：['M docs/audit/s84/closeout84.sh', ' M docs/audit/s84/terminal84.py']",
+   "ok": true,
+   "detail": "工作树干净",
    "kind": "violation"
   },
   "plaintiffs_measured": {
@@ -76,10 +71,10 @@
   "tree_files": 218,
   "tree_defs": 2587,
   "report_files": 218,
-  "worktree_head": "c9590b11bb88819489d96a43f4dfc25dc2d9f486",
+  "worktree_head": "d5a521c0c70c1a451d4dfb2b5e075f28e1d2d4ec",
   "pinned_commit": "a66040520139405095648461f7144d4f00629924",
   "report_fingerprint": "e3efdb6945b2",
   "disk_manifest_fingerprint": "e3efdb6945b2"
  },
- "ok": false
+ "ok": true
 }
