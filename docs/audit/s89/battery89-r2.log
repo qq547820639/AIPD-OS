@@ -1,0 +1,15 @@
+原文件 sha=b4d7913b85a0
+[ANCHORS OK] 10 支臂各命中 1 次
+[CONTROL OK] Y0 原样全绿
+[KILLED]   Y1-tracked-face-becomes-index（跟踪面退回读索引（`git add` 未 commit 被当成已入库））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_staged_but_uncommitted_entrypoint_is_untracked
+[KILLED]   Y6-quote-path-flag-dropped（撤掉 `core.quotePath=false` ⇒ 非 ASCII 路径被转义成八进制串）被抓住：tests/test_doc_command_census.py::test_tracked_face_reads_non_ascii_paths_unescaped
+[KILLED]   Y2-handoff-map-not-passed（面 ⑤ 拿不到面 ④ 的行集（让渡变成「谁都不免责」））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_script_rows_fire_on_bogus_flag_and_missing_script; tests/test_doc_command_census.py::test_scripts_row_face4_can_see_is_delegated_not_double_judged; tests/test_doc_command_census.py::test_a_delegated_row_still_fires_when_only_the_head_copy_is_missing; tests/test_doc_command_census.py::test_emitted_draft_and_the_verdict_use_the_same_hand_off; tests/test_doc_command_census.py::test_real_repo_entry_face_is_live_and_every_dead_link_is_registered
+[KILLED]   Y3-delegation-unconditional（回到第 87 片那版：`scripts/` 一律免责）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_placeholder_and_scripts_forms_are_counted_not_judged
+[KILLED]   Y7-emit-draft-drops-hand-off（`emit_register` 不再自算面 ④ 行集：草案把 delegated 当死链）被抓住：tests/test_doc_command_census.py::test_emitted_draft_and_the_verdict_use_the_same_hand_off
+[KILLED]   Y8-delegated-row-skips-head-check（让渡行不再判「磁盘上有、HEAD 里没有」（整行让给只看磁盘的面 ④））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_a_delegated_row_still_fires_when_only_the_head_copy_is_missing
+[KILLED]   Y9-violations-not-deduplicated（缺陷清单不去重：同一缺陷按引用次数记多笔红）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_two_citations_of_one_dead_entry_are_one_red
+[KILLED]   Y10-citation-count-pinned-to-one（`citations` 恒为 1：去重顺手把引用次数抹掉）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_two_citations_of_one_dead_entry_are_one_red
+[KILLED]   Y4-stale-fire-on-unknown-git（降级自己造红：git 读不出也照判「登记册该撤」）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_git_unreadable_tree_does_not_fabricate_stale_removal
+[KILLED]   Y5-no-existence-grace-on-unknown-git（把「不知道」折成违规：git 读不出也判未入库）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_untracked_entrypoint_fires_only_when_git_is_readable; tests/test_doc_command_census.py::test_git_unreadable_tree_does_not_fabricate_stale_removal
+合计 KILLED 10 / 10；其余按判决分类：无
+收尾复算 sha=b4d7913b85a0（应等于 b4d7913b85a0）

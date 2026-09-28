@@ -26,14 +26,18 @@ ARMS = [
      '            if path in ereg:\n                e_counts["dead_registered"] += 1\n                continue\n',
      ''),
     ("X3-no-stale-register-check", "登记册单向：撤掉「该撤」那一半",
-     '    for path, why in reg_stale:\n        key = ("登记册该撤", ENTRY_REGISTER_REL, 0, path)\n        judged.append(key)\n        extra[key] = why\n',
-     ''),
+     '    for path, why in reg_stale:\n        key = ("登记册该撤", ENTRY_REGISTER_REL, 0, path)\n        judged.append(key + ("",))\n        extra[key] = why\n',
+     '    for path, why in reg_stale:\n        key = ("登记册该撤", ENTRY_REGISTER_REL, 0, path)\n        extra[key] = why\n'),
     ("X4-placeholder-check-dropped", "模板形态不再免判",
      '                if ENTRY_PLACEHOLDER_RE.search(path):\n                    rows.append((rel, no, path, "placeholder"))\n                    continue\n',
      ''),
+    # 第 89 片第二次重定锚：`judged` 的键多了"位点"一维（`key + ("",)`），
+    # X3/X5 两个锚因此 0 命中。撤判决那一半时**只删 `judged.append` 那一行**、
+    # 留着 `key = …` 与 `extra[key] = …`，否则变异体是 NameError 崩溃而不是"判决消失"，
+    # 读出来的 KILLED 就不回答"这条判据有没有牙"。
     ("X5-untracked-not-judged", "「没入库」这一档被撤（本轮我自己犯的错无人守）",
-     '            key = ("入口未入库", rel, no, path)\n            judged.append(key)\n',
-     ''),
+     '            key = ("入口未入库", rel, no, path)\n            judged.append(key + ("",))\n',
+     '            key = ("入口未入库", rel, no, path)\n'),
     ("X6-git-unknown-becomes-guilty", "git 读不出时折成违规（不知道当_HAVE_没入库）",
      '                if tracked is None:\n                    rows.append((rel, no, path, "tracked"))\n                    continue\n',
      '                if tracked is None:\n                    rows.append((rel, no, path, "untracked"))\n                    continue\n'),

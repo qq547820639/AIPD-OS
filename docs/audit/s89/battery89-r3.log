@@ -1,0 +1,20 @@
+原文件 sha=20f1a0c346c7
+[ANCHORS OK] 15 支臂各命中 1 次
+[CONTROL OK] Y0 原样全绿
+[KILLED]   Y1-tracked-face-becomes-index（跟踪面退回读索引（`git add` 未 commit 被当成已入库））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_staged_but_uncommitted_entrypoint_is_untracked
+[KILLED]   Y6-quote-path-flag-dropped（撤掉 `core.quotePath=false` ⇒ 非 ASCII 路径被转义成八进制串）被抓住：tests/test_doc_command_census.py::test_tracked_face_reads_non_ascii_paths_unescaped
+[KILLED]   Y2-handoff-map-not-passed（面 ⑤ 拿不到面 ④ 的行集（让渡变成「谁都不免责」））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_script_rows_fire_on_bogus_flag_and_missing_script; tests/test_doc_command_census.py::test_scripts_row_face4_can_see_is_delegated_not_double_judged; tests/test_doc_command_census.py::test_a_delegated_row_still_fires_when_only_the_head_copy_is_missing; tests/test_doc_command_census.py::test_emitted_draft_and_the_verdict_use_the_same_hand_off; tests/test_doc_command_census.py::test_real_repo_entry_face_is_live_and_every_dead_link_is_registered
+[KILLED]   Y3-delegation-unconditional（回到第 87 片那版：`scripts/` 一律免责）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_placeholder_and_scripts_forms_are_counted_not_judged
+[KILLED]   Y7-emit-draft-drops-hand-off（`emit_register` 不再自算面 ④ 行集：草案把 delegated 当死链）被抓住：tests/test_doc_command_census.py::test_emitted_draft_and_the_verdict_use_the_same_hand_off
+[KILLED]   Y8-delegated-row-skips-head-check（让渡行不再判「磁盘上有、HEAD 里没有」（整行让给只看磁盘的面 ④））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_a_delegated_row_still_fires_when_only_the_head_copy_is_missing
+[KILLED]   Y15-delegated-row-ignores-disk（让渡行连「磁盘上有没有」都不看 ⇒ 缺脚本被改口成未入库）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green
+[KILLED]   Y9-violations-not-deduplicated（缺陷清单不去重：同一缺陷按引用次数记多笔红）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_two_citations_of_one_dead_entry_are_one_red
+[KILLED]   Y10-citation-count-pinned-to-one（`citations` 恒为 1：去重顺手把引用次数抹掉）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_two_citations_of_one_dead_entry_are_one_red
+[KILLED]   Y11-reverse-arm-reads-state-names（「该撤」只看状态名 ⇒ 被面 ④ 收着的在册入口永远撤不掉）被抓住：tests/test_doc_command_census.py::test_a_registered_entry_held_by_face4_is_still_reversible
+[KILLED]   Y12-reverse-arm-trusts-delegated（把 `delegated` 一律当成跑得动 ⇒ 缺脚本也被判「该撤」）被抓住：tests/test_doc_command_census.py::test_a_registered_entry_held_by_face4_is_still_reversible
+[KILLED]   Y13-empty-entry-face-still-reverses（面 ⑤ 读到 0 处也照跑反向臂 ⇒ 「没读到」折成「没人引用」）被抓住：tests/test_doc_command_census.py::test_empty_entry_face_with_a_nonempty_register_is_a_premise_not_N_removals
+[KILLED]   Y14-emit-writes-on-unreadable-corpus（语料读不全时草案照落盘（会删掉仍在被引用的登记））被抓住：tests/test_doc_command_census.py::test_emit_register_refuses_when_the_corpus_cannot_be_read
+[KILLED]   Y4-stale-fire-on-unknown-git（降级自己造红：git 读不出也照判「登记册该撤」）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_git_unreadable_tree_does_not_fabricate_stale_removal
+[KILLED]   Y5-no-existence-grace-on-unknown-git（把「不知道」折成违规：git 读不出也判未入库）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_untracked_entrypoint_fires_only_when_git_is_readable; tests/test_doc_command_census.py::test_git_unreadable_tree_does_not_fabricate_stale_removal
+合计 KILLED 15 / 15；其余按判决分类：无
+收尾复算 sha=20f1a0c346c7（应等于 20f1a0c346c7）

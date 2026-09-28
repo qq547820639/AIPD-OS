@@ -112,3 +112,56 @@ with space.py
 3. 第 87 片 §九#3（"再没被引用"keyed 在判据自己的可见性上）**本片只写了缓解，没改判决**：
    现在虚构名/叙述改写都会被判红，登记成 §二的代价；真正的修法仍是把那一半降成读数。
 4. `--min-tests` 与验签名册要在收尾时按本轮 collected 现读重设（每个 `def test_` 都算一条）。
+
+## 八、认证起跑前的第二轮只读复核（7 笔，全部亲手重验）
+
+派件仍是"只读复核交回的缺陷我逐条重验"，但这一轮多了一条纪律：**复核要在干净签出认证
+起跑之前派**，因为它会动 `scripts/` 与 `tests/`（两张 hashed 面），跑完再改就要重跑一整代。
+下列每一笔都先自己复现，再改，再让电池或 `--self-test` 反证。
+
+| # | 缺陷 | 一手复现读数 | 落点 |
+| --- | --- | --- | --- |
+| R1 | 修正片把"在不在 HEAD"补回让渡行时补过头：磁盘上根本没有的脚本也被叫成 `untracked` ⇒ 同一个缺陷被面 ④「脚本缺失」与面 ⑤「入口未入库」各记一笔，且解释文案是假的 | `--self-test` 当场 `AssertionError`：期望 `delegated`、实读 `untracked`（`scripts/zzz_missing_tool.py` 在合成树里不存在） | 条件收窄成"真在磁盘上 ∧ 不在 HEAD"；两极各一支（Y8 撤整格、Y15 只看状态） |
+| R2 | 登记册反向臂只看状态名 ⇒ `delegated` 永不等于 `tracked` ⇒ 被面 ④ 收着的在册入口**结构性撤不掉**，与 `REGISTER_RULE` 自己那句"现在又能解析了会反向开火"打架 | 读码：`elif all(s == "tracked" for s in states)`；夹具里那条 `scripts/…` 入库后 `states == ["delegated"]` ⇒ 两条判决都不开火 | 改成问磁盘与 HEAD 的事实；"磁盘上就没有"不许撤（同一条用例的两极） |
+| R3 | 面 ⑤ 读到 0 处命令形态时，反向臂把整本册判成「再没被引用」——与 §九#2 同一类"把没读到当没发生" | 合成树（README 无入口、册里两条）⇒ 旧实现两条「该撤」＋`ok=False`＋退 4 | `entry_face_empty` 前提问题 + 整臂免判，退码 2 |
+| R4 | 生成侧把缺席信号丢进 `_`：某个 `.md` 读不出时草案删掉那条登记还退 0，同树判决退 2 | `docs/audit/bad.md` 写非 UTF-8 ⇒ `refused == ""`、`written` 少一条、目标文件被改写 | `emit_register` 一并拒写并回填 `problems`/`git_unknown` |
+| R5 | `violations` 不去重：一行两处引用同一死链记两笔（"红了几条"≠"要改几处"） | `entry_points` 一手读数：`[("README.md",3,"/tmp/zzz_dup.py","dead"),("README.md",3,"/tmp/zzz_dup.py","dead")]` ⇒ 两条逐字相同的判决 | 按（面,文档,行,写法,**位点**）去重；次数留 `citations` 并进文本面；位点取语料记录序号 ⇒ 登记表一行两条记录仍是两笔 |
+| R6 | 一支新用例把一极记在自己账上，而那极它结构上看不见（夹具无 git ⇒ `tracked is None` 短路，删掉 `is_file()` 也照样绿） | 读码即见：`test_scripts_row…` 那棵树没有 `.git` | docstring 改写明该极由 `--self-test` + Y15 负责；电池补 Y15 |
+| R7 | 两处"把现状抄成常数"：测试注释里钉着 `1049 条`（现读 1053）、`emit_register` 的说明漏了它现在也走 `script_rows`→`quickref_corpus` | `git ls-tree -r HEAD \| wc -l` = 1053 | 计数改指现读入口；说明按调用链重写 |
+
+### 八之二、第二轮的牙与读数（认证前的最后一组盘上证据）
+
+- `--self-test`：**19 条 mark**（17 → 19：让渡行的入库面、去重与次数各一条）。
+- 常驻：`tests/test_doc_command_census.py` **44 个 `def test_`**（HEAD 是 37）。
+  HEAD 之后新增 7 条，逐条对应上表：让渡行的入库面（R1）、同一行两处引用记一笔（R5）、
+  草案与判决同走一次让渡（§一 #2 的生成侧）、被面 ④ 收着的在册入口仍可撤且**两极**（R2）、
+  读到 0 处是前提而不是 N 条「该撤」且**两极**（R3）、一行两条记录是两处要改（R5 的另一极）、
+  语料读不全时草案拒写（R4）。
+- 电池 `docs/audit/s89/battery89.py`：**KILLED 15 / 15**，Y0 对照全绿，
+  被改文件收尾复算 sha 一致（`20f1a0c346c7`）；这一轮新增五臂
+  Y11/Y12（反向臂的两极）、Y13（缺席被折成判决）、Y14（生成侧照落盘）、Y15（只看状态名）。
+- 老电池 `docs/audit/s87/battery87.py`：第一次重跑 **5/7 + 2 BAD-ANCHOR**，
+  重定锚后 **7/7**（sha 同为 `20f1a0c346c7`）——同一文件同一轮第三次被自己挪掉锚点。
+- 真仓库现读（`scripts/doc_command_census.py`，退码 0）：命令形态 **122** 处 ⇒
+  入库可解析 89 / 未入库 0 / 死链 20（已登记 20）/ 占位 8 / 交给面 ④ 5；登记册 13 条、该撤 0 条；
+  三档判红面 86 段 / 97 行 / 220 处。
+- 便宜的门全绿后才起跑认证：六把量具 `--self-test` 各退 0；
+  `pytest tests/test_changelog_integrity.py tests/test_doc_reference_census.py
+  tests/test_absence_claim_census.py tests/test_command_surface_census.py
+  tests/test_forensic_scripts_parse.py` ⇒ **60 passed**。
+
+### 八之三、顺手补上的一类空白读者：取证脚本自己没人读
+
+写 R 系列的过程中，`docs/audit/s89/battery89.py` 有一段时间是**语法死**的
+（中文字符串里嵌了半角引号 ⇒ `SyntaxError: invalid syntax`），而全套件对此完全绿：
+
+1. `docs/audit/**` 既不 import 也不 collect；
+2. `tests/test_exception_hygiene.py` 只扫 `src/aipd_os` 与 `scripts/*.py`，
+   且它对 `SyntaxError` 是 `continue`（那把尺问的是空 except，本来就不该被解析失败干扰）。
+
+一份跑不起来的取证脚本比没有更贵——它会以"已配电池"的身份被登记册与 CHANGELOG 引用。
+处置：`tests/test_forensic_scripts_parse.py`（`ast.parse` 全部取证 `.py`、`bash -n` 全部 `.sh`，
+外加"这两把尺自己会开火"的注入对照与"语料真的递归到了子目录"的前提断言）。
+本轮不把它扩成"每条取证脚本都要跑一遍"——那需要给全部脚本逐一建可重放前提
+（当时现读 51 个 `.py`、8 个 `.sh`），是独立一轮的活（已记进第 90 片候选）。
+
