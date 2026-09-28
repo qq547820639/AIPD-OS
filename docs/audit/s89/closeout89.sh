@@ -1,6 +1,7 @@
 #!/bin/bash
 # 第 89 片收口链：绑定 → 提交 → 发布门 → 提交门的读数 → 收尾验签。
-# 由 closeout88b.sh 逐行派生，只换四处：报告名 / 工作树名 / 产物前缀 s89 / PRIOR_FLOOR=2703。
+# 由 closeout88b.sh 逐行派生，只换五处：报告名 / 工作树名 / 产物前缀 s89 / PRIOR_FLOOR=2703
+#   / --expect-test 点名两条本轮原告（census 那支 + 新增的取证脚本解析门）。
 # 派生完必须做的两件事（记忆里的老坑）：grep 残留上一片路径归零、bash -n 过一遍。
 set -u
 R=/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
@@ -108,6 +109,7 @@ echo "GATE_COMMIT_RC=$?"
 
 "$PY" scripts/closeout_verifier.py --tag v5.6.0 \
     --expect-test tests/test_doc_command_census.py \
+    --expect-test tests/test_forensic_scripts_parse.py \
     --min-tests "$MIN_TESTS" --json docs/audit/s89/closeout.json > "$X/closeout89.log" 2>&1
 CV_RC=$?
 echo "CV_RC=$CV_RC  （0 全绿 / 4 判红 / 2 前提塌）"
