@@ -1,0 +1,13 @@
+release_evidence.py sha=e55cb9d8ee60
+doc_command_census.py sha=43c9a166cc1e
+[CONTROL OK] X0 原样全绿
+[KILLED]   X1-default-put-back（签名默认值装回 `| None = None`（少传参数不再报错））被抓住：tests/test_release_evidence_preflight.py::test_api_has_no_anchor_default
+[KILLED]   X2-api-guard-off（整条锚点校验关掉（`False and` 使判据永不让步））被抓住：tests/test_release_evidence_preflight.py::test_api_refuses_a_malformed_anchor_before_any_write[None]; tests/test_release_evidence_preflight.py::test_api_refuses_a_malformed_anchor_before_any_write[]; 
+[KILLED]   X3-40-becomes-7（「恰好 40 位」退化成「至少 7 位」：短 SHA 重新通过）被抓住：tests/test_release_evidence_preflight.py::test_api_refuses_a_malformed_anchor_before_any_write[a660405]
+[KILLED]   X4-snapshot-column-reweighted（把快照列接回判据（缺列的登记条目不再豁免））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_register_entry_that_resolved_again_or_is_uncited_fires; tests/test_doc_com
+[KILLED]   X5-no-note-carry-forward（刷新登记册时不再带旧 note（手写豁免依据被抹掉））被抓住：tests/test_doc_command_census.py::test_emit_register_carries_notes_and_refuses_an_unparsable_target
+[KILLED]   X6-overwrite-unparsable-register（目标读不出也照样覆盖）被抓住：tests/test_doc_command_census.py::test_emit_register_carries_notes_and_refuses_an_unparsable_target
+[KILLED]   X7-rule-text-drift（`rule` 常量写错归属档数（与册子各漂各的））被抓住：tests/test_doc_command_census.py::test_real_repo_register_shares_the_instrument_constants
+合计 KILLED 7 / 7；其余按判决分类：无
+收尾复算 release_evidence.py sha=e55cb9d8ee60（应等于 e55cb9d8ee60）
+收尾复算 doc_command_census.py sha=43c9a166cc1e（应等于 43c9a166cc1e）
