@@ -951,6 +951,36 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.53 F-DEP-LICENSE 第 92 片：把"依赖许可证审查"从散文变成会红的门，第一枪打在 casadi/LGPL 上**：
+  第 91 片对账 CI 面时看到的形状问题——`license-scan` job 跑裸 `pip-licenses`，
+  **没有可失败的断言**（只打印、退码恒 0）；而仓里唯一一次许可证判断
+  （`pyproject.toml` 里"选 pypdf 不用 PyMuPDF，后者 AGPL-3.0 与 Apache-2.0 不兼容"）是注释。
+  现读分母：`pyproject.toml` 声明根 13 个 ⇒ 闭包 45 个名字，逐包判到 **43**，
+  归属 `allowed 42 / forbidden 0 / unresolved 2 / declared-missing 1 / out-of-closure 28`，
+  以及**一条真原告**：`cadquery ← casadi`，上游 `info.license` =
+  `GNU Lesser General Public License v3 or later (LGPLv3+)`，classifier 只有泛化
+  `License :: OSI Approved` ⇒ 退码 4。
+  这一格定了取信号的方式：`License-Expression`/`License` 字段/`License ::` classifier
+  **三信号全收、不给 classifier 优先权**（只看 classifier 的阶梯会把 casadi 读成"未标注"而放过）。
+  选型（四段见 `docs/audit/DEPENDENCY_LICENSE_F-DEP-LICENSE_2026-09-28.md` §二）：
+  候选 nektos 系工具之外的两条成熟件是 `pip-licenses`（MIT，`--fail-on`/`--allow-only`；
+  实测本机未装，且它要求 `prettytable`）与 `license-expression`（Apache-2.0，SPDX 布尔解析；
+  本机在装但**只是 pip-audit 的传递依赖**，我们没声明）。择一 = **自研 stdlib 阶梯 + 台账**，
+  借的是 pip-licenses 的政策形状（allow-list + fail-on）与 SPDX id 词表；
+  决定性理由是 `ci.yml:56` 那个 job 只 `pip install -e .` ——
+  依赖任何未声明的第三方解析器，门在那一侧就永远 SKIP，而"永远 SKIP 的门"正是本片在修的病。
+  口径上两条实测教训：`extra ==` 选装 requires 一律跳过（本环境 480 条第三方 requires 里
+  **409 条**是这一形，展开它们闭包会涨到 169 个名字、其中 117 个从未安装 ⇒ 判据被"未安装"
+  淹没，那不是保守是失聪）；环境标记取并集不解析，没装的落 `unresolved` 只报。
+  牙：`--self-test` **5** 格 + 常驻 **9** 条 + 电池 **7/7 KILLED**（B2 那一臂就是 casadi 的
+  "只看 expr"退化形，四把尺同时抓）。台账 `docs/audit/DEPENDENCY_LICENSE_LEDGER.json`
+  给 casadi 记 `needs-review` ⇒ **门禁保持红**，直到属主按
+  `docs/security/dependency-license-review.md` §二 的三个选项拍板并改成 `accepted`
+  （法务/发布形态判断属线下项，代码侧不自判）；那条常驻用例钉的是"今天还没拍"，
+  转绿时它必须被改，不许靠放宽判据糊过去。
+  已知边界四条（读已装包而非 lockfile、带括号的 SPDX 表达式判 unknown、
+  上游把许可证标错时本面看不见、`mcp` 档在本环境装不上故其许可证从未被看过——已登记理由）。
+
 - **v5.52 F-CI-SURFACE 第 91 片：把"CI 判的东西本地读不读"变成一张可对账的表，并把 lint / type / schema 三面接进常驻**：
   第 90 片留的那句"认证链不跑 CI 的 lint 口径"本片先量成表再修：以
   `.github/workflows/ci.yml` 为**唯一权威面**现读，得 **17 个 job / 32 条会被单独执行的 shell 命令**

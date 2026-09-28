@@ -1,0 +1,13 @@
+{
+  "note": "依赖许可证裁定台账。decision 只接受 'accepted' 才转绿；needs-review 一律继续判红。license 串必须与门禁现读的归一 id 集合逐字相等，否则判「该撤」。",
+  "entries": [
+    {
+      "package": "casadi",
+      "license": "LGPL-3.0-or-later",
+      "decision": "needs-review",
+      "owner": "属主（发布/合规）",
+      "decided_on": "2026-09-28",
+      "why": "经 cadquery 可达（cad 档）。上游自述许可证：PyPI casadi 的 info.license = \"GNU Lesser General Public License v3 or later (LGPLv3+)\"，而它的 classifier 只有泛化的 License :: OSI Approved —— 门禁必须从 License 字段读；只看 classifier 会把它读成\"没标注\"而放过。LGPL-3 不要求本仓代码以 LGPL 发布（\"work that uses the library\" 在法律上是另一件作品，定义子类被视为使用接口），但附带义务（声明使用了该库、随 Combined Work 提供 LGPL 与 GPL 文本、允许替换/重新链接）是否已在发布物里满足，属法务/属主裁决，不由代码侧自判 ⇒ 本条保持红，直到 owner 改成 accepted 并附裁决。分析见 docs/security/dependency-license-review.md"
+    }
+  ]
+}

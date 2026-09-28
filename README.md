@@ -562,6 +562,22 @@ python scripts/ci_surface_census.py
 #     同格第二条 `mypy` 对应的注释「本地硬基线 ruff 0 / mypy 0」在第 91 片现读已不成立。
 #     现在这三面（ruff / mypy / schema_check）由 `tests/test_ci_face_gates.py` 真跑，
 #     缺工具走 SKIP（"未覆盖"不算绿），且那个文件与消费表**互相点名**。
+python scripts/dependency_license_gate.py
+#   ↑ 依赖许可证门禁（第 92 片）。权威面是**已装发行包的元数据**，从 `pyproject.toml` 的
+#     声明根做闭包 BFS；逐包落七档之一：allowed / forbidden（GPL 家族，直接红）/
+#     review-required（LGPL 家族，要台账裁决）/ unknown-license（三个信号都给不出具体
+#     许可证，也算红——"看不见"不等于合规）/ adjudicated（台账裁过且许可证串逐字对得上）/
+#     unresolved（别的平台才装：只报）/ out-of-closure（装了但走不到：只报）。
+#     **三个信号全收、不给 classifier 优先权**：`License-Expression`（PEP 639）很多包没填，
+#     classifier 常只写泛化的 `License :: OSI Approved`，而具体许可证住在 `License` 字段里
+#     ——真原告就是这一格：`cadquery ← casadi` 的 `LGPLv3+` 只有字段里有。
+#     `OR` 任一分支可用即放行、`AND` 要全可用（拍平成集合会让 `MIT AND LGPL-2.1` 因含 MIT 变绿）。
+#     台账 `docs/audit/DEPENDENCY_LICENSE_LEDGER.json` 双向对账：许可证串对不上 ⇒「该撤」；
+#     裁的是 forbidden 档 ⇒「越权放行」（台账不能吞强 copyleft）；`decision` 只有 `accepted`
+#     转绿，`needs-review` 继续红（casadi 今天就是这条）。我们自己声明却装不上的依赖
+#     要写在 `DECLARED_NOT_INSTALLED` 里给理由，没写就判红。
+#     分母由脚本自报（`corpus.*`），不抄进正文。裁决依据与三个选项见
+#     `docs/security/dependency-license-review.md`。
 python scripts/absence_claim_census.py
 #   ↑ 登记表否定句对账（第 65 片）：`src/aipd_os/registry_data.py` 里每句「X 仍没有」都配一个
 #     **反证锚点**（哪个文件/符号一旦出现，这句话就算过期）。判决四档：成立、过期（判红）、
