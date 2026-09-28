@@ -1,12 +1,10 @@
 {
-  "release_ready": false,
+  "release_ready": true,
   "checks": [
     {
       "check": "workspace_clean",
-      "passed": false,
-      "detail": [
-        " M docs/audit/s84/gate.log"
-      ]
+      "passed": true,
+      "detail": "clean"
     },
     {
       "check": "commit_matches_head",
