@@ -440,7 +440,11 @@ ENTRY_PATH_CHARS = r"A-Za-z0-9_\u4e00-\u9fff./\-\{\}$<>*…"
 # 「复算入口：bash x.sh」「跑 `python foo.py`」，只列 ASCII 空白/反引号/竖线会把
 # 全角冒号后面的那些整批漏掉——一种拼写≠全部形态（第 78 片记过的文本面病）。
 ENTRY_LINE_RE = re.compile(ENTRY_INTERP + ENTRY_FLAGS +
-                           r"\s+([" + ENTRY_PATH_CHARS + r"]+\.(?:py|sh))\b")
+                           r"\s+([" + ENTRY_PATH_CHARS + r"]+\.(?:py|sh))(?![A-Za-z0-9_])")
+# 结尾原来用 `\b`，而 Python 的 `\w` 把汉字也算作词字符 ⇒ `python scripts/live.py与下一条`
+# 这种"路径后面直接跟汉字"的写法**一行都不产生**（复核件实测）。中文文档里这个形状是常态，
+# 所以换成否定型前瞻：后面还能接 ASCII 词字符才算截断，接汉字算结束。
+# 实测对照：`python x.pyx` 仍不匹配（不会把 `.pyx` 吞成 `.py`）。
 # 行内"这是举例"标记（第 90 片）。形状借 markdownlint 的行级 disable 注释
 # （`<!-- markdownlint-disable-line MDxxx -->`，官方文档明说只能整行、不能整跨），
 # 语义借 Vale 的"点名到具体匹配"（`<!-- vale Style.Rule["ACT test"] = NO -->`）：
@@ -448,23 +452,28 @@ ENTRY_LINE_RE = re.compile(ENTRY_INTERP + ENTRY_FLAGS +
 # 整行式标记会让后来人往同一行里加一条真死链而无人知，
 # 点名式标记则要求作者写出他到底在豁免谁，写不出来就红。
 # 被点名的 occurrence 仍产出一行 `example` 读数——免判与看不见必须是两件事。
-ENTRY_EXAMPLE_RE = re.compile(r"<!--\s*aipd-census:example(?P<paths>[^>]*?)-->")
-# 模板/区间/变量形态不是"给人照抄的具体命令"：写了 X.py、sNN、`..`、尖括号、通配、
-# `${VAR}` 的都走**不判**，单列读数。第 85 片量分母时 README:508 那行
+ENTRY_EXAMPLE_RE = re.compile(r"<!--\s*aipd-census:example(?P<paths>.*?)-->")
+# 模板/区间/变量形态不是"给人照抄的具体命令"：写了 X.py、sNN、`..`（区间那种 `s11..s12`）、
+# 尖括号、通配、`${VAR}` 的都走**不判**，单列读数。第 85 片量分母时 README:508 那行
 # `python scripts/X.py` 就是这种形状——把它判红等于让尺子咬自己：
 # 那一行正是在描述本判据的占位写法。
-ENTRY_PLACEHOLDER_RE = re.compile(r"(?:X\.(?:py|sh)$|NN|\.\.|…|[<>{}*]|\$\{|s\d+\.\.s)")
+# 第 90 片复核件撤掉了裸 `\.\.` 这一支：它在归一化之前会把"`../outside/x.py`"这种
+# **逃出仓库根、干净签出永远跑不了**的路径一起免判（免判与看不见必须是两件事，
+# 而这条既不是模板也没人核对过）。区间模板由 `s\d+\.\.s` 那一支单独接住。
+ENTRY_PLACEHOLDER_RE = re.compile(r"(?:X\.(?:py|sh)$|NN|…|[<>{}*]|\$\{|s\d+\.\.s)")
 ENTRY_FILES = ("README.md", "SKILL.md", "QUICKSTART.md")
 ENTRY_DIRS = ("docs", "references")
 ENTRY_REGISTER_REL = "docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json"
 
 
 def example_names_on(line: str) -> set[str]:
-    """这一行的"举例"标记点名免判了哪些路径（没标记就是空集）。"""
-    mm = ENTRY_EXAMPLE_RE.search(line)
-    if not mm:
-        return set()
-    return {tok for tok in mm.group("paths").split() if tok}
+    """这一行的"举例"标记点名免判了哪些路径（没标记就是空集）。
+
+    一行**可以有多个标记**（两个示例各点一个名）：只 `search` 第一个的话，
+    后一个既不生效、它的死名字也永远不会被判"标记失效"——那是静默的双向失灵。
+    """
+    return {tok for m in ENTRY_EXAMPLE_RE.finditer(line)
+            for tok in m.group("paths").split() if tok}
 
 
 def stale_example_markers(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
@@ -620,19 +629,24 @@ def entry_points(root: Path,
         for no, line in enumerate(lines, 1):
             named = example_names_on(line)
             for m in ENTRY_LINE_RE.finditer(line):
-                path = m.group(1)
-                if path in named or posixpath.normpath(path) in named:
+                raw = m.group(1)
+                # **一律先归一化再判**（第 90 片复核件 #2/#3）。不折的两种后果都实测到了：
+                #   `./scripts/live.py` 逃出面 ④ 的让渡、且不在 HEAD 的名字里 ⇒ 假「未入库」；
+                #   `scripts/a/../gone.py` 被 example 存成未归一化的名字 ⇒ 登记册反向臂看不见
+                #   这条引用，把"仍被引用着的真死链"判成「该撤」。
+                path = posixpath.normpath(raw)
+                if path in named or raw in named:
                     # 作者在这行的标记里**点名**了这个路径：它仍是一行读数（`example`），
                     # 不是被抹掉。没被点名的 occurrence 照判——这是与整行式
                     # disable 的实质差别（后来人往同一行塞真死链不会跟着免判）。
                     rows.append((rel, no, path, "example"))
                     continue
-                if ".." in path:
-                    # 旧实现把 `..` 当成占位标记来**免判**，于是 `scripts/a/../gone.py`
-                    # 这种真会跑不动的写法静默过关（第 87 片 §九#6）。改成先归一化再判：
-                    # `..` 不是模板，是一个可以算清楚的路径。区间模板 `s11..s12.py`
-                    # 归一化后仍是自己，且仍带 `..` ⇒ 由下面的占位分支接住。
-                    path = posixpath.normpath(path)
+                if path == ".." or path.startswith("../"):
+                    # 逃出仓库根。旧实现靠占位分支里的裸 `..` 把它免判，但"`..` 归一化后仍在"
+                    # 的意思恰恰是**这条路径在仓库外面**——`(root / path)` 会指到仓库外去，
+                    # 那里存不存在都不算"干净签出拿得到"。这不是模板，是确定的跑不了。
+                    rows.append((rel, no, path, "dead"))
+                    continue
                 if ENTRY_PLACEHOLDER_RE.search(path):
                     rows.append((rel, no, path, "placeholder"))
                     continue
@@ -869,14 +883,20 @@ def audit(root: Path) -> dict[str, Any]:
         # 上面那条前提一立，整条反向臂就整体不判：`erows` 为空时"没有 states"
         # 既可能是"真的没人引用"，也可能是"这一面根本没读到语料"，两者不可分。
         states = [s for _r, _n, p, s in erows if p == path]
-        if not states:
-            reg_stale.append((path, "再没有任何文档引用它 ⇒ 撤登记"))
+        # `example` 不算"有人把它当入口引用"：那一档是作者点名"这是举例"。
+        # 一条在册路径如果**只剩**举例引用，那它作为"真入口"就已经没人引用了 ⇒ 该撤
+        # （与 `--emit-register` 的草案同一口径，否则判决与草案又各说一套，复核件 #8）。
+        cited = [s for s in states if s != "example"]
+        if not cited:
+            reg_stale.append((path, "再没有任何**入口形态**的文档引用它"
+                                    + ("（只剩点名举例的引用）" if states else "")
+                                    + " ⇒ 撤登记"))
             continue
         # 「现在处处都能解析」不能只看状态名：`delegated` 也覆盖了"磁盘上就没有这个脚本"
         # 那一格（它由面 ④ 判「脚本缺失」，仍然不是一处跑得动的入口）。所以磁盘事实
         # 要自己核一遍，否则一条注册过的死脚本会因为"没人判它 dead"而永远撤不掉。
         resolved = all(s == "tracked" or (s == "delegated" and (root / path).is_file())
-                       for s in states)
+                       for s in cited)
         if not resolved:
             continue
         if egit_unknown:
@@ -894,7 +914,9 @@ def audit(root: Path) -> dict[str, Any]:
     # 点名式豁免必须有牙：写了标记却点不到人 ⇒ 记一条"标记失效"。
     # 语料读不全时不判（与 `entry_face_empty`、`git_unknown` 同一口径：缺席不折成违规）。
     mark_stale, p9 = stale_example_markers(root)
-    problems += p9
+    # `entry_points` 与 `stale_example_markers` 各自读一遍同一份语料，于是"某个 .md 读不出"
+    # 这类前提问题会被报两遍（复核件 #7）。两条路都保留（各自独立可测），但读数不许重复计。
+    problems += [p for p in p9 if p not in problems]
     if not p9:
         for rel, no, tok in mark_stale:
             key = ("举例标记失效", rel, no, tok)
@@ -1218,7 +1240,18 @@ def _self_test(tmp: Path) -> int:
         # 撤掉哪一族，这里就少一行读数——没有这些夹具，加宽与没加宽不可区分。
         "入口 I：bash docs/audit/zzz/../zzz/live.sh 与 python docs/audit/zzz/../gone.py\n"
         "入口 J：python -u /tmp/zzz_flagged.py、python3.11 /tmp/zzz_versioned.py 与 "
-        "/abs/tree/.venv/bin/python /tmp/zzz_absinterp.py\n", encoding="utf-8")
+        "/abs/tree/.venv/bin/python /tmp/zzz_absinterp.py\n"
+        # ---- 复核件八项各留一行夹具（撤销臂 battery90 Z8–Z12 各撤一项）----
+        # 识别面那几族的失败模式是"没有读数"，不是红：没有这些行，撤掉修复读不出来。
+        "入口 K：python docs/audit/zzz/cjkadj.py紧跟汉字，另有 python docs/audit/zzz/after.py\n"
+        "入口 L：python ./docs/audit/zzz/live.sh 与 bash docs/audit/zzz/../gone2.sh\n"
+        "入口 M：python ../outside/zzz_escape.py 与 python docs/audit/zzz/nope.pyx\n"
+        "入口 N：python docs/audit/zzz/gen>x.py <!-- aipd-census:example docs/audit/zzz/gen>x.py -->\n"
+        "入口 O：bash docs/audit/zzz/ex1.sh 与 python docs/audit/zzz/ex2.sh"
+        " <!-- aipd-census:example docs/audit/zzz/ex1.sh -->"
+        "<!-- aipd-census:example docs/audit/zzz/ghost2.sh -->\n"
+        "入口 P：bash docs/audit/zzz/example_only.sh"
+        " <!-- aipd-census:example docs/audit/zzz/example_only.sh -->\n", encoding="utf-8")
     # README 是**面 ④ 的语料**，且第 1 行正是它认得的形状（行首、扁平）；第 2 行是嵌套路径，
     # 面 ④ 的正则 `scripts/([A-Za-z0-9_]+)\.py` 看不见它。两行同文本，差别只在覆盖面。
     (e / "README.md").write_text(
@@ -1230,6 +1263,10 @@ def _self_test(tmp: Path) -> int:
         {"path": "/tmp/zzz_dead_battery.py", "note": "历轮电池，写在宿主 /tmp，已不可再生"},
         {"path": "docs/audit/zzz/live.sh", "note": "这条其实早就入库了——专打「该撤」那一档"},
         {"path": "docs/audit/zzz/never_cited.sh", "note": "再没被任何文档引用——另一档「该撤」"},
+        {"path": "docs/audit/gone2.sh",
+         "note": "只以 `docs/audit/zzz/../gone2.sh` 的写法被引用：折叠前反向臂看不见这条引用"},
+        {"path": "docs/audit/zzz/example_only.sh",
+         "note": "只剩点名举例的引用 ⇒ 作为真入口已无人引用，该撤"},
     ]}, ensure_ascii=False), encoding="utf-8")
     # 真 git 仓库：未入库那一档必须由 `git ls-tree -r HEAD` 说，不是由测试注入
     for git_args in (["init", "-q"], ["add", "docs/audit/zzz/live.sh"],
@@ -1251,11 +1288,31 @@ def _self_test(tmp: Path) -> int:
                      "docs/audit/gone.py": "dead",
                      "/tmp/zzz_flagged.py": "dead",
                      "/tmp/zzz_versioned.py": "dead",
-                     "/tmp/zzz_absinterp.py": "dead"}, state
+                     "/tmp/zzz_absinterp.py": "dead",
+                     "docs/audit/zzz/cjkadj.py": "dead",
+                     "docs/audit/zzz/after.py": "dead",
+                     "docs/audit/gone2.sh": "dead",
+                     "../outside/zzz_escape.py": "dead",
+                     "docs/audit/zzz/gen>x.py": "example",
+                     "docs/audit/zzz/ex1.sh": "example",
+                     "docs/audit/zzz/ex2.sh": "dead",
+                     "docs/audit/zzz/example_only.sh": "example"}, state
+    # 逐行读数（`state` 按路径压了重，下面这几条才看得见"折成同一路径"与"根本没读到"）
+    rl = {(rel, no, p2): s for rel, no, p2, s in rows}
+    assert rl[("docs/audit/zzz/doc.md", 12, "docs/audit/zzz/cjkadj.py")] == "dead", rl
+    assert ("docs/audit/zzz/doc.md", 14, "docs/audit/nope.pyx") not in rl, rl
+    assert rl[("docs/audit/zzz/doc.md", 13, "docs/audit/zzz/live.sh")] == "tracked", rl
+    assert sum(1 for _r, _n, p2, _s in rows
+               if p2 == "docs/audit/zzz/live.sh") == 3, rows
     _mark(marks, "面 ⑤ 八格归属各自落位：入库/未入库/三种死链（两条 scripts/ + 绝对 + 仓外）"
                  "/占位/点名举例，且**同一行里未被点名的那条仍判死链**；"
                  "`..` 先归一化再判（`docs/audit/zzz/../gone.py` → `docs/audit/gone.py`），"
                  "短旗、版本后缀、带目录前缀的解释器三族也都读出死链")
+    _mark(marks, "复核件四族识别面：路径后紧跟汉字仍读出（旧 `\\b` 一行都不产生）、"
+                 "`./` 前缀折回同一条入口（`live.sh` 三处而非两处，第三条不是假「未入库」）、"
+                 "逃出仓库根的 `../` 判死链（旧实现把它当模板免判）、"
+                 "带 `>` 的名字可被点名（旧 `[^>]*?` 让标记整体失效）；"
+                 "`nope.pyx` 必须**读不到**（否定对照：换前瞻不许把 `.pyx` 吞成 `.py`）")
     # **让渡可核对**：同一棵树，只是把面 ④ 的行集给它 ⇒ 只有真被那一行收着的才免责。
     f4 = {(rel, no): stem for rel, no, stem, _u in script_rows(e)[0]}
     _r4, _g4, _p4 = entry_points(e, tracked_override={"docs/audit/zzz/live.sh"}, face4=f4)
@@ -1269,7 +1326,8 @@ def _self_test(tmp: Path) -> int:
                  "都落回面 ⑤ 判存在性；只有行首扁平那一条才 delegated")
     ereg, rp = load_entry_register(e)
     assert not rp and set(ereg) == {"/tmp/zzz_dead_battery.py", "docs/audit/zzz/live.sh",
-                                    "docs/audit/zzz/never_cited.sh"}, (ereg, rp)
+                                    "docs/audit/zzz/never_cited.sh", "docs/audit/gone2.sh",
+                                    "docs/audit/zzz/example_only.sh"}, (ereg, rp)
     # 端到端：audit() 在真登记册下的判决集合
     rep5 = audit(e)
     fields5 = {(v["written"], v["field"]) for v in rep5["violations"]}
@@ -1286,14 +1344,28 @@ def _self_test(tmp: Path) -> int:
     assert ("scripts/zzz_missing_tool.py", "脚本缺失") in fields5, fields5
     assert ("docs/audit/zzz/example.sh", "入口不可解析") not in fields5, fields5
     assert ("docs/audit/zzz/ghost_mark.sh", "举例标记失效") in fields5, fields5
+    assert ("docs/audit/zzz/ghost2.sh", "举例标记失效") in fields5, fields5
+    assert ("docs/audit/zzz/gen>x.py", "入口不可解析") not in fields5, fields5
+    assert ("docs/audit/zzz/ex2.sh", "入口不可解析") in fields5, fields5
+    assert ("../outside/zzz_escape.py", "入口不可解析") in fields5, fields5
+    assert ("docs/audit/gone2.sh", "登记册该撤") not in fields5, fields5
+    assert ("docs/audit/zzz/example_only.sh", "登记册该撤") in fields5, fields5
+    _why = {v["written"]: v["detail"] for v in rep5["violations"]
+            if v["field"] == "登记册该撤"}
+    assert "只剩点名举例的引用" in _why["docs/audit/zzz/example_only.sh"], _why
+    assert "只剩点名举例的引用" not in _why["docs/audit/zzz/never_cited.sh"], _why
     assert rep5["corpus"]["entry_example_stale"] == [
-        "docs/audit/zzz/doc.md:9|docs/audit/zzz/ghost_mark.sh"], rep5["corpus"]
+        "docs/audit/zzz/doc.md:9|docs/audit/zzz/ghost_mark.sh",
+        "docs/audit/zzz/doc.md:16|docs/audit/zzz/ghost2.sh"], rep5["corpus"]
     _mark(marks, "面 ⑤ 端到端：未入库开火、未登记死链开火、已登记的不开火、两条「该撤」各按理由"
                  "开火、README:1 由面 ④ 判（脚本缺失）而面 ⑤ 不重复记")
+    _mark(marks, "一行两个标记：第二个点名的死名字照判「标记失效」、同行未点名的 `ex2.sh` 照判死链"
+                 "（只 `search` 第一个标记时这两格一起静默）；`example_only.sh` 只剩举例引用 ⇒"
+                 "「该撤」并附理由，而折叠后才对上的 `gone2.sh` 仍在被引用 ⇒ 不许撤")
     c5 = rep5["corpus"]["entry_states"]
-    assert c5["tracked"] == 2 and c5["untracked"] == 1 and c5["dead"] == 10, c5
-    assert c5["dead_registered"] == 1 and c5["placeholder"] == 1 and c5["delegated"] == 1, c5
-    assert c5["example"] == 1, c5
+    assert c5["tracked"] == 3 and c5["untracked"] == 1 and c5["dead"] == 15, c5
+    assert c5["dead_registered"] == 2 and c5["placeholder"] == 1 and c5["delegated"] == 1, c5
+    assert c5["example"] == 4, c5
     assert rep5["corpus"]["entry_points"] == sum(
         c5[k] for k in ("tracked", "untracked", "dead", "placeholder", "delegated",
                         "example")), c5
@@ -1384,6 +1456,28 @@ def _self_test(tmp: Path) -> int:
     assert ("/tmp/zzz_dead_battery.py", "入口不可解析") in {
         (v["written"], v["field"]) for v in rep5b["violations"]}, rep5b["violations"]
     _mark(marks, "没有登记册＝一本空册：所有死链判红，grandfather 只能靠显式登记")
+
+    # ---- 语料读不全：前提问题只记一笔（复核件 #7）----
+    # 面 ⑤ 的判决与"标记失效"那一档各自把语料读一遍（两条路独立可测是刻意的），
+    # 于是一个读不出的 `.md` 会作为"前提问题"出现两次。修前实测：同一串出现 2 次，
+    # `problems` 的分母被自己灌了一次水——而这一格正是"退 2 到底为什么"的读法。
+    eu = tmp / "entry_unreadable"
+    (eu / "docs/audit/zzz/broken.md").mkdir(parents=True)
+    (eu / "docs/audit/zzz/doc.md").write_text(
+        "入口 Q：python docs/audit/zzz/q.py\n"
+        "说明：这一行没有命令形态 <!-- aipd-census:example docs/audit/zzz/ghost3.sh -->\n",
+        encoding="utf-8")
+    rep6 = audit(eu)
+    _ent_problems = [p for p in rep6["problems"] if p.startswith("entry_corpus_unreadable")]
+    assert len(_ent_problems) == 1, rep6["problems"]
+    assert "broken.md" in _ent_problems[0], _ent_problems
+    assert rep6["corpus"]["entry_example_stale"] == [
+        "docs/audit/zzz/doc.md:2|docs/audit/zzz/ghost3.sh"], rep6["corpus"]
+    assert ("docs/audit/zzz/ghost3.sh", "举例标记失效") not in {
+        (v["written"], v["field"]) for v in rep6["violations"]}, rep6["violations"]
+    assert main(["--repo", str(eu)]) == 2, rep6["problems"]
+    _mark(marks, "语料读不全时：前提问题按字符串去重（两条读语料的路各报一遍＝同一格灌水），"
+                 "且「标记失效」整档免判只留读数——看不见不等于违规")
 
     print(f"--self-test：{len(marks)} 条合成读数全部对上")
     return 0

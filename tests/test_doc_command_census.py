@@ -1190,8 +1190,10 @@ def test_tracked_face_reads_non_ascii_paths_unescaped(tmp_path: Path) -> None:
     一条明明入库的入口会被读成"未入库"再判红（假红，不是漏判）。
     本仓当前的跟踪路径全是 ASCII（条数是现读值，不抄在这里：`git ls-tree -r HEAD | wc -l`），
     所以这一格不咬现有语料——钉它是因为它一旦咬就是**假红**，而假红正是这把尺最贵的失败模式。
-    注意：面 ⑤ 的识别正则 `[A-Za-z0-9_./-]+` 本身**看不见**非 ASCII 路径，
-    所以这里直接验 `tracked_paths()`（修复所在的那一层），识别面的这一漏排在第 90 片。
+    注意：面 ⑤ 的识别正则**从第 90 片起看得见**非 ASCII 路径（`ENTRY_PATH_CHARS`
+    收了 CJK 基本区），本用例仍只验 `tracked_paths()`——那是跟踪面本身，另一层、另一把尺；
+    识别面那一半的牙在 `test_non_ascii_entrypoint_is_recognised_and_judged`。
+    （第 90 片之前这里写的是"识别面本身看不见这一漏排在第 90 片"，那句话已经翻案。）
     """
     tree = tmp_path / "repo"
     (tree / "docs" / "audit" / "中文 目录").mkdir(parents=True)
@@ -1206,3 +1208,158 @@ def test_tracked_face_reads_non_ascii_paths_unescaped(tmp_path: Path) -> None:
     assert "docs/audit/中文 目录/电池.py" in tracked, sorted(tracked)
     assert "with space.py" in tracked, sorted(tracked)
     assert not any(p.startswith('"') for p in tracked), sorted(tracked)
+
+
+def test_cjk_adjacent_path_is_recognised_and_pyx_is_not(tmp_path: Path,
+                                                        tmp_scope) -> None:
+    r"""路径后面**紧跟汉字**时必须仍读得出；`.pyx` 仍不许被吞成 `.py`。
+
+    结尾原来用 `\b`，而 Python 的 `\w` 把汉字算词字符 ⇒ `python docs/x.py与下一条`
+    在识别面上一行都不产生：既不 tracked 也不 dead，而是从分母里消失
+    （识别面的失败模式是"没有读数"，比判红更难发现）。换成否定型前瞻后接汉字算结束、
+    接 ASCII 词字符才算截断。同一条用例带否定对照：`thing.pyx` 必须**仍然读不到**，
+    否则"修好了漏判"会变成"新造了误吞"。
+    """
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      prose="复算入口：python docs/audit/zzz/tight.py紧跟汉字，"
+                            "另有 python docs/audit/zzz/thing.pyx\n")
+    rows, _gu, probs = census.entry_points(tree)
+    assert not probs, probs
+    assert [p for _r, _n, p, _s in rows] == ["docs/audit/zzz/tight.py"], rows
+    rep = census.audit(tree)
+    assert "入口不可解析" in fields(rep, "docs/audit/zzz/tight.py"), rep["violations"]
+    assert "docs/audit/zzz/thing.pyx" not in {v["written"] for v in rep["violations"]}
+
+
+def test_dot_prefixed_form_folds_onto_the_tracked_name(tmp_path: Path,
+                                                       tmp_scope) -> None:
+    """`./x` 必须先折叠再判：不折会把"已入库的那条入口"读成假「未入库」。
+
+    入库面是逐字比对 `git ls-tree -r HEAD` 的名字，而 git 从不存 `./` 前缀 ⇒
+    `python ./docs/audit/zzz/live.py` 指向的文件明明在 HEAD 的树里，比对却落空。
+    同一行再带一条 `docs/audit/zzz/../gone.py`：这一支旧实现**也**折（`..` 那一支），
+    列在这里是为了说明"折叠是统一的"，不是它的反证。
+    """
+    (tmp_path / "docs/audit/zzz").mkdir(parents=True)
+    (tmp_path / "docs/audit/zzz/live.py").write_text("print(1)\n", encoding="utf-8")
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      prose="复算：python ./docs/audit/zzz/live.py 与 "
+                            "bash docs/audit/zzz/../gone.py\n")
+    reg = tree / census.ENTRY_REGISTER_REL
+    reg.write_text(json.dumps({"entries": [{"path": "docs/audit/gone.py",
+                                            "note": "干净签出里没有这个文件"}]},
+                              ensure_ascii=False), encoding="utf-8")
+    _seed_git(tree, ["docs/audit/zzz/live.py"])
+    rows, git_unknown, probs = census.entry_points(tree)
+    assert not probs and git_unknown is False, (probs, git_unknown)
+    assert [p for _r, _n, p, _s in rows] == ["docs/audit/zzz/live.py",
+                                             "docs/audit/gone.py"], rows
+    assert {p: s for _r, _n, p, s in rows}["docs/audit/zzz/live.py"] == "tracked", rows
+    rep = census.audit(tree)
+    fired = {(v["written"], v["field"]) for v in rep["violations"]}
+    assert ("docs/audit/zzz/live.py", "入口未入库") not in fired, rep["violations"]
+    assert "docs/audit/gone.py" not in {w for w, _f in fired}, rep["violations"]
+    assert rep["corpus"]["entry_register_stale"] == [], rep["corpus"]
+
+
+def test_path_escaping_the_repo_root_is_dead_not_placeholder(tmp_path: Path,
+                                                             tmp_scope) -> None:
+    r"""`../outside/x.py` 不是模板，是确定的跑不了：干净签出里它在仓库外面。
+
+    旧实现靠占位分支里的裸 `\.\.` 把它一起免判。而"`..` 归一化后仍在"这句话的意思
+    恰恰是这条路径落在仓库根之外——`(root / path)` 会指到仓库外去，那里存不存在
+    都不算"拿得到"。区间模板（`s11..s12.py`）由 `s\d+\.\.s` 那一支单独接住，
+    两档同树各验一次，否则"修好一支、弄坏另一支"看不见。
+    """
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      prose="复算：python ../outside/zzz_escape.py\n"
+                            "模板：python docs/audit/s11..s12.py\n")
+    rows, _gu, probs = census.entry_points(tree)
+    assert not probs, probs
+    st = {p: s for _r, _n, p, s in rows}
+    assert st == {"../outside/zzz_escape.py": "dead",
+                  "docs/audit/s11..s12.py": "placeholder"}, rows
+    rep = census.audit(tree)
+    assert "入口不可解析" in fields(rep, "../outside/zzz_escape.py"), rep["violations"]
+    assert rep["corpus"]["entry_states"]["placeholder"] == 1, rep["corpus"]
+
+
+def test_two_markers_on_one_line_and_one_naming_an_angle_bracket_path(tmp_path: Path,
+                                                                      tmp_scope) -> None:
+    """一行可以有多个举例标记，被点名的名字也可以带 `>`。
+
+    两处都是"静默双向失灵"：`[^>]*?` 让**带 `>` 的名字**把整个标记作废
+    （既不生效、它的死名字也不会被判失效），只 `search` 第一个标记则第二个同样两头不沾。
+    四格一起钉：① 带 `>` 的被点名 ⇒ example；② 第一个标记点名的 ⇒ example；
+    ③ 同行未点名的 ⇒ 照判死链；④ 第二个标记点名的死名字 ⇒ 照判「举例标记失效」。
+    """
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      prose="入口：python docs/audit/zzz/gen>x.py"
+                            " <!-- aipd-census:example docs/audit/zzz/gen>x.py -->\n"
+                            "入口：bash docs/audit/zzz/ex1.sh 与 python /tmp/zzz_ex2.py"
+                            " <!-- aipd-census:example docs/audit/zzz/ex1.sh -->"
+                            "<!-- aipd-census:example /tmp/zzz_ghost2.py -->\n")
+    rows, _gu, probs = census.entry_points(tree)
+    assert not probs, probs
+    st = {p: s for _r, _n, p, s in rows}
+    assert st["docs/audit/zzz/gen>x.py"] == "example", rows
+    assert st["docs/audit/zzz/ex1.sh"] == "example", rows
+    assert st["/tmp/zzz_ex2.py"] == "dead", rows
+    rep = census.audit(tree)
+    fired = {(v["written"], v["field"]) for v in rep["violations"]}
+    assert ("/tmp/zzz_ex2.py", "入口不可解析") in fired, fired
+    assert ("/tmp/zzz_ghost2.py", "举例标记失效") in fired, fired
+    assert rep["corpus"]["entry_example_stale"] == \
+        ["docs/audit/note.md:2|/tmp/zzz_ghost2.py"], rep["corpus"]
+
+
+def test_register_entry_left_only_as_an_example_is_reversible(tmp_path: Path,
+                                                              tmp_scope) -> None:
+    """只剩"点名举例"的引用＝作为真入口已经没人引用 ⇒ 该撤，且理由要写明是哪一种。
+
+    判决与 `--emit-register` 草案必须同一口径，否则撤了草案、判决仍说它被引用着
+    （复核件 #8）。同时钉反面：一条**真被入口形态引用**的在册路径不许撤，
+    即使它同时也出现在别的举例里。
+    """
+    (tmp_path / "docs/audit/zzz").mkdir(parents=True)
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      prose="入口：bash docs/audit/zzz/real.sh\n"
+                            "举例：bash docs/audit/zzz/only_example.sh"
+                            " <!-- aipd-census:example docs/audit/zzz/only_example.sh -->\n")
+    (tmp_path / "docs/audit/zzz/real.sh").write_text("echo ok\n", encoding="utf-8")
+    reg = tree / census.ENTRY_REGISTER_REL
+    reg.write_text(json.dumps({"entries": [
+        {"path": "docs/audit/zzz/only_example.sh", "note": "示例早删了，只剩注释里点名"},
+        {"path": "docs/audit/zzz/real.sh", "note": "真的还被引用着（虽然磁盘上没了）"}]},
+        ensure_ascii=False), encoding="utf-8")
+    (tmp_path / "docs/audit/zzz/real.sh").unlink()
+    rep = census.audit(tree)
+    got = {v["written"]: v["detail"] for v in rep["violations"]
+           if v["field"] == "登记册该撤"}
+    assert set(got) == {"docs/audit/zzz/only_example.sh"}, rep["violations"]
+    assert "只剩点名举例的引用" in got["docs/audit/zzz/only_example.sh"], got
+    assert rep["corpus"]["entry_register_stale"] == ["docs/audit/zzz/only_example.sh"]
+
+
+def test_unreadable_corpus_records_the_premise_once(tmp_path: Path) -> None:
+    """同一个"读不出"不许记两笔：面 ⑤ 与标记反查各自读一遍语料，问题字符串会重复。
+
+    `problems` 是"退 2 到底为什么"的读法，灌一次水就等于把前提的数量说错。
+    另一面也要在：语料读不全时「标记失效」**整档免判**，只把读数留在
+    `entry_example_stale` 里——看不见不等于违规（与 `entry_face_empty`、
+    `git_unknown` 同一口径）。
+    """
+    (tmp_path / "docs/audit/zzz/broken.md").mkdir(parents=True)
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      code="# 参见 aipd usage 的说明\nVALUE = 1\n",
+                      prose="入口：python docs/audit/zzz/none.py\n"
+                            "说明：这一行没有命令形态"
+                            " <!-- aipd-census:example /tmp/zzz_ghost3.py -->\n")
+    rep = census.audit(tree)
+    ent = [p for p in rep["problems"] if p.startswith("entry_corpus_unreadable")]
+    assert len(ent) == 1 and "broken.md" in ent[0], rep["problems"]
+    assert rep["corpus"]["entry_example_stale"] == \
+        ["docs/audit/note.md:2|/tmp/zzz_ghost3.py"], rep["corpus"]
+    assert "/tmp/zzz_ghost3.py" not in {v["written"] for v in rep["violations"]}, \
+        rep["violations"]
+    assert census.main(["--repo", str(tree)]) == 2, rep["problems"]

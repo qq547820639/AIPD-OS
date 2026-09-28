@@ -341,7 +341,8 @@ def test_api_refuses_a_malformed_anchor_before_any_write(tmp_path: Path, bad) ->
     `BindPreflightError`。
 
     用 `out` 目录不存在来判"排在 mkdir 之前"：本函数原来的形状正是先 `mkdir` 再算，
-    第 84 片为此专门把两阶段顺序钉过一次（`test_gate_is_wired_into_write_evidence_before_any_write`）。
+    第 84 片为此专门把两阶段顺序钉过一次
+    （`test_gate_is_wired_into_write_evidence_before_any_write`）。
     大写那一档不是洁癖：`git rev-parse` 只印小写，而两个读者按**逐字相等**比锚点，
     收下一个大写值不会当场报错、只会让门与验签永远判红——所以形状判据必须把它关在外面。
     """
