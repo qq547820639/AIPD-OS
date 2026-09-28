@@ -1,0 +1,30 @@
+基线 rc=0 26 passed in 76.71s (0:01:16)
+基线已红 0 条（换绑之前这是预期，不是电池的判据）
+基线 conftest.py sha=3653eaeb56ec
+基线 release_fingerprint.py sha=57547de892b2
+基线 closeout_verifier.py sha=8dd5e325ff3a
+[KILLED     ] Y1-producer-computes-but-doesnt-write  1 failed, 25 passed in 80.77s (0:01:20)
+              开火: tests/test_report_manifest_fingerprint.py::test_production_conftest_stamps_a_real_json_report
+[KILLED     ] Y2-volatile-key-not-stripped  5 failed, 21 passed in 75.20s (0:01:15)
+              开火: tests/test_closeout_verifier.py::test_instrument_self_test_is_actually_run_and_green
+              开火: tests/test_report_manifest_fingerprint.py::test_digest_ignores_only_generated_at_among_top_level_fields
+              开火: tests/test_report_manifest_fingerprint.py::test_module_digest_matches_an_independently_written_copy
+              开火: tests/test_report_manifest_fingerprint.py::test_production_conftest_stamps_a_real_json_report
+              开火: tests/test_report_manifest_fingerprint.py::test_tool_face_prints_the_digest
+[KILLED     ] Y3-verifier-uses-raw-bytes-sha  6 failed, 20 passed in 83.48s (0:01:23)
+              开火: tests/test_closeout_verifier.py::test_clean_fixture_is_green_and_omitting_report_uses_provenance
+              开火: tests/test_closeout_verifier.py::test_empty_roster_missing_anchor_and_missing_dir_are_all_premature
+              开火: tests/test_closeout_verifier.py::test_instrument_self_test_is_actually_run_and_green
+              开火: tests/test_closeout_verifier.py::test_min_tests_ratchet_is_opt_in - As...
+              开火: tests/test_closeout_verifier.py::test_missing_plaintiff_fires_only_that_check
+              开火: tests/test_closeout_verifier.py::test_unbound_provenance_is_premature_not_two_violations
+[KILLED     ] Y4-C10-silenced  3 failed, 23 passed in 80.38s (0:01:20)
+              开火: tests/test_closeout_verifier.py::test_fingerprint_face_on_the_real_corpus_is_never_silently_green
+              开火: tests/test_closeout_verifier.py::test_fingerprint_verdict_always_has_a_content_level_explanation
+              开火: tests/test_closeout_verifier.py::test_instrument_self_test_is_actually_run_and_green
+[KILLED     ] Y5-C11-fires-without-baseline  2 failed, 24 passed in 80.89s (0:01:20)
+              开火: tests/test_closeout_verifier.py::test_dropping_a_whole_resident_file_fires_only_the_roster
+              开火: tests/test_closeout_verifier.py::test_instrument_self_test_is_actually_run_and_green
+[KILLED     ] Y6-unreadable-manifold-becomes-red  1 failed, 25 passed in 75.68s (0:01:15)
+              开火: tests/test_closeout_verifier.py::test_instrument_self_test_is_actually_run_and_green
+合计 KILLED+CRASH-KILL 6 / 6；其余按判决分类：无

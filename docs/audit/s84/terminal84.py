@@ -65,7 +65,10 @@ def main() -> int:
     assert not err and rec_fp and rec_fp == disk_fp, f"①：报告 {rec_fp[:12]} vs 磁盘 {disk_fp[:12]} {err}"
 
     summ = bound["summary"]
-    assert summ.get("failed", 1) == 0 and bound.get("exitcode") == 0, f"②：{summ}"
+    # 同 closeout84.sh：`failed` 键在 0 failed 时缺席，缺席要按 0 读（与生产侧同口径推导）
+    n_failed = summ["failed"] if "failed" in summ else max(
+        summ["total"] - summ["passed"] - summ.get("skipped", 0), 0)
+    assert n_failed == 0 and bound.get("exitcode") == 0, f"②：{summ}"
     dur = round(float(bound.get("duration", 0.0)), 1)
 
     gate_p = S / "gate.json"
@@ -106,7 +109,7 @@ def main() -> int:
 | 清单分母 | `SOURCE_MANIFEST.json` {n_files} 个文件（`docs/audit/` 整体排除 ⇒ 0 条） |
 | 报告自记清单指纹 | `{rec_fp[:12]}` |
 | 磁盘清单内容摘要 | `{disk_fp[:12]}` —— **逐位相等**（这道闸自己放行时也是这个判据） |
-| 干净签出那一跑 | {summ['passed']} passed / {summ.get('skipped', 0)} skipped / {summ.get('failed', 0)} failed，{dur} s，`exitcode={bound['exitcode']}` |
+| 干净签出那一跑 | {summ['passed']} passed / {summ.get('skipped', 0)} skipped / {n_failed} failed，{dur} s，`exitcode={bound['exitcode']}` |
 | 发布门 | `release_ready=True`，{len(checks)} 项全过，判红 0 项 |
 | 收尾验签 | {n_checks} 格全绿（判红 0、前提塌 0） |
 | 变异电池 | `KILLED+CRASH-KILL {tally.group(1)} / {tally.group(2)}`；另 `run1.log` 是改前的错读数 |

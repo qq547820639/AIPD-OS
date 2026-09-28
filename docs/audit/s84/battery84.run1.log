@@ -1,0 +1,28 @@
+基线 rc=1 1 failed, 28 passed, 8 warnings in 11.03s
+              基线红（非电池判据）: tests/test_closeout_verifier.py::test_roster_gap_equals_tests_changed_since_the_report
+基线 release_evidence.py sha=784e4a78d3bc
+基线 closeout_verifier.py sha=f0f91f4a5582
+[KILLED     ] W1-missing-field-no-longer-refused  2 failed, 27 passed, 8 warnings in 11.42s
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_without_the_fingerprint_and_writes_nothing
+[KILLED     ] W2-content-drift-no-longer-refused  3 failed, 26 passed, 8 warnings in 11.49s
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_when_the_manifest_content_moved_after_the_run
+[KILLED     ] W3-compares-raw-bytes  4 failed, 25 passed, 7 warnings in 11.27s
+              增量开火: tests/test_release_evidence_preflight.py::test_binds_and_records_the_fingerprint_when_it_matches
+              增量开火: tests/test_release_evidence_preflight.py::test_only_generated_at_moving_still_binds
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+[BAD-ANCHOR ] W4-gate-moved-after-the-write  new 已在树上（空改写）
+[KILLED     ] W5-refusal-laundered-to-zero  5 failed, 24 passed, 8 warnings in 12.02s
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_without_the_fingerprint_and_writes_nothing
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_an_unparsable_report
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_when_the_manifest_content_moved_after_the_run
+[KILLED     ] W6-production-doesnt-record-field  6 failed, 23 passed, 7 warnings in 10.83s
+              增量开火: tests/test_closeout_verifier.py::test_bind_provenance_fixture_shape_mirrors_production
+              增量开火: tests/test_release_evidence_preflight.py::test_binds_and_records_the_fingerprint_when_it_matches
+              增量开火: tests/test_release_evidence_preflight.py::test_only_generated_at_moving_still_binds
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_when_the_manifest_content_moved_after_the_run
+[KILLED     ] W7-fixture-stops-mirroring-field  2 failed, 27 passed, 8 warnings in 11.41s
+              增量开火: tests/test_closeout_verifier.py::test_bind_provenance_fixture_shape_mirrors_production
+合计 KILLED+CRASH-KILL 6 / 7；其余按判决分类：BAD-ANCHOR 1

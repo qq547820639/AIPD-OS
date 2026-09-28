@@ -20,7 +20,11 @@ import release_fingerprint as rf
 from pathlib import Path
 rep = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 s = rep["summary"]
-assert s.get("failed", 1) == 0 and rep.get("exitcode") == 0, f"报告不干净：{s}"
+# pytest-json-report 的 summary 在 0 failed 时**根本不带 `failed` 键**（生产侧
+# `_parse_pytest_report` 就是这么推导的），所以"缺席"必须按 0 读、不能按 1 读——
+# 写成 s.get("failed", 1) 会把一份干净报告判成不干净。
+failed = s["failed"] if "failed" in s else max(s["total"] - s["passed"] - s.get("skipped", 0), 0)
+assert failed == 0 and rep.get("exitcode") == 0, f"报告不干净：{s}"
 assert rep["source_commit"] == sys.argv[2], "报告锚点不是 tag SHA"
 disk, err = rf.fingerprint_from_file(Path("SOURCE_MANIFEST.json"))
 rec = str(rep.get("source_manifest_fingerprint") or "")
@@ -71,12 +75,13 @@ GATE_RC=$?
 echo "GATE_RC=$GATE_RC"
 "$PY" -c "
 import json;d=json.load(open('docs/audit/s84/gate.json'))
-bad=[c['name'] for c in d['checks'] if not c.get('passed')]
+bad=[c['check'] for c in d['checks'] if not c.get('passed')]   # JSON 里的键叫 check
 print('release_ready=',d.get('release_ready'),' 项=',len(d['checks']),' 未过=',bad)"
 
 # ---- 2.5 先把 gate 产物提交：验签器的 worktree_clean 看的是它开跑那一刻的 git status，
 #          未跟踪的 gate.json / repository_snapshot.json 会让它作为无关连带开火。
-git add docs/audit/s84/gate.json docs/audit/s84/gate.log docs/audit/repository_snapshot.json
+git add docs/audit/s84/gate.json docs/audit/repository_snapshot.json
+git add -f docs/audit/s84/gate.log      # 仓库 .gitignore 第 43 行 `*.log` ⇒ 取证件必须 -f
 git commit -q -m "chore(s84): 收下发布门读数与重算的 repository_snapshot"
 echo "GATECOMMIT_RC=$?"
 

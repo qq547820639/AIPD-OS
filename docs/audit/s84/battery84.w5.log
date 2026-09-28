@@ -1,0 +1,9 @@
+基线 rc=0 29 passed, 8 warnings in 85.04s (0:01:25)
+子集复算：只跑 1/8 臂（W5-refusal-laundered-to-zero）——合计行的分母按本次实跑的臂数算，不是整支电池
+基线 release_evidence.py sha=c60ac82a21a5
+[KILLED     ] W5-refusal-laundered-to-zero  4 failed, 25 passed, 8 warnings in 74.78s (0:01:14)
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_without_the_fingerprint_and_writes_nothing
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_an_unparsable_report
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_when_the_manifest_content_moved_after_the_run
+合计 KILLED+CRASH-KILL 1 / 1；其余按判决分类：无
