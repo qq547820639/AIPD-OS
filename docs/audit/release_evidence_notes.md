@@ -96,7 +96,7 @@ python scripts/sign_release.py aipd-os-5.6.0.zip           # 默认：MAC（HMAC
   函数级集成、干净 clone 与解压包审计可复现。
 - `tests/test_packaging.py`：`RELEASE_MANIFEST.json` 与 `SOURCE_MANIFEST.json` 内部一致性与
   磁盘哈希一致性（发布物齐全时执行；无清单时跳过）。
-- `tests/test_release_evidence_preflight.py`（第 84 片）：上面那道闸的 8 条常驻牙——三种坏形状
-  各一条、合规侧两条（指纹相同能绑、只换 `generated_at` 仍能绑）、"拒写不半写"一条
+- `tests/test_release_evidence_preflight.py`（第 84 片起，条数由 `grep -c '^def test_'` 现读）：那道闸的常驻牙——四种坏形状
+  各一条（路径不可读 / 缺字段 / 读不出 / 不同源；前两种在第 85 片拆成两条判决与两条用例）、合规侧两条（指纹相同能绑、只换 `generated_at` 仍能绑）、"拒写不半写"一条
   （先合法绑一次再拿坏报告去绑，磁盘字节必须逐字节不变）、不带报告不被闸一条，
   以及一条 AST 接线断言（那道 `if` 必须排在第一个 `.write_text(` 之前）。

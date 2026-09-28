@@ -18,7 +18,7 @@
 带 ``--test-report`` 时先过一道闸（第 84 片）：三份内容全部算完之后、**任何落盘动作之前**
 （连输出目录都不建），
 `preflight_report_vs_source` 核对"报告自记的清单**内容**摘要 == 即将写出的这份清单"，
-报告读不出 / 缺字段 / 不同源一律抛 `BindPreflightError` 并**整批不写**。
+路径不在 / 报告读不出 / 缺字段 / 不同源一律抛 `BindPreflightError` 并**整批不写**。
 比的是 `release_fingerprint` 的规范摘要而不是原始字节——`generated_at` 每轮都换。
 
 退码：0 写好 / 2 被这道闸拒（配方据此停下，不是"没活干"）/ 其它异常按 Python 默认。
@@ -333,11 +333,19 @@ def preflight_report_vs_source(report_info: dict, source_doc: dict) -> str:
 
     比的为什么不是清单文件的原始 sha256：`generate_source_manifest` 每次都重写
     `generated_at`，原始字节每轮必变（`release_fingerprint` 的规范摘要正是为此）。
-    报告侧没有可比对象（缺字段、报告读不出）也一律拒：那种报告说不清自己测的是哪一份清单，
-    把它写成 attestation 就是一条无法归因的证据。
+    报告侧没有可比对象（路径不在 / 报告读不出 / 缺字段）也一律拒：那种报告说不清自己
+    测的是哪一份清单，把它写成 attestation 就是一条无法归因的证据。
+    前两种形状都由 `_parse_pytest_report` 产出但返回不同：路径不在时**连 `parsed` 键
+    都没有**，所以两档的判决文案必须分开写，不能拿"present 但 parsed=false"去描述
+    一个根本没 present 的输入（那是操作员最容易犯的旗子值打错）。
     """
     rec = str(report_info.get("source_manifest_fingerprint") or "")
     want = release_fingerprint.fingerprint_of_document(source_doc)
+    if not report_info.get("present"):
+        given = str(report_info.get("path") or "")
+        raise BindPreflightError(
+            f"报告路径不是可读文件：{given or '（未给出路径）'}"
+            "——没有可比对象，拒绝绑定（检查 --test-report 的取值）")
     if not report_info.get("parsed"):
         raise BindPreflightError("报告读不出（present 但 parsed=false）——没有可比对象，拒绝绑定")
     if not rec:

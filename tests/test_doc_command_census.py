@@ -484,3 +484,67 @@ def test_live_bucket_has_no_unregistered_commands_in_this_repo() -> None:
     assert rep["report_only_unmatched"] == [], rep["report_only_unmatched"]
     assert rep["corpus"]["report_record_mentions"] > rep["corpus"]["report_only_mentions"], \
         rep["corpus"]
+
+
+# ---------------------------------------------------------------------------
+# 判红面 ④（第 85 片）：文档里行首的 `python scripts/X.py …` 必须真能照着跑。
+# 立条前先在真语料上量过：今天 4 行、判 4 行，其中 1 行是假话
+# （`references/cad-runtime-acceptance.md` 原本写 `--require-cad`，脚本只认
+# `--require-any-cad`，实跑 rc=2 `unrecognized arguments`）。
+# 所以这一格不是橡皮章——但也正因如此，两极都必须钉住。
+
+
+def _mk_scripts(tmp: Path) -> None:
+    (tmp / "scripts").mkdir(parents=True, exist_ok=True)
+    (tmp / "scripts/zzz_a.py").write_text(
+        "import argparse\nap = argparse.ArgumentParser()\n"
+        "ap.add_argument('--alpha')\nap.add_argument('--beta-two')\n", encoding="utf-8")
+    (tmp / "scripts/zzz_dyn.py").write_text(
+        "import argparse\nNAMES = ['--gamma']\nap = argparse.ArgumentParser()\n"
+        "ap.add_argument(*NAMES)\n", encoding="utf-8")
+
+
+def test_script_rows_fire_on_bogus_flag_and_missing_script(tmp_path: Path,
+                                                           tmp_scope) -> None:
+    """三行三种判决各归各位；合规那行（含反斜杠续行）不许开火。"""
+    _mk_scripts(tmp_path)
+    write_tree(tmp_path, GOOD_README + (
+        "python scripts/zzz_a.py --alpha\n"
+        "python scripts/zzz_a.py --zzz-not-declared\n"
+        "python scripts/zzz_nosuch.py --alpha\n"
+        "python scripts/zzz_a.py --beta-two \\\n    --alpha\n"),
+        GOOD_REGISTRY, code='GOOD = "先跑 aipd ctq add 再看"\n')
+    rep = census.audit(tmp_path)
+    assert fields(rep, "zzz_a.py --zzz-not-declared") == {"脚本旗子"}, rep["violations"]
+    assert fields(rep, "scripts/zzz_nosuch.py") == {"脚本缺失"}, rep["violations"]
+    assert not any(v["written"].endswith("--alpha") or "--beta-two" in v["written"]
+                   for v in rep["violations"]), rep["violations"]
+    c = rep["corpus"]
+    assert c["script_rows"] == 4 and c["script_rows_judged"] == 4, c
+    assert c["script_rows_unbounded"] == [], c
+    assert census.main(["--repo", str(tmp_path)]) == 4
+
+
+def test_unbounded_argparse_is_not_judged(tmp_path: Path, tmp_scope) -> None:
+    """`add_argument(*NAMES)` 读不到全集 ⇒ 不判。
+
+    这是"看不见 ≠ 违规"那一极：把读不到当成不存在，就会在合法脚本上造假红，
+    而且只有分母键能证明它是**因为**不封闭才没判（不是因为整档没跑）。
+    """
+    _mk_scripts(tmp_path)
+    write_tree(tmp_path, GOOD_README + "python scripts/zzz_dyn.py --whatever\n",
+               GOOD_REGISTRY)
+    rep = census.audit(tmp_path)
+    assert fields(rep, "zzz_dyn.py --whatever") == set(), rep["violations"]
+    c = rep["corpus"]
+    assert c["script_rows"] == 1, c
+    assert c["script_rows_judged"] == 0, c
+    assert c["script_rows_unbounded"] == ["zzz_dyn"], c
+
+
+def test_fourth_judging_face_is_live_in_the_real_repo() -> None:
+    """真仓库上这一档必须**真的走到**（分母下界），否则上面两条只是合成语料里的自证。"""
+    c = census.audit(ROOT)["corpus"]
+    assert c["script_rows"] >= 4, c
+    assert c["script_rows_judged"] >= 4, c
+    assert c["script_rows_judged"] <= c["script_rows"], c

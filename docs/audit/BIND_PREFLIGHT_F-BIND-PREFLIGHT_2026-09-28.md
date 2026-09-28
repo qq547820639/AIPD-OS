@@ -323,6 +323,11 @@ bash docs/audit/s84/closeout84.sh
    `doc_command_census` 对它的作用域，要么明确写一句"发布证据工具不在量具目录内"并挂豁免。
    （旁注：这句"0 次"最初是从一个只读子代理的普查里抄来的，它现在已经被本轮自己改成 2 次——
    是"入门禁档必须亲手重算"的现行版本，记在这里当反例。）
+   > 闭合（第 85 片）：**这句话的前提被量出来是错的**——README 的"量具目录"从不是脚本登记表
+   > （`scripts/*.py` 43 个里只有 3 个有行首写法），所以"缺这一行"不是缺陷；
+   > 真正无人判的是**那 3 行本身能不能照着跑**。第 85 片把那一面立成判红面 ④，
+   > 并当场抓出 1 处真缺陷（`references/cad-runtime-acceptance.md` 的 `--require-cad`）。
+   > 见 `docs/audit/SCRIPT_ROW_CENSUS_F-DOC-CMD-SCRIPTS_2026-09-28.md`。
 4. **清单里一旦出现 float，`fingerprint_of_document` 与 RFC 8785 就分家**。现在的自研规范化是
    `json.dumps(sort_keys=True, ensure_ascii=False, separators=(",", ":"))`，对 str/int 与 JCS 同读数
    （本轮实测 `SOURCE_MANIFEST.json` 值类型只有 `str`/`int`，float 0 处）。翻案条件写死在这里：
@@ -365,6 +370,7 @@ bash docs/audit/s84/closeout84.sh
    按 `present` 与 `parsed` 分两条消息，并给"路径不存在"补一条常驻用例——
    现在树上只有 `test_refuses_an_unparsable_report` 覆盖第一种（它断的 `"读不出"` 对那一种是准确的），
    第二种是**一条没有任何用例经过的分支**。这两处请搭下一片的必经重锚一起做，不要为一句文案单独跑一整个全量。
+   > 闭合（第 85 片）：两条文案已拆，并各补一条常驻用例，其中一条专钉"两个判决文本必须不同"；三支回退臂证其有牙。
 7. ~~`out_dir.mkdir` 在闸之前，被拒时会留下一个空目录~~ —— **本轮已修**（独立复核件点名之后）。
    原来：`write_evidence` 第一句是 `out_dir.mkdir(parents=True, exist_ok=True)`，它在闸之前 ⇒
    被拒时输出目录本身被创建，只是里面没有任何文件。当时的措辞"一个字节都不落盘"因此是过 claim。

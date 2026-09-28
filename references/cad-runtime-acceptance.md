@@ -3,7 +3,7 @@
 ## 前置检查
 
 ```bash
-python scripts/runtime_preflight.py --require-cad --json-out runtime_preflight.json
+python scripts/runtime_preflight.py --require-any-cad --json-out runtime_preflight.json
 ```
 
 要求发现 CAD Skill 的 `SKILL.md` 以及 `scripts/step`、`scripts/inspect`、`scripts/snapshot`。

@@ -74,6 +74,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import difflib
 import json
 import re
 import sys
@@ -302,6 +303,90 @@ def quickref_lines(root: Path) -> tuple[list[tuple[str, int, str]], list[str]]:
     return out, problems
 
 
+SCRIPT_ROW_RE = re.compile(r"^python(?:3)? scripts/([A-Za-z0-9_]+)\.py(.*)$")
+
+
+def script_arg_flags(path: Path) -> tuple[set[str], bool]:
+    """AST 取一个脚本 argparse 声明的全部长旗子；第二个返回值＝这个集合是否静态封闭。
+
+    出现 `add_argument(*names)`、`add_argument(var)`、f-string 之类第一实参不是字面量的
+    声明时返回 False。**那种脚本一律不判**：读不到全集就把"我没见到"当成"它不存在"，
+    是本项目反复记过的假红形状（缺席与看不见的分别）。
+    """
+    flags: set[str] = set()
+    bounded = True
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, SyntaxError):
+        return set(), False
+    for n in ast.walk(tree):
+        if not (isinstance(n, ast.Call) and getattr(n.func, "attr", "") == "add_argument"):
+            continue
+        if not n.args:
+            bounded = False
+            continue
+        first = n.args[0]
+        if isinstance(first, ast.Constant) and isinstance(first.value, str):
+            if first.value.startswith("--"):
+                flags.add(first.value.split("=", 1)[0])
+            continue
+        bounded = False
+    return flags, bounded
+
+
+def script_rows(root: Path) -> tuple[list[tuple[str, int, str, list[str]]],
+                                     list[str], list[str]]:
+    r"""判红面 ④（第 85 片）：文档里行首的 `python scripts/X.py …` 必须真能照着跑。
+
+    第 60 片立这把尺时只覆盖了 `aipd …` 那一面，理由是"那才是产品命令面"；
+    但 README 量具目录与 `references/` 里写的是**另一种**照着敲的形状
+    （`python scripts/closeout_verifier.py --tag …`），今天一条都不判。
+    本轮先量分母：真仓库 4 行、涉及 4 个脚本，其中 **1 行是假话**——
+    `references/cad-runtime-acceptance.md:6` 写 `--require-cad`，
+    而 `runtime_preflight.py` 只声明 `--require-any-cad`（实跑 rc=2
+    `unrecognized arguments: --require-cad`）。所以这一格不是橡皮章。
+
+    语料走 `quickref_corpus` 的**同一份遍历**（判红面 ② 与续行那格也从这里取），
+    并在这里把行尾 `\` 的续行折回一行——否则只看得到半条命令，
+    而 README 的合规形状（`--tag v5.6.0` 换行 `--expect-test …`）会被读成"没有那个旗子"。
+    """
+    files, problems = quickref_corpus(root)
+    out: list[tuple[str, int, str, list[str]]] = []
+    unbounded: list[str] = []
+    cache: dict[str, tuple[set[str], bool] | None] = {}
+    for rel, lines in files:
+        merged: list[tuple[int, str]] = []
+        pend_no: int | None = None
+        pend = ""
+        for no, raw in enumerate(lines, 1):
+            body = _quick_body(raw)
+            if pend_no is None:
+                pend_no, pend = no, body
+            else:
+                pend = pend.rstrip() + " " + body
+            if pend.rstrip().endswith("\\"):
+                pend = pend.rstrip()[:-1]
+                continue
+            merged.append((pend_no, pend))
+            pend_no, pend = None, ""
+        if pend_no is not None:
+            merged.append((pend_no, pend))
+        for no, body in merged:
+            m = SCRIPT_ROW_RE.match(body.rstrip())
+            if not m:
+                continue
+            stem, rest = m.group(1), m.group(2)
+            used = sorted(set(re.findall(r"--[A-Za-z][A-Za-z0-9-]*", rest)))
+            out.append((rel, no, stem, used))
+            if stem not in cache:
+                path = root / "scripts" / f"{stem}.py"
+                cache[stem] = None if not path.is_file() else script_arg_flags(path)
+            got = cache[stem]
+            if got is not None and not got[1] and stem not in unbounded:
+                unbounded.append(stem)
+    return out, unbounded, problems
+
+
 def production_code_mentions(root: Path) -> tuple[list[tuple[str, int, str]],
                                                   list[tuple[str, int, str]],
                                                   list[str]]:
@@ -371,7 +456,8 @@ def audit(root: Path) -> dict[str, Any]:
     cont, p5 = continuation_breaks(root)
     code, code_neg, p4 = production_code_mentions(root)
     prose, p3 = prose_mentions(root)
-    problems += p1 + p2 + p3 + p4 + p5
+    srows, sunbounded, p6 = script_rows(root)
+    problems += p1 + p2 + p3 + p4 + p5 + p6
 
     def record(kind: str, rel: str, no: int, seg: str) -> None:
         for first, second in _mentions(seg):
@@ -393,6 +479,32 @@ def audit(root: Path) -> dict[str, Any]:
     # 所以直接进 violations，也别指望它给只报面去重（那按名字去重，形状不同）。
     for rel, no, seg in cont:
         judged.append(("续行", rel, no, seg))
+
+    # 判红面 ④：脚本必须存在，且行内 `--旗子` 必须在它自己的 argparse 声明里。
+    # 与 ② / ②b 同一条纪律：语料走 quickref_corpus 那一份遍历，别另起一次 rglob。
+    script_rows_judged = 0
+    extra: dict[tuple[str, str, int, str], str] = {}
+    for rel, no, stem, used in srows:
+        path = root / "scripts" / f"{stem}.py"
+        if not path.is_file():
+            script_rows_judged += 1
+            judged.append(("脚本缺失", rel, no, f"scripts/{stem}.py"))
+            extra[("脚本缺失", rel, no, f"scripts/{stem}.py")] = (
+                "这一行照抄会直接报 `No such file or directory`")
+            continue
+        decl, bounded = script_arg_flags(path)
+        if not bounded:
+            continue                      # 读不到全集 ⇒ 不判（也不假装判过）
+        script_rows_judged += 1
+        for flag in used:
+            if flag in decl:
+                continue
+            key = ("脚本旗子", rel, no, f"{stem}.py {flag}")
+            judged.append(key)
+            near = difflib.get_close_matches(flag, sorted(decl), n=2, cutoff=0.6)
+            extra[key] = (f"`{path.name}` 声明的长旗子共 {len(decl)} 个："
+                          f"{' '.join(sorted(decl)) or '（一个都没有）'}"
+                          + (f"；近形候选 {' '.join(near)}" if near else ""))
 
     # 只报面 = 全量扫描里**未被按名判过**的提及，再补上"代码里带否定标记"那批中
     # 尚未被全量扫描覆盖的（今天 `CODE_DIRS ⊂ REPORT_ONLY_DIRS` 都含 src，五条全已被覆盖 ⇒
@@ -444,6 +556,8 @@ def audit(root: Path) -> dict[str, Any]:
         "authority_groups": len(groups),
         "corpus": {"run_command_segments": len(reg), "quickref_lines": len(quick),
                    "continuation_breaks": len(cont),
+                   "script_rows": len(srows), "script_rows_judged": script_rows_judged,
+                   "script_rows_unbounded": sorted(sunbounded),
                    "code_mentions": len(code), "code_negated": len(code_neg),
                    "prose_mentions": len(prose),
                    "report_only_mentions": len(live_rows),
@@ -452,7 +566,8 @@ def audit(root: Path) -> dict[str, Any]:
                    "report_record_dirs": record_dirs},
         "report_record_unmatched": [{"doc": d, "line": n, "written": w}
                                     for d, n, w in record_bad],
-        "violations": [{"field": f, "doc": d, "line": n, "written": w}
+        "violations": [{"field": f, "doc": d, "line": n, "written": w,
+                        "detail": extra.get((f, d, n, w), "")}
                        for f, d, n, w in judged],
         "report_only_unmatched": [{"doc": d, "line": n, "written": w}
                                   for d, n, w in report_bad],
@@ -469,13 +584,26 @@ def render(rep: dict[str, Any]) -> str:
     lines.append(f"判红面语料：run_command {c['run_command_segments']} 段 / "
                  f"速查行 {c['quickref_lines']} 行 / 生产代码 {c['code_mentions']} 处"
                  f"（另有 {c['code_negated']} 处同行带否定标记 ⇒ 只报）"
-                 f"；速查语料里断掉的续行 {c['continuation_breaks']} 处")
+                 f"；速查语料里断掉的续行 {c['continuation_breaks']} 处"
+                 f"；行首 `python scripts/X.py` 共 {c['script_rows']} 行"
+                 f"（判 {c['script_rows_judged']} 行，"
+                 f"{len(c['script_rows_unbounded'])} 行因旗子集合静态不封闭而不判："
+                 f"{', '.join(c['script_rows_unbounded']) or '无'}）")
     lines.append(f"只报面（live，可行动）{c['report_only_mentions']} 处；"
                  f"记录性引述（只数不列名）{c['report_record_mentions']} 处 "
                  f"{c['report_record_dirs']}；全量扫描 {c['prose_mentions']} 处，"
                  f"live + record = {c['report_only_mentions'] + c['report_record_mentions']} 处"
                  "（与减去三档判红面覆盖后的行数同构）")
     for v in rep["violations"]:
+        if v["field"] == "脚本旗子":
+            lines.append(f"  ✗ 脚本旗子 {v['doc']}:{v['line']} 写了 `{v['written']}`"
+                         " ⇒ 这个脚本不接受该旗子，照抄会 rc=2 用法错误"
+                         + (f"（{v.get('detail', '')}）" if v.get("detail") else ""))
+            continue
+        if v["field"] == "脚本缺失":
+            lines.append(f"  ✗ 脚本缺失 {v['doc']}:{v['line']} 点名 `{v['written']}`"
+                         " ⇒ 仓库里没有这个脚本，那行不可执行")
+            continue
         if v["field"] == "续行":
             lines.append(f"  ✗ {v['field']} {v['doc']}:{v['line']} 以 `\\` 收尾，而下一行是"
                          "另一条 `aipd` 命令 ⇒ 照抄只会跑到半条命令（要么补完旗子，要么"
@@ -541,6 +669,24 @@ def _self_test(tmp: Path) -> int:
         "--pdf   # 顺带出 A4 图框矢量 PDF（中文可抽取）\\\n"
         + legal_tail + "\n",
         encoding="utf-8")
+    # 判红面 ④ 的夹具：四个脚本、四种判决。名字一律 `zzz_` 前缀（不与产品脚本撞名，
+    # 也不会被将来注册的真名反噬——第 60/61 片那两处写死真名的教训）。
+    (tmp / "scripts").mkdir(exist_ok=True)
+    (tmp / "scripts/zzz_tool.py").write_text(
+        "import argparse\nap = argparse.ArgumentParser()\n"
+        "ap.add_argument('--alpha')\nap.add_argument('--beta-two')\n", encoding="utf-8")
+    (tmp / "scripts/zzz_dyn.py").write_text(
+        "import argparse\nNAMES = ['--gamma']\nap = argparse.ArgumentParser()\n"
+        "ap.add_argument(*NAMES)\n", encoding="utf-8")
+    rows = (tmp / "README.md").read_text(encoding="utf-8")
+    (tmp / "README.md").write_text(
+        rows + "\npython scripts/zzz_tool.py --alpha            # 合规：旗子真声明着\n"
+        "python scripts/zzz_tool.py --zzz-not-a-flag   # 必开火：脚本不认这个旗子\n"
+        "python scripts/zzz_missing_tool.py --alpha    # 必开火：仓库里没有这个脚本\n"
+        "python scripts/zzz_dyn.py --anything          # 不判：旗子集合静态不封闭\n"
+        "python scripts/zzz_tool.py --beta-two \\\n"
+        "    --alpha           # 合规续行：折回同一行才判得对\n",
+        encoding="utf-8")
     (tmp / "src/aipd_os").mkdir(parents=True, exist_ok=True)
     (tmp / "src/aipd_os/registry_data.py").write_text(
         'CAPABILITIES = [{"id": "a", "run_command": "aipd ctq revise --db x / '
@@ -571,11 +717,19 @@ def _self_test(tmp: Path) -> int:
          globals_["CODE_DIRS"]) = saved
     bad = {(v["written"], v["field"]) for v in rep["violations"]}
     expect = {(f"aipd {ghost_bad}", "quickref"), (f"aipd {ghost_bad}", "run_command"),
-              (f"aipd {ghost_bad}", "code"), (broken, "续行")}
+              (f"aipd {ghost_bad}", "code"), (broken, "续行"),
+              ("zzz_tool.py --zzz-not-a-flag", "脚本旗子"),
+              ("scripts/zzz_missing_tool.py", "脚本缺失")}
     assert bad == expect, (sorted(bad), sorted(expect))
     _mark(marks, "三档判红面各抓到一条注入的假命令（速查行、run_command 段、生产代码），"
                  "断掉的续行那格抓到历史原件那一行")
     assert rep["corpus"]["continuation_breaks"] == 1, rep["corpus"]
+    # 判红面 ④ 的三格分母：5 行、判 4 行（不封闭那行不判）、不封闭名单只有 zzz_dyn
+    assert rep["corpus"]["script_rows"] == 5, rep["corpus"]
+    assert rep["corpus"]["script_rows_judged"] == 4, rep["corpus"]
+    assert rep["corpus"]["script_rows_unbounded"] == ["zzz_dyn"], rep["corpus"]
+    _mark(marks, "判红面 ④：假旗子与不存在的脚本各开火一次；真旗子、折回来的续行、"
+                 "以及静态不封闭的脚本一律不开火（看不见不折成违规）")
     assert legal_tail.strip() not in {v["written"] for v in rep["violations"]}
     _mark(marks, "合规侧同批存在：下一行是旗子（`  --db … --bom …`）的合法续行不开火")
     assert not any("aipd ctq add" in b or "aipd usage" in b or "aipd drawing spec" in b

@@ -499,9 +499,16 @@ python scripts/closeout_verifier.py --tag v5.6.0 --expect-test tests/test_new_th
 #     时跑出来的全量都带着这条红，于是永远拿不到可绑的那一份。
 #     但"退 2 挡住配方"只等于挡住了记得跑这一步的人，所以第 84 片把强制力补到写入侧：
 #     `release_evidence.py` 带 `--test-report` 时在**任何落盘动作之前**核对（连输出目录都不建）
-#     「报告自记的清单指纹 == 即将写出的那份清单的内容摘要」，缺席/读不出/不同源一律
+#     「报告自记的清单指纹 == 即将写出的那份清单的内容摘要」，四种坏形状（路径不可读 /
+#    　　缺字段 / 读不出 / 不同源）一律
 #     `BindPreflightError` → 退 2 且三份证据一个都不写（拒写不半写）。
-#     闸的常驻牙见 `tests/test_release_evidence_preflight.py`。
+#     闸的常驻牙见 `tests/test_release_evidence_preflight.py`（条数别抄进正文——
+#     用 `grep -c '^def test_' tests/test_release_evidence_preflight.py` 现读）。
+python scripts/doc_command_census.py
+#   ↑ 除了 `aipd …` 那一面，第 85 片起它还判**行首 `python scripts/X.py …`**：
+#     脚本必须存在、行内 `--旗子` 必须在该脚本 argparse 声明里（AST 读）；
+#     旗子集合静态不封闭（`add_argument(*NAMES)`）的脚本**不判**——看不见≠违规。
+#     立条前在真语料上量过：4 行、判 4 行，其中 1 行是假话，所以不是橡皮章。
 python scripts/absence_claim_census.py
 #   ↑ 登记表否定句对账（第 65 片）：`src/aipd_os/registry_data.py` 里每句「X 仍没有」都配一个
 #     **反证锚点**（哪个文件/符号一旦出现，这句话就算过期）。判决四档：成立、过期（判红）、

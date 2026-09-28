@@ -5,7 +5,9 @@
 这一片的存在理由：第 83 片把 C10 从判红改成前提塌（判红会自锁），于是"缺字段"这一判
 在验签侧只剩下"挡配方"的分量——真正的拦截必须回到写入侧，否则守的还是"我记得跑那一步"。
 
-两极都要钉：坏形状按形状逐档（没字段 / 内容不同源 / 报告读不出），
+两极都要钉：坏形状按形状逐档（路径不在 / 报告读不出 / 没字段 / 内容不同源），
+其中前两档是 `_parse_pytest_report` 的两种返回、文案必须逐字不同（把"路径不存在"说成
+"present 但 parsed=false"就是把操作员最容易犯的那件事说错了）；
 合规侧要证"只换 `generated_at` 照样能绑"（否则每轮正常收尾都被自己拒掉），
 还要证**拒写不半写**（树里已经躺着的证据不许被动过一半）。
 """
@@ -72,6 +74,16 @@ def _bind(tmp_path: Path, repo: Path, out_dir: Path, report: Path | None):
     return rc, buffer.getvalue()
 
 
+def _verdict(text: str) -> str:
+    """取回 main() 打印的那句判决本身（剥掉公共前缀），好逐字比两档文案。
+
+    前缀只含一个全角冒号，所以 `split("：", 1)[1]` 拿到的就是异常消息（含换行）。
+    前缀没命中时这条 helper 会响亮地失败，而不是把整行吐回去冒充"判决"。
+    """
+    assert "拒绝写入证据" in text, text
+    return text.split("：", 1)[1].strip()
+
+
 def test_refuses_a_report_without_the_fingerprint_and_writes_nothing(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     out = tmp_path / "out"
@@ -108,6 +120,44 @@ def test_refuses_an_unparsable_report(tmp_path: Path) -> None:
     assert rc == 2, (rc, text)
     assert "读不出" in text, text
     assert not (out / "PROVENANCE.json").exists()
+
+
+def test_refuses_a_report_path_that_is_not_a_file_and_names_it(tmp_path: Path) -> None:
+    """`--test-report` 打错一个字母是操作员最容易犯的一档：这一档必须点名路径。"""
+    repo = _repo(tmp_path)
+    missing = tmp_path / "no-such-report.json"
+    assert not missing.exists(), "夹具前提：这一条测的就是路径不存在"
+    out = tmp_path / "out"
+    rc, text = _bind(tmp_path, repo, out, missing)
+    assert rc == 2, (rc, text)
+    # main() 先把旗子值 resolve() 再交给 `_parse_pytest_report`，
+    # 所以断的是解析后的全路径（macOS 上 tmp_path 会把 /var 解成 /private/var）。
+    assert str(missing.resolve()) in text, text
+    assert "不是可读文件" in text, text
+    assert "parsed=false" not in text, text
+    assert not (out / "SOURCE_MANIFEST.json").exists(), "拒写必须发生在任何落盘动作之前"
+    assert not (out / "PROVENANCE.json").exists()
+    assert not out.exists(), "被拒之后连输出目录都不该建（mkdir 已挪到闸之后）"
+
+
+def test_missing_path_and_unparsable_report_get_different_verdicts(tmp_path: Path) -> None:
+    """本轮改的就是这一格：两档形状共用一句文案时，其中一句必然是错的。"""
+    repo = _repo(tmp_path)
+    junk = tmp_path / "junk.json"
+    junk.write_text("{ not json", encoding="utf-8")
+    missing = tmp_path / "no-such-report.json"
+    rc_junk, text_junk = _bind(tmp_path, repo, tmp_path / "out-junk", junk)
+    rc_miss, text_miss = _bind(tmp_path, repo, tmp_path / "out-miss", missing)
+    assert (rc_junk, rc_miss) == (2, 2), (rc_junk, rc_miss)
+    unparsable, not_found = _verdict(text_junk), _verdict(text_miss)
+    assert unparsable != not_found, (unparsable, not_found)
+    # 文件在、JSON 坏：说"读不出/parsed=false"是准确的，但不得谎报文件不在
+    assert "读不出" in unparsable and "parsed=false" in unparsable, unparsable
+    assert "不是可读文件" not in unparsable, unparsable
+    # 路径不在：得点名是哪个路径，且不得谎报成解析失败
+    assert "不是可读文件" in not_found, not_found
+    assert str(missing.resolve()) in not_found, not_found
+    assert "parsed=false" not in not_found and "解析" not in not_found, not_found
 
 
 def test_binds_and_records_the_fingerprint_when_it_matches(tmp_path: Path) -> None:

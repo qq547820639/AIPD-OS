@@ -951,6 +951,33 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.46 F-DOC-CMD-SCRIPTS 第 85 片：文档里 `python scripts/X.py …` 那一面第一次有人判，顺手量出一个**不该做**的门**：
+  入口是第 84 片 §八.3 那句"README 量具目录里没有 `release_evidence.py` 这一行"。本轮去核实它时先量分母，
+  结果**我那句话的前提是错的**：`scripts/*.py` 43 个，只有 **3** 个在 README 有行首可执行写法，36 个压根没提——
+  那张表从来不是脚本登记表。于是"每个脚本都该有一行"这条判据今天会一次红 40 处，
+  按第 60 片立尺时那条"先量假阳性再决定做不做门"的纪律**不做**，改为登记反向形状
+  （要做得先有"有意不进目录"的豁免清单）。但量的过程暴露了真正的洞：
+  **那 3 行本身没有任何尺子看过**，而 README/`references/` 里写给工程师与 agent 照抄的正是这种形状。
+  **新增判红面 ④**（`scripts/doc_command_census.py` 的 `script_rows` / `script_arg_flags`）：脚本必须存在、
+  行内 `--旗子` 必须在它自己的 argparse 声明里（AST 读，不跑 `--help`——拿执行结果当权威就是把待证的东西当用了），
+  判决文本带出"声明了哪些"与 `difflib` 近形候选；语料走 `quickref_corpus` **同一份遍历**并把行尾 `\` 折回一行。
+  **第三态刻意不判**：`add_argument(*NAMES)` 这类静态不封闭的脚本只进 `script_rows_unbounded`，
+  读不到全集就把"我没见到"当"它不存在"是造假红。
+  **立条前在真语料上量过，所以不是橡皮章**：`4 行 / 判 4 行 / 1 行是假话`——
+  `references/cad-runtime-acceptance.md:6` 写 `--require-cad`，而 `runtime_preflight.py` 只声明
+  `--require-any-cad`；**亲手跑过**：错旗子得 `error: unrecognized arguments`（rc 2），
+  对旗子得 `architecture_ready: true`（也是 rc 2 = 该工具自己的判决码）——**退码不能单独当判据**，
+  这一格里两个 2 含义完全不同。修文档后真仓库 `rc=0`。
+  自测加四支臂（假旗子、缺脚本、真旗子+合法续行、不封闭），分母三键各自钉死
+  （`script_rows 5 / judged 4 / unbounded [zzz_dyn]`——**判 4 不判 5 是设计**，那 1 的差只能由 unbounded 解释）；
+  常驻 +3（含一条真仓库分母下界，防"合成语料里活着而真语料被静默收窄成 0 也全绿"）。
+  同批落地第 84 片 §八.6：`preflight_report_vs_source` 原先用 `not report_info.get("parsed")` 一次盖住
+  "JSON 坏"与"路径根本不存在"两种输入（后者连 `parsed` 键都没有，文案却说 `present 但 parsed=false`，
+  说反了，而它恰是操作员最容易犯的那种），现按 `present`/`parsed` 拆两条文案并各补一条用例，
+  其中一条专钉**两条判决文本必须不同**。派出的子代理自己绕开一个宿主陷阱：`main()` 先 `resolve()`，
+  macOS 上 `tmp_path` 会变 `/private/var/…`，断言得比解析后的串——平台相关字面量不进断言。
+  它另用三支回退臂（撤拆分／换两条文案／去掉路径回显，各 2 failed）证明新用例有牙，
+  并复算第 84 片八臂锚点仍全部唯一。被哈希文件数不变（684，只改内容）。
 - **v5.45 F-BIND-PREFLIGHT 第 84 片：绑定那道闸从"我记得跑一步"搬进工具本体，拒写不半写**：
   第 83 片把 C10 从判红改成前提塌（判红会自锁，那一条到今天仍然对），代价是"报告没带清单指纹"
   在验签侧只剩挡配方的分量——它挡的是**已经写完的证据**。本片把强制力补回写入侧：
