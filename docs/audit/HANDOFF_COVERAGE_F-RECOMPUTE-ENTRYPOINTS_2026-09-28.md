@@ -195,8 +195,8 @@ with space.py
 | 段 | 命令形状 | 读数 |
 | --- | --- | --- |
 | 绑定 | `release_evidence.py --repo . --out . --version 5.6.0 --source-commit <tag SHA> --test-report docs/audit/pytest-report-v5.6.0.json` | `BIND_RC=0`；回读 `source_commit=a66040520139…`、`test_report=2713p/0f/2718t`、`fp=8956ec96dafe`（提交 `8bc6e36`） |
-| 发布门 | `production_release_gate.py --release-ready --tag v5.6.0 --test-report … --json-out docs/audit/s89/gate.json`（PATH 带 `.venv/bin`） | `GATE_RC=0`，`release_ready: True`，8/8 项无未过（提交 `2a04794`） |
-| 收尾验签 | `closeout_verifier.py --tag v5.6.0 --expect-test <两条原告> --min-tests 2718` | `CV_RC=0`，11 格全绿：`roster_covers_tree` 树 219 文件 / 2623 个 def ↔ 报告 219 文件 / 2718 条，双向差集为空；`size_ratchet` 2718 ≥ 2718；`worktree_clean` ✓ |
+| 发布门 | `production_release_gate.py --release-ready --tag v5.6.0 --test-report … --json-out docs/audit/s89/gate.json`（PATH 带 `.venv/bin`） | `GATE_RC=0`，`release_ready: True`，8/8 项无未过（读数入库于 `3ff6013`） |
+| 收尾验签 | `closeout_verifier.py --tag v5.6.0 --expect-test <两条原告> --min-tests 2718` | `CV_RC=0`，11 格全绿：`roster_covers_tree` 树 219 文件 / 2623 个 def ↔ 报告 219 文件 / 2718 条，双向差集为空；`size_ratchet` 2718 ≥ 2718；`worktree_clean` ✓（读数入库于 `2a04794`） |
 | 回收签出树后复算 | 同上两条门再各跑一次（`-b` 后缀另起文件，不覆盖绑定那一代） | 发布门 `GATE_B_RC=0`（8/8），验签 `CV_B_RC=0`（11 格全绿，含 `report_fingerprint_matches_disk 8956ec96dafe`）——证明"证件绿"不依赖那棵 worktree 还在 |
 
 三条口径：① `--min-tests` 由脚本从本轮报告现读 `collected=2718` 再传给验签器，
