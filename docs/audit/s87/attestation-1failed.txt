@@ -1,0 +1,36 @@
+第 87 片第一次干净签出全量的失败现场（这份报告因此作废，未绑定）
+summary: {'passed': 2686, 'skipped': 5, 'failed': 1, 'total': 2692, 'collected': 2692}  duration: 1624.2s  exitcode: 1
+清单指纹（报告自记）: c7133d0bb197df772652be07c47da89e78472fbf1b7120e1067636b016a7f67d
+
+用例: tests/test_packaging.py::test_release_manifest_hashes_match_disk
+def test_release_manifest_hashes_match_disk() -> None:
+        """发布清单的 SHA-256 必须与磁盘上实际文件一致（可复现性）。"""
+        manifest_path = _find_manifest()
+        if manifest_path is None:
+            pytest.skip("未找到 RELEASE_MANIFEST.json，跳过打包可复现性检查")
+    
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        mismatches = []
+        for f in manifest["files"]:
+            p = ROOT / f["path"]
+            if not p.exists():
+                mismatches.append(f"{f['path']}: 文件不存在")
+                continue
+            if _sha256_hex(p) != f["sha256"]:
+                mismatches.append(f"{f['path']}: SHA-256 不匹配")
+            if f.get("size") is not None and p.stat().st_size != f["size"]:
+                mismatches.append(f"{f['path']}: 大小不匹配")
+    
+>       assert not mismatches, "发布清单与磁盘不一致：\n" + "\n".join(mismatches)
+E       AssertionError: 发布清单与磁盘不一致：
+E         CHANGELOG.md: SHA-256 不匹配
+E         CHANGELOG.md: 大小不匹配
+E         README.md: SHA-256 不匹配
+E         README.md: 大小不匹配
+E         scripts/doc_command_census.py: SHA-256 不匹配
+E         scripts/doc_command_census.py: 大小不匹配
+E         tests/test_doc_command_census.py: SHA-256 不匹配
+E         tests/test_doc_command_census.py: 大小不匹配
+E       assert not ['CHANGELOG.md: SHA-256 不匹配', 'CHANGELOG.md: 大小不匹配', 'README.md: SHA-256 不匹配', 'README.md: 大小不匹配', 'scripts/doc_command_census.py: SHA-256 不匹配', 'scripts/doc_command_census.py: 大小不匹配', ...]
+
+tests/test_packaging.py:102: AssertionError
