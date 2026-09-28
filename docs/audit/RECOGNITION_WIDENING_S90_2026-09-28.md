@@ -59,3 +59,29 @@ D 族今天 0 命中：识别面加宽非 ASCII 不产生任何现红，但 `tra
 
 候选清单、六维对比与择一决定见 `RECOGNITION_WIDENING_S90` 的 §三之二（检索完成后填写）；
 未检索到第二候选之前不动判据。
+
+## 四、生成件住在语料里这一格：择一已做（进语料），理由是现读的
+
+第 87 片 §九#10 留的问题是"`docs/audit/capability_matrix.md` 由登记表生成，却又住在
+面 ⑤ 的语料里 ⇒ 生成件参与被生成的语料"。两个候选处置：**把它踢出语料**，或
+**留在语料、把漂移记成账**。择一取后者，依据是现读：
+
+```
+$ .venv/bin/python -c "…按 ENTRY_LINE_RE 扫 docs/audit/capability_matrix.md…"
+entry hits in matrix: 7        # 第 49-56 行
+  scripts/research/source_worker.py / search_papers.py / fetch_fulltexts.py
+  scripts/research/postprocess.py（两行）/ scripts/claim_gate.py …
+template-ish lines: 2          # 第 50 行的 `…_by_{arxiv,…}.py`、第 72 行的 `src/…/{composer,renderer}.py`
+```
+
+那 7 处命中里有 **6 处指向真存在的脚本**，也就是说这本生成册目前**正在为分母供内容**：
+把它踢出语料不会让判据更干净，只会让这 6 条入口少一个读者
+（它们改名的时候就没人判红了）。漂移的代价反过来是可承受的：登记表加一行 ⇒
+生成册多一行 ⇒ `corpus.entry_points` 往前走一格，而这正是判据想要的方向。
+第 50 行那个 `{arxiv,…}` 模板形态**不产生任何读数**（既不计占位也不判），
+那是 §九#6"placeholder 分支不可达"的证据，归 §二 第 3 条一起修，
+不在这一格里靠"排除文件"混过去。
+
+配套口径：生成件与语料同体这件事，镜像清单已经记在
+`~/.qoder-cn/projects/.../memory/project-aipd-command-surface-mirrors.md`，
+每轮改登记表要同批改的清单以那份为准；本节只负责"面 ⑤ 这一面留不留它"这一问。
