@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-27T21:56:05+00:00",
+  "generated_at": "2026-09-28T05:42:31+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 336411,
-      "sha256": "b463d134c95a4a22f875e7cd957ecf1e74430cdc067eaa1ce9df7a2459df52f1"
+      "size": 340422,
+      "sha256": "208469d946aa3a4084087b855b375302bd5aeca0ffa58a58fdbe3941527cfcc6"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 64884,
-      "sha256": "b5bc63948522aee041b6ae6e5d523f97d1b82a438b7aab7f7dcaf902f1de916f"
+      "size": 65381,
+      "sha256": "cd395c426c79a91e93fc6ff456e15d598e0805c980422353c20293181a0b3e85"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -747,8 +747,8 @@
     },
     {
       "path": "scripts/closeout_verifier.py",
-      "size": 42822,
-      "sha256": "8dd5e325ff3a50822e1429f0a8184b19e6573cd61cf93138083cd3151488269a"
+      "size": 43409,
+      "sha256": "e3978f9e5af08c5e741d0bebb4ab8071349870dbf8a0d557def2e1adfc0cfa67"
     },
     {
       "path": "scripts/command_surface_census.py",
@@ -837,13 +837,13 @@
     },
     {
       "path": "scripts/release_evidence.py",
-      "size": 14879,
-      "sha256": "2aed5dc463ac792785a43b7660c285d06e0439713f1e1b9e032c253e427cdb4c"
+      "size": 18682,
+      "sha256": "7c2017283a6da9a46999e9045e1c2f4157b2f68ee2aa4998d4ef06e08611f1fd"
     },
     {
       "path": "scripts/release_fingerprint.py",
-      "size": 2901,
-      "sha256": "57547de892b2397852b22f290f14f9f30e95c462a92299c81f7a95feed8dc743"
+      "size": 3023,
+      "sha256": "34de22431e3ab72c9d91c7a3387e931de43ec7eb59b92a9ab982761e68fd8a27"
     },
     {
       "path": "scripts/research/README.md",
@@ -2247,8 +2247,8 @@
     },
     {
       "path": "tests/conftest.py",
-      "size": 3231,
-      "sha256": "3653eaeb56ec45405555d45d7a65ddc4afe7a76afb576769d1c21f441105f4e5"
+      "size": 3610,
+      "sha256": "a2008d4a9a7e5721abc52583946389f7c73400f0b90b972612c93d2200f74b98"
     },
     {
       "path": "tests/fixtures/__init__.py",
@@ -2582,8 +2582,8 @@
     },
     {
       "path": "tests/test_closeout_verifier.py",
-      "size": 30643,
-      "sha256": "a776cbb5ecd0937ddcb4dfc135c45c06d0bbfc6333e4c360a9975abb83551cfd"
+      "size": 32173,
+      "sha256": "8bf536349a703bb41114c23db4d6da94237664418796d3b39c126c2e7d57fcfd"
     },
     {
       "path": "tests/test_command_coverage.py",
@@ -3141,6 +3141,11 @@
       "sha256": "433f717be4f52ec3b3dbef91c04137fc66bf7de42d3096c69e74c8e1be544fa4"
     },
     {
+      "path": "tests/test_release_evidence_preflight.py",
+      "size": 8600,
+      "sha256": "a428f4903bef7db4d12e5e5edb4a40a4667e2244bdfc16ec9f08661ede4a8fed"
+    },
+    {
       "path": "tests/test_release_manifest.py",
       "size": 41580,
       "sha256": "301e6fd8e792eecad59345d9afab6dec21c8be017c48d0c4e66ec4dadd0c02d2"
@@ -3167,8 +3172,8 @@
     },
     {
       "path": "tests/test_report_manifest_fingerprint.py",
-      "size": 7051,
-      "sha256": "ed295e1d968948bf61196b93b1288ba38a0500a6b938bad857f6ec6b6ebfa33f"
+      "size": 7083,
+      "sha256": "3264deb6f18a0af36118fa622f8d24e5ab636279aa93cd75d98b4695d7e14a75"
     },
     {
       "path": "tests/test_research_chain.py",
