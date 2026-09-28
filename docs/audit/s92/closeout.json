@@ -1,0 +1,80 @@
+{
+ "command": "closeout verify",
+ "problems": [],
+ "violations": [],
+ "checks": {
+  "report_bound_to_provenance": {
+   "ok": true,
+   "detail": "报告 sha256=34f25f458230 与 PROVENANCE 记录一致",
+   "kind": "violation"
+  },
+  "counts_counted_from_roster": {
+   "ok": true,
+   "detail": "现数 passed=2740 skipped=5 total=2745，summary 与 PROVENANCE 两处副本一致",
+   "kind": "violation"
+  },
+  "terminal_clean": {
+   "ok": true,
+   "detail": "exitcode=0，2745 条无 failed/error",
+   "kind": "violation"
+  },
+  "roster_covers_tree": {
+   "ok": true,
+   "detail": "树 222 文件 / 2650 个 def，报告 222 文件 / 2745 条，双向差集为空",
+   "kind": "violation"
+  },
+  "pinned_source_binding": {
+   "ok": true,
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD 5667e3c2 的祖先",
+   "kind": "violation"
+  },
+  "content_parity_measured": {
+   "ok": true,
+   "detail": "2 条清单哈希用例都在名单里并 passed：测的就是这棵树",
+   "kind": "violation"
+  },
+  "report_fingerprint_recorded": {
+   "ok": true,
+   "kind": "ok",
+   "detail": "报告自带清单指纹 71078cdade00"
+  },
+  "report_fingerprint_matches_disk": {
+   "ok": true,
+   "detail": "报告指纹与磁盘清单 71078cdade00 同源（只换 generated_at 不算变）",
+   "kind": "violation"
+  },
+  "worktree_clean": {
+   "ok": true,
+   "detail": "工作树干净",
+   "kind": "violation"
+  },
+  "plaintiffs_measured": {
+   "ok": true,
+   "detail": "1 条本轮原告都在名单里且 passed",
+   "kind": "violation"
+  },
+  "size_ratchet": {
+   "ok": true,
+   "detail": "名单 2745 条 ≥ 下界 2745",
+   "kind": "violation"
+  }
+ },
+ "readings": {
+  "report_entries": 2745,
+  "outcome_hist": {
+   "passed": 2740,
+   "skipped": 5
+  },
+  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s92",
+  "report_duration_s": 396.3078758716583,
+  "provenance_binds_report": true,
+  "tree_files": 222,
+  "tree_defs": 2650,
+  "report_files": 222,
+  "worktree_head": "5667e3c2a506cbbf5e2e3b35f8ef08a8160f9d01",
+  "pinned_commit": "a66040520139405095648461f7144d4f00629924",
+  "report_fingerprint": "71078cdade00",
+  "disk_manifest_fingerprint": "71078cdade00"
+ },
+ "ok": true
+}
