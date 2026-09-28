@@ -86,11 +86,24 @@ def main() -> int:
         print(f"   读数：报告 {r.get('report_entries')} 条 / 终态 {r.get('terminal')} / "
               f"min_tests {r.get('min_tests')}")
 
-    out = subprocess.run([str(REPO / ".venv/bin/python"),
-                          str(REPO / "scripts" / "doc_command_census.py")],
-                         capture_output=True, text=True)
-    face = [ln for ln in out.stdout.splitlines() if ln.startswith("判红面 ⑤")]
-    print(f"6) 面 ⑤ 现读（rc={out.returncode}）：{(face[0] if face else '（没读到那一行）')}")
+    try:
+        out = subprocess.run([sys.executable,
+                              str(REPO / "scripts" / "doc_command_census.py")],
+                             capture_output=True, text=True, cwd=REPO)
+    except OSError as exc:                      # 解释器或尺子本身不在 ⇒ 是"没读到"，不是"读到 0"
+        print(f"6) 面 ⑤ 现读：读不出（{exc}）⇒ 这一格没有读数")
+        missing += 1
+        out = None
+    if out is not None:
+        face = [ln for ln in out.stdout.splitlines() if ln.startswith("判红面 ⑤")]
+        tail = [ln for ln in out.stdout.splitlines() if ln.startswith("现状面缺陷")]
+        print(f"6) 面 ⑤ 现读（rc={out.returncode}）："
+              f"{(face[0] if face else '（没读到那一行）')}")
+        if not face:
+            missing += 1
+        print(f"   {(tail[0] if tail else '（没读到判决行）')}")
+        if not tail:
+            missing += 1
 
     worktrees = subprocess.run(["git", "-C", str(REPO), "worktree", "list"],
                                capture_output=True, text=True).stdout.strip().splitlines()
