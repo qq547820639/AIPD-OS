@@ -7,14 +7,16 @@
 按整路径匹配而不是按基名——第一遍我按基名数，`__init__.py`/`out.md` 这类重名把读数撑歪）。
 读数写在 `docs/audit/WORKTREE_INVENTORY_2026-09-28.md` §六，摘三行：
 
-- 被引用的路径片段 **144** 个；磁盘上还在的 **5** 个，且这 5 个在仓库内都没有同名入库件；
-- **122** 个指向的工件从没入过库、内容确已不可再生（第 30—64 片把电池脚本、探针日志、
-  `state.db` 写在 `tmp/` 下；第 63 片那份验签脚本被宿主重启清掉是同一形状，
-  见 `docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md:4-5`）；
+- 被引用的路径片段 **144** 个（HEAD `59a1073` 重读为 **143**，分母含本文件）；
+  磁盘上还在的 **5** 个，且这 5 个当时在仓库内都没有同名入库件（其中 4 个随后由本轮迁入）；
+- **122** 个（重读为 **127**：复核件查出另有 6 条被我错归成「陈旧指针」，
+  实为基名巧合，见 `WORKTREE_INVENTORY` §六 同一处更正）指向的工件从没入过库、内容确已不可再生（第 30—64 片把电池脚本、探针日志、
+  `state.db` 写在 `tmp/` 下；第 63 片那份手写验签脚本被宿主重启清掉是同一形状，
+  原文在 `docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md:9-10`（先前标 `:4-5` 错位，已更正）；
 - **6** 个是"文件没了但库内有同名件"——历轮自己迁过 `docs/audit/sNN/`，那是陈旧指针而不是内容丢失。
 
 所以真正的缺口不是"磁盘占了多少"，而是：**"复算入口"这一类主张从来没有一面尺子看着**。
-第 63 片造 `closeout_verifier` 只治了"验签脚本"那一种；文档正文里
+第 64 片把 `closeout_verifier` 提为常驻量具，只治了"验签脚本"那一种；文档正文里
 `python /tmp/s46/battery.py  # 电池（10 条）` 这种句子——它是给下一个读者用的操作说明——
 今天没人判它可不可执行。
 
@@ -35,7 +37,7 @@
 借来的两样落到实现里：lychee 的"豁免是一份**显式配置文件**而不是行内注释"
 （→ `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json`，面 ⑤ 只认这本册子）、
 mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只数不判，并在读数里点名），
-`markdown-link-check` 的 `projectBase`（→ 解析根只有仓库根，不跟着 `cwd` 漂）。
+`markdown-link-check` 的 `projectBaseUrl`（README 原名如此；→ 解析根只有仓库根，不跟着 `cwd` 漂）。
 
 ## 二、判据形状：五档归属，其中两档是"刻意不判"
 
@@ -88,15 +90,15 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
 这不是判据的缺陷，是它的**用法约束**：任何把具体数字抄进 `docs/audit/*.md` 的做法，
 对这一面都不成立。因此常驻用例钉的全是**关系**而非数：
 `dead == dead_registered > 0`、`untracked == 0`、`tracked/delegated/placeholder > 0`、
-四档之和 == 入口总读数、登记册每条都仍不可解析且都带 note。
-其中"四档之和 == 总数"就是防漂移的那根：漏计任何一档（包括把已登记的漏掉）当场红。
+五档之和 == 入口总读数、登记册每条都仍不可解析且都带 note。
+其中"五档之和 == 总数"就是防漂移的那根：漏计任何一档（包括把已登记的漏掉）当场红。
 
 ## 四、自测与常驻的两极
 
 - `--self-test` 的运行时标记从 **9** 条加到 **14** 条（`git show HEAD:… | --self-test` 现读的 9，
   与本版 14 各跑一次；新增 5 条都是面 ⑤ 的）——
   六格归属各落一位、端到端"未入库开火／未登记死链开火／已登记的不开火／两条『该撤』各按自己的理由开火／
-  `scripts/` 不重复判"、分母自证（四档之和 == 入口总读数，登记的另记一格）、
+  `scripts/` 不重复判"、分母自证（五档之和 == 入口总读数，登记的另记一格）、
   `git` 读不出时降级、没有登记册＝空册即全判红。
   合成语料里的 `git init` + 只提交一半是**真跑 `git ls-files`**，不是测试注入的集合。
 - 常驻用例 `tests/test_doc_command_census.py` 从 23 条加到 **30** 条（+7）：
@@ -112,7 +114,9 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
 
 ## 五、电池：7 臂，其中一臂第一版真的没牙
 
-`docs/audit/s87/battery87.py`（每臂锚点唯一、变异后可编译的体检先跑；落地证明用 sha；归因打用例名）：
+`docs/audit/s87/battery87.py`（每臂锚点唯一由它自己判（`:73-77` 命中≠1 记 BAD-ANCHOR）；
+**「变异后可编译」这一步不在电池里**，是我另跑的一次性 `ast.parse` 探针（读数：体检不通过的臂数 0）——
+把一次性探针的产物写成工具自带能力，正是本片要治的那类谎，所以先把自己这份改回来；落地证明用 sha；归因打用例名）：
 
 ```
 原文件 sha=2a43da69dd24
@@ -147,7 +151,7 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
 
 | 位置 | 改了什么 |
 | --- | --- |
-| `scripts/doc_command_census.py` | 面 ⑤ 的四个函数、`audit()` 接线与 `entry_states` 读数、`render()` 三行判决文案、`--emit-register` |
+| `scripts/doc_command_census.py` | 面 ⑤ 的五个函数（entry_corpus / tracked_paths / load_entry_register / entry_points / emit_register）、`audit()` 接线与 `entry_states` 读数、`render()` 三行判决文案、`--emit-register` |
 | `scripts/doc_command_census.py` 模块 docstring | 补上第 85 片漏写的面 ④，新增面 ⑤ 段；把两处**抄在文中的旧分母**（"88 条路径"、"1389/1012/73%"）改成"由 `--json` 现读"并标所属轮次 |
 | `tests/test_doc_command_census.py` | +7 条常驻用例（含一把比判据宽的独立尺）；补 `import re` |
 | `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json` | 新建，13 条死链逐条带 `cited_by` 与 note |
@@ -255,7 +259,48 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
   连一行读数都不产生）。第 89 片要在"生成件不进语料"与"进语料但漂移记账"之间明选一个，
   不能像现在这样两个都不是。
 
-## 十、复算入口
+## 十、终局读数（绑定那一跑，全部由 `docs/audit/s87/terminal87.py` 现读）
+
+| 步骤 | 实际读数 |
+| --- | --- |
+| 干净签出全量（`.wt-s87` @ `4dd1425`） | `2687 passed, 5 skipped in 582.44s`，`collected=2692`，`exitcode=0`，报告自记锚点 `a66040520139`（=tag，非 HEAD）、清单指纹 `c7133d0bb197` |
+| 绑定（一次、两旗同给） | `BIND_RC=0`；回读 `PROVENANCE.test_report = present/parsed 均 True，2687p/0f/2692t`，指纹 `c7133d0bb197`；提交 `3b0ef08` |
+| 发布门（第一次，随脚本） | **`GATE_RC=2`，`release_ready=False`，8 项里 `workspace_clean` 未过** |
+| 发布门（补暂存后重跑） | `GATE_RC=0`，`release_ready=True`，8/8 全过（`docs/audit/s87/gate-rerun.json`；**作废那份 `gate.json` 原样留在库里不覆盖**） |
+| 收尾验签（第一次手跑） | `CV_RC=4`，11 档只红 `worktree_clean：['?? docs/audit/s87/gate-rerun.json']` |
+| 收尾验签（按脚本顺序重跑） | **`CV_RC=0`，11/11 全绿**：`size_ratchet 名单 2692 ≥ 下界 2692`、`roster_covers_tree 树 218 文件 / 2602 个 def，报告 218 文件 / 2692 条，双向差集为空`、`pinned_source_binding`、`report_fingerprint_matches_disk c7133d0bb197` |
+| 面 ⑤ 现读（认证之后） | 命令形态 **119** 处 ⇒ 入库可解析 8 / 未入库 0 / 死链 20（已登记 20）/ 占位 8；登记册 13 条；`现状面缺陷 0 条` |
+| worktree | 登记 2 行（主树 + `.wt-s87`），收尾后回到 1 行 |
+
+**这一段自己又出了一次"读数说谎"**：`terminal87.py` 第一版把文件名写死成第一代证件，
+于是它指着作废的 `gate.json` 报 `release_ready=False` 像那是当前状态；
+又用了验签 `readings` 里根本不存在的 `terminal`/`min_tests` 两个键（读成 `None`）；
+再用 `"checks" in g` 分派两代形状——而两份证件都有 `checks` 键，只是一个列表一个字典，
+于是遍历字典拿到字符串直接 `AttributeError`。三处都是**跑出来**的，不是看出来的；
+现在两代逐份点名打印，且带来源文件名。
+
+## 十一、本轮收口链上我犯的三次错（都进了证件，不抹）
+
+1. **派生脚本时把 `PROVENANCE.json` 从绑定那步的 `git add` 清单里丢了**。
+   绑定确实写了它（回读就是 `2687p/0f/2692t`），但提交没带它 ⇒ 它整段时间停在未提交态，
+   于是发布门 `workspace_clean` 判红（`GATE_RC=2`，`release_ready=False`）、
+   收尾验签同一件事退 4，而 HEAD 里的 `PROVENANCE` 停在 09:19 的重锚态（`present=false`）——
+   **读起来像"绑定没发生"**。已核实发布门只读不写该文件
+   （`production_release_gate.py:651-654` 是 `_load_json`），所以红因唯一。
+   这与面 ⑤ 这一片要抓的是同一件事（"取证件写完没提交"），只是这次是我自己在
+   脚本里丢了路径；从 s86 派生 s87 时我只核了"有没有残留 s86 字样"，
+   **没有逐项核对 `git add` 的清单是否等价**——派生自检要看语义项，不只看字符串。
+2. **手跑绕过了脚本的顺序**：修完 1 之后我手工跑门与验签，把 `gate-rerun.json` 先写进树
+   再跑验签 ⇒ 又吃一次 `worktree_clean` 自红。脚本里那条"门读数先入库、再跑验签"的注释
+   就是上一片为同一形状写的，我这次是没照它做，而不是它没写。
+3. 上面 §十 里那三处读数件缺陷。
+
+三次都在同一条链上，且都是"证件/树状态被自己改动后又去检查树状态"这一族。
+第 89 片（任务 #20）之外，另记一条收口纪律：**修完任何一步后，要么整支脚本重跑，
+要么严格按脚本内的顺序手工复现，不许混用**——混用会得到一次真红 + 一次假红，
+两者的形状还完全一样，只能靠顺序区分。
+
+## 十二、复算入口
 
 ```bash
 cd AIPD-OS
