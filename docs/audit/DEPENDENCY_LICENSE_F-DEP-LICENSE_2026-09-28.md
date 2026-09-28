@@ -105,3 +105,19 @@
 4. 上游把许可证标错时本面看不见（读的是上游自述）。下一步可选：比对 wheel 内 `LICENSE` 文件正文
    （`importlib.metadata.files()` 拿得到路径），把"元数据说 MIT、打包文件是 AGPL"这种不一致
    也做成一格判红。挂到第 93 片入口。
+
+## 五、认证读数（这一代一次跑通）
+
+| 项 | 读数 |
+| --- | --- |
+| 干净全量（worktree `.wt-s92` @ `b541f3c`） | **2740 passed / 5 skipped / collected 2745**，396.3s，`exitcode=0` |
+| 用例数增量 | 2736 → 2745，恰为本片新增的 9 条常驻用例（`--min-tests 2745` 由报告现取） |
+| 报告自记清单指纹 | `71078cdade00…` == 磁盘 `SOURCE_MANIFEST.json`（绑定前后各核一次） |
+| 被哈希文件数 | 688 → **691**，差集现算＝新增三条且零删除：门禁本体、它的常驻用例、`docs/security/dependency-license-review.md`（**这条顺带核实了 `docs/security/` 参与哈希**，只有 `docs/audit/` 被整体排除 ⇒ 裁决文档必须在最后一次 `release_evidence.py` 之前定稿，本轮就是这个顺序） |
+| 发布门 | 8/8、`release_ready=True`、`GATE_RC=0` |
+| 收尾验签 | 11/11、`CV_RC=0`；回收 worktree 后复算 `-b` 亦 11/11、`CVB_RC=0` |
+| 门禁本身 | 闭包 45 名 / 逐包 43 / `allowed 42`、`forbidden 0`、`unresolved 2`、`declared-missing 1`、`out-of-closure 28`；**判红 1 条 = casadi/LGPL-3.0-or-later，台账 `needs-review`** |
+| 自测与电池 | `--self-test` 5 格；`docs/audit/s92/battery92.py` **7/7 KILLED**、退 0；第 91 片电池 8/8、第 90 片 13/13、第 89 片 15/15、第 87 片 7/7 同批复跑仍全绿 |
+
+上一片那两条"收口顺序"的教训这一片照做且都生效：跑批期间**不写仓库**（所以 `workspace_clean`
+一次过），`-b` 复算**先入库再跑**（所以 `worktree_clean` 一次过）。
