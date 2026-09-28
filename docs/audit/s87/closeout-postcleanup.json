@@ -1,0 +1,80 @@
+{
+ "command": "closeout verify",
+ "problems": [],
+ "violations": [],
+ "checks": {
+  "report_bound_to_provenance": {
+   "ok": true,
+   "detail": "报告 sha256=962ba845948f 与 PROVENANCE 记录一致",
+   "kind": "violation"
+  },
+  "counts_counted_from_roster": {
+   "ok": true,
+   "detail": "现数 passed=2687 skipped=5 total=2692，summary 与 PROVENANCE 两处副本一致",
+   "kind": "violation"
+  },
+  "terminal_clean": {
+   "ok": true,
+   "detail": "exitcode=0，2692 条无 failed/error",
+   "kind": "violation"
+  },
+  "roster_covers_tree": {
+   "ok": true,
+   "detail": "树 218 文件 / 2602 个 def，报告 218 文件 / 2692 条，双向差集为空",
+   "kind": "violation"
+  },
+  "pinned_source_binding": {
+   "ok": true,
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD 0930c695 的祖先",
+   "kind": "violation"
+  },
+  "content_parity_measured": {
+   "ok": true,
+   "detail": "2 条清单哈希用例都在名单里并 passed：测的就是这棵树",
+   "kind": "violation"
+  },
+  "report_fingerprint_recorded": {
+   "ok": true,
+   "kind": "ok",
+   "detail": "报告自带清单指纹 c7133d0bb197"
+  },
+  "report_fingerprint_matches_disk": {
+   "ok": true,
+   "detail": "报告指纹与磁盘清单 c7133d0bb197 同源（只换 generated_at 不算变）",
+   "kind": "violation"
+  },
+  "worktree_clean": {
+   "ok": true,
+   "detail": "工作树干净",
+   "kind": "violation"
+  },
+  "plaintiffs_measured": {
+   "ok": true,
+   "detail": "1 条本轮原告都在名单里且 passed",
+   "kind": "violation"
+  },
+  "size_ratchet": {
+   "ok": true,
+   "detail": "名单 2692 条 ≥ 下界 2692",
+   "kind": "violation"
+  }
+ },
+ "readings": {
+  "report_entries": 2692,
+  "outcome_hist": {
+   "passed": 2687,
+   "skipped": 5
+  },
+  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s87",
+  "report_duration_s": 582.1219079494476,
+  "provenance_binds_report": true,
+  "tree_files": 218,
+  "tree_defs": 2602,
+  "report_files": 218,
+  "worktree_head": "0930c695adb0c7cd70d5c881c74696f245c4d1e9",
+  "pinned_commit": "a66040520139405095648461f7144d4f00629924",
+  "report_fingerprint": "c7133d0bb197",
+  "disk_manifest_fingerprint": "c7133d0bb197"
+ },
+ "ok": true
+}

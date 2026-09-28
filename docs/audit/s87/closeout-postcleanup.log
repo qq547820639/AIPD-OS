@@ -1,0 +1,15 @@
+收尾验签（报告 ↔ 证据 ↔ 工作树）
+  读数：报告 2692 条 / 218 个文件，树 218 个文件 / 2602 个 def，终态 {'passed': 2687, 'skipped': 5}
+  锚点 a66040520139 ← HEAD 0930c695adb0，报告 root=/Volumes/Extra/CodeProj/AI全链路自研/.wt-s87
+  ✓ report_bound_to_provenance：报告 sha256=962ba845948f 与 PROVENANCE 记录一致
+  ✓ counts_counted_from_roster：现数 passed=2687 skipped=5 total=2692，summary 与 PROVENANCE 两处副本一致
+  ✓ terminal_clean：exitcode=0，2692 条无 failed/error
+  ✓ roster_covers_tree：树 218 文件 / 2602 个 def，报告 218 文件 / 2692 条，双向差集为空
+  ✓ pinned_source_binding：报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD 0930c695 的祖先
+  ✓ content_parity_measured：2 条清单哈希用例都在名单里并 passed：测的就是这棵树
+  ✓ report_fingerprint_recorded：报告自带清单指纹 c7133d0bb197
+  ✓ report_fingerprint_matches_disk：报告指纹与磁盘清单 c7133d0bb197 同源（只换 generated_at 不算变）
+  ✓ worktree_clean：工作树干净
+  ✓ plaintiffs_measured：1 条本轮原告都在名单里且 passed
+  ✓ size_ratchet：名单 2692 条 ≥ 下界 2692
+全部判据绿
