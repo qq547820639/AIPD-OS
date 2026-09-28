@@ -1,0 +1,85 @@
+{
+ "command": "closeout verify",
+ "problems": [],
+ "violations": [
+  {
+   "check": "worktree_clean",
+   "detail": "工作树有 1 处未提交改动：['?? docs/audit/round-reclaim/']"
+  }
+ ],
+ "checks": {
+  "report_bound_to_provenance": {
+   "ok": true,
+   "detail": "报告 sha256=3d3e3800cff1 与 PROVENANCE 记录一致",
+   "kind": "violation"
+  },
+  "counts_counted_from_roster": {
+   "ok": true,
+   "detail": "现数 passed=2680 skipped=5 total=2685，summary 与 PROVENANCE 两处副本一致",
+   "kind": "violation"
+  },
+  "terminal_clean": {
+   "ok": true,
+   "detail": "exitcode=0，2685 条无 failed/error",
+   "kind": "violation"
+  },
+  "roster_covers_tree": {
+   "ok": true,
+   "detail": "树 218 文件 / 2595 个 def，报告 218 文件 / 2685 条，双向差集为空",
+   "kind": "violation"
+  },
+  "pinned_source_binding": {
+   "ok": true,
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD c18c8539 的祖先",
+   "kind": "violation"
+  },
+  "content_parity_measured": {
+   "ok": true,
+   "detail": "2 条清单哈希用例都在名单里并 passed：测的就是这棵树",
+   "kind": "violation"
+  },
+  "report_fingerprint_recorded": {
+   "ok": true,
+   "kind": "ok",
+   "detail": "报告自带清单指纹 f39fdbb2cffc"
+  },
+  "report_fingerprint_matches_disk": {
+   "ok": true,
+   "detail": "报告指纹与磁盘清单 f39fdbb2cffc 同源（只换 generated_at 不算变）",
+   "kind": "violation"
+  },
+  "worktree_clean": {
+   "ok": false,
+   "detail": "工作树有 1 处未提交改动：['?? docs/audit/round-reclaim/']",
+   "kind": "violation"
+  },
+  "plaintiffs_measured": {
+   "ok": true,
+   "detail": "1 条本轮原告都在名单里且 passed",
+   "kind": "violation"
+  },
+  "size_ratchet": {
+   "ok": true,
+   "detail": "名单 2685 条 ≥ 下界 2685",
+   "kind": "violation"
+  }
+ },
+ "readings": {
+  "report_entries": 2685,
+  "outcome_hist": {
+   "passed": 2680,
+   "skipped": 5
+  },
+  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s86",
+  "report_duration_s": 395.1252689361572,
+  "provenance_binds_report": true,
+  "tree_files": 218,
+  "tree_defs": 2595,
+  "report_files": 218,
+  "worktree_head": "c18c8539a2278252f15812af07bcf40af90c7f8c",
+  "pinned_commit": "a66040520139405095648461f7144d4f00629924",
+  "report_fingerprint": "f39fdbb2cffc",
+  "disk_manifest_fingerprint": "f39fdbb2cffc"
+ },
+ "ok": false
+}

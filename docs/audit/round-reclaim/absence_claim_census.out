@@ -1,0 +1,30 @@
+============================================================
+登记表否定句 × 反证锚点对账（F-STALE-ABSENCE）
+============================================================
+语料：84 个能力，带否定词的句子 37 句；账本登记 14 条，未挂锚点 30 句（宽档，只报不判）
+能力缺失句（窄档＝判据面）：17 句 = 登记 7 + 豁免 10 + **未处置 0**
+被挡在窄档外的 20 句，按轴分开：无缺失谓词 11、无能力名词 6、谈判决/谈口径 3（三档各有常驻用例钉住它非空）；具名样本 8 句、样本问题 0 条
+  ✓ REWORK-EXECUTOR-QUOTE-BATCH [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:23 | 反证位点 —
+  ✓ FACT-LINEAGE-WIRED [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:20 | 反证位点 write_fact_lineage 生产面外部调用点 = 1 处、src/aipd_os/supervisor/supervisor.py:546
+  ✓ CAD-ASSEMBLY-CONSTRAINT-SOLVER [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:62 | 反证位点 —
+  ✓ CAD-ASSEMBLY-RASTER-ABSENT [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:63 | 反证位点 —
+  ✓ QUOTE-FX-CONVERSION [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:71 | 反证位点 —
+  ✓ FULLTEXT-STEP-WIRED [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:28 | 反证位点 fetch_fulltext 生产面外部调用点 = 1 处、scripts/research/fetch_fulltexts.py:310
+  ✓ PRODUCER-COUNT-REGISTRY [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:23 | 反证位点 现读 truth 生产者 = 9 个，句里写 9 个、src/aipd_os/bom/cost_lineage.py、src/aipd_os/bom/cost_rework.py
+  ✓ PRODUCER-COUNT-ARCH [HOLDS] 锚点 docs/architecture/truth_architecture.md:text:185 | 反证位点 现读 truth 生产者 = 9 个，句里写 9 个、src/aipd_os/bom/cost_lineage.py、src/aipd_os/bom/cost_rework.py
+  ✓ EVIDENCE-REWORK-WIRED [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:77 | 反证位点 rework_evidence_artifact 生产面外部调用点 = 1 处、src/aipd_os/cli/commands_truth.py:221
+  ✓ BOM-COST-TO-CTQ-REVERSE-PATH [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:23 | 反证位点 —
+  ✓ DRAWING-SECTION-TYPES [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:62 | 反证位点 —
+  ✓ ASSEMBLY-OPERATIONS-TABLE [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:63 | 反证位点 —
+  ✓ GATE-COMMIT-CLI-ENTRY-WIRED [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:96 | 反证位点 commit_approved 生产面外部调用点 = 1 处、src/aipd_os/cli/product_commands.py:175
+  ✓ ASSEMBLY-STEPS-PDF-WIRED [HOLDS] 锚点 src/aipd_os/registry_data.py:current_limitation:63 | 反证位点 render_assembly_steps_pdf 生产面外部调用点 = 1 处、src/aipd_os/cad/assembly_steps.py:298
+  · 未挂锚点的否定句（前 8 条，供下一轮挑）：
+      - product_truth.ctq_declaration|current_limitation|`aipd release manifest` 的 `ctq` 数组照旧只收 active、条目里仍不写 drawing_feature，那条限制没有因本片改动
+      - product_truth.impact_propagation|current_limitation|当前 BOM 没有行、这张 BOM 已不是记录那张、签名没变而 revision/version_no 变了，三种都不算收口）与 bom_cost（src/ai
+      - product_truth.impact_propagation|current_limitation|项目里还没有 BOM 版本记录时记录照写、边数 0、点名原因
+      - research.standards_regulations|current_limitation|依赖外部法规库/专业数据源，未接入时诚实等待
+      - research.patents_competitors|current_limitation|依赖外部专利/竞品数据源，未接入时诚实等待
+      - cad.anthropometric_families|current_limitation|内置族为常用成年男女/儿童百分位示例，未覆盖全部人群数据库
+      - industrialize.change_control|current_limitation|但「这个 actor 真是某个人」无法机器验证——没有身份源，署名是声明不是证据。第 27 片已把它接进发布证据：`aipd release manifest`
+      - industrialize.change_control|current_limitation|证据还有阻断项时未经 `--acknowledge-not-ready` 会被**拒绝落盘**），于是「没单提到」一分为三——基线证明语义未变的记 `uncha
+判红 0 条：登记的 14 句「仍缺着」现在都还缺着
