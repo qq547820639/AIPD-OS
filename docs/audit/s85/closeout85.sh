@@ -6,6 +6,8 @@ set -u
 R=/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
 WT=/Volumes/Extra/CodeProj/AI全链路自研/.wt-s85
 PY="$R/.venv/bin/python"
+X=/Volumes/Extra/CodeProj/AI全链路自研/.s85-outside
+mkdir -p "$X"   # 工具 stdout 必须落树外：`>` 在进程启动前就截断文件，落在树里 workspace_clean 永不可能绿
 export PATH="$R/.venv/bin:$PATH"      # 少了它 pip-audit 找不到 ⇒ no_unacknowledged_cve 假红
 cd "$R" || exit 9
 
@@ -70,27 +72,28 @@ git log --oneline -1
 # ---- 2. 发布门（先跑，因为它会写 repository_snapshot） ----
 "$PY" scripts/production_release_gate.py --release-ready --tag v5.6.0 \
     --test-report docs/audit/pytest-report-v5.6.0.json \
-    --json-out docs/audit/s84/gate.json > docs/audit/s84/gate.log 2>&1
+    --json-out docs/audit/s85/gate.json > "$X/gate.log" 2>&1
 GATE_RC=$?
 echo "GATE_RC=$GATE_RC"
 "$PY" -c "
-import json;d=json.load(open('docs/audit/s84/gate.json'))
+import json;d=json.load(open('docs/audit/s85/gate.json'))
 bad=[c['check'] for c in d['checks'] if not c.get('passed')]   # JSON 里的键叫 check
 print('release_ready=',d.get('release_ready'),' 项=',len(d['checks']),' 未过=',bad)"
 
 # ---- 2.5 先把 gate 产物提交：验签器的 worktree_clean 看的是它开跑那一刻的 git status，
 #          未跟踪的 gate.json / repository_snapshot.json 会让它作为无关连带开火。
-git add docs/audit/s84/gate.json docs/audit/repository_snapshot.json
-git add -f docs/audit/s84/gate.log      # 仓库 .gitignore 第 43 行 `*.log` ⇒ 取证件必须 -f
+git add docs/audit/s85/gate.json docs/audit/repository_snapshot.json
+git add -f docs/audit/s85/gate.log      # 仓库 .gitignore 第 43 行 `*.log` ⇒ 取证件必须 -f
 git commit -q -m "chore(s85): 收下发布门读数与重算的 repository_snapshot"
 echo "GATECOMMIT_RC=$?"
 
 # ---- 3. 收尾验签 ----
 "$PY" scripts/closeout_verifier.py --tag v5.6.0 \
     --expect-test tests/test_doc_command_census.py --expect-test tests/test_release_evidence_preflight.py \
-    --min-tests 2675 --json docs/audit/s84/closeout.json > docs/audit/s84/closeout.log 2>&1
+    --min-tests 2675 --json docs/audit/s85/closeout.json > "$X/closeout.log" 2>&1
 CV_RC=$?
 echo "CV_RC=$CV_RC  （0 全绿 / 4 判红 / 2 前提塌）"
-tail -6 docs/audit/s84/closeout.log
+cp "$X/gate.log" "$X/closeout.log" docs/audit/s85/
+tail -6 docs/audit/s85/closeout.log
 
 echo "=== 收口链结束：GATE_RC=$GATE_RC CV_RC=$CV_RC ==="
