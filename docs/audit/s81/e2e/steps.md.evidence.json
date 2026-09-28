@@ -1,0 +1,96 @@
+{
+  "document": "assembly_steps",
+  "manifest": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/assy.json",
+  "manifest_sha256": "99001cb8d5abfb978ca4b229bdb9c2955c060b8f6bc6b77310913103112fe9ab",
+  "document_sha256": "6ed65331e10851a83d82c1d4259241432237761cd105becf6ef4ce5c014897b9",
+  "columns": [
+    "ITEM",
+    "PART"
+  ],
+  "steps": [
+    {
+      "no": 1,
+      "action": "支架贴合基面",
+      "balloons": [
+        1
+      ],
+      "cited": [
+        {
+          "balloon": 1,
+          "part": "支架"
+        }
+      ]
+    },
+    {
+      "no": 2,
+      "action": "压板压在支架上并拧至规定扭矩",
+      "balloons": [
+        1,
+        2
+      ],
+      "cited": [
+        {
+          "balloon": 1,
+          "part": "支架"
+        },
+        {
+          "balloon": 2,
+          "part": "压板"
+        }
+      ]
+    }
+  ],
+  "assembly_steps": {
+    "step_count": 2,
+    "balloon_coverage": {
+      "declared": [
+        1,
+        2
+      ],
+      "referenced": [
+        1,
+        2
+      ],
+      "unreferenced": []
+    }
+  },
+  "assembly_step_issues": [],
+  "parts_list": [
+    {
+      "item": 1,
+      "part": "支架"
+    },
+    {
+      "item": 2,
+      "part": "压板"
+    }
+  ],
+  "bom": null,
+  "not_covered": [
+    "维护指引",
+    "工时与工序成本",
+    "扭矩或拧紧值",
+    "检验点与点检项"
+  ],
+  "pdf": {
+    "path": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/steps.pdf",
+    "sha256": "dca597adf9c094cb6c9fdaac3083c70a11289f5a7a4028adf1d38214f9f29b69",
+    "pages": 2,
+    "chars": 325,
+    "image": {
+      "path": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/assy.png",
+      "sha256": "f3f31f50113d496b007d3b1260c88c9ea14cabf49b75a3ce15ffe1274706c812",
+      "pixels": [
+        1140,
+        1728
+      ],
+      "bytes": 2300614
+    }
+  },
+  "generated_at": "2026-09-27T17:16:48.837975+00:00",
+  "tool": "aipd_os.cad.assembly_steps（声明渲染，无几何投影）",
+  "model_source": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/assy.json",
+  "command": "drawing assembly-steps",
+  "ok": true,
+  "status": "DONE"
+}

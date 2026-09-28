@@ -1,0 +1,87 @@
+{
+  "document": "assembly_steps",
+  "manifest": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/assy_full2.json",
+  "manifest_sha256": "5bf85548e7db88b720c0185a653799cc76003d04688e2979c92777d980d91f89",
+  "document_sha256": "d97f282612d6acf9cbd2ce065035224b502378c561bc623eb36a94512c35cb47",
+  "columns": [
+    "ITEM",
+    "PART"
+  ],
+  "steps": [
+    {
+      "no": 1,
+      "action": "支架贴合基面",
+      "balloons": [
+        1,
+        2
+      ],
+      "cited": [
+        {
+          "balloon": 1,
+          "part": "支架"
+        },
+        {
+          "balloon": 2,
+          "part": "压板"
+        }
+      ]
+    }
+  ],
+  "assembly_steps": {
+    "step_count": 1,
+    "balloon_coverage": {
+      "declared": [
+        1,
+        2
+      ],
+      "referenced": [
+        1,
+        2
+      ],
+      "unreferenced": []
+    }
+  },
+  "assembly_step_issues": [],
+  "parts_list": [
+    {
+      "item": 1,
+      "part": "支架"
+    },
+    {
+      "item": 2,
+      "part": "压板"
+    }
+  ],
+  "bom": null,
+  "not_covered": [
+    "维护指引",
+    "工时与工序成本",
+    "扭矩或拧紧值",
+    "检验点与点检项"
+  ],
+  "pdf": {
+    "path": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/fin.pdf",
+    "sha256": "858535b380713348c94fe0e37cbef379372e846a56fe2060509075de51151927",
+    "pages": 2,
+    "chars": 302,
+    "image": {
+      "path": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/assy.png",
+      "sha256": "f3f31f50113d496b007d3b1260c88c9ea14cabf49b75a3ce15ffe1274706c812",
+      "pixels": [
+        1140,
+        1728
+      ],
+      "bytes": 2300614,
+      "placed_mm": [
+        51.5,
+        78.0
+      ]
+    }
+  },
+  "generated_at": "2026-09-27T18:37:36.076073+00:00",
+  "tool": "aipd_os.cad.assembly_steps（声明渲染，无几何投影）",
+  "model_source": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/assy_full2.json",
+  "command": "drawing assembly-steps",
+  "ok": true,
+  "status": "DONE"
+}

@@ -1,0 +1,209 @@
+{
+ "common": {
+  "anchor": "a66040520139405095648461f7144d4f00629924",
+  "anchor_equals": "tag v5.6.0^{commit}，非当时 HEAD",
+  "fingerprint_reason": "该字段第 83 片才挂进报告，所以这 11 份历史报告不带清单同源证据——正是第 84 片写入侧闸门的适用起点",
+  "source_manifest_fingerprint": null
+ },
+ "produced_at": "2026-09-28",
+ "provenance": {
+  "fields_unrecoverable": [
+   "逐份 report.json 的 sha256",
+   "40 条非 passed 用例的 nodeid 列表（只留下每轮的 skipped 计数）"
+  ],
+  "note": "non_passed 全部是 skipped：11 轮 outcomes 只含 passed/skipped 两个键，且 summary 里没有 failed 键（pytest-json-report 在 0 failed 时省略该键）。",
+  "read_at": "2026-09-28T08:28 本机时钟，回收动作之前",
+  "read_from": "tmp/sNN/final/report.json（11 个文件，回收前直接读）",
+  "this_file_is": "重建件。第一版摘要（含 40 条非 passed 用例的 nodeid 与逐份 sha256）在本轮一次范围过宽的回车里被连带删除（见 WORKTREE_INVENTORY §六 错误 3），而源文件已随 worktree 一并回收，故不可再生。"
+ },
+ "rounds": [
+  {
+   "created_unix": 1790496337.639649,
+   "duration_s": 483.7,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 210,
+   "len_tests": 2577,
+   "outcomes": {
+    "passed": 2574,
+    "skipped": 3
+   },
+   "passed": 2574,
+   "report_bytes": 2329052,
+   "round": "s70",
+   "skipped": 3,
+   "total": 2577,
+   "worktree": "tmp/s70/final"
+  },
+  {
+   "created_unix": 1790498585.15869,
+   "duration_s": 256.1,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 211,
+   "len_tests": 2587,
+   "outcomes": {
+    "passed": 2584,
+    "skipped": 3
+   },
+   "passed": 2584,
+   "report_bytes": 2336430,
+   "round": "s71",
+   "skipped": 3,
+   "total": 2587,
+   "worktree": "tmp/s71/final"
+  },
+  {
+   "created_unix": 1790499914.4747992,
+   "duration_s": 238.9,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 211,
+   "len_tests": 2589,
+   "outcomes": {
+    "passed": 2586,
+    "skipped": 3
+   },
+   "passed": 2586,
+   "report_bytes": 2337443,
+   "round": "s72",
+   "skipped": 3,
+   "total": 2589,
+   "worktree": "tmp/s72/final"
+  },
+  {
+   "created_unix": 1790501004.261525,
+   "duration_s": 248.3,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 211,
+   "len_tests": 2590,
+   "outcomes": {
+    "passed": 2587,
+    "skipped": 3
+   },
+   "passed": 2587,
+   "report_bytes": 2338208,
+   "round": "s73",
+   "skipped": 3,
+   "total": 2590,
+   "worktree": "tmp/s73/final"
+  },
+  {
+   "created_unix": 1790503548.762294,
+   "duration_s": 344.8,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 211,
+   "len_tests": 2592,
+   "outcomes": {
+    "passed": 2589,
+    "skipped": 3
+   },
+   "passed": 2589,
+   "report_bytes": 2339099,
+   "round": "s74",
+   "skipped": 3,
+   "total": 2592,
+   "worktree": "tmp/s74/final"
+  },
+  {
+   "created_unix": 1790505463.095365,
+   "duration_s": 213.6,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 211,
+   "len_tests": 2594,
+   "outcomes": {
+    "passed": 2591,
+    "skipped": 3
+   },
+   "passed": 2591,
+   "report_bytes": 2341005,
+   "round": "s75",
+   "skipped": 3,
+   "total": 2594,
+   "worktree": "tmp/s75/final"
+  },
+  {
+   "created_unix": 1790508156.1806872,
+   "duration_s": 320.3,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 213,
+   "len_tests": 2605,
+   "outcomes": {
+    "passed": 2602,
+    "skipped": 3
+   },
+   "passed": 2602,
+   "report_bytes": 2354215,
+   "round": "s76",
+   "skipped": 3,
+   "total": 2605,
+   "worktree": "tmp/s76/final"
+  },
+  {
+   "created_unix": 1790510789.677574,
+   "duration_s": 215.1,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 214,
+   "len_tests": 2611,
+   "outcomes": {
+    "passed": 2607,
+    "skipped": 4
+   },
+   "passed": 2607,
+   "report_bytes": 2360981,
+   "round": "s77",
+   "skipped": 4,
+   "total": 2611,
+   "worktree": "tmp/s77/final"
+  },
+  {
+   "created_unix": 1790512434.620141,
+   "duration_s": 229.2,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 214,
+   "len_tests": 2620,
+   "outcomes": {
+    "passed": 2615,
+    "skipped": 5
+   },
+   "passed": 2615,
+   "report_bytes": 2366713,
+   "round": "s78",
+   "skipped": 5,
+   "total": 2620,
+   "worktree": "tmp/s78/final"
+  },
+  {
+   "created_unix": 1790513830.623793,
+   "duration_s": 196.9,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 214,
+   "len_tests": 2621,
+   "outcomes": {
+    "passed": 2616,
+    "skipped": 5
+   },
+   "passed": 2616,
+   "report_bytes": 2367681,
+   "round": "s79",
+   "skipped": 5,
+   "total": 2621,
+   "worktree": "tmp/s79/final"
+  },
+  {
+   "created_unix": 1790517660.559506,
+   "duration_s": 250.8,
+   "failed_absent_from_summary_derived_zero": true,
+   "files_in_report": 215,
+   "len_tests": 2627,
+   "outcomes": {
+    "passed": 2622,
+    "skipped": 5
+   },
+   "passed": 2622,
+   "report_bytes": 2374153,
+   "round": "s80",
+   "skipped": 5,
+   "total": 2627,
+   "worktree": "tmp/s80/final"
+  }
+ ],
+ "what": "第 70..80 片收口那一跑的逐例报告读数（原始 2.3MB JSON 已随 worktree 回收）"
+}

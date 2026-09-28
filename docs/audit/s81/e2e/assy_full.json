@@ -1,0 +1,1 @@
+{"parts": [{"name": "支架", "balloon": 1, "step": "支架.step"}, {"name": "压板", "balloon": 2, "step": "压板.step"}], "assembly_steps": [{"no": 1, "action": "支架贴合基面", "balloons": [1, 2]}]}

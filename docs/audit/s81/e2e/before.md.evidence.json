@@ -1,0 +1,67 @@
+{
+  "document": "assembly_steps",
+  "manifest": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/assy.json",
+  "manifest_sha256": "d14cdf51b98b9d6286f1ead192955dd798bc1c7ae4622fd03e661ceaac8a1153",
+  "document_sha256": "4e2ba866568ff41e0419865b64a710ffbdc9e851f47cf089074cf22a15e49c96",
+  "columns": [
+    "ITEM",
+    "PART"
+  ],
+  "steps": [
+    {
+      "no": 1,
+      "action": "支架贴合基面",
+      "balloons": [
+        1
+      ],
+      "cited": [
+        {
+          "balloon": 1,
+          "part": "支架"
+        }
+      ]
+    }
+  ],
+  "assembly_steps": {
+    "step_count": 1,
+    "balloon_coverage": {
+      "declared": [
+        1,
+        2
+      ],
+      "referenced": [
+        1
+      ],
+      "unreferenced": [
+        2
+      ]
+    }
+  },
+  "assembly_step_issues": [
+    "球标 2（压板）没有任何步骤装配它：这份文档交出去，操作者不会装这一件"
+  ],
+  "parts_list": [
+    {
+      "item": 1,
+      "part": "支架"
+    },
+    {
+      "item": 2,
+      "part": "压板"
+    }
+  ],
+  "bom": null,
+  "not_covered": [
+    "维护指引",
+    "工时与工序成本",
+    "扭矩或拧紧值",
+    "检验点与点检项"
+  ],
+  "pdf": null,
+  "generated_at": "2026-09-27T18:20:30.043749+00:00",
+  "tool": "aipd_os.cad.assembly_steps（声明渲染，无几何投影）",
+  "model_source": "/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e/assy.json",
+  "command": "drawing assembly-steps",
+  "ok": true,
+  "status": "DONE"
+}
