@@ -6,8 +6,9 @@
 
 ## 1. 三份证据
 
-生成入口：`scripts/release_evidence.py`。三份证据都以**最终 tag SHA**
-（`git rev-parse HEAD`）为锚点，互不依赖、互不自引用。
+生成入口：`scripts/release_evidence.py`，`--source-commit` **必填**（第 86 片）：
+留空或不是 40 位十六进制一律退 2、整批不写。三份证据都以**最终 tag SHA**
+（`git rev-parse v5.6.0^{commit}` 现读，**不是** `git rev-parse HEAD`）为锚点，互不依赖、互不自引用。
 
 | 证据文件 | 覆盖范围 | 关键字段 |
 | --- | --- | --- |

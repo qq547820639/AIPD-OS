@@ -1,0 +1,9 @@
+基线 rc=0 13 passed, 12 warnings in 4.53s
+基线 release_evidence.py sha=5abb31706cf9
+[KILLED     ] X1-anchor-may-default-again  1 failed, 12 passed, 12 warnings in 5.02s
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_without_source_commit_on_both_paths
+[KILLED     ] X2-shape-check-dropped  1 failed, 12 passed, 13 warnings in 5.16s
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_malformed_source_commit
+[KILLED     ] X3-shape-check-loosened-to-prefix  1 failed, 12 passed, 13 warnings in 5.31s
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_malformed_source_commit
+合计 KILLED+CRASH-KILL 3 / 3；其余按判决分类：无

@@ -21,13 +21,15 @@
 路径不在 / 报告读不出 / 缺字段 / 不同源一律抛 `BindPreflightError` 并**整批不写**。
 比的是 `release_fingerprint` 的规范摘要而不是原始字节——`generated_at` 每轮都换。
 
-退码：0 写好 / 2 被这道闸拒（配方据此停下，不是"没活干"）/ 其它异常按 Python 默认。
-不带 ``--test-report`` 时闸不成立（配方第一步"只刷清单"本来就没有报告可比）。
+退码：0 写好 / 2 被拒（配方据此停下，不是"没活干"）/ 其它异常按 Python 默认。
+退 2 有两种：锚点缺失或不是 40 位 SHA（第 86 片），以及带 ``--test-report`` 时那道
+同源闸没过（第 84 片）。不带 ``--test-report`` 时同源闸不成立（配方第一步"只刷清单"
+本来就没有报告可比），但**锚点那一半照样要过**——漂到 HEAD 的清单正是从那一步开始的。
 
-用法：
-    python scripts/release_evidence.py --repo . \
-        --bundle releases/aipd-os-5.6.0.zip --version 5.6.0 \
-        --test-report .pytest/lastreport.json --out .
+用法（`--source-commit` 必填，见下）：
+    python scripts/release_evidence.py --repo . --out . --version 5.6.0 \
+        --source-commit "$(git rev-parse v5.6.0^{commit})" \
+        --test-report docs/audit/pytest-report-v5.6.0.json
 """
 from __future__ import annotations
 
@@ -36,6 +38,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 import zipfile
@@ -413,7 +416,23 @@ def main(argv=None) -> int:
     out = Path(a.out).resolve() if a.out else repo
     bundle = Path(a.bundle).resolve() if a.bundle else None
     test_report = Path(a.test_report).resolve() if a.test_report else None
-    source_commit = a.source_commit or None
+    # 锚点不许默认成 HEAD（第 86 片）。它是清单**内容**的一部分，
+    # 所以漂掉的锚点不会当场报错，只会在下一轮绑定时读成"清单被改过"：
+    # 第 52 片与第 62 片各为此多跑一整个全量。带 `--test-report` 那一支
+    # 今天已被第 84 片的指纹闸顺带拦住，**不带报告的那一支（配方第一步刷清单）
+    # 仍然静默接受 HEAD**——本轮补的就是那半支。
+    if not a.source_commit:
+        print("拒绝：`--source-commit` 必须显式给出。本仓的发布锚点按约定停在 tag 上，"
+              "由 `git rev-parse <tag>^{commit}` 现读；留空会把它默认成当时的 HEAD，"
+              "而锚点是清单内容的一部分 ⇒ 漂掉的锚点不报错，只会让下一轮绑定读成"
+              "「清单在跑完全量之后被改过」。")
+        return 2
+    if not re.fullmatch(r"[0-9a-fA-F]{40}", a.source_commit):
+        print(f"拒绝：`--source-commit` 不是 40 位十六进制 SHA：{a.source_commit[:40]!r}"
+              "。两个读者（`production_release_gate` 与 `closeout_verifier`）都按逐字相等判，"
+              "截断值不会报错、只会永远判红。")
+        return 2
+    source_commit = a.source_commit
 
     try:
         results = write_evidence(repo, out, a.version, bundle, test_report, source_commit)

@@ -237,3 +237,66 @@ def test_gate_is_wired_into_write_evidence_before_any_write() -> None:
     call = next(n for n in ast.walk(guard[0]) if isinstance(n, ast.Call)
                 and needle in {getattr(n.func, "id", ""), getattr(n.func, "attr", "")})
     assert call.lineno < first_write, (call.lineno, first_write)
+
+
+# ---------------------------------------------------------------------------
+# 第 86 片：锚点不许默认成 HEAD。
+# 第 52 片与第 62 片两次实测记录的是同一件事——少给 `--source-commit` 不报错，
+# 只把 `SOURCE_MANIFEST.source_commit` 写成当时的 HEAD；下一轮绑定才读成"清单被改过"。
+# 第 84 片的指纹闸顺带拦住了**带报告**那一支，**不带报告的配方第一步**仍是静默通道。
+
+
+def test_refuses_without_source_commit_on_both_paths(tmp_path: Path) -> None:
+    """两条入口都要拒：带报告那一支（今天靠指纹闸恰好也拦）与不带报告那一支（此前静默）。"""
+    repo = _repo(tmp_path)
+    for extra in ([], ["--test-report", str(_report(tmp_path, _want(repo)))]):
+        out = tmp_path / f"out{len(extra)}"
+        import io
+        buf, saved = io.StringIO(), sys.stdout
+        sys.stdout = buf
+        try:
+            rc = ev.main(["--repo", str(repo), "--out", str(out), "--version", "5.6.0"] + extra)
+        finally:
+            sys.stdout = saved
+        assert rc == 2, (extra, buf.getvalue())
+        assert "必须显式给出" in buf.getvalue(), buf.getvalue()
+        assert not out.exists(), "被拒时连输出目录都不该建（锚点校验也排在任何落盘之前）"
+
+
+def test_refuses_a_malformed_source_commit(tmp_path: Path) -> None:
+    """40 位以外的值也拒：两个读者按逐字相等判，截断 SHA 不会报错、只会永远判红。"""
+    repo = _repo(tmp_path)
+    for bad in ("a660405", "z" * 40, " " + "a" * 39):
+        out = tmp_path / "out"
+        import io
+        buf, saved = io.StringIO(), sys.stdout
+        sys.stdout = buf
+        try:
+            rc = ev.main(["--repo", str(repo), "--out", str(out), "--version", "5.6.0",
+                          "--source-commit", bad])
+        finally:
+            sys.stdout = saved
+        assert rc == 2, (bad, buf.getvalue())
+        assert "不是 40 位十六进制" in buf.getvalue(), buf.getvalue()
+
+
+def test_explicit_anchor_lands_verbatim_and_is_not_head(tmp_path: Path) -> None:
+    """合规侧：显式锚点必须逐字落进清单，且不等于该仓库的 HEAD——否则"必填"只是仪式。"""
+    repo = _repo(tmp_path)
+    head = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"],
+                          capture_output=True, text=True).stdout.strip()
+    anchor = "b" * 40
+    assert anchor != head, "夹具前提：锚点要与 HEAD 不同形，否则这条测不出"
+    out = tmp_path / "out"
+    import io
+    buf, saved = io.StringIO(), sys.stdout
+    sys.stdout = buf
+    try:
+        rc = ev.main(["--repo", str(repo), "--out", str(out), "--version", "5.6.0",
+                      "--source-commit", anchor])
+    finally:
+        sys.stdout = saved
+    assert rc == 0, buf.getvalue()
+    for name in ("SOURCE_MANIFEST.json", "PROVENANCE.json"):
+        doc = json.loads((out / name).read_text(encoding="utf-8"))
+        assert doc["source_commit"] == anchor, (name, doc["source_commit"])
