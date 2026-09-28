@@ -1,0 +1,470 @@
+{
+ "ok": true,
+ "authority_paths": 90,
+ "authority_groups": 15,
+ "corpus": {
+  "run_command_segments": 86,
+  "quickref_lines": 97,
+  "continuation_breaks": 0,
+  "script_rows": 5,
+  "script_rows_judged": 5,
+  "script_rows_unbounded": [],
+  "code_mentions": 220,
+  "code_negated": 6,
+  "prose_mentions": 1461,
+  "report_only_mentions": 48,
+  "report_record_mentions": 1083,
+  "report_total_mentions": 1131,
+  "report_record_dirs": {
+   "CHANGELOG.md": 83,
+   "docs/audit": 889,
+   "tests": 65,
+   ".trae": 46
+  }
+ },
+ "report_record_unmatched": [
+  {
+   "doc": "CHANGELOG.md",
+   "line": 1356,
+   "written": "aipd ctq zzz-listy"
+  },
+  {
+   "doc": "CHANGELOG.md",
+   "line": 1725,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "CHANGELOG.md",
+   "line": 1725,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "CHANGELOG.md",
+   "line": 1822,
+   "written": "aipd ghost cmd"
+  },
+  {
+   "doc": "CHANGELOG.md",
+   "line": 1848,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "CHANGELOG.md",
+   "line": 1869,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "CHANGELOG.md",
+   "line": 1916,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 131,
+   "written": "aipd ctq zzz-quickref"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 131,
+   "written": "aipd ctq zzz-listy"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 131,
+   "written": "aipd ctq listy"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 131,
+   "written": "aipd ghost cmd"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 132,
+   "written": "aipd ghostly cmd"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 132,
+   "written": "aipd ghostspec run"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 132,
+   "written": "aipd ghostci check"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 132,
+   "written": "aipd x"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 134,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 135,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md",
+   "line": 140,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 61,
+   "written": "aipd ctq listy"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 61,
+   "written": "aipd ghost cmd"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 62,
+   "written": "aipd ghostci check"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 62,
+   "written": "aipd ghostly cmd"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 62,
+   "written": "aipd ghostspec run"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 63,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 63,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 63,
+   "written": "aipd x"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 206,
+   "written": "aipd ctq listy"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 206,
+   "written": "aipd ghost cmd"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 206,
+   "written": "aipd ghostci check"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 206,
+   "written": "aipd ghostly cmd"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 206,
+   "written": "aipd ghostspec run"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 206,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 206,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/CTQ_LIST_F-CTQ-READER_2026-09-27.md",
+   "line": 206,
+   "written": "aipd x"
+  },
+  {
+   "doc": "docs/audit/CTQ_REVISION_F-CTQ-REVISION_2026-09-27.md",
+   "line": 159,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/CTQ_REVISION_F-CTQ-REVISION_2026-09-27.md",
+   "line": 159,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 6,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 6,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 13,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 66,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 92,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 93,
+   "written": "aipd ctq listy"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 93,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 130,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 134,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 163,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 230,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 230,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 230,
+   "written": "aipd ctq listy"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 231,
+   "written": "aipd ghost cmd"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 270,
+   "written": "aipd ghostly cmd"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 334,
+   "written": "aipd ghostspec run"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 334,
+   "written": "aipd ghostci check"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 335,
+   "written": "aipd ghostly cmd"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 394,
+   "written": "aipd x"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 419,
+   "written": "aipd ctq listy"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 419,
+   "written": "aipd ghost cmd"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 419,
+   "written": "aipd ghostci check"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 419,
+   "written": "aipd ghostly cmd"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 419,
+   "written": "aipd ghostspec run"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 419,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 419,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 420,
+   "written": "aipd ghost cmd"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 420,
+   "written": "aipd ghostci check"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 420,
+   "written": "aipd ghostly cmd"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 420,
+   "written": "aipd ghostspec run"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 420,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md",
+   "line": 420,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/LIVE_RECORD_SPLIT_F-LIVE-RECORD-SPLIT_2026-09-27.md",
+   "line": 27,
+   "written": "aipd ctq zzz-listy"
+  },
+  {
+   "doc": "docs/audit/SUPERVISOR_FACT_LINEAGE_F-TRUTH-LINEAGE_2026-09-27.md",
+   "line": 64,
+   "written": "aipd supervisor add-work"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd ctq listy"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd ctq zzz-listy"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd ctq zzz-quickref"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd ghost cmd"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd ghostci check"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd ghostly cmd"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd ghostspec run"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd truth ctq"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd truth show"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 80,
+   "written": "aipd x"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 94,
+   "written": "aipd ctq zzz-listy"
+  },
+  {
+   "doc": "docs/audit/TRUTH_HISTORY_F-AUDIT-READER_2026-09-27.md",
+   "line": 94,
+   "written": "aipd ctq zzz-quickref"
+  },
+  {
+   "doc": "docs/audit/pytest-report-v5.6.0.json",
+   "line": 1,
+   "written": "aipd ctq zzz-listy"
+  },
+  {
+   "doc": "docs/audit/pytest-report-v5.6.0.json",
+   "line": 1,
+   "written": "aipd ctq zzz-quickref"
+  },
+  {
+   "doc": "docs/audit/pytest-report-v5.6.0.json",
+   "line": 1,
+   "written": "aipd ghost cmd"
+  },
+  {
+   "doc": "docs/audit/pytest-report.json",
+   "line": 1,
+   "written": "aipd ctq zzz-listy"
+  },
+  {
+   "doc": "docs/audit/pytest-report.json",
+   "line": 1,
+   "written": "aipd ctq zzz-quickref"
+  },
+  {
+   "doc": "docs/audit/pytest-report.json",
+   "line": 1,
+   "written": "aipd ghost cmd"
+  }
+ ],
+ "violations": [],
+ "report_only_unmatched": [],
+ "problems": []
+}

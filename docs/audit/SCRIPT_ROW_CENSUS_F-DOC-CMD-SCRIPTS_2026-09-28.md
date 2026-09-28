@@ -130,6 +130,26 @@ cd /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
     tests/test_release_evidence_preflight.py -q
 ```
 
+## 九、终局读数（绑定那一跑，全部现读）
+
+| 格 | 读数 |
+| --- | --- |
+| 被认证提交 | `a66040520139`（tag `v5.6.0`，本轮不重锚） |
+| 收口 HEAD | `b25e2211a677` |
+| 绑定提交 | `a1be6ca` |
+| 清单分母 | 684 个文件（**与第 84 片同数**——本轮没加新脚本也没加新测试文件） |
+| 报告自记清单指纹 / 磁盘内容摘要 | `40760bb06958` == `40760bb06958` 逐位相等 |
+| 干净签出那一跑 | 2677 passed / 5 skipped / 0 failed，332.5 s，`exitcode=0` |
+| 发布门 | `release_ready=True`，8 项全过 |
+| 收尾验签 | 11 格全绿（判红 0、前提塌 0） |
+| 判红面 ④（真仓库） | 行首 `python scripts/X.py` 5 行 / 判 5 行 / 不封闭 0 行，判红 **0** |
+| 判红面 ④（立条前） | 同语料判红 **1** 处（`references/cad-runtime-acceptance.md` 的 `--require-cad`），文档改对后归零 |
+| `--self-test` | 9 条合成读数全部对上（含新档四支臂） |
+
+两道"看不见 ≠ 没有"的读数在这张表里各自有位置：`script_rows_judged < script_rows` 只能由
+`script_rows_unbounded` 解释（今天真仓库为 0 行不封闭，合成语料里那一行由自测钉住）；
+判红 0 的含义由"立条前有 1 处"那一行担保，不是由"这档没跑"担保。
+
 ## 八、遗留
 
 1. **"每个 `scripts/*.py` 都该在文档里出现"这条判据仍然不存在**，也不该存在（40 处假阳性）。
