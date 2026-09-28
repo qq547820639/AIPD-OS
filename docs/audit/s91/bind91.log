@@ -1,0 +1,4 @@
+/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/scripts/release_evidence.py:235: DeprecationWarning: Accessing jsonschema.__version__ is deprecated and will be removed in a future release. Use importlib.metadata directly to query for jsonschema's version.
+  env["packages"][pkg] = getattr(mod, "__version__", "unknown")
+wrote: /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/SOURCE_MANIFEST.json
+wrote: /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/PROVENANCE.json
