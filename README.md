@@ -492,7 +492,7 @@ python scripts/closeout_verifier.py --tag v5.6.0 --expect-test tests/test_new_th
 #     这正是第 62 片真犯过的错。
 #     `--self-test` 是 22 臂合成电池（每臂只点亮自己那一格判决，其中一支是「只换
 #     `generated_at` 必须读成同一份清单」的假红控制——比原始字节 sha 就会每轮都假红），
-#     常驻牙 20 条见 `tests/test_closeout_verifier.py`；指纹那把尺另见
+#     常驻牙 21 条见 `tests/test_closeout_verifier.py`（第 84 片 +1：跨文件键集对照）；指纹那把尺另见
 #     `tests/test_report_manifest_fingerprint.py` 6 条，含用真 `pytest --json-report`
 #     跑出来的生产侧端到端。`report_fingerprint_recorded` 缺字段读成**前提塌（退 2）**而不是判红：
 #     报告是不可变的历史产物，判红会自锁——attestation 必须 0 failed，而任何"旧报告还在树里"
