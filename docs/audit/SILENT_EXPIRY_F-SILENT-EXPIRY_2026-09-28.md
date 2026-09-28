@@ -234,3 +234,18 @@ ruff 侧复核报"本轮新增 246 行最长 95 < 100"，`pyproject.toml:84` 的
 `roster_covers_tree` 与 `worktree_clean` 读的都是"当前这棵树"——
 如果哪份取证件是被 `--force` 带走的，红会出现在这里而不是出现在 §十 那一跑。
 现在两代读数都是 8/8 与 11/11，说明回收没带走承重件。
+
+## 十二、本文自己的复算入口（面 ⑤ 会扫到，逐条写明怎么重跑）
+
+| 入口 | 在不在库 | 重跑命令 | 预期读数 |
+| --- | --- | --- | --- |
+| `docs/audit/s88/battery88.py` | 已入库（提交 23877d2） | `.venv/bin/python docs/audit/s88/battery88.py` | `合计 KILLED 10 / 10`，两文件 sha 收尾等于开局 |
+| `docs/audit/s86/battery86.py` | 已入库 | `.venv/bin/python docs/audit/s86/battery86.py` | `4 / 4`（第 88 片加了 X4） |
+| `docs/audit/s84/battery84.py` | 已入库 | `.venv/bin/python docs/audit/s84/battery84.py` | `8 / 8` |
+| `docs/audit/s87/battery87.py` | 已入库 | `.venv/bin/python docs/audit/s87/battery87.py` | `7 / 7` |
+| `docs/audit/s88/closeout88.sh` | 已入库 | 只在"重新认证一次"时用；它会绑定并**提交**，不是无副作用的读 | 第一代读数见 §十 |
+| `docs/audit/s88/closeout88b.sh` | 已入库 | 同上，第二代专用（报告与工作树都换名） | 第二代读数见 §十三 |
+
+一把尺跑多久的现读值：本轮邻居会话在跑另一棵树的整体验证（宿主 load 23.9），
+四把电池的**判决计数没变、时长变了**（s88 约 13 分钟、s84 约 28 分钟，平静时段分别是 8 与 10）。
+读数按 `KILLED n/n` 记，不按耗时记——这条是第 84/85 片那条"邻居会话抢 CPU"纪律的又一次兑现。
