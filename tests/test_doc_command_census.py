@@ -660,8 +660,14 @@ def test_the_snapshot_column_is_decoration_not_authority(tmp_path: Path,
                                                          tmp_scope) -> None:
     """快照列填对的、填错的、整列缺的，判决一字不变——它现在名字里就说了不参与判决。
 
-    反面也钉：已登记且仍被引用 ⇒ 既不正判也不反判（`base == []`）。
-    若将来有人把这列接回判据，那是新增一条判决，得连这条一起改，不能悄悄接。
+    每档额外断 `dead_registered == 1`：只比"判决相同"的话，四种写法可能一起落在
+    "面 ⑤ 根本没看见那一行"的状态上（把 `startswith("/")` 那支改成 tracked 就能这样绿过去）。
+    这根计数把"看得见、且被免判"钉成每一档的共同前提，四种写法才真的只是列的形状之差。
+
+    最后一段是**分辨性夹具**：一条在册、带着完整且真实的 `cited_by_at_emit_time`、
+    但语料里没有对应行的条目。判据现在必须开火（「登记册该撤」）；
+    将来谁把这列接回判据，它就闭嘴。"这一列被忽略"与"这一列被查到、值为空"
+    两种实现，只有这个形状能分开。
     """
     tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
                       code="# 参见 aipd usage 的说明\nVALUE = 1\n",
@@ -677,36 +683,69 @@ def test_the_snapshot_column_is_decoration_not_authority(tmp_path: Path,
                                   ensure_ascii=False), encoding="utf-8")
         rep = census.audit(tree)
         assert not rep["problems"], rep["problems"]
+        assert rep["corpus"]["entry_states"]["dead_registered"] == 1, (col, rep["corpus"])
         fields_now = sorted({v["field"] for v in rep["violations"]})
         if base is None:
             base = fields_now
         assert fields_now == base, (col, rep["violations"])
     assert base == [], base
 
+    ghost = "/tmp/zzz_column_only.py"
+    reg.write_text(json.dumps({"entries": [
+        {"path": DEAD, "note": "宿主 /tmp"},
+        {"path": ghost, "note": "第 88 片分辨性夹具",
+         "cited_by_at_emit_time": ["docs/audit/note.md:1"]}]}, ensure_ascii=False),
+        encoding="utf-8")
+    rep = census.audit(tree)
+    fired = {v["written"] for v in rep["violations"] if v["field"] == "登记册该撤"}
+    assert ghost in fired, (fired, "在册条目带着一整列引用仍被判「该撤」⇒ 这列不被消费")
+    assert DEAD not in fired, rep["violations"]
 
-def test_emit_register_carries_notes_and_refuses_an_unparsable_target(tmp_path: Path,
-                                                                      tmp_scope) -> None:
-    """`--emit-register` 的两个面：按 path 带旧 note；目标读不出时整批不落盘。
 
-    前半是第 87 片复核登记的真缺陷（草案覆盖式重写会抹掉历轮手写的豁免依据）；
-    后半是同一支的对称面——拒绝时不许已经动了目标文件。
+def test_emit_register_carries_notes_reports_drops_and_refuses(tmp_path: Path) -> None:
+    """`--emit-register` 的三个面：带旧 note、报出"有依据却被丢"的条目、目标不像册子就不落盘。
+
+    前两半是同一条纪律的两端——豁免依据不许**静默**消失：留在 `dead` 档的按 `path` 带过来，
+    离开那一档的（最常见原因是有人把最后一处命令形态改写成叙述，而不是"修好了"）
+    必须连原文一起报出来，由操作者决定要不要手工留档。
+    后半用两种"读不出"：非法 JSON，以及"能解析但不是字典"——后者以前会抛
+    `AttributeError`、退 1 加一段 traceback，而 docstring 承诺的是"整批不写"。
+
+    不需要 `tmp_scope`：`emit_register` 只走 `entry_points`，那是按本仓 `ENTRY_FILES`/
+    `ENTRY_DIRS` 的名字在**传入的树**里找文件，与被 monkeypatch 的判决面无关。
     """
     tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
                       prose=f"复算入口：python {DEAD}\n")
     dst = tree / census.ENTRY_REGISTER_REL
     got = census.emit_register(tree, dst)
     assert got["refused"] == "" and got["written"] == 1, got
-    assert got["missing_notes"] == [DEAD], got
+    assert got["missing_notes"] == [DEAD] and got["dropped"] == [], got
     doc = json.loads(dst.read_text(encoding="utf-8"))
     assert doc["entries"][0]["cited_by_at_emit_time"], doc
-    assert doc["rule"] == census.REGISTER_RULE, doc["rule"]
+    # 五段说明文字都得由常量生成：只比磁盘册子与常量的那条同源用例抓不到"草案漏字段"，
+    # 因为漏了的那一段在册子里同样不存在——两边就"一致地缺"了。
+    for key, const in (("what", census.REGISTER_WHAT), ("rule", census.REGISTER_RULE),
+                       ("cited_by_at_emit_time_semantics",
+                        census.REGISTER_SNAPSHOT_SEMANTICS),
+                       ("note_semantics", census.REGISTER_NOTE_SEMANTICS),
+                       ("shape_borrowed_from", census.REGISTER_SHAPE_BORROWED_FROM)):
+        assert doc[key] == const, (key, doc.get(key))
 
     filled = "第 88 片夹具：宿主 /tmp，重启即没，读数已抄进取证文档"
     doc["entries"][0]["note"] = filled
     dst.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
     again = census.emit_register(tree, dst)
-    assert again["missing_notes"] == [], again
+    assert again["missing_notes"] == [] and again["dropped"] == [], again
     assert json.loads(dst.read_text(encoding="utf-8"))["entries"][0]["note"] == filled
+
+    # 把引用那一行从语料里撤掉 ⇒ 条目离开 dead 档：文件可以少这一条，依据不许悄悄没
+    (tree / "docs" / "audit" / "note.md").write_text("改成叙述，不再有命令形态\n",
+                                                     encoding="utf-8")
+    third = census.emit_register(tree, dst)
+    assert third["written"] == 0, third
+    assert third["dropped"] == [{"path": DEAD, "note": filled}], third
+    left = [e["path"] for e in json.loads(dst.read_text(encoding="utf-8"))["entries"]]
+    assert DEAD not in left, left
 
     broken = "{ 这不是 JSON"
     dst.write_text(broken, encoding="utf-8")
@@ -714,9 +753,15 @@ def test_emit_register_carries_notes_and_refuses_an_unparsable_target(tmp_path: 
     assert "读不出" in refused["refused"], refused
     assert dst.read_text(encoding="utf-8") == broken, "拒绝时不许动目标文件"
 
+    notadict = '["这不是字典"]'
+    dst.write_text(notadict, encoding="utf-8")
+    refused2 = census.emit_register(tree, dst)
+    assert "不是字典" in refused2["refused"], refused2
+    assert dst.read_text(encoding="utf-8") == notadict, "非字典目标同样不许被覆盖"
+
 
 def test_real_repo_register_shares_the_instrument_constants() -> None:
-    """真仓库那本册的三段说明文字必须与量具的常量逐字同源。
+    """真仓库那本册的五段说明文字必须与量具的常量逐字同源。
 
     钉关系不钉数字。第 87 片实测到册里的 `rule` 写"四种归属"而代码写"五种"——
     两份手抄各漂各的，谁都不判。把常量拿出来比，这类漂移当场变红。

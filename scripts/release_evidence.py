@@ -379,12 +379,14 @@ def write_evidence(repo: Path, out_dir: Path, version: str,
     任何拒绝都发生在**任何落盘动作之前**——连输出目录都不建，
     因为半写会让树里留一份与清单不同源的证据。
     """
-    if not re.fullmatch(r"[0-9a-fA-F]{40}", source_commit or ""):
+    if not re.fullmatch(r"[0-9a-f]{40}", source_commit or ""):
         raise BindPreflightError(
-            f"拒绝：`source_commit` 必须是 40 位十六进制的最终 tag SHA，实得 "
+            f"拒绝：`source_commit` 必须是 40 位十六进制（小写）的最终 tag SHA，实得 "
             f"{source_commit!r}。本函数不给默认值，也不接受"
             "『先按 HEAD 算、回头再改』——漂掉的锚点不报错，只会让下一轮绑定读成"
-            "「清单在跑完全量之后被改过」（由 `git rev-parse <tag>^{commit}` 现读）。")
+            "「清单在跑完全量之后被改过」（由 `git rev-parse <tag>^{commit}` 现读）。"
+            "大小写也判：git 只印小写，两个读者按逐字相等比，"
+            "收下一个大写值不会当场报错、只会永远判红。")
     source = generate_source_manifest(repo, source_commit)
     source["version"] = version
     prov = generate_provenance(repo, bundle, test_report, source_commit)
@@ -423,8 +425,8 @@ def main(argv=None) -> int:
     ap.add_argument("--test-report", default="", help="pytest 机器可读 JSON 报告路径")
     ap.add_argument("--source-commit", default="",
                     help="最终 tag SHA，**必填**（预置到 SOURCE_MANIFEST/PROVENANCE 的 "
-                         "source_commit）；留空或非 40 位十六进制一律退 2，"
-                         "不默认成当前 HEAD（第 86 片关命令行、第 88 片关 API）")
+                         "source_commit）；留空或非 40 位十六进制（小写）一律退 2，"
+                         "不默认成当前 HEAD（第 86 片关命令行、第 88 片关 API 并收紧字符类）")
     a = ap.parse_args(argv)
 
     repo = Path(a.repo).resolve()
@@ -442,10 +444,10 @@ def main(argv=None) -> int:
               "而锚点是清单内容的一部分 ⇒ 漂掉的锚点不报错，只会让下一轮绑定读成"
               "「清单在跑完全量之后被改过」。")
         return 2
-    if not re.fullmatch(r"[0-9a-fA-F]{40}", a.source_commit):
-        print(f"拒绝：`--source-commit` 不是 40 位十六进制 SHA：{a.source_commit[:40]!r}"
+    if not re.fullmatch(r"[0-9a-f]{40}", a.source_commit):
+        print(f"拒绝：`--source-commit` 不是 40 位十六进制 SHA（小写）：{a.source_commit[:40]!r}"
               "。两个读者（`production_release_gate` 与 `closeout_verifier`）都按逐字相等判，"
-              "截断值不会报错、只会永远判红。")
+              "截断值或大写值都不会报错、只会永远判红——`git rev-parse` 只印小写。")
         return 2
     source_commit = a.source_commit
 

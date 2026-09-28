@@ -269,9 +269,14 @@ def test_refuses_without_source_commit_on_both_paths(tmp_path: Path) -> None:
 
 
 def test_refuses_a_malformed_source_commit(tmp_path: Path) -> None:
-    """40 位以外的值也拒：两个读者按逐字相等判，截断 SHA 不会报错、只会永远判红。"""
+    """40 位以外的值也拒：两个读者按逐字相等判，截断 SHA 不会报错、只会永远判红。
+
+    大写那一档同理由（第 88 片复核加）：形状判据收下 `A660405…` 这种"看着像"的值，
+    门与验签就必然判不中，而报错点离原因两环。
+    """
     repo = _repo(tmp_path)
-    for bad in ("a660405", "z" * 40, " " + "a" * 39):
+    for bad in ("a660405", "z" * 40, " " + "a" * 39,
+                "A66040520139405095648461F7144D4F00629924"):
         out = tmp_path / "out"
         import io
         buf, saved = io.StringIO(), sys.stdout
@@ -324,16 +329,21 @@ def test_api_has_no_anchor_default(tmp_path: Path) -> None:
     out = tmp_path / "out"
     with pytest.raises(TypeError) as exc:
         ev.write_evidence(repo, out, "5.6.0", None, None)  # type: ignore[call-arg]
+    # 参数名必须出现在报错里：`TypeError` 也可能是别处的签名问题撞出来的，
+    # 只判"抛了 TypeError"会把"删错参数"读成"删对了默认值"。
     assert "source_commit" in str(exc.value), str(exc.value)
-    assert not out.exists(), "签名面失败时也不该留半个目录"
 
 
-@pytest.mark.parametrize("bad", [None, "", "a660405", "z" * 40, " " + "a" * 39])
+@pytest.mark.parametrize("bad", [None, "", "a660405", "z" * 40, " " + "a" * 39,
+                                 "A66040520139405095648461F7144D4F00629924"])
 def test_api_refuses_a_malformed_anchor_before_any_write(tmp_path: Path, bad) -> None:
-    """显式传 `None`／空串／短 SHA／非十六进制都在任何落盘之前抛 `BindPreflightError`。
+    """显式传 `None`／空串／短 SHA／非十六进制／**大写**十六进制，都在任何落盘之前抛
+    `BindPreflightError`。
 
     用 `out` 目录不存在来判"排在 mkdir 之前"：本函数原来的形状正是先 `mkdir` 再算，
     第 84 片为此专门把两阶段顺序钉过一次（`test_gate_is_wired_into_write_evidence_before_any_write`）。
+    大写那一档不是洁癖：`git rev-parse` 只印小写，而两个读者按**逐字相等**比锚点，
+    收下一个大写值不会当场报错、只会让门与验签永远判红——所以形状判据必须把它关在外面。
     """
     repo = _repo(tmp_path)
     out = tmp_path / "out"          # tmp_path 每个参数化实例都是新目录，不必再拼唯一名

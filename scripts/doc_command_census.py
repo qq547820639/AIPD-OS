@@ -499,9 +499,12 @@ def entry_points(root: Path,
 
     分母**不在本文抄**（与面 ③ 同一条规矩，第 87 片立档时抄过一次、第 88 片复核时
     那份 104/5/18 已经漂成 119/8/20）：现读值看 `--json` 的
-    `corpus.entry_points` 与 `corpus.entry_states`，五档之和等于总读数由 `--self-test`
-    钉住。立档前确实量过一轮（"先量再立"是第 85 片的纪律），但量到的数是**那一次的**，
-    而这一档的语料含 `docs/audit/` —— 文档每多写一行引用，分母就自己往前走。
+    `corpus.entry_points` 与 `corpus.entry_states`。立档前确实量过一轮（"先量再立"是
+    第 85 片的纪律），但量到的数是**那一次的**，而这一档的语料含 `docs/audit/` ——
+    文档每多写一行引用，分母就自己往前走。
+    `--self-test` 钉的是**分桶不重不漏**（每行只落一档，所以五档之和恒等于行数——
+    那是构造式恒等，不是能咬人的牙，第 87 片 §九#8 已把它记为待换的弱判据）；
+    "某一档今天有几条"这种数**没有任何判据钉着**，只有上面那两个键。
     """
     files, problems = entry_corpus(root)
     if tracked_override is not None:
@@ -1066,7 +1069,13 @@ REGISTER_RULE = (
     "（tracked / untracked / dead / delegated / placeholder）；"
     "落不到仓库里的必须在本册 `entries` 里逐条列出，否则判红。列进来不等于放过："
     "判据每次现读语料，某条现在又能解析了、或现读扫不到任何引用它的行时，"
-    "会以「登记册该撤」反向开火。")
+    "会以「登记册该撤」反向开火。"
+    "两条已知副作用没修（记在取证文档 §九#2 与 §九#3）：后一半 keyed 在"
+    "**判据看得见的那种引用**上，把最后一处命令形态改写成叙述同样会触发它；"
+    "而在 git 读不出的树（合成语料、无 `.git` 的镜像）上，"
+    "「存在即合规」的降级会把磁盘上有的相对路径记成 tracked，"
+    "于是本册里的相对路径条目会被判「该撤」并附一句并没证实的"
+    "「文件已入库」。")
 
 REGISTER_SNAPSHOT_SEMANTICS = (
     "`cited_by_at_emit_time` 只在 `--emit-register` 那一刻写一次，判据不读它："
@@ -1091,8 +1100,12 @@ def emit_register(root: Path, dst: Path) -> dict:
     `--emit-register` 的产物里 note 是空的，由人补"为什么不再可复算"。刷新时**按 path
     把旧 note 带过去**：note 是判据真正消费的豁免理由，草案覆盖式重写会把历轮手写的
     依据一起抹掉（第 87 片复核登记过这条，本轮连同快照列降级一并处理）。
-    返回 `{"written": n, "missing_notes": [path…], "refused": ""|"…"}`；
-    目标存在但读不出时整批不写。
+    返回 `{"written": n, "missing_notes": [path…], "dropped": [{path, note}…], "refused": ""|"…"}`；
+    目标存在但读不出（不是 JSON、或不是字典）时整批不写。
+    只带了 `path` 而没有 note 的旧条目不算损失，所以 `dropped` 只报**有手写依据却被丢弃**的那些：
+    一条死链最常见的离开 `dead` 档的原因不是"修好了"，而是有人把最后一处命令形态改写成了
+    叙述（本文件 §八.1 正鼓励这么写）——那种情况下它的依据仍然有效，静默删掉就等于
+    把"为什么这条不必再可复算"这条判断从账上抹了。
     """
     erows, _git_unknown, _p = entry_points(root)
     by: dict[str, list[str]] = {}
@@ -1104,12 +1117,17 @@ def emit_register(root: Path, dst: Path) -> dict:
         try:
             existing = json.loads(dst.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            return {"written": 0, "missing_notes": [],
+            return {"written": 0, "missing_notes": [], "dropped": [],
                     "refused": f"目标登记册读不出，草案不落盘以免抹掉手写依据：{exc}"}
+        if not isinstance(existing, dict):
+            return {"written": 0, "missing_notes": [], "dropped": [],
+                    "refused": f"目标登记册不是字典（读到 {type(existing).__name__}），"
+                               "草案不落盘以免抹掉手写依据"}
         for e in existing.get("entries", []):
             note = str(e.get("note") or "")
             if note:
                 old_notes[str(e.get("path") or "")] = note
+    dropped = [{"path": p, "note": n} for p, n in sorted(old_notes.items()) if p not in by]
     doc = {
         "what": REGISTER_WHAT,
         "rule": REGISTER_RULE,
@@ -1124,7 +1142,7 @@ def emit_register(root: Path, dst: Path) -> dict:
                    encoding="utf-8")
     return {"written": len(doc["entries"]),
             "missing_notes": [e["path"] for e in doc["entries"] if not e["note"]],
-            "refused": ""}
+            "dropped": dropped, "refused": ""}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1151,6 +1169,9 @@ def main(argv: list[str] | None = None) -> int:
               f"（note 待补 {len(miss)} 条）")
         for p in miss:
             print(f"  缺 note：{p}")
+        for d in got["dropped"]:
+            print(f"  本次不再列为死链、但旧册带着手写依据：{d['path']}\n"
+                  f"    依据原文：{d['note'][:200]}")
         return 0
     rep = audit(root)
     print(render(rep))
