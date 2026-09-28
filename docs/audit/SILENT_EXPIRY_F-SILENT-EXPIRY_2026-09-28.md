@@ -35,7 +35,7 @@
 | 层 | 改前 | 改后 | 谁在判 |
 | --- | --- | --- | --- |
 | 操作员入口 `main()` | 缺空串→退 2、非 40 位→退 2（第 86 片） | 不变 | `tests/test_release_evidence_preflight.py:249,266` |
-| API `write_evidence()` | `source_commit: str \| None = None` | **无默认值** + 同一形状的 `BindPreflightError`（`:367`/`:382`） | 本轮新增 `:321`/`:332`/`:346` |
+| API `write_evidence()` | `source_commit: str \| None = None` | **无默认值** + 同一形状的 `BindPreflightError`（`write_evidence` 定义处与其内第一道校验，行号本轮已漂过两次，故按函数名引） | 本轮新增 `test_api_has_no_anchor_default` 等三条（按函数名引，不引行号：本轮已因加行漂过两次） |
 | 生成层 `generate_*()` | `or _default_source_commit(repo)` | **有意保留** | 由 A 面用例的注释点名理由 |
 
 保留生成层那半的理由（写进 `tests/test_release_evidence_preflight.py` 分节头）：
@@ -73,27 +73,33 @@
 
 ## 五、牙：用例与电池
 
-新增常驻 6 条（A 面 3 + B 面 3）。电池 `docs/audit/s88/battery88.py` **7 臂 KILLED 7/7**，
-对照臂 X0 原样全绿，两支被改文件收尾复算 sha 与开局一致。逐臂：
+新增常驻 6 条（A 面 3 + B 面 3）。电池 `docs/audit/s88/battery88.py` **10 臂 KILLED 10/10**
+（第一代 7 臂的读数留在 `battery88.log`，复核交回后加臂那一代在 `battery88-r2.log`，两代不许互换引用），
+对照臂 X0 原样全绿，两支被改文件收尾复算 sha 与开局一致
+（`release_evidence.py e67ef8e7c4d6`、`doc_command_census.py 3cfcf1b7f613`）。逐臂：
 
 | 臂 | 撤掉的判决 | 被谁抓住 |
 | --- | --- | --- |
-| X1 | 把签名默认值装回 `\| None = None` | `test_api_has_no_anchor_default` |
-| X2 | 整条锚点校验关掉（`False and`） | `test_api_refuses_a_malformed_anchor_before_any_write[None]` 与 `[""]` |
-| X3 | "恰好 40 位"退化成"至少 7 位" | 同条用例的 `[a660405]` 参数 |
-| X4 | 把快照列接回判据（缺列不再豁免） | `test_the_snapshot_column_is_decoration_not_authority` + 量具自身 `--self-test` + `test_register_is_load_bearing_for_the_same_line` |
-| X5 | 刷新时不带旧 note | `test_emit_register_carries_notes_and_refuses_an_unparsable_target` |
-| X6 | 目标读不出也照样覆盖 | 同条用例的后半 |
+| X1 | 把签名默认值装回 `\| None = None`（少传参数不再报错） | `test_api_has_no_anchor_default` |
+| X2 | 整条锚点校验关掉（`False and`） | `test_api_refuses_a_malformed_anchor_before_any_write` 的 `[None]`/`[""]`/… 五档 |
+| X3 | "恰好 40 位"退化成"至少 7 位" | 同条用例的 `[a660405]` 与 `[A660405…]` 两档 |
+| X8 | **字符类放宽回大小写通吃**（复核交回后补） | 只有 `[A66040520139405095648461F7144D4F00629924]` 那一档能抓 ⇒ 大写反例的存在理由就是这条臂 |
+| X4 | 把快照列接回判据（缺列不再豁免） | `test_the_snapshot_column_is_decoration_not_authority` + 量具自身 `--self-test` + `test_register_entry_that_resolved_again_or_is_uncited_fires` |
+| X5 | 刷新时不带旧 note | `test_emit_register_carries_notes_reports_drops_and_refuses` |
+| X6 | 目标读不出时照样落盘（拒绝只剩一句话） | 同上（这一臂第一代那版是让被变异体**崩溃**而红，见 §九#6） |
+| X9 | 有手写依据却被丢的条目不再报出来 | 同一条用例的 `dropped` 那一节 |
+| X10 | 目标不是字典时不拒绝 | 同一条用例的最后一节（原来会抛 `AttributeError`，见 §九#5） |
 | X7 | `rule` 常量写错归属档数 | `test_real_repo_register_shares_the_instrument_constants` |
 
-**X3 是第 86 片 X3 的 API 侧重演**，不是重复：第 86 片那臂撤的是 `main()` 里的形状校验，
-撤掉它操作员还能被 API 侧拦住（改后），所以两半各自需要一支。
-**X4 是极性反转臂**：它证明"这列不参与判决"这件事本身有牙——
-把它接回判据会被三条用例同时翻红，其中一条是量具自己的 `--self-test`。
+**X3 与 X8 是同一族的两半**：X3 撤"恰好 40 位"，X8 撤"只收小写"——第 86 片那把电池记的
+是前一半的腐化路径，本轮复核发现后一半**压根没有牙**（所有夹具锚点都是小写），
+所以两半各配一支臂、各配一档反例。
 
-三把**老电池按第 87 片那条要求重跑**（因为 `release_evidence.py` 与 `doc_command_census.py` 都动了）：
-`docs/audit/s84/battery84.py` W1–W8 **8/8**、`docs/audit/s86/battery86.py` X1–X3 **3/3**、
-`docs/audit/s87/battery87.py` X1–X7 **7/7**。
+三把**老电池按第 87 片那条要求重跑**（`release_evidence.py` 与 `doc_command_census.py` 都动了）：
+`docs/audit/s84/battery84.py` W1–W8 **8/8**、`docs/audit/s86/battery86.py` **X1–X4 4/4**
+（第 88 片给它加了 X4「字符类放宽」）、`docs/audit/s87/battery87.py` X1–X7 **7/7**；
+三代的日志分别记在 `docs/audit/s86/battery86.log`（第 86 片那一代）与
+`docs/audit/s86/battery86-r2.log`（第 88 片重跑那一代）。
 第 87 片 §十二 曾预告"第 86 片 X1 的锚点在新形状下必然命中 0、要显式记成臂作废"——
 **那条预告本身是错的**：X1 的锚点是 `main()` 里的 `if not a.source_commit:`（`battery86.py:24`），
 本轮没动那一行，所以它照旧命中 1、照旧 KILLED。记在这里是因为我一度把这条预告当成前提写进了任务文本。
@@ -116,6 +122,17 @@
    而这一节的退码没被收进任何判据。`bash -n` 过、`grep -c 's86\|s87'` 归零都拦不住它，
    只有逐行读 `git add` 的目标是否存在才看得见。修法：把 `bind.log`/`gate.log`
    的 `cp` 放在同一节第一条。
+
+4. **我自己写的电池只覆盖了我想到的轴**：`battery88.py` 第一代 7 臂全 KILLED，
+   看着像"每档判决都有牙"，但锚点字符类那一半**压根没有臂**——因为我全部夹具锚点都是小写，
+   "放宽成大写通吃"这种变异我根本没写过。复核件把它找出来之后我才补 X8/X10 与那档反例。
+   教训的形状：**"KILLED n/n"里的 n 是自己定的分母，它不等于"覆盖了全部腐化路径"**；
+   下一片的电池要按"判据的每个谓词成分"列轴（字符类、量词、锚定位置、大小写、空白），
+   而不是按"我改了哪几行"列臂。
+5. **行号引用在这一轮漂了三次**（`release_evidence.py:365→367`、`census:687→689`、
+   preflight 三条用例 `:321/:332/:346→:326/:339/:356`），每次都靠 grep 重抓才对上。
+   已把三处文档改成**按函数名引**并写明原因：同一文件里加行就会挪行号，
+   而"去这行看"这种指针的失效是静默的（第 87 片 §八 记过同一形状，本轮是我自己复发）。
 
 ## 七、镜像面（同轮必须一起改的那几张）
 
@@ -148,9 +165,31 @@
    用 `"deadbeef"` 当夹具值）⇒ 黄金项目产物的"锚定最终 tag"在真实发布路径上从未生效。
    已排进第 89 片任务 #20 第⑨条。
 
-## 九、复核交回（独立视角，逐条我自己重验后才落表）
+## 九、复核交回（两件独立只读复核，逐条我重开代码定档）
 
-（待两个复核件交回后填：每条含它的探针读数、我重开代码后的判定，以及是否升格为第 89 片条目。）
+派件条件写死了"不许跑 pytest、不许跑电池"（当时干净签出那一跑正在进行，
+`tests/test_state_perf_gates.py` 那条 5× 比值门在负载下会假红）。
+下面每条的"我的判定"都由我亲手重开它引用的文件得出，不是转述。
+
+| # | 复核交回 | 我重开代码看到的 | 判定与去向 |
+| --- | --- | --- | --- |
+| 1 | `write_evidence` 的形状判据含大写，而全部夹具锚点都是小写 ⇒ 把 `[0-9a-fA-F]` 改成 `[0-9a-f]` 或加 `.lower()` 六种坏形状全绿，"逐字落地"那条测不出归一化 | `release_evidence.py:382` 原为 `[0-9a-fA-F]`；`tests/...preflight.py` 三处锚点 `"a"*40`/`"b"*40`/`"c"*40` 确实全小写；`git rev-parse v5.6.0^{commit}` 只印小写，两个读者按逐字相等判（`production_release_gate.py:452` 的 `sc != tag_sha`、`closeout_verifier.py:332,334` 的 `!= pinned`） | **真缺陷，本轮已修**：判据收到 `[0-9a-f]{40}`（CLI 与 API 两支同形），CLI/API 各加一档大写反例，电池补臂 X8（CLI 侧另补 X4） |
+| 2 | `test_api_has_no_anchor_default` 里 `assert not out.exists()` 是空断言——`TypeError` 在调用边界就抛了，函数体从没执行，目录当然不存在 | 成立（同 `test_api_writes_the_explicit_anchor_verbatim...` 才会真建目录） | 删掉该行；同一条里留下的 `"source_commit" in str(exc.value)` 改为显式注明它是**唯一**能分辨"删对默认值"与"删错参数"的断言 |
+| 3 | `test_the_snapshot_column_is_decoration_not_authority` 只证了"四种写法判决相同"，没证"这一列不被消费"：若某一档把 `startswith("/")` 改成 tracked，四种写法会一起落在"看不见那一行"上而仍然相等 | 成立——`base == []` 使四路相等退化成"没有违规，四次" | 每档加断 `entry_states["dead_registered"] == 1`（把"看得见且被免判"钉成共同前提），并补**分辨性夹具**：在册、引用列完整、语料无对应行的条目必须开火；该形状由 `audit()` 的 `if not states` 分支（`:690`）提供，旧用例那批条目**根本不带这一列**，所以确实分不开"被忽略"与"查到但为空" |
+| 4 | `emit_register` 只对**仍在 `dead` 档**的路径带 note；一条死链若因"最后一处命令形态被改写成叙述"而离开 `dead`，它的手写依据就被静默删掉——而这恰是本文件 §八.1 鼓励的写法 | 成立：`by` 只收 `state == "dead"`（`:1099-1101`），`old_notes.get(k, "")` 只对 `by` 里的键生效 | **真缺陷，本轮已修**：返回 `dropped: [{path, note}]`，`main()` 连原文打印；不改判决（该不该撤仍由判据现读）。常驻用例第三节 + 电池 X9 |
+| 5 | 拒绝分支只兜住"读不出 JSON"；目标是**能解析但不是字典**（例如一个 JSON 数组）时 `existing.get(...)` 抛 `AttributeError`，退 1 加 traceback，与 docstring 承诺的"整批不写"两套说法 | 成立（`:1104-1109` 只 catch 三个解析异常） | **本轮已修**：加 `isinstance(existing, dict)` 拒绝档；常驻用例第四节 + 电池 X10 |
+| 6 | 电池 X6 把拒绝分支删成 `pass` 后，被变异体是在 `existing` 未定义上**崩溃**而红的 ⇒ "拒绝时不许动目标文件"那条断言从没被执行过 | 成立（`except: pass` 之后 `existing.get(...)` 直接抛） | **本轮已改形状**：X6 改成"仍照常落盘"（`existing = {}`），正常返回路径上翻红；崩溃型变异不再充当这条断言的证据 |
+| 7 | 归因串 `who[:200]` 把 X4 的第三条被抓用例切掉了，读数无法核对 | 成立（`battery88.py` 原 `[:200]`） | 放宽到 `[:600]` 并写明理由 |
+| 8 | 我在 `entry_points()` docstring 里写"五档之和等于总读数由 `--self-test` 钉住"，而同一次提交里我编辑的复核表第 8 行自己判那条是**构造式恒等**（`e_counts[state] += 1` 每行只加一次）⇒ 同一提交两处打架 | 成立（`:672` 的自增排在分支之前；`dead_registered` 是另一格另加） | **本轮已改措辞**：docstring 明说那是"分桶不重不漏的构造式恒等，不是能咬人的牙"，并把"要换成能开火的判据"指向 §九#8/第 89 片 |
+| 9 | `REGISTER_RULE` 把「该撤」写成无条件真理，但 git 读不出的树上降级会造出这条红（第 87 片 §九#2 仍未修） | 成立（`entry_points` 的 git 读不出降级在 `doc_command_census.py:536` 记 `tracked`，而 `audit():695` 的条件是"处处都是 tracked"） | 规则文本补两条已知误报与去向，不假装已修 |
+| 10 | `test_emit_register_*` 带着惰性夹具参数 `tmp_scope`——`emit_register` 不走被 monkeypatch 的那几张面 | 成立（`emit_register` 只调 `entry_points`，用的是 `ENTRY_FILES`/`ENTRY_DIRS` 名字本身） | 删参数并在 docstring 写明为什么不需要（留着一个"看起来在隔离"的夹具＝给读者一个假的共同前提） |
+| 11 | 同源用例 docstring 写"三段说明文字"，实际比五段 | 成立 | 改为五段 |
+| 12 | 复核认为 `missing_notes == [DEAD]` 那一档无法分辨"`if not e['note']` 这个过滤被删掉" | **不同意**：过滤删掉后 `missing_notes` 会含全部路径，同一条用例后面的 `again["missing_notes"] == []`（note 已填那一步）必红 | 记录分歧，不再加臂（避免为同一事实写第三处） |
+| 13 | `build/bundle_stage/tests/test_release_evidence.py:77` 仍是旧的 5 参调用 | 成立但**不判**：`build/` 被 `.gitignore:16` 排除、`pyproject.toml` 的 `testpaths = ["tests"]` 不收它 ⇒ 不在发布清单也不在收集面 | 不动它（一次构建残留，不是活调用点） |
+| 14 | 五段 `what`/`shape_borrowed_from` 原来是内联字面量，"同源"用例只比三份 | 成立 | 提升为 `REGISTER_WHAT` / `REGISTER_SHAPE_BORROWED_FROM` 常量，同源用例与 `emit_register` 的草案各比五份（草案那份也补，否则"两边一致地缺"仍能绿） |
+
+ruff 侧复核报"本轮新增 246 行最长 95 < 100"，`pyproject.toml:84` 的 `line-length = 100` 我核对过；
+两条"未亲验"的读数（面 ⑤ 的 119/8/20 与电池 KILLED 数）都是我自己跑的，见 §三/§十。
 
 ## 十、终局读数（全部由 `docs/audit/s88/closeout88.sh` 现场产生）
 
@@ -178,3 +217,20 @@
 回收后再复验一次（证明取证件没被回收动作带走）：命令与读数见 §十一，
 本节写在这里只为了给"回收前"的读数留位——§十一 的读数是**换树之后**重跑门与验签得到的，
 两节不许互换引用。
+
+## 十一、回收签出树之后的复算读数（与 §十 是两代读数，不许互换引用）
+
+`.wt-s88` 已 `git worktree remove --force` 回收，`git worktree list` 只剩主树。
+在**只剩主树**的这个状态下重跑门与验签，两步的落盘件与日志都另起文件名
+（`-recheck` 后缀），§十 那一代的原件一字不动地留在库里，读者能对照两代。
+
+| 步 | 命令 | 实际读数 |
+| --- | --- | --- |
+| 复算门 | `production_release_gate.py --release-ready --tag v5.6.0 --test-report docs/audit/pytest-report-v5.6.0.json --json-out docs/audit/s88/gate-recheck.json` | `GATE_RECHECK_RC=0`；`release_ready: True \| 未过: 无 \| 项数: 8` |
+| 复算验签 | `closeout_verifier.py --tag v5.6.0 --expect-test ×2 --min-tests 2702 --json docs/audit/s88/closeout-recheck.json` | `CV_RECHECK_RC=0`；`grep -c "✓"` = **11**，末行「全部判据绿」，其中 `worktree_clean：工作树干净` |
+| 现场 | `git status --short` | 空（提交 `324308c` 收了门的读数、`b4d44d6` 收了验签的读数） |
+
+这两步为什么值得再跑一遍：回收动作本身会改 `.git/worktrees` 的登记，而
+`roster_covers_tree` 与 `worktree_clean` 读的都是"当前这棵树"——
+如果哪份取证件是被 `--force` 带走的，红会出现在这里而不是出现在 §十 那一跑。
+现在两代读数都是 8/8 与 11/11，说明回收没带走承重件。

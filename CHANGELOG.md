@@ -963,8 +963,8 @@
   发布门的 `source_manifest_zero_diff`（`scripts/production_release_gate.py:414`）要按当前树现算
   一份清单再只比 `(path, sha256)`，那条通道既不写盘也不消费锚点。
   夹具那侧同批改掉：`tests/test_release_evidence.py:95,102` 显式传 `head`。
-  新常驻 3 条（`tests/test_release_evidence_preflight.py:321`/`:332`/`:346`）＝缺省必红、
-  五种坏形状逐档必红、显式锚点逐字落地且**不等于** HEAD。
+  新常驻 3 条（`tests/test_release_evidence_preflight.py` 的 `test_api_has_no_anchor_default`/`test_api_refuses_a_malformed_anchor_before_any_write`/`test_api_writes_the_explicit_anchor_verbatim_and_it_is_not_head`）＝缺省必红、
+  六种坏形状逐档必红（含**大写十六进制**那一档，见下面 D 段）、显式锚点逐字落地且**不等于** HEAD。
   **B. 登记册的 `cited_by` 降级**：第 87 片那本册子的 `rule` 文本声称"`cited_by` 为空 ⇒
   判据会以「登记册该撤」反向开火"，而 `load_entry_register`（`scripts/doc_command_census.py:463-482`）
   只取 `path`/`note`——那一列**只写不读**，文档在说谎。修法取"改名"而不是"删列"
@@ -973,10 +973,16 @@
   `test_real_repo_register_shares_the_instrument_constants` 逐字段比（当场抓出另一处同族病：
   册里 `rule` 写"四种归属"而代码写"五种"，两份手抄各漂各的、谁都不判）；
   `test_the_snapshot_column_is_decoration_not_authority` 用"填对／填错／用旧键名／整列缺"
-  四种写法读出**同一份判决**，把"不参与判决"钉成事实而不是注释。
-  `emit_register` 顺带补了两条它本来没有的前提：刷新时按 `path` 带旧 note（原来整体覆盖，
-  重跑就抹掉历轮手写的豁免依据），目标读不出时整批不落盘。登记册已由 `--emit-register` 自己刷新一次
-  （13 条，note 逐字未变，`docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json`）。
+  四种写法读出**同一份判决**（每一档还各断一次 `dead_registered == 1`，否则四种写法可能
+  一起落在"面 ⑤ 根本没看见那一行"上而仍然相等），末尾另加一条**分辨性夹具**：
+  在册、带完整引用列、但语料里没有对应行的条目必须开火——只有这个形状能分掉
+  "这一列被忽略"与"这一列被查到、值为空"两种实现。
+  `emit_register` 顺带补了三条它本来没有的前提：刷新时按 `path` 带旧 note（原来整体覆盖，
+  重跑就抹掉历轮手写的豁免依据）；条目离开 `dead` 档时把它的 note 原文放进 `dropped`
+  报出来（不改判决，只让"有依据却被丢"不再是静默事件）；目标读不出时整批不落盘，
+  且"不是 JSON"与"是 JSON 但不是字典"两支都算读不出（后者原来抛 `AttributeError`、
+  退 1 加一段 traceback，而承诺写的是"整批不写"）。登记册已由 `--emit-register` 自己刷新一次
+  （13 条，note 逐字带过，`docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json`）。
   **C. 抄在文中的分母与失效配方**：`entry_points()` docstring 的"104/5/18"、
   README 与本篇 v5.48 条目的"107 处"，全部改成"由 `--json` 的 `corpus.entry_points / entry_states`
   现读"并保留带轮次标签的历史读数（本轮同一把尺现读 **119 处 / 死链 20 / 占位 8**，
@@ -984,10 +990,33 @@
   `closeout_verifier` 的立档轮次由"第 63 片"改回 **第 64 片**（v5.25 那行就是它自己的出生记录）。
   `docs/audit/RELEASE_FIX_PLAN_2026-08-14.md:59` 那行配方写的是字面量 `--source-commit HEAD`，
   第 86 片起照抄必退 2 ⇒ 改成 `git rev-parse v5.6.0^{commit}` 并注明原文意图。
-  电池 `docs/audit/s88/battery88.py`：**KILLED 7 / 7**，对照臂 X0 原样全绿，两支被改文件
-  收尾复算 sha 与开局一致（`release_evidence.py e55cb9d8ee60`、`doc_command_census.py 43c9a166cc1e`）；
+  **D. 复核交回的五条，本轮就动了**（两片独立只读复核，逐条我重开代码定档，全文见取证文档 §九）：
+  ① 锚点形状判据从 `[0-9a-fA-F]{40}` 收到 **`[0-9a-f]{40}`**——`git rev-parse` 只印小写，
+  两个读者按逐字相等判，收下大写值不会当场报错、只会让门与验签永远判红（报错点离原因两环）；
+  这条在改之前**没有任何牙**：所有夹具锚点都是小写，把字符类放宽或加 `.lower()` 六种坏形状全绿。
+  现由 CLI 与 API 各一条大写档钉住，电池补臂 X8。
+  ② `emit_register` 的 `dropped` 报告（上面 B 段）与"目标不是字典"那一支拒绝（臂 X9/X10）。
+  ③ `doc_command_census.py` 模块 docstring 曾把"五档之和 == 总读数"当成 `--self-test` 的牙来引用，
+  而同一次提交里的复核表第 8 行自己判它是**构造式恒等**——docstring 与判决表在同一提交里打架，
+  已改成"那是分桶不重不漏的构造式恒等，不是能咬人的牙"并指名 §九#8 为待换项。
+  ④ `REGISTER_RULE` 补上「该撤」那一半的两条已知误报（叙述改写也算"没被引用"；
+  git 读不出的树上降级会造出一条从没证实的"已入库"），并注明未修、去向 §九#2/#3。
+  ⑤ 电池 X6 那类"把拒绝分支删成 `pass`"的臂是靠 `UnboundLocalError` **崩溃**而红的，
+  于是"拒绝时不许动目标文件"那条断言从没被执行过——改成让被变异体正常返回的形状（现 X6/X10），
+  归因串也从 `[:200]` 放宽到 `[:600]`（第 88 片复核时截断把第三条归因切掉了）。
+  另外两处本轮自己的账：`test_emit_register_*` 原先带着一个**惰性夹具参数** `tmp_scope`
+  （`emit_register` 根本不走被 monkeypatch 的那几张面），删掉；
+  同源用例的 docstring 写"三段说明文字"而它比的是五段，改成五段。
+  第 86 片那条"API 仍可传 `None`"的遗留、与 v5.47 里"电池三臂"的读数，都在本轮改到
+  **四臂 `KILLED 4/4`**（新增 X4 就是上面①的 CLI 侧）。
+  电池 `docs/audit/s88/battery88.py`：**KILLED 10 / 10**（复核交回后从 7 臂加到 10 臂，
+  两代读数分别留在 `docs/audit/s88/battery88.log` 与 `battery88-r2.log`，不许互换引用），
+  对照臂 X0 原样全绿，两支被改文件收尾复算 sha 与开局一致
+  （`release_evidence.py e67ef8e7c4d6`、`doc_command_census.py 3cfcf1b7f613`）；
   其中 X3 是第 86 片 X3 那条"把恰好 40 位退化成至少 7 位"的腐化路径在 API 侧重演，
-  X4 反过来把快照列接回判据 ⇒ 被三条用例同时抓住（含量具自己的 `--self-test`）。
+  X8 是它在**字符类**那一半的重演（放宽成大写通吃 ⇒ 只有 `A660405…` 那一档能抓住它），
+  X4 反过来把快照列接回判据 ⇒ 被三条用例同时抓住（含量具自己的 `--self-test`），
+  X6/X10 现在都在**正常返回路径**上翻红（第一代那版靠被变异体崩溃，见取证文档 §九#6）。
   选型跳过声明（按最高指令第三节例外条款）：本片只关两条已存在的通道的默认值与说谎文本，
   不引入新技术栈、不改会影响多个文件的方案形状，候选对比无新增决策可改；
   第 87 片已就面 ⑤ 的选型做过 lychee / mdBook / markdown-link-check 六维对比并记在
@@ -1031,13 +1060,15 @@
   `a66040520139`，一句警告都没有。**带**报告那一支今天已被第 84 片的指纹闸顺带拦住
   （锚点是清单内容之一，漂了就不同源）——所以剩下的静默通道正是配方第一步"只刷清单"。
   **两道前置**都排在任何落盘之前（连目录都不建）：缺失 ⇒ 退 2 并写明由
-  `git rev-parse <tag>^{commit}` 现读；非 40 位十六进制 ⇒ 退 2，理由是
+  `git rev-parse <tag>^{commit}` 现读；非 40 位十六进制 ⇒ 退 2（第 88 片把字符类收到只认小写），理由是
   两个读者都按**逐字相等**比较，截断值不报错、只会永远判红，把排查方向从"我旗子写错了"
   支到"判据坏了"。常驻 +3（10 → 13）。
   **有意没做的一半**：不加"锚点必须等于报告里的 `source_commit`"那道——带报告时它已被
   第 84 片指纹闸与 gate 的 `commit_matches_head` 两样东西覆盖，再写一遍就是
   "同一个事实写两处"（第 46 片那类债：注入一支臂杀不掉，因为另一支还兜着）。
-  电池 `docs/audit/s86/battery86.py` 三臂 `KILLED 3/3`，其中 **X3 不是 X2 的重复**：
+  电池 `docs/audit/s86/battery86.py` 三臂 `KILLED 3/3`（**第 88 片加到四臂**：
+  锚点字符类收到小写之后补 X4「把字符类放宽回去」，见 v5.49 的 D①；第 88 片重跑那一代的
+  读数另存一份在 `docs/audit/s86/battery86-r2.log`，两代不许互换引用），其中 **X3 不是 X2 的重复**：
   X2 撤掉整条形状校验，X3 把"恰好 40 位"退化成"至少 7 位"——git 短 SHA 正好 7 位，
   `a660405` 重新通过；只有第二臂能抓住"以后有人嫌它严、顺手改成 `match`+`{7}`"这条最可能的腐化路径。
   `write_evidence()` 这条 **API 仍可传 `None`**（临时仓库夹具里"锚点=该仓库 HEAD"是正确语义），

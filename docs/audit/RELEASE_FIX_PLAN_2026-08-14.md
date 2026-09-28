@@ -57,7 +57,7 @@
   2. 全量测试并输出 `--json-report` 生成 test_report
   3. 打包 `aipd package` 生成 `releases/aipd-os-5.6.0.zip`
   4. `release_evidence.py --repo . --test-report <report> --source-commit "$(git rev-parse v5.6.0^{commit})"` → 刷新 SOURCE/PROVENANCE
-     （原文这一格写的是字面量 `--source-commit HEAD`；第 86 片起形状校验只认 40 位十六进制，
+     （原文这一格写的是字面量 `--source-commit HEAD`；第 86 片起形状校验只认 40 位十六进制（第 88 片起只认小写），
      照抄这一行会退 2。那不是本意——当时要的就是"锚点 = 最终 tag SHA"，第 88 片把配方文本改齐）
   5. `regenerate_release_manifest.py --version 5.6.0` → 刷新 RELEASE_MANIFEST
   6. `sign_release.py --sign releases/aipd-os-5.6.0.zip` → 重签

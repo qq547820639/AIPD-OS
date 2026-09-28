@@ -1,0 +1,38 @@
+基线 rc=0 42 passed, 13 warnings in 343.70s (0:05:43)
+基线 release_evidence.py sha=e67ef8e7c4d6
+基线 closeout_verifier.py sha=e3978f9e5af0
+[KILLED     ] W1-missing-field-no-longer-refused  1 failed, 41 passed, 13 warnings in 311.51s (0:05:11)
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_without_the_fingerprint_and_writes_nothing
+[KILLED     ] W2-content-drift-no-longer-refused  2 failed, 40 passed, 13 warnings in 685.07s (0:11:25)
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_when_the_manifest_content_moved_after_the_run
+[KILLED     ] W3-compares-raw-bytes  3 failed, 39 passed, 12 warnings in 246.13s (0:04:06)
+              增量开火: tests/test_release_evidence_preflight.py::test_binds_and_records_the_fingerprint_when_it_matches
+              增量开火: tests/test_release_evidence_preflight.py::test_only_generated_at_moving_still_binds
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+[KILLED     ] W4-gate-moved-after-the-write  5 failed, 37 passed, 13 warnings in 257.63s (0:04:17)
+              增量开火: tests/test_release_evidence_preflight.py::test_gate_is_wired_into_write_evidence_before_any_write
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_path_that_is_not_a_file_and_names_it
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_without_the_fingerprint_and_writes_nothing
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_when_the_manifest_content_moved_after_the_run
+[KILLED     ] W5-refusal-laundered-to-zero  6 failed, 36 passed, 13 warnings in 319.96s (0:05:19)
+              增量开火: tests/test_release_evidence_preflight.py::test_missing_path_and_unparsable_report_get_different_verdicts
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_path_that_is_not_a_file_and_names_it
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_without_the_fingerprint_and_writes_nothing
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_an_unparsable_report
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_when_the_manifest_content_moved_after_the_run
+[KILLED     ] W6-production-doesnt-record-field  5 failed, 37 passed, 12 warnings in 282.55s (0:04:42)
+              增量开火: tests/test_closeout_verifier.py::test_bind_provenance_fixture_shape_mirrors_production
+              增量开火: tests/test_release_evidence_preflight.py::test_binds_and_records_the_fingerprint_when_it_matches
+              增量开火: tests/test_release_evidence_preflight.py::test_only_generated_at_moving_still_binds
+              增量开火: tests/test_release_evidence_preflight.py::test_refusal_does_not_touch_evidence_already_on_disk
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_when_the_manifest_content_moved_after_the_run
+[KILLED     ] W7-fixture-stops-mirroring-field  1 failed, 41 passed, 13 warnings in 306.25s (0:05:06)
+              增量开火: tests/test_closeout_verifier.py::test_bind_provenance_fixture_shape_mirrors_production
+[KILLED     ] W8-mkdir-moved-before-the-gate  3 failed, 39 passed, 13 warnings in 326.08s (0:05:26)
+              增量开火: tests/test_release_evidence_preflight.py::test_gate_is_wired_into_write_evidence_before_any_write
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_path_that_is_not_a_file_and_names_it
+              增量开火: tests/test_release_evidence_preflight.py::test_refuses_a_report_without_the_fingerprint_and_writes_nothing
+合计 KILLED+CRASH-KILL 8 / 8；其余按判决分类：无

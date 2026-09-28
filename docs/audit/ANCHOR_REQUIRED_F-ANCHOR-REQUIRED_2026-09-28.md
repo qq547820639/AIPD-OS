@@ -40,7 +40,9 @@ tag 锚点 = a66040520139
 `main()` 里两道前置，都排在任何写盘之前（沿用第 84/85 片那条"连目录都不建"的形状）：
 
 1. `--source-commit` 为空 ⇒ 退 2，消息写明"由 `git rev-parse <tag>^{commit}` 现读"；
-2. 不是 40 位十六进制 ⇒ 退 2，消息写明**为什么**要全形：
+2. 不是 40 位十六进制 ⇒ 退 2，消息写明**为什么**要全形
+   （第 88 片又收了一半：字符类只认小写 `[0-9a-f]{40}`，大写那档当时**没有任何牙**——
+   全部夹具锚点都是小写 ⇒ 放宽字符类无人能判；现由 CLI/API 各一档大写反例 + 电池臂钉住）：
    `production_release_gate` 与 `closeout_verifier` 都按逐字相等比较，
    截断值不会报错、只会永远判红——把读者的排查方向从"我旗子写错了"支到"判据坏了"。
 
@@ -78,7 +80,7 @@ X3 不是 X2 的重复：X2 撤掉整条校验，X3 把「恰好 40 位」退化
    **→ 第 88 片已闭合**：夹具改成显式传 `head`（`tests/test_release_evidence.py:95,102`），
    `write_evidence()` 的默认值删掉、缺锚点在任何落盘之前抛 `BindPreflightError`
    `scripts/release_evidence.py:367`（校验体在 `:382`），牙在 `tests/test_release_evidence_preflight.py`
-   末尾三条（`:321`/`:332`/`:346`，含把"恰好 40 位"退化成"至少 7 位"那一臂）。
+   末尾三条 `test_api_has_no_anchor_default`／`test_api_refuses_a_malformed_anchor_before_any_write`／`test_api_writes_the_explicit_anchor_verbatim_and_it_is_not_head`（按函数名引，不引行号），含把"恰好 40 位"退化成"至少 7 位"与把字符类放宽成大写通吃那两臂。
    `generate_source_manifest()` / `generate_provenance()` 的 `or _default_source_commit(repo)`
    **有意保留**：`production_release_gate` 的 `source_manifest_zero_diff` 要按当前树现算一份
    清单再只比 `(path, sha256)`，那条通道既不写盘也不消费锚点。

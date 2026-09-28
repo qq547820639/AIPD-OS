@@ -25,15 +25,21 @@ ARMS = [
      "note": "放掉必填：第 52/62 片那两次「多跑一整个全量」的成因重新无人守——"
              "漂掉的锚点不当场报错，只在下一轮绑定读成「清单被改过」"},
     {"id": "X2-shape-check-dropped", "file": EV,
-     "reps": [('    if not re.fullmatch(r"[0-9a-fA-F]{40}", a.source_commit):\n',
+     "reps": [('    if not re.fullmatch(r"[0-9a-f]{40}", a.source_commit):\n',
                '    if False:\n')],
      "note": "放掉形状校验：截断或含空格的锚点被逐字相等比较读成永远不等，"
              "读者看到的是「判据坏了」而不是「锚点写错了」"},
     {"id": "X3-shape-check-loosened-to-prefix", "file": EV,
-     "reps": [('if not re.fullmatch(r"[0-9a-fA-F]{40}", a.source_commit):',
-               'if not re.match(r"[0-9a-fA-F]{7}", a.source_commit):')],
+     "reps": [('if not re.fullmatch(r"[0-9a-f]{40}", a.source_commit):',
+               'if not re.match(r"[0-9a-f]{7}", a.source_commit):')],
      "note": "把「恰好 40 位」退化成的「至少 7 位」：git 短 SHA 正是 7 位，"
              "于是 a660405 这种截断值重新通过——这一臂证明必填与全形两半都在工作"},
+    {"id": "X4-hex-class-widened-to-uppercase", "file": EV,
+     "reps": [('if not re.fullmatch(r"[0-9a-f]{40}", a.source_commit):',
+               'if not re.fullmatch(r"[0-9a-fA-F]{40}", a.source_commit):')],
+     "note": "第 88 片把字符类收到小写（`git rev-parse` 只印小写，两个读者按逐字相等判）。"
+             "这一臂把它放宽回去：大写锚点能过写入侧、却在门与验签那里永远判不红在报警——"
+             "报错点离原因两环。由 `test_refuses_a_malformed_source_commit` 的大写那档抓住"},
 ]
 
 

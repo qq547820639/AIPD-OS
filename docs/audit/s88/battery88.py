@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
-"""第 88 片变异电池：两处"静默过期面"各配自己的撤销臂。
+"""第 88 片变异电池：每一档判决都要有一支"撤掉它就必红"的对照臂。
 
-覆盖面两根轴：
+覆盖面三根轴（10 支臂）：
 - `release_evidence.write_evidence()` 的锚点必填（X1 把默认值装回去、X2 关掉整条校验、
-  X3 把"恰好 40 位"退化成"至少 7 位"——第 86 片 X3 记的那条最可能的腐化路径，这轮在 API 侧重演）；
-- 登记册的 `cited_by_at_emit_time` 降级（X4 让那列重新承重、X5 撤掉 note 带旧值、
-  X6 撤掉"目标读不出就不落盘"、X7 把 `rule` 常量改回写错归属数的那版）。
+  X3 把"恰好 40 位"退化成"至少 7 位"——第 86 片 X3 记的那条最可能的腐化路径，这轮在 API 侧重演、
+  X8 把字符类放宽回大小写通吃——只在大写那档才有牙，见 `test_api_refuses_..._before_any_write`）；
+- 登记册的 `cited_by_at_emit_time` 降级（X4 让那列重新承重、X7 把 `rule` 常量改回写错归属数的那版）；
+- `emit_register` 的三条新前提（X5 撤掉 note 带旧值、X6 目标读不出也照样落盘、
+  X9 不再报出"有依据却被丢"的条目、X10 目标不是字典时不拒绝）。
+
+X6 与 X10 是按复核件要求改的形状：原来那版把拒绝分支删成 `pass` 会让电池靠
+`UnboundLocalError` **崩溃**而红，于是"拒绝时不许动目标文件"那条断言从没被执行过。
+现在两支都在正常返回路径上翻红。
 
 分类：KILLED（该臂被常驻用例抓住）/ SURVIVED（撤掉没人发现＝这档没牙）/
 BAD-ANCHOR（锚点没落到预期位置，臂作废，读数不进合计）。
 对照臂 X0 不改任何字节，必须先证明"原样是绿的"，否则后面的红不能归因给变异。
 
-跑法：`python docs/audit/s88/battery88.py`（约 8 分钟，每臂跑三个用例文件）。
+跑法：`python docs/audit/s88/battery88.py`（约 15 分钟，每臂跑三个用例文件）。
 """
 from __future__ import annotations
 
@@ -26,7 +32,13 @@ CEN = REPO / "scripts" / "doc_command_census.py"
 TESTS = ("tests/test_release_evidence_preflight.py "
          "tests/test_doc_command_census.py tests/test_release_evidence.py").split()
 
-API_GUARD = '    if not re.fullmatch(r"[0-9a-fA-F]{40}", source_commit or ""):'
+API_GUARD = '    if not re.fullmatch(r"[0-9a-f]{40}", source_commit or ""):'
+DROP_REPORT = '            "dropped": dropped, "refused": ""}'
+NON_DICT_BRANCH = (
+    '        if not isinstance(existing, dict):\n'
+    '            return {"written": 0, "missing_notes": [], "dropped": [],\n'
+    '                    "refused": f"目标登记册不是字典（读到 {type(existing).__name__}），"\n'
+    '                               "草案不落盘以免抹掉手写依据"}')
 
 # (名字, 撤掉的是什么, 目标文件, old, new)。old 必须在目标文件里恰好命中一次。
 ARMS = [
@@ -48,15 +60,24 @@ ARMS = [
     ("X5-no-note-carry-forward", "刷新登记册时不再带旧 note（手写豁免依据被抹掉）", CEN,
      '                     "note": old_notes.get(k, "")} for k, v in sorted(by.items())],',
      '                     "note": ""} for k, v in sorted(by.items())],'),
-    ("X6-overwrite-unparsable-register", "目标读不出也照样覆盖", CEN,
+    ("X6-overwrite-unparsable-register", "目标读不出时照样落盘（拒绝只剩一句话）", CEN,
      '        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:\n'
-     '            return {"written": 0, "missing_notes": [],\n'
+     '            return {"written": 0, "missing_notes": [], "dropped": [],\n'
      '                    "refused": f"目标登记册读不出，草案不落盘以免抹掉手写依据：{exc}"}',
      '        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:\n'
-     '            pass'),
+     '            existing = {}'),
     ("X7-rule-text-drift", "`rule` 常量写错归属档数（与册子各漂各的）", CEN,
      'REGISTER_RULE = (\n    "面 ⑤ 对每一条 `<解释器> 路径.py|.sh` 形态的入口判五种归属"',
      'REGISTER_RULE = (\n    "面 ⑤ 对每一条 `<解释器> 路径.py|.sh` 形态的入口判四种归属"'),
+    ("X8-api-hex-class-widened", "API 侧把字符类放宽回大小写通吃", EV,
+     API_GUARD,
+     '    if not re.fullmatch(r"[0-9a-fA-F]{40}", source_commit or ""):'),
+    ("X9-dropped-notes-unreported", "有手写依据却被丢的条目不再报出来", CEN,
+     DROP_REPORT,
+     '            "dropped": [], "refused": ""}'),
+    ("X10-nondict-target-not-refused", "目标不是字典时不拒绝（回去就抛 AttributeError）", CEN,
+     NON_DICT_BRANCH,
+     '        if not isinstance(existing, dict):\n            pass'),
 ]
 
 
@@ -110,7 +131,8 @@ def main() -> int:
             marks["SURVIVED"] += 1
         else:
             who = "; ".join(killed_by) if killed_by else "(没解析出 FAILED 行，见日志)"
-            print(f"[KILLED]   {name}（{what}）被抓住：{who[:200]}")
+            # 不截太短：第 88 片复核时 `[:200]` 把第三条归因切掉，读数无法核对是哪条用例抓的
+            print(f"[KILLED]   {name}（{what}）被抓住：{who[:600]}")
             marks["KILLED"] += 1
     total = len(ARMS) - 1
     print(f"合计 KILLED {marks['KILLED']} / {total}；"

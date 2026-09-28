@@ -7,7 +7,7 @@
 ## 1. 三份证据
 
 生成入口：`scripts/release_evidence.py`，`--source-commit` **必填**（第 86 片）：
-留空或不是 40 位十六进制一律退 2、整批不写。第 88 片把同一半闸放到 API 上：
+留空或不是 40 位十六进制（**小写**，第 88 片把字符类从 `[0-9a-fA-F]` 收到 `[0-9a-f]`：`git rev-parse` 只印小写，而两个读者按逐字相等判，收大写值不会当场报错、只会让门永远判不中）一律退 2、整批不写。第 88 片把同一半闸放到 API 上：
 `write_evidence(..., source_commit)` **没有默认值**，少传是 `TypeError`，
 传 `None`／空串／短 SHA 在任何落盘之前抛 `BindPreflightError`；
 底层 `generate_source_manifest()` / `generate_provenance()` 仍保留"默认取当前 HEAD"，
