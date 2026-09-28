@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-28T20:08:28+00:00",
+  "generated_at": "2026-09-28T20:57:14+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 366302,
-      "sha256": "4b5022d07915cf1b14744c88123e5f18dcd5b21878595617d71da83fd3145ca2"
+      "size": 370650,
+      "sha256": "c80895cda6d7bb74fd9d2fb127e8bc4b4e50473482f50b730c1669eed06c0130"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 68616,
-      "sha256": "cf46370540773b1bdeaecb1b1f64dcdad2c0f11d8e0944315aad9fa657dbf06c"
+      "size": 69484,
+      "sha256": "ab67a2975749b57b113c7b6b6cb14b0ecd0a541ad9b328bcd591662079a69087"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -762,8 +762,8 @@
     },
     {
       "path": "scripts/doc_command_census.py",
-      "size": 87548,
-      "sha256": "20f1a0c346c73208fab69ed707b48548e92b83c1e3a493d9284eea69055ec6f7"
+      "size": 97593,
+      "sha256": "f475c3273bc91f88abc4ac3e8acbece56aabaefac3a0851444ec4cb727ec58c9"
     },
     {
       "path": "scripts/doc_reference_census.py",
@@ -2652,8 +2652,8 @@
     },
     {
       "path": "tests/test_doc_command_census.py",
-      "size": 67455,
-      "sha256": "95adc7d0c65753599ee7d1795bc48256a2af32c8b4555fcff7a54e106c7bc8b5"
+      "size": 72093,
+      "sha256": "fe575b50d823c796395ac7d7bc735033e8a8feebc5accaeda66de83556b613e8"
     },
     {
       "path": "tests/test_doc_reference_census.py",
