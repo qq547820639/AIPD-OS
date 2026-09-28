@@ -53,7 +53,8 @@ print(f"回读 OK: source_commit={sha[:12]} test_report={tr['passed']}p/{tr['fai
       f"fp={str(tr.get('source_manifest_fingerprint'))[:12]}")
 PYX
 
-git add SOURCE_MANIFEST.json docs/audit/pytest-report.json docs/audit/pytest-report-v5.6.0.json
+git add SOURCE_MANIFEST.json PROVENANCE.json \
+        docs/audit/pytest-report.json docs/audit/pytest-report-v5.6.0.json
 git commit -q -F - <<'MSG'
 chore(s87): 绑定第 87 片的 attestation 报告
 
