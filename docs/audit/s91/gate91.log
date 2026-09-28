@@ -5,7 +5,7 @@
       "check": "workspace_clean",
       "passed": false,
       "detail": [
-        " M docs/audit/CI_SURFACE_F-CI-SURFACE_2026-09-28.md"
+        " M docs/audit/s91/gate.json"
       ]
     },
     {
