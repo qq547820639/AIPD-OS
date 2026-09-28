@@ -1,7 +1,7 @@
 {
   "name": "aipd-orchestrator",
   "version": "5.6.0",
-  "release_date": "2026-09-28",
+  "release_date": "2026-09-29",
   "release_type": "AI full-chain product development and delivery supervisor",
   "theory_reference": "references/AIPD-OS-v4.0.docx",
   "files": [
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 348986,
-      "sha256": "6464fbb659a1f98f8591bf995ae8b3c3bd6b178d835bd73f809343ee49b18026"
+      "size": 354714,
+      "sha256": "173e1a75d46b34e99e6a95962addb95820ab7aba9c146c86bf2e44cc0baa9c16"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 67316,
-      "sha256": "23f84a612e0035808af7cfaa9d58cae34688ece60b6f5fac6d77082bc7ff54bd"
+      "size": 67930,
+      "sha256": "5fb11ece36d2018faeacfe4e81029b960deeb5f198fbedc07819def643c1a348"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -762,8 +762,8 @@
     },
     {
       "path": "scripts/doc_command_census.py",
-      "size": 64932,
-      "sha256": "2a43da69dd24e2ecb60cc06f8dc760767536053da0b3228930f75f99c92c466d"
+      "size": 68091,
+      "sha256": "e287162f617ac029c3655c900a9878cdc41ae7200489eecad96bf0a24c2a74cf"
     },
     {
       "path": "scripts/doc_reference_census.py",
@@ -837,8 +837,8 @@
     },
     {
       "path": "scripts/release_evidence.py",
-      "size": 20943,
-      "sha256": "5abb31706cf90130877718163ade6926e20f9cf08cc273e015948b677b448ecc"
+      "size": 22313,
+      "sha256": "e55cb9d8ee604f377c1ccf218672ddf438c84a89d9b821669e193c376da5338e"
     },
     {
       "path": "scripts/release_fingerprint.py",
@@ -2652,8 +2652,8 @@
     },
     {
       "path": "tests/test_doc_command_census.py",
-      "size": 39467,
-      "sha256": "da0159b979f0422739ca097474b24162b26bbb56e74995f2c6989762b15c0ad7"
+      "size": 44257,
+      "sha256": "d673414ab884f3392fc7202b91c958b9ed8e7dd03c9efff973cb68b67cd5d8ee"
     },
     {
       "path": "tests/test_doc_reference_census.py",
@@ -3132,8 +3132,8 @@
     },
     {
       "path": "tests/test_release_evidence.py",
-      "size": 14140,
-      "sha256": "d1477ad6e1a0ae279ef0a585d5bf7438f29ea8b511aa56964891f164bcfdcbf4"
+      "size": 14378,
+      "sha256": "d2071eec42896fea67d0426cc135f0eef1262cc9c7bd4aba8a3a16de9e58ea0e"
     },
     {
       "path": "tests/test_release_evidence_ctq_status.py",
@@ -3142,8 +3142,8 @@
     },
     {
       "path": "tests/test_release_evidence_preflight.py",
-      "size": 15363,
-      "sha256": "6d934367cefc25dcc7dc5556512899b49997700791c64e80fe1b8750c0f3effa"
+      "size": 18795,
+      "sha256": "0dadb51d154296e7f57be20e8dd9b789d72f63551383c1863adceee512a8eae7"
     },
     {
       "path": "tests/test_release_manifest.py",
