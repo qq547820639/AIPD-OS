@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-28T21:00:59+00:00",
+  "generated_at": "2026-09-28T21:46:37+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 370847,
-      "sha256": "09b46cb42a28e8195dd65262bc1a7d21805e9eb9dfedb835d6d502f7667ccc6c"
+      "size": 373319,
+      "sha256": "08749825ada41519c4bfb100992ab9c6e9314891aa1f01fef0c1c66e168a5835"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 69484,
-      "sha256": "ab67a2975749b57b113c7b6b6cb14b0ecd0a541ad9b328bcd591662079a69087"
+      "size": 69989,
+      "sha256": "23f3db9a5b38991d93da6391652bacc851e052b06420f3091a9912481a9e07e7"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -762,8 +762,8 @@
     },
     {
       "path": "scripts/doc_command_census.py",
-      "size": 97593,
-      "sha256": "f475c3273bc91f88abc4ac3e8acbece56aabaefac3a0851444ec4cb727ec58c9"
+      "size": 105485,
+      "sha256": "5c4c6b6df8e3c9043a26b9e28e0189a013231dac0832d6a0ef06b85cae146d75"
     },
     {
       "path": "scripts/doc_reference_census.py",
@@ -2652,8 +2652,8 @@
     },
     {
       "path": "tests/test_doc_command_census.py",
-      "size": 72093,
-      "sha256": "fe575b50d823c796395ac7d7bc735033e8a8feebc5accaeda66de83556b613e8"
+      "size": 81997,
+      "sha256": "7eb1fa489414fe4d832976cf91c931bc2e4da15e6905d5101c3b0b301255408b"
     },
     {
       "path": "tests/test_doc_reference_census.py",
@@ -3147,8 +3147,8 @@
     },
     {
       "path": "tests/test_release_evidence_preflight.py",
-      "size": 19505,
-      "sha256": "12ea854352d69d99c5ca579d2fcaf14aac6398c9df50a34ebc4fd172ed74373f"
+      "size": 19510,
+      "sha256": "91275d808c29f8ea18f71b98ce1020bfeb287ba8660cc218bf4137e7fc66e0fd"
     },
     {
       "path": "tests/test_release_manifest.py",
