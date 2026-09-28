@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 380252,
-      "sha256": "47f403df1e66ae61e2b597be9f569caaa8ec90ca2cec5c9f60432b07cf5b90db"
+      "size": 383681,
+      "sha256": "345fcb0bcc7729ac830f171fda0021998a8d685a183835c554b39e145cdfde48"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 72942,
-      "sha256": "c185d6ca2950a8c430289aa1ce430b63b645ed23748c801ac807a1cafaa8c120"
+      "size": 74121,
+      "sha256": "d6ceb02e2f4ceba2f2f4527ea3ebdf10936a7a60fd748118a5a4314cc668979d"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -407,8 +407,8 @@
     },
     {
       "path": "docs/security/dependency-license-review.md",
-      "size": 5513,
-      "sha256": "6c3ba0c1f1ef7a78b8f690ca251c1b75365cd53c45d25d877515cb6c5dea5c63"
+      "size": 8034,
+      "sha256": "0ec1db575247b3a59f12238bb799f3bb7e5a2ba7b1e4108176b9c073ea226c28"
     },
     {
       "path": "evals/cad_evals.json",
@@ -772,8 +772,8 @@
     },
     {
       "path": "scripts/dependency_license_gate.py",
-      "size": 31715,
-      "sha256": "baf0eadb895dc99bb3d4414896482c8a1abaf5ac8905db854997e0c1e22b5342"
+      "size": 56981,
+      "sha256": "73b896ada9bdf20d076d483e0b7f8dcfefcd670dbc05a03d944d32a2822f9981"
     },
     {
       "path": "scripts/doc_command_census.py",
@@ -857,8 +857,8 @@
     },
     {
       "path": "scripts/release_fingerprint.py",
-      "size": 3023,
-      "sha256": "34de22431e3ab72c9d91c7a3387e931de43ec7eb59b92a9ab982761e68fd8a27"
+      "size": 4564,
+      "sha256": "46cf398e3dda28902ccfa1ea8c866786c77dadf5795eed83f4f5973add10f703"
     },
     {
       "path": "scripts/research/README.md",
@@ -2672,8 +2672,8 @@
     },
     {
       "path": "tests/test_dependency_license_gate.py",
-      "size": 9485,
-      "sha256": "92a09f091f9d45779934c7ee9033e94cbd91b58515ad9bd7a27a18ebc3d17178"
+      "size": 23054,
+      "sha256": "f1c3a808b58e20d506530d54a1cb188dfc5da64bc85f1c88eb8d295591f98b7b"
     },
     {
       "path": "tests/test_dispatcher.py",
@@ -3207,8 +3207,8 @@
     },
     {
       "path": "tests/test_report_manifest_fingerprint.py",
-      "size": 7083,
-      "sha256": "3264deb6f18a0af36118fa622f8d24e5ab636279aa93cd75d98b4695d7e14a75"
+      "size": 10378,
+      "sha256": "598760dcd525afbe3618c3c9daf846def03f0c530435743d47ca8068d11f5294"
     },
     {
       "path": "tests/test_research_chain.py",
