@@ -40,7 +40,7 @@ WORKFLOW_REL = ".github/workflows/ci.yml"
 SURFACE_REGISTER_REL = "docs/audit/CI_SURFACE_REGISTER.json"
 
 def _norm(cmd: str) -> str:
-    """命令规范化：连续空白折成一个空格、去首尾，比较用这一份。
+    r"""命令规范化：连续空白折成一个空格、去首尾，比较用这一份。
 
     `\` 续行的折叠**不在这里**做，而在 `_split_shell()`——那里逐行读块标量，
     交给本函数的串里永远没有换行。第 91 片这里原本还带一次 `replace("\\\\n", " ")`，
