@@ -44,7 +44,7 @@
 这条正是记忆里"加/改一条在册判据后必须重跑以该文件为靶的老控制"的又一次兑现，
 并且补一个它没写的形状：**重跑老控制不只可能红，还可能从"红"退化成"绿得没有理由"**。
 
-## 四、牙与读数
+## 四、牙与读数（**第一代**：`e2173f8`/`7d2cc22` 那一刻，认证未跑；本轮终局见 §八之二）
 - `--self-test`：14 → **17 条 mark**（新增让渡可核对、`git add` 未 commit、降级不造红三条），
   且让渡那两条是**同树两极**（README 行首免责 / 取证文档同名行判红），
   避免"干脆谁都不免责"这种单边改法蒙绿。
@@ -165,3 +165,27 @@ with space.py
 本轮不把它扩成"每条取证脚本都要跑一遍"——那需要给全部脚本逐一建可重放前提
 （当时现读 51 个 `.py`、8 个 `.sh`），是独立一轮的活（已记进第 90 片候选）。
 
+
+## 九、干净签出那一跑（本轮唯一被绑进证件的读数）
+
+| 项 | 读数 |
+| --- | --- |
+| 树 | detached worktree @ `6696864`（两份清单重锚那一提），路径 `/Volumes/…/.wt-s89`（**在仓库外**） |
+| 命令 | `PYTHONPATH=$PWD/src PATH=<repo>/.venv/bin:$PATH AIPD_SOURCE_COMMIT=$(git rev-parse 'v5.6.0^{commit}') .venv/bin/python -m pytest -q --json-report --json-report-file=report-s89.json` |
+| 判决 | `2713 passed, 5 skipped`，`exitcode=0`，`summary.collected == len(tests) == 2718`，465.31s |
+| 锚点自证 | 报告 `source_commit` == tag 提交 `a660405201394050…`（不是 HEAD）；`source_manifest_fingerprint` = `8956ec96dafe…`，与主树和签出树两份 `SOURCE_MANIFEST.json` 由 `release_fingerprint.py` 现算的值逐字相同（绑定前的探针就是这两个数） |
+| 覆盖面 | 跳过面 5 条与上一代**逐条相同**（双向差集为空）：`test_mail_protocol.py` 2 条、`test_research_fulltext_live.py` 2 条、`test_researchstudio_provider.py` 1 条，全是要联网那一类 |
+| 本轮原告 | `tests/test_doc_command_census.py` 44 条、`tests/test_forensic_scripts_parse.py` 4 条，全部 collected 且 passed |
+| 环境 | `host_load` 起跑 3.99 → 中段邻居会话顶到 26.00（5 s 采样落树外 `.s88-outside/load89-r2.csv`）；`host_cpus=10`。这一跑没有时延类断言红（`tests/test_state_perf_gates.py` 的 5× 比值门在该负载下照绿），所以不需要挪到安静窗口重放 |
+
+两条**只在当场成立、别当成本轮证件**的记录：
+
+1. worktree 第一次是**手敲相对路径**建的，`git worktree add .wt-s89 HEAD` 按 CWD 解析 ⇒
+   落在 `AIPD-OS/.wt-s89`，而 `.wt-*` 不在 `.gitignore` 里 ⇒ `git status --short` 立刻出
+   `?? .wt-s89/`。它在仓库里的话既进清单遍历又进 `workspace_clean`，两道都会红。
+   处置：`git worktree remove --force` 后按绝对路径 `../.wt-s89` 重建，并在此后每一步之前
+   `git status --short` 确认主树为空。上表那一跑读的是重建后的树。
+2. 第二轮复核之前的第一代那一跑（worktree @ `7d2cc22`，`2702 passed / 5 skipped`）
+   因复核交回的 7 笔全落在 hashed 面而**当场过期**：未绑定、未提交，报告随工作树回收消失。
+   这里记下它的身份，是为了让"本轮只花了一代认证"这件事可核对——
+   派复核件在起跑之前，是这一步省下来的（约 8 分钟一跑）。
