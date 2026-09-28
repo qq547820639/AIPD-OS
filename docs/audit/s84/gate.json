@@ -5,8 +5,7 @@
       "check": "workspace_clean",
       "passed": false,
       "detail": [
-        " M docs/audit/s84/closeout84.sh",
-        " M docs/audit/s84/terminal84.py"
+        " M docs/audit/s84/gate.log"
       ]
     },
     {
