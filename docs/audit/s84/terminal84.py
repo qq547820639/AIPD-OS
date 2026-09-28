@@ -112,7 +112,7 @@ def main() -> int:
 | 干净签出那一跑 | {summ['passed']} passed / {summ.get('skipped', 0)} skipped / {n_failed} failed，{dur} s，`exitcode={bound['exitcode']}` |
 | 发布门 | `release_ready=True`，{len(checks)} 项全过，判红 0 项 |
 | 收尾验签 | {n_checks} 格全绿（判红 0、前提塌 0） |
-| 变异电池 | `KILLED+CRASH-KILL {tally.group(1)} / {tally.group(2)}`；另 `run1.log` 是改前的错读数 |
+| 变异电池 | 整支八臂 `KILLED {tally.group(1)}/{tally.group(2)}`（W5 是真 BAD-ANCHOR：锚点抄着本轮被改掉的 print 文案）；改锚后 `--only W5` 复算 `1/1 KILLED`。三份日志都入库：`battery84.log` / `battery84.w5.log` / `battery84.run1.log`（更早那次的假 BAD-ANCHOR） |
 
 **现场拒写演示（不是合成夹具，用的是真仓库的清单与真报告的副本）**：
 把绑定那份报告的 `source_manifest_fingerprint` 换成 `{'0'*12}…`（{n_files} 格清单的内容摘要
