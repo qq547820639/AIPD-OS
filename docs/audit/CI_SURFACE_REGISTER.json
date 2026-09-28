@@ -1,0 +1,266 @@
+{
+  "entries": [
+    {
+      "command": "curl -sSfL https://github.com/zricethezav/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz -o /tmp/gitleaks.tar.gz",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "安装/解包步骤：要联网装包或往 `/usr/local/bin` 写文件（共享状态，不属自决范围）。它不判任何东西，红只可能是网络或镜像",
+      "matched_rule": "curl "
+    },
+    {
+      "command": "gitleaks detect --source . --redact --verbose",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "要 gitleaks 二进制（本机实测 `which gitleaks` 无）且它扫的是提交历史，收口链跑在 detached worktree 上，历史面不在这一格里",
+      "matched_rule": "gitleaks detect"
+    },
+    {
+      "command": "mypy",
+      "kind": "consumed",
+      "consumers": [
+        "tests/test_ci_face_gates.py"
+      ],
+      "why": "同一格。`ci.yml:130` 那句「本地硬基线 ruff 0 / mypy 0」在第 91 片现读是 24 个错误/20 个文件",
+      "matched_rule": "mypy"
+    },
+    {
+      "command": "pip install -e \".[cad,dev]\"",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "安装/解包步骤：要联网装包或往 `/usr/local/bin` 写文件（共享状态，不属自决范围）。它不判任何东西，红只可能是网络或镜像",
+      "matched_rule": "pip install"
+    },
+    {
+      "command": "pip install -e \".[dev]\"",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "安装/解包步骤：要联网装包或往 `/usr/local/bin` 写文件（共享状态，不属自决范围）。它不判任何东西，红只可能是网络或镜像",
+      "matched_rule": "pip install"
+    },
+    {
+      "command": "pip install -e \".[full,dev]\"",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "安装/解包步骤：要联网装包或往 `/usr/local/bin` 写文件（共享状态，不属自决范围）。它不判任何东西，红只可能是网络或镜像",
+      "matched_rule": "pip install"
+    },
+    {
+      "command": "pip install -e .",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "安装/解包步骤：要联网装包或往 `/usr/local/bin` 写文件（共享状态，不属自决范围）。它不判任何东西，红只可能是网络或镜像",
+      "matched_rule": "pip install"
+    },
+    {
+      "command": "pip install build",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "安装/解包步骤：要联网装包或往 `/usr/local/bin` 写文件（共享状态，不属自决范围）。它不判任何东西，红只可能是网络或镜像",
+      "matched_rule": "pip install"
+    },
+    {
+      "command": "pip install pip-audit",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "安装/解包步骤：要联网装包或往 `/usr/local/bin` 写文件（共享状态，不属自决范围）。它不判任何东西，红只可能是网络或镜像",
+      "matched_rule": "pip install"
+    },
+    {
+      "command": "pip install pip-licenses",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "命令本身没有可失败的断言（退出码恒 0，只把结果打印出来）⇒ 把它当门禁是假承诺；本机也未装该工具",
+      "matched_rule": "pip-licenses"
+    },
+    {
+      "command": "pip-licenses",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "命令本身没有可失败的断言（退出码恒 0，只把结果打印出来）⇒ 把它当门禁是假承诺；本机也未装该工具",
+      "matched_rule": "pip-licenses"
+    },
+    {
+      "command": "python -c \"import cadquery as cq; print('cadquery', cq.__version__)\"",
+      "kind": "consumed",
+      "consumers": [
+        "tests/test_cad_golden_loop.py"
+      ],
+      "why": "内核在场性由那一条用例自己 import 并判；本机实测 cadquery 可导入",
+      "matched_rule": "import cadquery"
+    },
+    {
+      "command": "python -m aipd_os.scripts.schema_check",
+      "kind": "consumed",
+      "consumers": [
+        "tests/test_ci_face_gates.py"
+      ],
+      "why": "",
+      "matched_rule": "aipd_os.scripts.schema_check"
+    },
+    {
+      "command": "python -m build",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "会往 `dist/` 落产物，而收口链硬要求工作树干净（`worktree_clean` 无豁免路径）；打包一致性由 `tests/test_packaging.py` 在本地判",
+      "matched_rule": "python -m build"
+    },
+    {
+      "command": "python -m pip install --upgrade pip setuptools wheel",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "安装/解包步骤：要联网装包或往 `/usr/local/bin` 写文件（共享状态，不属自决范围）。它不判任何东西，红只可能是网络或镜像",
+      "matched_rule": "pip install"
+    },
+    {
+      "command": "python -m pytest tests/ -m \"not integration\" -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python -m pytest tests/ -m \"not model_eval and not integration\" -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python -m pytest tests/ -m \"not model_eval\" -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python -m pytest tests/ -m integration -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python -m pytest tests/maturity_consistency_test.py -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python -m pytest tests/test_audit_repo.py tests/test_capability_matrix.py -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python -m pytest tests/test_cad_golden_loop.py tests/test_cad_contract_unify.py -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python -m pytest tests/test_command_coverage.py tests/test_capability_matrix.py -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python -m pytest tests/test_integration_smoke.py -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python -m pytest tests/test_packaging.py -q",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/closeout_verifier.py"
+      ],
+      "why": "本地全量那一跑是无标记的超集（实测 collected 2726，integration 21 条都在名单里）；谁跑遍整棵树由 `closeout_verifier` 的 `roster_covers_tree` 那一格证",
+      "matched_rule": "-m pytest"
+    },
+    {
+      "command": "python scripts/audit_dependency_ack.py",
+      "kind": "consumed",
+      "consumers": [
+        "scripts/production_release_gate.py"
+      ],
+      "why": "发布门的 `no_unacknowledged_cve` 那一格消费同一套 CVE 台账",
+      "matched_rule": "audit_dependency_ack.py"
+    },
+    {
+      "command": "python scripts/audit_repo.py",
+      "kind": "consumed",
+      "consumers": [
+        "tests/test_audit_repo.py"
+      ],
+      "why": "同一份判据由常驻用例在进程内跑（`--json-out` 那一份是产物落盘，不是另一条判据）",
+      "matched_rule": "audit_repo.py"
+    },
+    {
+      "command": "python scripts/audit_repo.py --json-out docs/audit/audit.json",
+      "kind": "consumed",
+      "consumers": [
+        "tests/test_audit_repo.py"
+      ],
+      "why": "同一份判据由常驻用例在进程内跑（`--json-out` 那一份是产物落盘，不是另一条判据）",
+      "matched_rule": "audit_repo.py"
+    },
+    {
+      "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
+      "kind": "consumed",
+      "consumers": [
+        "tests/test_capability_matrix.py"
+      ],
+      "why": "矩阵与登记表的一致性由那两条常驻用例核",
+      "matched_rule": "capability_matrix.py"
+    },
+    {
+      "command": "python scripts/skill_quality_audit.py",
+      "kind": "consumed",
+      "consumers": [
+        "tests/test_skill_command_surface.py"
+      ],
+      "why": "",
+      "matched_rule": "skill_quality_audit.py"
+    },
+    {
+      "command": "ruff check src tests state_service",
+      "kind": "consumed",
+      "consumers": [
+        "tests/test_ci_face_gates.py"
+      ],
+      "why": "CI 的 lint job 第一条；第 90 片之前本地一道都不读它，于是一条 E501 活了六轮",
+      "matched_rule": "ruff check"
+    },
+    {
+      "command": "tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin",
+      "kind": "ci-only",
+      "consumers": [],
+      "why": "安装/解包步骤：要联网装包或往 `/usr/local/bin` 写文件（共享状态，不属自决范围）。它不判任何东西，红只可能是网络或镜像",
+      "matched_rule": "tar -xzf"
+    }
+  ]
+}

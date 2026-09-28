@@ -22,7 +22,7 @@ from tests.test_product_intelligence_runtime_e2e import _env
 def _committed_counts(env) -> dict[str, int]:
     store = ProductTruthStore(str(env["db"].path), tenant_id="default",
                               project_id="p1")
-    kinds = {}
+    kinds: dict[str, int] = {}
     for rec in store.query():
         kinds[rec.record_type] = kinds.get(rec.record_type, 0) + 1
     return kinds

@@ -61,7 +61,10 @@ def _report(tmp_path: Path, fingerprint: str | None) -> Path:
 def _want(repo: Path) -> str:
     doc = ev.generate_source_manifest(repo, ANCHOR)
     doc["version"] = "5.6.0"
-    return rf.fingerprint_of_document(doc)
+    # `release_evidence`/`release_fingerprint` 是 sys.path 注入的 scripts/ 模块，mypy 检索不到，
+    # 所以这条调用的返回值在类型层面是 Any：按 `fingerprint_of_document()` 声明的 str 收下。
+    fingerprint: str = rf.fingerprint_of_document(doc)
+    return fingerprint
 
 
 def _bind(tmp_path: Path, repo: Path, out_dir: Path, report: Path | None):

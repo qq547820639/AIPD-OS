@@ -29,6 +29,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -430,6 +431,7 @@ def test_record_produced_by_the_command_names_a_real_command(tmp_path: Path) -> 
     """`ctq.py` 曾把 `aipd truth ctq add` 烙进每条记录的 source.note——本轮实测修掉的幻影。"""
     from aipd_os.cli.main import main
     from aipd_os.product_truth import ProductTruthStore
+    from aipd_os.product_truth.models import SourceRef
     from aipd_os.state.db import AIPDStateDB
 
     db = tmp_path / "state.db"
@@ -441,8 +443,11 @@ def test_record_produced_by_the_command_names_a_real_command(tmp_path: Path) -> 
                      "--feature", "hole", "--drawing-feature", "TOP.hole_1",
                      "--nominal", "8.0", "--lower", "7.95", "--upper", "8.05",
                      "--inspection", "CMM", "--by", "潘工"]) == 0
-    note = ProductTruthStore(str(db), tenant_id=T,
-                             project_id=P).query(record_type="ctq")[0].source.note
+    # `TruthRecord.source` 在类型上是 `SourceRef | None`，而 `ctq add` 这条生产路径给每条
+    # 记录都落一份 SourceRef（下面读的就是它烙进 note 的命令写法）。这里按那一侧的形状收，
+    # 不用 assert 收窄——加断言就动了运行时行为。
+    store = ProductTruthStore(str(db), tenant_id=T, project_id=P)
+    note = cast(SourceRef, store.query(record_type="ctq")[0].source).note
     paths, groups, problems = census.valid_commands()
     assert not problems, problems
     mentions = census._mentions(note)

@@ -305,13 +305,18 @@ class TestDriftScanScaling:
                 finally:
                     conn.set_trace_callback(None)
 
-        ProductTruthStore.connect = traced
+        # 临时把类上的 `connect` 换成带 trace 回调的那一个，finally 里原样换回去。
+        # 写成 `type.__setattr__` 而不是 `ProductTruthStore.connect = traced`：两者编译到
+        # 同一处属性写入（运行时没有任何差别），但直接给方法赋值会被 mypy 判成
+        # method-assign，而 `setattr(obj, "connect", ...)` 这种字面量名字会被 ruff 判成
+        # B010 并要求"改回普通赋值"——两条判据只能这样同时满足。
+        type.__setattr__(ProductTruthStore, "connect", traced)
         try:
             report = scan_drift(store,
                                 resolvers=build_resolvers(str(db_path), pid, TENANT),
                                 tenant_id=TENANT, project_id=pid)
         finally:
-            ProductTruthStore.connect = original
+            type.__setattr__(ProductTruthStore, "connect", original)
             dxf_lineage.spec_file_digest = real_digest
         return int(report["scanned"]), len(statements), len(reads), dict(report["counts"])
 

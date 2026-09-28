@@ -82,13 +82,16 @@ def resolve_upstream(store: Any, *, inputs: dict[str, Any],
         # 按 receipt 的 "committed" 读会永远读到空——第一版就栽在这里，被第 70 片的
         # idea_id 用例抓出来（它让"解析不到"和"解析成 0"长得一模一样）。
         raw = receipt.get("committed_truth_refs_json")
-        refs = receipt.get("committed")
+        # 这一路的读取结果与上面 `inputs[truth_refs]` 那一路的 `refs` 不是同一个量
+        # （那一路是 `list[str]`，这一路是表列，可能是 None、字符串或已经解析好的列表），
+        # 同名复用会让类型检查看不出这两条路的差别，所以这里单独叫 `committed_refs`。
+        committed_refs = receipt.get("committed")
         if isinstance(raw, str) and raw.strip():
             try:
-                refs = json.loads(raw)
+                committed_refs = json.loads(raw)
             except ValueError:
-                refs = []
-        for rid in refs or []:
+                committed_refs = []
+        for rid in committed_refs or []:
             if rid not in found_ids:
                 found_ids.append(str(rid))
     if found_ids:

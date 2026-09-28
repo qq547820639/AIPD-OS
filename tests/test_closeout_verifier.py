@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -82,10 +83,15 @@ def real_pair(tmp_path: Path, pinned: str):
 
     def run(pinned_arg: str = pinned, expect: list[str] | None = None,
             parity: list[str] | None = None, min_tests: int = 0) -> dict:
-        return cov.audit(report, ROOT, prov, pinned_arg, ROOT / "tests",
-                         expect if expect is not None else ["tests/test_packaging.py"],
-                         parity if parity is not None else list(cov.PARITY_TESTS),
-                         min_tests)
+        # `closeout_verifier` 在 scripts/ 下、不在 mypy 的检索路径上，所以它的返回值在
+        # 类型层面是 Any。先把判决收到 `audit()` 自己声明的 dict[str, Any] 上再交出去，
+        # 这样下面读的 keys 是量具真实产出的那份报告，而不是一个无类型的口子。
+        result: dict[str, Any] = cov.audit(
+            report, ROOT, prov, pinned_arg, ROOT / "tests",
+            expect if expect is not None else ["tests/test_packaging.py"],
+            parity if parity is not None else list(cov.PARITY_TESTS),
+            min_tests)
+        return result
 
     return run
 

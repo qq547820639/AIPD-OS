@@ -36,6 +36,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -59,7 +60,9 @@ CLOSURE_EVIDENCE = "test_cli_public_surface"
 
 @pytest.fixture(scope="module")
 def report() -> dict:
-    rep = census.audit(ROOT)
+    # 量具在 scripts/ 下（sys.path 注入，mypy 检索不到），返回值在类型层面是 Any：
+    # 按 `audit()` 自己声明的 dict[str, Any] 收下，下面读的 ok/problems/tiers 才是同一份报告。
+    rep: dict[str, Any] = census.audit(ROOT)
     assert rep["ok"], f"读数不可信：{rep['problems']}"
     return rep
 

@@ -37,7 +37,9 @@ def _run_works(monkeypatch, work: dict) -> list[dict]:
 
     monkeypatch.setattr(oa, "request", fake_request)
     monkeypatch.setattr(oa, "create_session", lambda *a, **k: object())
-    papers = oa.search_papers_by_open_alex("康复机器人", 2020, 2026, max_results=1)
+    # 连接器在 scripts/research/ 下（sys.path 注入），mypy 检索不到它，返回值在类型层面是 Any：
+    # 按映射结果真正的形状（一页 works 映射出的论文行列表）收下，再交给下面的字段断言。
+    papers: list[dict] = oa.search_papers_by_open_alex("康复机器人", 2020, 2026, max_results=1)
     assert calls["n"] >= 1
     return papers
 

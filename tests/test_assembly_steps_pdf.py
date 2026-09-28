@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import TypedDict
 
 import pytest
 from pypdf import PdfReader
@@ -26,9 +27,17 @@ from aipd_os.cad.assembly_steps import (  # noqa: E402
 from aipd_os.cad.assembly_steps_pdf import IMAGE_CAPTION  # noqa: E402
 
 
+class _Part(TypedDict):
+    """清单里的一条零件行（写进 assy.json 的就是这三列）。"""
+
+    name: str
+    balloon: int
+    step: str
+
+
 def _manifest(tmp_path: Path, steps: list[dict]) -> Path:
-    parts = [{"name": "支架", "balloon": 1, "step": "支架.step"},
-             {"name": "压板", "balloon": 2, "step": "压板.step"}]
+    parts: list[_Part] = [{"name": "支架", "balloon": 1, "step": "支架.step"},
+                           {"name": "压板", "balloon": 2, "step": "压板.step"}]
     for one in parts:
         (tmp_path / one["step"]).write_bytes(b"ISO-10303-21;HEADER;")
     file = tmp_path / "assy.json"

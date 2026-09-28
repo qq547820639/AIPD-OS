@@ -51,7 +51,11 @@ def _contract_commands() -> set[str]:
 
 def _declared_commands() -> set[str]:
     """SKILL.md「## 0.」清单声明的命令——用 CI 那一份解析器，不另写一套。"""
-    return skill_audit.declared_from_skill((ROOT / "SKILL.md").read_text(encoding="utf-8"))
+    # 解析器在 scripts/ 下、不在 mypy 的检索路径上，返回值在类型层面是 Any：
+    # 先按 `declared_from_skill()` 自己声明的 set[str] 收下，再进下面的集合差。
+    declared: set[str] = skill_audit.declared_from_skill(
+        (ROOT / "SKILL.md").read_text(encoding="utf-8"))
+    return declared
 
 
 def _tested_commands() -> set[str]:

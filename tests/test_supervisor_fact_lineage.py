@@ -19,6 +19,7 @@ import json
 import sqlite3
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 from aipd_os.cli.main import main
 from aipd_os.product_truth import ProductTruthStore
@@ -123,7 +124,10 @@ def test_idea_id_resolves_through_the_committed_definition(tmp_path) -> None:
     gate.resolve_owner_decision(did, "approve", "ok", actor="owner")
     assert cli_main(["product", "gate", "--db", str(env["db"].path),
                      "--project", "p1", "--commit", "--json"]) == 0
-    receipt = gate.get_commit(snap.snapshot_id)
+    # `get_commit` 回 `dict[str, Any] | None`（这个 idea 从没提交过才是 None）；这一条用例的
+    # 前提就是上面那句 `product gate --commit` 退了 0，所以按已提交那一侧的形状读这一列。
+    # 不用 assert 收窄——加断言会动运行时行为，前提已由那句 rc 断言承担。
+    receipt = cast(dict[str, Any], gate.get_commit(snap.snapshot_id))
     committed = sorted(json.loads(receipt["committed_truth_refs_json"]))
     assert len(committed) == 2, receipt
 

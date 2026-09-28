@@ -548,6 +548,20 @@ python scripts/doc_command_census.py
 #     `--emit-register` 刷新时按 `path` 带旧 note，目标读不出就整批不落盘。
 #     git 读不出的树（合成语料、无 .git 的镜像）自动退成「存在即合规」并把 git_unknown
 #     记进读数，不把未入库那档折成违规。
+python scripts/ci_surface_census.py
+#   ↑ CI 门禁面 ↔ 本地收口链对账（第 91 片）。权威面是 `.github/workflows/ci.yml` 本身：
+#     每条"会被单独执行的 shell 命令"落五档之一——
+#     已接住 / 无人守（判红）/ 结构性免跑（**必须带理由**，没有理由就判红）/
+#     空头委托（登记说有人守，而那个文件其实不做事，或压根不在树里）/
+#     消费表该撤（CI 已不再跑它 ⇒ 豁免不许只涨不消）。
+#     键一律由工具现读生成（`docs/audit/s91/build_ci_surface_register.py` 里只写子串规则，
+#     任何一条命令没被唯一接住就整批不落盘）⇒ 本地不留第二份命令清单。
+#     分母由工具自报（`corpus.ci_commands` 与 `buckets`），别抄进正文。
+#     为什么要有它：`ruff check src tests state_service` 从第 84 片起就是 CI 的门禁，
+#     而收口链（全量 + 发布门 + 收尾验签）一道都不读它的结果 ⇒ 一条 E501 红了六轮；
+#     同格第二条 `mypy` 对应的注释「本地硬基线 ruff 0 / mypy 0」在第 91 片现读已不成立。
+#     现在这三面（ruff / mypy / schema_check）由 `tests/test_ci_face_gates.py` 真跑，
+#     缺工具走 SKIP（"未覆盖"不算绿），且那个文件与消费表**互相点名**。
 python scripts/absence_claim_census.py
 #   ↑ 登记表否定句对账（第 65 片）：`src/aipd_os/registry_data.py` 里每句「X 仍没有」都配一个
 #     **反证锚点**（哪个文件/符号一旦出现，这句话就算过期）。判决四档：成立、过期（判红）、

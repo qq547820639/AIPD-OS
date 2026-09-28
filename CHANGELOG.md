@@ -951,6 +951,44 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.52 F-CI-SURFACE 第 91 片：把"CI 判的东西本地读不读"变成一张可对账的表，并把 lint / type / schema 三面接进常驻**：
+  第 90 片留的那句"认证链不跑 CI 的 lint 口径"本片先量成表再修：以
+  `.github/workflows/ci.yml` 为**唯一权威面**现读，得 **17 个 job / 32 条会被单独执行的 shell 命令**
+  （按文本去重；含 `\` 续行折叠与逐行切块两个规范化步骤），而"本地收口链有归宿"的条数
+  在一轮之前是 **0**。两条一手复现的后果：`ruff check src tests state_service` 那条 E501
+  自第 84 片起红着而无人读；同格第二条 `mypy` 对应的注释
+  「本地硬基线（ruff 0 / mypy 0）…补 lint job 使之成为门禁」**现读是 24 errors / 20 files**
+  ⇒ 那句话对 CI 成立、对本仓的收口链不成立，是"假叙述住在没人读的位置"的标准形状。
+  新量具 `scripts/ci_surface_census.py`（选型四段见 `docs/audit/CI_SURFACE_F-CI-SURFACE_2026-09-28.md` §二，
+  候选含 nektos/act 与 pre-commit，择一为**借 act 的"权威面只有一份"思路自研**）：
+  五档归属——已接住 / **无人守**（判红）/ 结构性免跑（**必须带理由，没理由就判红**）/
+  **空头委托**（登记说有人守、那文件其实不做事或压根不在树里）/ **消费表该撤**（CI 已不再跑它）。
+  册子 `docs/audit/CI_SURFACE_REGISTER.json` 的键**由工具现读生成**
+  （`docs/audit/s91/build_ci_surface_register.py` 只写子串规则，任何一条命令没被唯一接住
+  就整批不落盘——这道闸门当场拦下过一次：`python -c "import cadquery…"` 没有规则接它）。
+  现读归属：**19 已接住 / 13 结构性免跑 / 0 无人守**，退码 0。
+  13 条免跑的因由各写在各条目里，最值钱的一条是 `pip-licenses`：
+  **它根本没有可失败的断言**（只打印，退码恒 0）⇒ 把它当门禁是假承诺，
+  诚实的登记是"免跑 + 没有断言"，而不是假装它被本地覆盖了。
+  三面接进常驻：`tests/test_ci_face_gates.py` 真跑 ruff / mypy / schema_check
+  （缺工具走 `pytest.skip`——"未覆盖"不许报成绿），并与册子**互相点名**：
+  册子多挂一条或本文件多跑一条都红（量具只核到"消费方文件在不在、有没有用例"，
+  "这个文件到底跑了哪几条命令"只能在这一格钉）。
+  牙：`--self-test` **4** 格（含"同一判据的两极"——受托方文件没用例 vs 文件不在树里，
+  理由文本各不同）+ `tests/test_ci_surface_census.py` **6** 条 +
+  电池 `docs/audit/s91/battery91.py` **8/8 KILLED**。
+  **电池首跑 6/8，两支存活都换成了真改进**：A6 撤掉 `_norm` 里的 `\` 续行折叠 ⇒ 读数零变化，
+  因为折叠其实在 `_split_shell` 已经做过，`_norm` 拿到的串永不含换行 ⇒ 那是一条**永不达到的路径**
+  （删掉它，并把 A6 改指真正的折叠点）；A8 撤掉"消费方文件必须存在" ⇒ 也零变化，
+  因为夹具只造过"文件在但没用例"那一极 ⇒ 补第二极之后才被抓住。
+  前置工作是 `mypy` 24 → **0**（`python -m mypy` 现读 `Success: no issues found in 480 source files`）：
+  派子代理按硬判据做（不许 `type: ignore`、不许改 `[tool.mypy]`、不许加断言或改运行时行为、
+  生产代码里要改语义的一律报回不动），交回后由我本人复跑 mypy / ruff / 受影响用例三方核对；
+  被删掉的断言条数由 diff 现读为 **0**。
+  未做（三条，各写清卡在哪）：违规行里的 `line` 恒为 0（`safe_load` 不带行号，要换 `compose`，
+  属本轮没做）；命令切分不看 `&&` 与 `for`（今天 32 条里 0 条含 `&&`，不咬现状）；
+  GitHub Actions 那边到底跑成什么颜色**未验证**——本机 `gh auth status` 报未登录，
+  属线下项，本片的判据全部来自本地逐字复现那三条命令。
 - **v5.51 F-RECOMPUTE-ENTRYPOINTS 第 90 片：识别面从"一种拼写"加宽到四族写法，并给"举例"一个点名式豁免**：
   第 87 片 §九#5/#6 那两格（识别漏族、placeholder 不可达分支与 `..` 消音）在同一处形状上，
   合一片做。**动手前先量**：`docs/audit/s90/probe_recognition_widening.py` 按四族分开数

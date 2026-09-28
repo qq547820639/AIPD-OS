@@ -34,7 +34,7 @@ def _store(tmp_path) -> ProductTruthStore:
     return ProductTruthStore(str(tmp_path / "sup.db"), tenant_id=T, project_id=P)
 
 
-def _evidence(store, **meta) -> str:
+def _evidence(store: ProductTruthStore, **meta) -> str:
     base = {"work_id": "W-001", "run_id": "R-old", "capability": "doc.generate",
             "output_hash": "h-old", "evidence_references": ["a.md"], "gate": "pass"}
     base.update(meta)

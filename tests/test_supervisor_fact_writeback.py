@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from aipd_supervisor import Supervisor  # noqa: E402
 
 
-def _db(tmp_path) -> Path:
+def _db(tmp_path: Path) -> Path:
     return tmp_path / "sup.db"
 
 

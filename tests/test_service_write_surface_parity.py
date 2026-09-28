@@ -27,6 +27,7 @@ import inspect
 import json
 import sqlite3
 from pathlib import Path
+from typing import TypedDict
 
 import pytest
 
@@ -42,8 +43,21 @@ _TABLE = {"add_fact": ("facts", "fact_id"),
           "add_evidence": ("evidence", "evidence_id"),
           "add_risk": ("risks", "risk_id")}
 
+class _FullCall(TypedDict):
+    """一张完整调用：位置参数、逐格给不同值的具名参数、期望落在哪一列。
+
+    这三样的值形状不同（args 是 str 元组、后两个是异构映射），不标出来的话 mypy 会把
+    整个内层映射算成 `Collection[str]` 那种"没有运行时值对得上"的公共父类型，
+    于是 `dict(case["kwargs"])` 这条真在跑的取值路径反而过不了类型检查。
+    """
+
+    args: tuple[str, ...]
+    kwargs: dict[str, object]
+    expect: dict[str, object]
+
+
 #: 每个方法一次「每格都给不同值」的完整调用，以及**期望落在哪一列**。
-FULL_CALLS = {
+FULL_CALLS: dict[str, _FullCall] = {
     "add_fact": dict(
         args=("default", "P-SVC", "product_goal", "峰值 12 N", "C"),
         kwargs=dict(unit="N", source="truth", confidence=0.8,

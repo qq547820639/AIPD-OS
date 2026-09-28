@@ -19,6 +19,7 @@ from __future__ import annotations
 import ast
 import json
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -347,7 +348,11 @@ def _cost_calc_dests() -> set[str]:
             continue
         dest = next((k.value.value for k in node.keywords
                      if k.arg == "dest" and isinstance(k.value, ast.Constant)), None)
-        dests.add(dest or first.value.lstrip("-").replace("-", "_"))
+        # `ast.Constant.value` 在 typeshed 里是"任何常量字面量"的联合
+        # （str/bytes/bool/int/float/complex/None/ellipsis），而 argparse 的 `dest=` 只可能写
+        # 字符串标识符：这条前提由 cast 说明，`dests: set[str]` 才保住真实的元素类型。
+        # 不写成 isinstance 分支去收窄——那等于替"dest= 被写成非字符串"那一支换掉语义。
+        dests.add(cast(str, dest or first.value.lstrip("-").replace("-", "_")))
 
     # 反向对照：这三样属于别的子命令，混进来就说明范围切错了（over-collection 看得见）
     foreign = {"manifest", "target", "views"} & dests

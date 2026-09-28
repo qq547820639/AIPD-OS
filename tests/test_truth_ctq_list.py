@@ -99,7 +99,10 @@ def _list(db, *extra: str) -> tuple[int, str]:
 
 
 def _payload(text: str) -> dict:
-    return json.loads(text.strip().splitlines()[-1])
+    # `json.loads` 回的是 Any：CLI 末行打印的是一份 JSON 文档，按文档的真实形状
+    # （键为字符串、值由各命令决定）收下，再交给下面的字段断言。
+    payload: dict[str, Any] = json.loads(text.strip().splitlines()[-1])
+    return payload
 
 
 def test_ctq_list_is_registered_on_the_argparse_tree(env) -> None:

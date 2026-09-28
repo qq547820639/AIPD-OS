@@ -65,7 +65,9 @@ def _run(db, *extra: str) -> tuple[int, str]:
 
 
 def _payload(text: str) -> dict[str, Any]:
-    return json.loads(text.strip().splitlines()[-1])
+    # `json.loads` 回的是 Any：先按这份 JSON 文档的形状收下，再交给下面的字段断言。
+    payload: dict[str, Any] = json.loads(text.strip().splitlines()[-1])
+    return payload
 
 
 def _add(db, project: str, feature: str, drawing: str, upper: str = "8.05") -> str:

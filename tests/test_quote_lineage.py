@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -39,10 +40,13 @@ P = "QUOTE-LINEAGE"
 
 
 def _sig(**over) -> str:
-    base = {"currency": "CNY",
-            "applied": [{"quote_id": "亚明五金-支架-v1", "supplier": "亚明五金",
-                         "part": "支架", "version": 1, "status": "V",
-                         "unit_price": "12.5", "currency": "CNY"}]}
+    # 这份 bag 的两个值本来就是两种形状（币种是 str、applied 是行列表），mypy 会把它们的
+    # 公共父类型算成 `Sequence[Collection[str]]`，那个phantom 类型没有任何运行时值对得上；
+    # 按 `quote_input_signature` 自己的入参形状（applied 就是 dict[str, Any] 的行列表）标出来。
+    base: dict[str, Any] = {"currency": "CNY",
+                            "applied": [{"quote_id": "亚明五金-支架-v1", "supplier": "亚明五金",
+                                         "part": "支架", "version": 1, "status": "V",
+                                         "unit_price": "12.5", "currency": "CNY"}]}
     base.update(over)
     return quote_input_signature(**base)
 

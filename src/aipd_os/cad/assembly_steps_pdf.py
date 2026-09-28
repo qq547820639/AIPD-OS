@@ -33,7 +33,9 @@ from reportlab.pdfgen import canvas
 
 FONT = "STSong-Light"
 MARGIN = 18 * mm
-LINE_H = 6.2 * mm
+# reportlab 没有类型存根，`mm` 在类型层面是未知的量：这两处常量按它们真正的
+# 运行时类型（点浮点数）标出来，否则排版算式一路是 Any，返回值那道检查就形同虚设。
+LINE_H: float = 6.2 * mm
 IMAGE_CAPTION = "装配示意图（由作者提供）"
 
 __all__ = ["FONT", "IMAGE_CAPTION", "read_image_size", "render_assembly_steps_pdf", "wrap_cjk"]
@@ -62,7 +64,7 @@ def wrap_cjk(text: str, max_units: float) -> list[str]:
 
 
 def _frame(c: Any, page_no: int, part_name: str, revision: str,
-           not_covered: Sequence[str]) -> tuple[float, float]:
+           not_covered: Sequence[str]) -> float:
     """画图框 + 标题栏，返回正文可用区顶端 y。
 
     标题栏那句"本文档不承载"读的是调用方传进来的同一份 ``not_covered``：原先这里
@@ -76,7 +78,9 @@ def _frame(c: Any, page_no: int, part_name: str, revision: str,
     c.setLineWidth(0.4)
     block_h = 26 * mm
     c.rect(MARGIN, MARGIN, w - 2 * MARGIN, block_h)
-    top = h - MARGIN - block_h - LINE_H
+    # `A4` 来自没有类型存根的 reportlab，这条算式在类型层面是 Any；按它落地的单位（pt）
+    # 标成 float，`_frame` 才不是"宣称返回 float、实际回 Any"。
+    top: float = h - MARGIN - block_h - LINE_H
     c.line(MARGIN, top + block_h * 0.5, w - MARGIN, top + block_h * 0.5)
     c.setFont(FONT, 9)
     left = MARGIN + 4 * mm

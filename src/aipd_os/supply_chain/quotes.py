@@ -12,7 +12,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 # 规范 CSV 表头
 CANONICAL_CSV_HEADER = [
@@ -167,18 +167,24 @@ def _parse_quote_pdf(p: Path) -> dict[str, Any]:
 
     缺少解析库或无法提取结构化报价时，返回 not_verified 结构（不虚构）。
     """
+    # 两条 import 各自绑一个名字，再由 `reader_cls` 收成同一个可构造对象：
+    # 直接把 `PdfReader` 二次绑定给 PyPDF2 的类会被类型检查判成"给类型赋值"，
+    # 而这里真正要表达的是"一个能用路径构造出 reader 的类"。
+    reader_cls: Callable[..., Any]
     try:
-        from pypdf import PdfReader  # noqa: WPS433
+        from pypdf import PdfReader
+        reader_cls = PdfReader
     except ImportError:
         try:
-            from PyPDF2 import PdfReader  # noqa: WPS433
+            from PyPDF2 import PdfReader as PyPdf2Reader  # noqa: WPS433
+            reader_cls = PyPdf2Reader
         except ImportError:
             return _not_verified_result(
                 str(p), "pdf",
                 "pypdf/PyPDF2 未安装，无法解析 pdf 报价；请安装 pypdf 或走外部工具（数据保持 not_verified）",  # noqa: E501
             )
     try:
-        reader = PdfReader(str(p))
+        reader = reader_cls(str(p))
         text = "\n".join((page.extract_text() or "") for page in reader.pages)
     except Exception as exc:  # noqa: BLE001
         return _not_verified_result(str(p), "pdf", f"pdf 解析失败: {exc}")
