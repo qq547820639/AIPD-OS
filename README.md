@@ -511,7 +511,10 @@ python scripts/doc_command_census.py
 #     立条前在真语料上量过：4 行、判 4 行，其中 1 行是假话，所以不是橡皮章。
 #   第 87 片再加一面：文档里的**复算入口** `<解释器> 路径.py|.sh` 必须落得了地，
 #     五档归属 tracked / untracked / dead / delegated / placeholder。
-#     「文件在本地但 `git ls-files` 不列它」判红——本轮就差点栽在这格（取证件写完没提交）；
+#     「文件在本地但 HEAD 的树里没有」判红——判据读 `git ls-tree -r HEAD`，**不读索引**
+#     （第 89 片：`git add` 而没 `git commit` 的取证件在干净签出里同样拿不到）；
+#     `scripts/…` 只在**真被面 ④ 收进那一行**时才免责（面 ④ 语料不含 `docs/audit/`、
+#     正则只认行首扁平形状，其余落回这里判存在性——第 87 片那句"交给面 ④"是空头让渡）；
 #     绝对路径 `/tmp/…` 与仓库内不存在的都算 dead，必须在
 #     `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json` 里挂着并写明为什么不再可复算，
 #     没登记就判红。登记册双向对账：条目"现在又能解析了"或"再没被引用"都反向开火。

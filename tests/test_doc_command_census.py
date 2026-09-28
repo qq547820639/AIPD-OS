@@ -637,15 +637,101 @@ def test_untracked_entrypoint_fires_only_when_git_is_readable(tmp_path: Path,
 
 def test_placeholder_and_scripts_forms_are_counted_not_judged(tmp_path: Path,
                                                               tmp_scope) -> None:
-    """模板写法与 `scripts/…` 各归一格：都不判红，但必须数得到（否则是漏判不是不判）。"""
+    """模板写法不判只数；`scripts/…` **只有真被面 ④ 收进那一行**才免责（第 89 片改）。
+
+    第 87 片那版把"交给面 ④"当成无条件豁免，而面 ④ 的语料不含 `docs/audit/`、
+    正则只认行首扁平形状 ⇒ 取证文档里点名的、嵌套路径的脚本，两把尺都不判。
+    这一条现在同时钉两极：README 行首那条走面 ④（判"脚本缺失"），
+    取证文档那条走面 ⑤（判"入口不可解析"）。
+    """
     tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
                       prose="模板：python scripts/X.py\n已判面：python scripts/"
                             "zzz_delegated_tool.py --zzz 1\n")
     rep = census.audit(tree)
     st = rep["corpus"]["entry_states"]
-    assert st["placeholder"] >= 1 and st["delegated"] >= 1, st
-    assert not any(v["field"].startswith("入口") for v in rep["violations"]
-                   if v["written"].startswith("scripts/")), rep["violations"]
+    assert st["placeholder"] >= 1, st
+    assert st["delegated"] == 0, st          # docs/audit 里的行面 ④ 收不到 ⇒ 不再免责
+    ent = {(v["doc"], v["line"], v["field"], v["written"]) for v in rep["violations"]}
+    assert ("docs/audit/note.md", 2, "入口不可解析",
+            "scripts/zzz_delegated_tool.py") in ent, ent
+    assert ("scripts/X.py", "入口不可解析") not in {(w, f) for _d, _l, f, w in ent}, ent
+
+
+def test_scripts_row_face4_can_see_is_delegated_not_double_judged(tmp_path: Path,
+                                                                  tmp_scope) -> None:
+    """同一句话换个位置就换个尺子：README 行首的 `python scripts/X.py` 归面 ④。
+
+    没有这一条，上面那条"取证文档不免责"可以靠"干脆谁都不免责"绿过去——
+    两极都在，才叫"让渡是可核对的"而不是"让渡被删了"。
+    """
+    tree = write_tree(tmp_path, GOOD_README + "\npython scripts/zzz_handed_tool.py --zzz 1\n",
+                      GOOD_REGISTRY, code="# 参见 aipd usage 的说明\nVALUE = 1\n")
+    rep = census.audit(tree)
+    fields_h = {(v["field"], v["written"]) for v in rep["violations"]}
+    assert ("脚本缺失", "scripts/zzz_handed_tool.py") in fields_h, rep["violations"]
+    assert not any(f.startswith("入口") and w == "scripts/zzz_handed_tool.py"
+                   for f, w in fields_h), rep["violations"]
+    assert rep["corpus"]["entry_states"]["delegated"] == 1, rep["corpus"]
+
+
+def test_staged_but_uncommitted_entrypoint_is_untracked(tmp_path: Path, tmp_scope) -> None:
+    """`git add` 而没 `git commit` 的取证件必须判「未入库」：判据读 HEAD 的树，不读索引。
+
+    第 87 片 §九#7 量到的正是这一格：面 ⑤ 问的是"干净签出拿不拿得到"，
+    而 `git ls-files` 读索引 ⇒ 只 add 未 commit 的文件被算成已入库，
+    那条入口在别人的签出里根本不存在，却读成合规。
+    """
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      code="# 参见 aipd usage 的说明\nVALUE = 1\n",
+                      prose="入口：python docs/audit/zzz/staged.py\n")
+    (tree / "docs" / "audit" / "zzz").mkdir(parents=True, exist_ok=True)
+    (tree / "docs" / "audit" / "zzz" / "staged.py").write_text("print(1)\n", encoding="utf-8")
+    _seed_git(tree, ["README.md", "src/aipd_os/registry_data.py"])   # 提交里**没有** staged.py
+    subprocess.run(["git", "-C", str(tree), "add", "docs/audit/zzz/staged.py"],
+                   capture_output=True, check=True)
+    # 两把尺同时读同一个文件，差集就是这一条用例的存在理由：
+    # 索引（`git ls-files`）看得见它，HEAD 的树（`git ls-tree -r HEAD`）看不见。
+    import subprocess as _sp
+    idx = _sp.run(["git", "-C", str(tree), "ls-files"], capture_output=True,
+                  text=True).stdout.splitlines()
+    assert "docs/audit/zzz/staged.py" in idx, idx
+    assert "docs/audit/zzz/staged.py" not in census.tracked_paths(tree)[0], \
+        census.tracked_paths(tree)[0]
+    rep = census.audit(tree)
+    assert "入口未入库" in fields(rep, "docs/audit/zzz/staged.py"), rep["violations"]
+
+
+ZZZ_LOCAL = "zzz_local_tool.sh"
+
+
+def test_git_unreadable_tree_does_not_fabricate_stale_removal(tmp_path: Path,
+                                                              tmp_scope) -> None:
+    """git 读不出的树：降级出来的 `tracked` 不许被当成"已入库"去判「登记册该撤」。
+
+    第 87 片 §九#2 的原话是"降级自己造出一条违规，还附一句从没证实过的文件已入库"，
+    与"不知道≠违规"这条纪律正面冲突。现在的形状是：那一半**只记读数**
+    （`entry_register_stale_unjudged`），而"再没被引用"那一半与 git 无关、照旧开火。
+    """
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      code="# 参见 aipd usage 的说明\nVALUE = 1\n",
+                      prose=f"入口 A：python docs/audit/zzz/{ZZZ_LOCAL} \n")
+    (tree / "docs" / "audit" / "zzz").mkdir(parents=True, exist_ok=True)
+    (tree / "docs" / "audit" / "zzz" / ZZZ_LOCAL).write_text("echo ok\n", encoding="utf-8")
+    reg = tree / census.ENTRY_REGISTER_REL
+    reg.parent.mkdir(parents=True, exist_ok=True)
+    reg.write_text(json.dumps({"entries": [
+        {"path": f"docs/audit/zzz/{ZZZ_LOCAL}", "note": "降级会把它读成 tracked"},
+        {"path": "docs/audit/zzz/never_written.sh", "note": "再没被任何文档引用"}]},
+        ensure_ascii=False), encoding="utf-8")
+    assert not (tree / ".git").exists(), "夹具前提：这棵树必须读不出 git"
+    rep = census.audit(tree)
+    assert rep["corpus"]["entry_states"].get("git_unknown") == 1, rep["corpus"]
+    fired = {v["written"] for v in rep["violations"] if v["field"] == "登记册该撤"}
+    assert f"docs/audit/zzz/{ZZZ_LOCAL}" not in fired, rep["violations"]
+    assert "docs/audit/zzz/never_written.sh" in fired, rep["violations"]
+    assert rep["corpus"]["entry_register_stale_unjudged"] == [f"docs/audit/zzz/{ZZZ_LOCAL}"], \
+        rep["corpus"]
+
 
 
 # ---------------------------------------------------------------------------
@@ -784,7 +870,16 @@ def test_real_repo_entry_face_is_live_and_every_dead_link_is_registered() -> Non
     assert not rep["problems"], rep["problems"]
     st = rep["corpus"]["entry_states"]
     assert st["dead"] == st["dead_registered"] > 0, st
+    # `untracked == 0` 单独看是"零违规"的同形读法：在一棵读不出 git 的树（镜像、无 .git 的副本）
+    # 上它恒真。必须同时钉"这棵树 git 读得出"，那条 0 才是判过的结果而不是没判。
+    assert not st.get("git_unknown"), st
+    assert rep["corpus"]["entry_git_unknown"] is False, rep["corpus"]
     assert st["untracked"] == 0, st
+    # 登记册自己也必须在 HEAD 的树里：它是判据消费的豁免名单，
+    # 只躺在工作树里＝下一轮换一棵干净签出就变成"一本空册"，所有死链当场重开。
+    assert census.ENTRY_REGISTER_REL in (census.tracked_paths(ROOT)[0] or set()), \
+        census.ENTRY_REGISTER_REL
+    assert not rep["corpus"]["entry_register_stale_unjudged"], rep["corpus"]
     assert st["tracked"] > 0 and st["delegated"] > 0 and st["placeholder"] > 0, st
     assert not [v for v in rep["violations"]
                 if v["field"].startswith("入口") or v["field"] == "登记册该撤"], rep["violations"]
@@ -792,7 +887,13 @@ def test_real_repo_entry_face_is_live_and_every_dead_link_is_registered() -> Non
     assert len(reg["entries"]) >= 1, reg
     for e in reg["entries"]:
         assert e["note"], f"登记条目 {e['path']} 没写为什么不再可复算"
-        assert e["path"].startswith("/") or not (ROOT / e["path"]).exists(), e["path"]
+        # （第 89 片）原来这里写的是 `startswith("/") or not (ROOT/path).exists()`：
+        # 今天 13 条**全是绝对路径**，`or` 的左半边恒真 ⇒ 右半边从没执行过，
+        # 这条断言对"注册的东西其实还在仓库里"这种状态是瞎的（§九#8b）。
+        # 换掉它的是上面那对扫描侧断言（`dead == dead_registered` 且无「该撤」）
+        # ——它们由判据现读，绝对/相对两种形状都走同一条路；
+        # 相对路径那条分支由合成语料的 `test_register_entry_that_resolved_again_or_is_uncited_fires`
+        # 与 `test_git_unreadable_tree_does_not_fabricate_stale_removal` 负责。
     # 独立分母（比判据宽：不看有没有解释器前缀）：登记册必须落在它的真子集里
     loose: set[str] = set()
     for d in [ROOT / "README.md", ROOT / "QUICKSTART.md", ROOT / "SKILL.md"] + \
@@ -823,3 +924,29 @@ def test_absolute_path_is_dead_even_when_that_file_exists(tmp_path: Path,
     assert "入口不可解析" in fields(rep, written), rep["violations"]
     assert rep["corpus"]["entry_states"]["dead"] == 1, rep["corpus"]
     assert not any(v["field"] == "入口未入库" for v in rep["violations"]), rep["violations"]
+
+
+def test_tracked_face_reads_non_ascii_paths_unescaped(tmp_path: Path) -> None:
+    """非 ASCII 文件名必须原样出现在跟踪面里：git 默认把它们转义成八进制串。
+
+    `git ls-tree`/`git ls-files` 都不加 `-c core.quotePath=false` 时输出
+    `"\\344\\270\\255\\346\\226\\207/x.py"` 这种形状 ⇒ 成员判定必然落空，
+    一条明明入库的入口会被读成"未入库"再判红（假红，不是漏判）。
+    本仓今天 1049 条跟踪路径全是 ASCII，所以这一格不咬现有语料——
+    钉它是因为它一旦咬就是**假红**，而假红正是这把尺最贵的失败模式。
+    注意：面 ⑤ 的识别正则 `[A-Za-z0-9_./-]+` 本身**看不见**非 ASCII 路径，
+    所以这里直接验 `tracked_paths()`（修复所在的那一层），识别面的这一漏排在第 90 片。
+    """
+    tree = tmp_path / "repo"
+    (tree / "docs" / "audit" / "中文 目录").mkdir(parents=True)
+    (tree / "docs" / "audit" / "中文 目录" / "电池.py").write_text("print(1)\n",
+                                                                   encoding="utf-8")
+    (tree / "with space.py").write_text("print(2)\n", encoding="utf-8")
+    for args in (["init", "-q"], ["add", "-A"],
+                 ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "seed"]):
+        subprocess.run(["git", "-C", str(tree), *args], capture_output=True, check=True)
+    tracked = census.tracked_paths(tree)[0]
+    assert tracked is not None, census.tracked_paths(tree)[1]
+    assert "docs/audit/中文 目录/电池.py" in tracked, sorted(tracked)
+    assert "with space.py" in tracked, sorted(tracked)
+    assert not any(p.startswith('"') for p in tracked), sorted(tracked)

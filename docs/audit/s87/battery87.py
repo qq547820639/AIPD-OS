@@ -37,9 +37,13 @@ ARMS = [
     ("X6-git-unknown-becomes-guilty", "git 读不出时折成违规（不知道当_HAVE_没入库）",
      '                if tracked is None:\n                    rows.append((rel, no, path, "tracked"))\n                    continue\n',
      '                if tracked is None:\n                    rows.append((rel, no, path, "untracked"))\n                    continue\n'),
-    ("X7-scripts-delegated-dropped", "`scripts/…` 又回到两处各记一笔红",
-     '                if path.startswith("scripts/"):\n',
-     '                if False:\n'),
+    # 第 89 片重定锚：原来的锚 `if path.startswith("scripts/"):` 在让渡改成"有条件免责"之后
+    # 命中的是那条**空分支**（`pass`），变异改不了任何可观察输出 ⇒ X7 退化成等价臂、
+    # 当场 SURVIVED（同一文件被自己改过，老控制必须重验——不重验就会把"没牙"读成"判决还在"）。
+    # 现在撤的是免责的**前提**：`stem4` 恒为 None ⇒ 谁都不免责 ⇒ README 行首那条回到"两笔红"。
+    ("X7-scripts-delegated-dropped", "`scripts/…` 又回到两处各记一笔红（免责前提被撤）",
+     '                stem4 = (face4 or {}).get((rel, no))',
+     '                stem4 = None'),
 ]
 
 

@@ -243,7 +243,7 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
 
 | # | 缺陷 | 我验的读数（探针，非引用） | 定档 |
 | --- | --- | --- | --- |
-| 1 | `scripts/…` 让给面 ④ 是**空头让渡**：面 ④ 的语料不含 `docs/audit/`，且它的 `SCRIPT_ROW_RE` 要行首、要扁平 `scripts/X.py` ⇒ 从取证文档里点名的 `scripts/gone.py` **谁都不判** | 合成树 `docs/audit/n.md` 写 `python scripts/gone.py --flag 1` ⇒ 状态 `delegated`、**判决 `[]`**；对照：同一棵树 README 里同一写法会出 `脚本缺失` | 真缺陷，必修 |
+| 1 | `scripts/…` 让给面 ④ 是**空头让渡**：面 ④ 的语料不含 `docs/audit/`，且它的 `SCRIPT_ROW_RE` 要行首、要扁平 `scripts/X.py` ⇒ 从取证文档里点名的 `scripts/gone.py` **谁都不判** | 合成树 `docs/audit/n.md` 里一行 `python` 紧跟 `scripts/gone.py --flag 1` ⇒ 状态 `delegated`、**判决 `[]`**（这一格在第 89 片改成叙述形态：让渡闭合之后，新判据在真仓库里开的**第一枪**打的就是本行这个虚构假名——见 `SILENT_EXPIRY_…_2026-09-28.md` §五，把虚构名写成命令形态会被当真死链判，这是该修复的已知代价）；对照：同一棵树 README 里同一写法会出 `脚本缺失` | 真缺陷，必修 |
 | 2 | （第 88 片把这条误报**写进登记册的 `rule` 文本**并指明未修，见 `REGISTER_RULE`；行为本身仍未修，该撤不该撤的判定还在）`git` 读不出时的降级**自己造出违规**：降级把"磁盘上有"记成 `tracked`，而登记册反向臂的条件是"处处都是 `tracked`" ⇒ 相对路径条目被判「登记册该撤」并附一句从没证实过的"文件已入库" | 无 `.git` 的合成树 + 登记册写 `docs/audit/lab.py` ⇒ 判决 `登记册该撤 docs/audit/lab.py \| 现在处处都能解析（文件已入库）`，而 `entry_states.git_unknown=1` 同时被打印出来 | 真缺陷，必修（与"不知道≠违规"这条自己写的纪律正面冲突） |
 | 3 | 「再没被引用」那一半 keyed 在**判据自己的可见性**上而不是引用上，且建议是破坏性的：把最后一处命令形态改写成叙述（§八.1 正鼓励这么写，今天有 66 处叙述型 `/tmp/*.py`）就会开火，照建议删掉登记 ⇒ 下一轮再写命令形态时 20 条重开 | 代码路径 `states` 只来自 `erows`（`doc_command_census.py:689`，第 88 片加常量后由 `:687` 后移）；配合 #4 的快照列无人读，等于这半边的判据没有任何独立事实支撑 | 真缺陷，必修（措辞＋降级为读数） |
 | 4 | `cited_by` **只写不读**，而登记册自己的 `rule` 文本声称"它为空 ⇒ 反向开火" | `load_entry_register` 只取 `path`/`note`（`:463-482`）；`emit_register` 仍写 `cited_by`（当时在 `:1071`）⇒ 文档与实现两套说法 | **第 88 片已修**：改名 `cited_by_at_emit_time`、`rule` 由 `REGISTER_RULE` 单点生成、四种写法的判决由常驻用例钉成相同（见 §八.5）；改名后 `emit_register` 的写入位在 `:1119` |
