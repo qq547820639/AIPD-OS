@@ -1083,15 +1083,27 @@ def test_real_repo_entry_face_is_live_and_every_dead_link_is_registered() -> Non
         # ——它们由判据现读，绝对/相对两种形状都走同一条路；
         # 相对路径那条分支由合成语料的 `test_register_entry_that_resolved_again_or_is_uncited_fires`
         # 与 `test_git_unreadable_tree_does_not_fabricate_stale_removal` 负责。
-    # 独立分母（比判据宽：不看有没有解释器前缀）：登记册必须落在它的真子集里
+    # 独立分母（比判据宽：不看有没有解释器前缀）：登记册必须落在它的真子集里。
+    # 这一把宽尺只认 `/tmp/….py` 那一种形状，所以**只对绝对路径条目**做子集检查——
+    # 第 90 片起册子里也会出现相对名（如某次实验现造的 `joined.sh`），
+    # 那种条目由下面那条"文件系统事实"断言负责，不能因为宽尺看不见就拿它判红。
     loose: set[str] = set()
     for d in [ROOT / "README.md", ROOT / "QUICKSTART.md", ROOT / "SKILL.md"] + \
              sorted((ROOT / "docs").rglob("*.md")) + sorted((ROOT / "references").rglob("*.md")):
         if d.is_file():
             loose.update(re.findall(r"/tmp/[A-Za-z0-9_./-]+\.py", d.read_text(encoding="utf-8")))
     registered = {e["path"] for e in reg["entries"]}
-    assert registered <= loose, sorted(registered - loose)
+    abs_registered = {p for p in registered if p.startswith("/")}
+    assert abs_registered <= loose, sorted(abs_registered - loose)
     assert loose - registered, "登记册与宽口径分母相等 ⇒ 宽尺多半也没看见东西"
+    # 另一根独立的轴：**在册的每条路径现在都得真的拿不到**（文件系统事实，与语料无关）。
+    # 第 89 片把"已能解析 ⇒ 该撤"接进判据之后，这一格在测试侧也要有自己的读法，
+    # 否则判据与测试同时瞎掉时没人报。
+    for e in reg["entries"]:
+        p2 = e["path"]
+        assert not (ROOT / p2).exists(), f"登记条目 {p2} 其实还在树里 ⇒ 该从死链册撤"
+        if p2.startswith("/"):
+            assert not Path(p2).exists(), f"登记条目 {p2} 在这台机器上还存在"
     # 宽尺可见、判据没判的，只允许是"非命令形态的叙述引用"（本轮普查已登记为度量，不做门）
     assert census.main(["--repo", str(ROOT)]) == 0
 
@@ -1143,6 +1155,31 @@ def test_non_ascii_entrypoint_is_recognised_and_judged(tmp_path: Path,
     gone = census.audit(tree)
     assert "入口不可解析" in fields(gone, "docs/audit/脚本/取数.py"), gone["violations"]
     assert census.main(["--repo", str(tree)]) == 4, gone["violations"]
+
+
+def test_named_example_marker_spares_only_the_named_occurrence(tmp_path: Path,
+                                                               tmp_scope) -> None:
+    """点名式举例注释：只免判被点名的那一处；点不到人就判「举例标记失效」。
+
+    为什么不做成 markdownlint 那种"整行 disable"：那会让后来人往同一行里加一条真死链
+    而无人知。三格都要在——① 被点名的不判；② 同行未点名的照判；③ 标记点到不存在的
+    occurrence 要红（否则注释会变成只涨不消的豁免，且没有一条读数能看出它已经不做事）。
+    """
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      code="# 参见 aipd usage 的说明\nVALUE = 1\n",
+                      prose="复算：bash /tmp/zzz_named.sh 与 python /tmp/zzz_unnamed.py"
+                            " <!-- aipd-census:example /tmp/zzz_named.sh -->\n"
+                            "这句里没有命令形态 <!-- aipd-census:example /tmp/zzz_ghost.py -->\n")
+    rep = census.audit(tree)
+    fired = {(v["written"], v["field"]) for v in rep["violations"]}
+    assert ("/tmp/zzz_named.sh", "入口不可解析") not in fired, fired
+    assert ("/tmp/zzz_unnamed.py", "入口不可解析") in fired, fired
+    assert ("/tmp/zzz_ghost.py", "举例标记失效") in fired, fired
+    st = rep["corpus"]["entry_states"]
+    assert st["example"] == 1, st
+    assert rep["corpus"]["entry_example_stale"] == ["docs/audit/note.md:2|/tmp/zzz_ghost.py"], \
+        rep["corpus"]
+    assert census.main(["--repo", str(tree)]) == 4, rep["violations"]
 
 
 def test_tracked_face_reads_non_ascii_paths_unescaped(tmp_path: Path) -> None:

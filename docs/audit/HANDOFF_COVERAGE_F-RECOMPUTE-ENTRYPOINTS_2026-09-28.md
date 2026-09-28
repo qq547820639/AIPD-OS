@@ -104,7 +104,7 @@ with space.py
 
 ## 七、未做与下一片
 
-1. **识别面加宽**（§九#5：`/abs/…/.venv/bin/python`、`python3.11`、`python -u x.py`、续行折叠）
+1. **识别面加宽**（§九#5：`/abs/…/.venv/bin/python`、`python3.11`、`python -u x.py`、续行折叠）<!-- aipd-census:example x.py -->
    与 **placeholder 的四个不可达分支 + `..` 消音开关**（§九#6）没做：
    它们改的是"看得见多少"，会直接动死链分母与登记册内容，必须与第二§二那条"举例标记"一起量，
    否则每加一类识别就要当场处理一批新红——那是下一片的正题，不是本片的顺手事。

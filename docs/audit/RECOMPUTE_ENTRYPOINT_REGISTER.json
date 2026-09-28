@@ -87,6 +87,13 @@
   },
   {
    "cited_by_at_emit_time": [
+    "docs/audit/DRIFT_SCAN_COST_F-DRIFT-4_2026-09-26.md:142"
+   ],
+   "note": "第 55 片（DRIFT_SCAN_COST）的变异对照电池：跑在宿主临时工作区 /tmp/s55 里，判决读数是「对照臂（未注入）rc=0 ✓ 3 条形状用例全绿」，该读数抄在 docs/audit/DRIFT_SCAN_COST_F-DRIFT-4_2026-09-26.md:140-144 的代码块里。/tmp/s55 随会话销毁、内容不可再生 ⇒ 第 90 片识别面加宽（解释器与路径之间允许夹短旗）之后这一行才第一次被看见。",
+   "path": "/tmp/s55/battery.py"
+  },
+  {
+   "cited_by_at_emit_time": [
     "docs/audit/DRIFT_SCAN_COST_F-DRIFT-4_2026-09-26.md:74"
    ],
    "note": "第 55 片漂移扫描的形态探针：直接调那条常驻用例里的同一个探针（见 DRIFT_SCAN_COST…:74）。",
@@ -98,10 +105,17 @@
    ],
    "note": "第 30 片契约绑定的变异集（21/21，见 CONTRACT_BINDING…:206）。这是宿主重启把 /tmp 清空那一批里最早的证据之一，也是第 63 片造 closeout_verifier 的直接动因。",
    "path": "/tmp/slice30-mutations.py"
+  },
+  {
+   "cited_by_at_emit_time": [
+    "docs/audit/DOC_CONTINUATION_GUARD_F-DOC-CONTINUATION_2026-09-28.md:41"
+   ],
+   "note": "第 82 片（DOC_CONTINUATION_GUARD）现造的临时文件：把 README 的断行两行原样落盘后跑 `bash -n`，读数是退码 0（证明 shell 自己也看不见这个缺陷），抄在 docs/audit/DOC_CONTINUATION_GUARD_F-DOC-CONTINUATION_2026-09-28.md:39-41。文件在宿主临时目录、未入库、不可再生；第 90 片加宽认到『解释器 + 短旗 + 路径』后被看见。",
+   "path": "joined.sh"
   }
  ],
  "note_semantics": "每条 note 必须自己说清三件事：它是哪一片的什么量具、它当时的判决读数是多少、那个读数抄在哪篇取证文档的哪一行。缺任何一件就退化成占位文本（常驻用例只保证非空，不保证有信息量）。",
- "rule": "面 ⑤ 对每一条 `<解释器> 路径.py|.sh` 形态的入口判五种归属（tracked / untracked / dead / delegated / placeholder）；落不到仓库里的必须在本册 `entries` 里逐条列出，否则判红。列进来不等于放过：判据每次现读语料，某条现在又能解析了、或现读扫不到任何引用它的行时，会以「登记册该撤」反向开火。两条边界：① 在 git 读不出的树（合成语料、无 `.git` 的镜像）上，`tracked` 是「存在即合规」的降级值、不是「已入库」的证据，所以那一轮**不出**「该撤」判决，只把它们列进 `corpus.entry_register_stale_unjudged` 读数（第 87 片 §九#2，第 89 片闭合——降级不许自己造红）。② 反向判据 keyed 在**判据看得见的那种引用**（命令形态）上：把最后一处命令形态改写成叙述同样会触发「再没被引用」，此时 `dropped` 会把带着手写依据的条目报出来，但撤不撤仍由人判（§九#3，未修，是措辞与判据的固有接缝）。",
- "shape_borrowed_from": "lychee 的 --exclude/--exclude-path/.lycheeignore（豁免是一份显式配置文件而不是行内注释）；mdBook 的 ignore/no_run/compile_fail（把「不跑」说成一种被记录的形状）",
+ "rule": "面 ⑤ 对每一条 `<解释器> 路径.py|.sh` 形态的入口判六种归属（tracked / untracked / dead / delegated / placeholder / example）；落不到仓库里的必须在本册 `entries` 里逐条列出，否则判红。列进来不等于放过：判据每次现读语料，某条现在又能解析了、或现读扫不到任何引用它的行时，会以「登记册该撤」反向开火。`example` 那一档不走本册：它由被引用那一行上的 `<!-- aipd-census:example 路径… -->` 注释**点名**，且点不到 occurrence 时会判「举例标记失效」——豁免不靠一本越来越长的册子攒。两条边界：① 在 git 读不出的树（合成语料、无 `.git` 的镜像）上，`tracked` 是「存在即合规」的降级值、不是「已入库」的证据，所以那一轮**不出**「该撤」判决，只把它们列进 `corpus.entry_register_stale_unjudged` 读数（第 87 片 §九#2，第 89 片闭合——降级不许自己造红）。② 反向判据 keyed 在**判据看得见的那种引用**（命令形态）上：把最后一处命令形态改写成叙述同样会触发「再没被引用」，此时 `dropped` 会把带着手写依据的条目报出来，但撤不撤仍由人判（§九#3，未修，是措辞与判据的固有接缝）。",
+ "shape_borrowed_from": "lychee 的 --exclude/--exclude-path/.lycheeignore（豁免是一份显式配置文件而不是行内注释；实测其 master README 无行内 ignore 指令）；mdBook 的 ignore/no_run/compile_fail（把「不跑」说成一种被记录的形状，仅块级）；markdownlint 的 `<!-- markdownlint-disable-line MDxxx -->`（行级 HTML 注释、点名哪个检查器，官方明说只能整行）；Vale 的 `<!-- vale Style.Rule[\"ACT test\"] = NO -->`（点名到具体匹配，但要成对开合）——本册的 `aipd-census:example` 取前者的行内注释形状 + 后者的点名语义，两者都不是逐跨（span）级，所以再补一条自家不变量：点了名却点不到就判红",
  "what": "文档里点名、但在干净签出中不可解析的复算入口登记册（判红面 ⑤ 的 grandfather 名单）"
 }

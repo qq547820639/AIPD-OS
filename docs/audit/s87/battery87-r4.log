@@ -1,0 +1,11 @@
+原文件 sha=f475c3273bc9
+[CONTROL OK] X0 原样全绿
+[KILLED]   X1-absolute-not-dead（绝对路径不再算死链）被抓住：tests/test_doc_command_census.py::test_absolute_path_is_dead_even_when_that_file_exists
+[KILLED]   X2-register-not-consumed（登记册不再被消费（豁免成空转））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_real_repo_clean_and_all_
+[KILLED]   X3-no-stale-register-check（登记册单向：撤掉「该撤」那一半）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_register_entry_that_reso
+[KILLED]   X4-placeholder-check-dropped（模板形态不再免判）被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_real_repo_clean_and_all_
+[KILLED]   X5-untracked-not-judged（「没入库」这一档被撤（本轮我自己犯的错无人守））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_untracked_entrypoint_fir
+[KILLED]   X6-git-unknown-becomes-guilty（git 读不出时折成违规（不知道当_HAVE_没入库））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_untracked_entrypoint_fir
+[KILLED]   X7-scripts-delegated-dropped（`scripts/…` 又回到两处各记一笔红（免责前提被撤））被抓住：tests/test_doc_command_census.py::test_instrument_self_test_is_actually_run_and_green; tests/test_doc_command_census.py::test_script_rows_fire_on_bogu
+合计 KILLED 7 / 7；其余按判决分类：无
+收尾复算 sha=f475c3273bc9（应等于 f475c3273bc9）

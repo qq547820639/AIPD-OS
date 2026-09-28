@@ -510,7 +510,7 @@ python scripts/doc_command_census.py
 #     旗子集合静态不封闭（`add_argument(*NAMES)`）的脚本**不判**——看不见≠违规。
 #     立条前在真语料上量过：4 行、判 4 行，其中 1 行是假话，所以不是橡皮章。
 #   第 87 片再加一面：文档里的**复算入口** `<解释器> 路径.py|.sh` 必须落得了地，
-#     五档归属 tracked / untracked / dead / delegated / placeholder。
+#     六档归属 tracked / untracked / dead / delegated / placeholder / example。
 #     「文件在本地但 HEAD 的树里没有」判红——判据读 `git ls-tree -r HEAD`，**不读索引**
 #     （第 89 片：`git add` 而没 `git commit` 的取证件在干净签出里同样拿不到）；
 #     `scripts/…` 只在**真被面 ④ 收进那一行**时才免责（面 ④ 语料不含 `docs/audit/`、
@@ -523,6 +523,15 @@ python scripts/doc_command_census.py
 #     而文件压根不存在的那条不再改口——否则同一个缺陷会记成两笔红。
 #     `violations` 是待修清单，按（面, 文档, 行, 写法, 位点）去重，引用次数留在
 #     `citations` 与 `entry_states` 里（"红了几条"要等于"要改几处"）。
+#     第 90 片把**识别形状**加宽：解释器可带目录前缀（`/abs/…/.venv/bin/python`）与
+#     版本后缀（`python3.11`），与路径之间可夹短旗（`python -u …`），路径可含中文，
+#     模板字符（`{}$<>*…`）也进捕获类好让占位那几支分支真可达。
+#     加宽是**漏判→有读数**，不是免判：原先这些写法连一行都不产生。
+#     同片两条新语义：`..` 不再当占位免判，而是先归一化再判存在性；
+#     取证文档需要写"举例用的假名"时，在那一行点名
+#     （`aipd-census:example 路径…` 的行内 HTML 注释，形状借 markdownlint 的行级
+#     disable、语义借 Vale 的点名到匹配），只免判被点名那一处，
+#     且**点不到 occurrence 就判「举例标记失效」**——豁免不许只涨不消。
 #     上线前量的分母：命令形态 107 处，其中真死链 18 处全部来自历轮写在宿主 `/tmp` 的
 #     电池/探针脚本（内容已不可再生 ⇒ 逐条登记），占位模板 5 处（`scripts/X.py` 这类
 #     描述判据自己的写法）⇒ 不判那一档必须先有，否则新尺一上线就咬自己。

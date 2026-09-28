@@ -5,6 +5,12 @@
 | --- | --- | --- |
 | Z0 | 不改任何字节（对照） | ——必须全绿，否则电池前提不成立 |
 | Z1 | 路径字符集里的 CJK 基本区（D 族：中文命名的入口脚本重新变成看不见） | `test_non_ascii_entrypoint_is_recognised_and_judged` |
+| Z2 | 点名语义退成"整行 disable"（markdownlint 那一步就好，多吃一口） | 那条用例的"同行未点名仍判"半支 + 自测 doc.md 第 8 行 |
+| Z3 | 去掉"点不到 occurrence 就判失效"的反查 | 那条用例的第三格 + 自测 `entry_example_stale` |
+| Z4 | `..` 不归一化（回到"当成占位免判"） | 自测里 `docs/audit/gone.py` 那一格 |
+| Z5 | 解释器与路径之间不许夹短旗 | 自测的 `/tmp/zzz_flagged.py` |
+| Z6 | 不认版本后缀 | 自测的 `/tmp/zzz_versioned.py` |
+| Z7 | 解释器不许带目录前缀 | 自测的 `/tmp/zzz_absinterp.py` |
 
 识别面加宽的失败模式与判决面不同：**它不产生红，它产生"没有读数"**。
 一条认不出的入口既不在 `tracked` 也不在 `dead`，而是从 `corpus.entry_points` 的分母里
@@ -29,8 +35,27 @@ TESTS = ["tests/test_doc_command_census.py"]
 ARMS = [
     ("Z0-control-no-change", "对照：原样必须全绿", None, None),
     ("Z1-cjk-charset-removed", "把 CJK 基本区从路径字符集里收回（D 族重新变隐形）",
-     r'ENTRY_PATH_CHARS = r"A-Za-z0-9_\u4e00-\u9fff./-"',
-     r'ENTRY_PATH_CHARS = r"A-Za-z0-9_./-"'),
+     r'ENTRY_PATH_CHARS = r"A-Za-z0-9_\u4e00-\u9fff./\-\{\}$<>*…"',
+     r'ENTRY_PATH_CHARS = r"A-Za-z0-9_./\-\{\}$<>*…"'),
+    ("Z2-marker-becomes-line-wide", "点名语义退成整行 disable（同行未点名的也跟着免判）",
+     "                if path in named or posixpath.normpath(path) in named:",
+     "                if named:"),
+    ("Z3-stale-marker-check-removed", "去掉"
+     "「点了名却点不到 occurrence 就判失效」的反查",
+     "    if not p9:",
+     "    if False:"),
+    ("Z4-dotdot-stays-muted", "`..` 不再归一化（回到被占位分支静默免判）",
+     '                if ".." in path:',
+     '                if False:'),
+    ("Z5-no-flags-between", "解释器与路径之间不许夹短旗",
+     r'ENTRY_FLAGS = r"(?:\s+-{1,2}[A-Za-z][\w-]*)*"',
+     r'ENTRY_FLAGS = r""'),
+    ("Z6-no-version-suffix", "不认 `python3.11` 这种带版本后缀的解释器",
+     r'ENTRY_PY = r"(?:\.venv/bin/)?python3?(?:\.\d+)?"',
+     r'ENTRY_PY = r"(?:\.venv/bin/)?python3?"'),
+    ("Z7-no-interp-dir-prefix", "解释器不许带目录前缀（绝对路径里的 .venv 又看不见）",
+     r'ENTRY_INTERP = r"(?<![A-Za-z0-9_./-])(?:[A-Za-z0-9_./-]+/)?(?:" + ENTRY_PY + ',
+     r'ENTRY_INTERP = r"(?<![A-Za-z0-9_./-])(?:" + ENTRY_PY + '),
 ]
 
 

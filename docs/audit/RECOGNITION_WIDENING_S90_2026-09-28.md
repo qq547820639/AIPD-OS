@@ -12,10 +12,10 @@
 
 | 族 | 形状 | 新增位置 | 其中新死链候选 |
 | --- | --- | --- | --- |
-| A | 解释器带路径前缀（`/abs/x/.venv/bin/python foo.py`） | 1 | 1 |
-| B | 版本号解释器（`python3.11 foo.py`） | 1 | 1（与 A 同一行） |
-| C | 解释器与路径之间夹短旗（`python -u foo.py`） | 3 | 3 |
-| D | 路径含非 ASCII（写作 `python` ＋ `脚本/取数.py` 两截的示例形状） | **0** | 0 |
+| A | 解释器带路径前缀（`/abs/x/.venv/bin/python foo.py` <!-- aipd-census:example foo.py -->） | 1 | 1 |
+| B | 版本号解释器（`python3.11 foo.py` <!-- aipd-census:example foo.py -->） | 1 | 1（与 A 同一行） |
+| C | 解释器与路径之间夹短旗（`python -u foo.py` <!-- aipd-census:example foo.py -->） | 3 | 3 |
+| D | 路径含非 ASCII（`python 脚本/取数.py` <!-- aipd-census:example 脚本/取数.py -->） | **0** | 0 |
 
 ### 一之二、D 落地当场把本文判红一次（不是推测，是本轮的第一手读数）
 
@@ -30,6 +30,13 @@
 处置（临时，且在账上标着）：那一个示例改成"`python` ＋ `中文路径`"两截写法，让树保持绿；
 等 §三 选定的显式标记落地后，**把它改回真正的命令形态并加一条常驻用例**，
 让"标记能免掉本文这一行"成为该机制自己的语料证据（而不是只靠合成夹具）。
+→ **已兑现**：上表 D 行现在就是真正的命令形态，行内带点名式举例注释
+（`aipd-census:example` 后面写 `脚本/取数.py`）；A/B/C 三行的 `foo.py` 同理。
+这一篇文档因此同时是"记账"和"该机制的真语料"——它红过一次，才被修好的。
+而且**这句说明本身也被判红过一次**：第一次把注释原样抄在这里时，
+`举例标记失效` 那条判据当场报"这一行点不到 occurrence"（说明文字里没有命令形态），
+于是改成现在这种不带注释定界符的写法。失效检查第一次上线就咬到了作者本人，
+这是它能算作一条判据而不是一个装饰的证据。
 
 **合计只多 4 个位置，而这 4 个位置里有 2 个是"描述这条判据自己的那句话"**：
 
@@ -57,8 +64,52 @@ D 族今天 0 命中：识别面加宽非 ASCII 不产生任何现红，但 `tra
 
 ## 三、选型（AGENTS.md 第三节：这一片要拍的新机制是"怎么标'这是举例'"）
 
-候选清单、六维对比与择一决定见 `RECOGNITION_WIDENING_S90` 的 §三之二（检索完成后填写）；
-未检索到第二候选之前不动判据。
+### 三之一、候选清单（每条都可打开；标注谁亲手读过）
+
+| 候选 | 出处 | 粒度 | 亲验状态 |
+| --- | --- | --- | --- |
+| lychee 的 `--exclude` / `--exclude-path` / `.lycheeignore` | https://github.com/lycheeverse/lychee/blob/master/README.md | 按 URL 正则 / 按文件；豁免在**侧车文件**里 | 我本人抓 raw README 全文并检索：`lychee-ignore` 这一类**行内指令不存在** |
+| mdBook 代码块属性 `rust,ignore` / `no_run` / `compile_fail` | https://rust-lang.github.io/mdBook/format/mdbook.html | 仅**围栏代码块**，属性不跨块传播 | 我本人打开该页确认属性表与"never propagate across blocks" |
+| markdownlint 行内注释 `<!-- markdownlint-disable-line MDxxx -->`（另有 `-next-line`、`-file`、`-capture/-restore`） | https://github.com/DavidAnson/markdownlint#rules--aliases | **整行 / 整段**，官方明说不能指定单个 occurrence | 我本人打开该 README 确认四种形式与粒度 |
+| Vale `<!-- vale Style.Rule["ACT test"] = NO -->` … `= YES` | https://docs.vale.sh/formats/markdown | 成对开合的**区间**，可点名到规则内某条匹配 | **未亲验**：研究件读的是这页；我本人只在自己抓的 Grafana 文档里见到同形写法（https://grafana.com/docs/writers-toolkit/review/doc-validator/），Vale 官方那页没打开 |
+| doctest `# doctest: +SKIP` | https://docs.python.org/3/library/doctest.html#directives | **单个 example**（最接近逐跨），但语义是"文档里的示例不执行" | **未亲验**（研究件报告，我没打开） |
+
+### 三之二、六维对比（只写可核验的结论）
+
+- **功能匹配度**：`+SKIP` 与 Vale 的 `["匹配"]` 最接近"标一处"；markdownlint 只到整行；
+  mdBook 只到块；lychee 只到 URL 正则/文件 ⇒ 只有"点名式行内注释 + 自家补一条不变量"能同时满足
+  "不吞同行别的引用"与"豁免不会只涨不消"。
+- **License**：MIT（markdownlint、Vale）、MPL-2.0（mdBook）、Apache-2.0（lychee）、BSD-2（doctest/Sphinx）
+  ——本方案**借语义不引代码**，四种许可都不进依赖闭包，许可面为零风险。
+- **维护活跃度**：四者都是活跃项目（研究件报的版本/日期：lychee 0.24.2、mdBook 0.5.4、
+  markdownlint v0.41.1、Vale 3.23.0）；这些是**未亲验**的二手读数，只作背景，不进判据。
+- **安全风险**：本仓这条判据跑在收口链上，"引入外部 linter 作为依赖"会把网络安装面拉进认证路径；
+  自研一条正则不新增执行面。
+- **代码质量**：外部工具的规则表达力都强于本面，但它们判的对象不是"干净签出里这条入口能不能跑"，
+  接进来也只能当第二把尺，取代不了 `git ls-tree` 那一层。
+- **适配成本**：引 lychee ⇒ 要为"脚本路径"写一套 URL 映射；引 markdownlint/Vale ⇒ 要接 node/二进制
+  并把它们的输出并进现有退码协议；借语义 ⇒ 一个 `ENTRY_EXAMPLE_RE` + 两个函数
+  （`example_names_on` / `stale_example_markers`），已落在 `scripts/doc_command_census.py`。
+
+### 三之三、择一决定：**借语义**——不引依赖，也不新造形状
+
+采用"行内 HTML 注释 + 点名参数"的形状（markdownlint 的 ergonomics + Vale 的点名语义），
+并**加上两者都没有的一条自家不变量**：点了名却在同一行找不到 occurrence ⇒ 判「举例标记失效」。
+为什么不直接照抄任一家：markdownlint 吞整行（后来人往同一行加真死链会跟着免判）、
+Vale 需要成对开合且要复述匹配文本、`+SKIP` 粒度对但语义是"不执行"而不是"这是虚构"、
+lychee 的豁免在侧车文件里——那正是第 87 片选登记册时**已经付过一次账**的形状
+（豁免越攒越长、没人知道哪条还在做事）。
+"点名 + 点不到就红"是对那个已知病灶的直接回应，也是本片唯一真正自研的部分。
+
+### 三之四、落地处
+
+- `scripts/doc_command_census.py`：`ENTRY_EXAMPLE_RE`、`example_names_on()`、`stale_example_markers()`、
+  `entry_points()` 的 `example` 档、`audit()` 的「举例标记失效」判决、`render()` 的
+  `点名举例 / 失效标记` 读数、`REGISTER_RULE` 的六档措辞。
+- 用例：`tests/test_doc_command_census.py::test_named_example_marker_spares_only_the_named_occurrence`、
+  `--self-test` 里 doc.md 的第 8/9 行（同树两极）。
+- 镜像：`README.md` 面 ⑤ 那一段（六档 + 加宽 + 点名注释）、CHANGELOG v5.51。
+- 本文 §一之二 与 §五 的读数由这套机制吸收；被点名的 7 处虚构名全部保留命令形态。
 
 ## 四、生成件住在语料里这一格：择一已做（进语料），理由是现读的
 
