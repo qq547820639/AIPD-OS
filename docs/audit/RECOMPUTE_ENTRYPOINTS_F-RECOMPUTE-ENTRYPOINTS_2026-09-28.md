@@ -215,7 +215,40 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
    **永久修法要动 `scripts/`**（参与发布哈希，正在跑的认证会被作废）：要么把这列改名
    `cited_by_at_emit_time`，要么整列删掉，让"引用位置"只能由现读得到。排在第 88 片。
 
-## 九、复算入口
+## 九、只读复核交回的缺陷清单（每条都自己重验过，不含推测）
+
+派了一个只读复核件审本片的面 ⑤（禁写、禁跑套件、禁碰认证中的 worktree）。它交回 8 项，
+我逐条用自己的探针重验——**下表"我验的读数"就是探针的原始输出**，不是它的转述：
+
+| # | 缺陷 | 我验的读数（探针，非引用） | 定档 |
+| --- | --- | --- | --- |
+| 1 | `scripts/…` 让给面 ④ 是**空头让渡**：面 ④ 的语料不含 `docs/audit/`，且它的 `SCRIPT_ROW_RE` 要行首、要扁平 `scripts/X.py` ⇒ 从取证文档里点名的 `scripts/gone.py` **谁都不判** | 合成树 `docs/audit/n.md` 写 `python scripts/gone.py --flag 1` ⇒ 状态 `delegated`、**判决 `[]`**；对照：同一棵树 README 里同一写法会出 `脚本缺失` | 真缺陷，必修 |
+| 2 | `git` 读不出时的降级**自己造出违规**：降级把"磁盘上有"记成 `tracked`，而登记册反向臂的条件是"处处都是 `tracked`" ⇒ 相对路径条目被判「登记册该撤」并附一句从没证实过的"文件已入库" | 无 `.git` 的合成树 + 登记册写 `docs/audit/lab.py` ⇒ 判决 `登记册该撤 docs/audit/lab.py \| 现在处处都能解析（文件已入库）`，而 `entry_states.git_unknown=1` 同时被打印出来 | 真缺陷，必修（与"不知道≠违规"这条自己写的纪律正面冲突） |
+| 3 | 「再没被引用」那一半 keyed 在**判据自己的可见性**上而不是引用上，且建议是破坏性的：把最后一处命令形态改写成叙述（§八.1 正鼓励这么写，今天有 66 处叙述型 `/tmp/*.py`）就会开火，照建议删掉登记 ⇒ 下一轮再写命令形态时 20 条重开 | 代码路径 `states` 只来自 `erows`（`doc_command_census.py:687`）；配合 #4 的 `cited_by` 无人读，等于这半边的判据没有任何独立事实支撑 | 真缺陷，必修（措辞＋降级为读数） |
+| 4 | `cited_by` **只写不读**，而登记册自己的 `rule` 文本声称"它为空 ⇒ 反向开火" | `load_entry_register` 只取 `path`/`note`（`:475-482`）；`emit_register` 仍写 `cited_by`（`:1071`）⇒ 文档与实现两套说法 | 已部分处理（本轮刷了数据并写明非权威），**文本仍要说谎**，必修 |
+| 5 | 识别面漏整族写法：解释器与路径之间不许有任何旗子/引号、不认版本后缀、绝对路径的解释器被 lookbehind 里的 `/` 挡掉 | 探针：`跑 /Volumes/X/AIPD-OS/.venv/bin/python scripts/x.py` ⇒ `[]`；`python3.11 scripts/x.py` ⇒ `[]`；`python -u /tmp/x.py` ⇒ `[]`；而 `` `.venv/bin/python docs/audit/s87/battery87.py` `` ⇒ 命中 | 真缺陷，必修（`/abs/…/.venv/bin/python` 那型本仓真有） |
+| 6 | `placeholder` 的 7 个分支里 **4 个不可达**（捕获字符类根本容不下 `…`/`<}`/`${`/`*`），而 `..` 是**消音开关**：`python scripts/a/../gone.py` 被捕获并免判 | 探针：`python scripts/a/../gone.py` ⇒ 命中且走免判；`docs/audit/capability_matrix.md:50` 的 `python scripts/research/search_papers_by_{arxiv,…}.py` ⇒ **连一行都不产生**（既不计占位也不判） | 真缺陷：可达性要清、`..` 要么收窄要么在文档里明写它是已知逃逸口 |
+| 7 | `tracked` 取的是 **git 索引**不是 HEAD ⇒ `git add` 未 `commit` 的取证件被当成"干净签出也拿得到" | 探针（临时仓库里 `b.py` 只 add 不 commit）：`ls-files=[a.py,b.py]`、`ls-tree HEAD=[a.py]`、差=`[b.py]`。本片所有夹具都是 add+commit，所以**没有一条用例能分辨这两者** | 真缺陷，必修（改 `ls-tree -r HEAD`），且这正是面 ⑤ 想抓的那一类 |
+| 8 | 三处"看着是牙、其实咬不到"：真仓库用例 `untracked == 0` 没配 `git_unknown` 断言（在无 git 的副本里恒真）；登记册可解析性那条 `startswith("/") or not exists()` 对今天 13 条**全是绝对路径**的条目短路；自测的"五档之和 == 总读数"是**结构恒等式**（每行只加一次计数），而它的标记文案声称能抓"把已登记的漏计"——`dead_registered` 不在求和键里 | 代码：`e_counts[state] += 1` 每行一次（`:670`）⇒ 和恒等于 `len(erows)`；`tests/test_doc_command_census.py:656`、`:664` 形状同上 | 必修（换成能开火的判据）；**本文 §四 与自测标记文案此前把这条说成有效牙，属over-claim，在此更正** |
+
+**结论与顺序**：面 ⑤ 今天仍然交付了价值（18 处真死链被登记、README 那处占位被免判、
+`入口未入库` 那档确实抓住我本轮自己犯的错，电池 7 臂 7 杀也是真的），但**它的覆盖比本文
+§四/§五 写的要窄、它的两处降级会自己造红**。以上 8 条已全部落成第 89 片的工单
+（任务 #20），第 88 片不变。§四 里"分母自证会抓漏计"那句、§五 里"每条登记都仍不可解析"那句，
+在第 89 片把那三条假牙换成真牙之前，按本表读。
+
+**另外两件顺带查出的事**：
+- `RELEASE_MANIFEST.json` 是与 `SOURCE_MANIFEST.json` 覆盖面完全相同（各 684 条、互不含对方）
+  但由 `scripts/regenerate_release_manifest.py` 单独产出的第二张清单；本轮改到它收录的 4 个文件
+  而没人刷它 ⇒ **27 分钟的干净签出全量**里 `tests/test_packaging.py::test_release_manifest_hashes_match_disk`
+  才把它抓出来（报告因此作废，预检拒绝绑定、一个字节没落盘）。0.79 秒就能测出来的东西
+  花了 27 分钟才看见 ⇒ 每轮收口前的廉价门必须含 `tests/test_packaging.py` 与
+  `regenerate_release_manifest.py`，已写进项目记忆的收口配方。
+- 复核件还指出：`SELF_STEMS` 式的自指排除**没有**应用到面 ⑤，而面 ⑤ 的语料含
+  `docs/audit/`，且登记册自己是 `.json`（不在 `.md` 遍历里）⇒ **登记册文件本身没被任何尺子
+  要求入库**：本地未提交时作者看 0 违规、干净签出的人看 20 条。这条也进第 89 片。
+
+## 十、复算入口
 
 ```bash
 cd AIPD-OS
