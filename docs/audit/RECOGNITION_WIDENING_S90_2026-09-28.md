@@ -247,3 +247,40 @@ template-ish lines: 2          # 第 50 行的 `…_by_{arxiv,…}.py`、第 72 
 3. 假红方向新暴露一格：`test_real_repo_entry_face_is_live…` 现在硬断"在册每条都得真拿不到"，
    如果将来某条历史工件在**这台机器上**又被重建（例如有人重跑 `/tmp` 里的电池），
    它会红，而那既不是判据的错也不是文档的错——属主项：要么删掉本机残留，要么把该条撤出册子。
+
+## 七、认证读数（这一代是唯一有效代，作废那一代的报告也留在树里）
+
+收口链：`bash docs/audit/s90/closeout90.sh`（BIND=0 GATE=0 CV=0）。
+
+| 项 | 读数 |
+| --- | --- |
+| 干净全量（worktree @ `e558b28`） | **2721 passed / 5 skipped / collected 2726**，351.5s，`exitcode=0` |
+| 报告自记清单指纹 | `f6f687582d10…` == 磁盘 `SOURCE_MANIFEST.json` 内容摘要（绑定前后各核一次） |
+| 锚点 | `a66040520139405095648461f7144d4f00629924`（`git rev-parse v5.6.0^{commit}` 现读，小写） |
+| 跳过面 | 与上一代**逐条相同**（5 条，双向差集为空） |
+| 发布门 | 8/8 项通过，`release_ready=True`，`GATE_RC=0`（`.venv/bin` 已进 PATH） |
+| 收尾验签 | 11/11 全绿，`CV_RC=0`；`--min-tests 2726` 由报告 `summary.collected` 现取 |
+| 回收 worktree 后复算 | `closeout-s90-b`：同样 11/11、`worktree_clean` 成立（报告与 gate 的 stdout 全程落树外 `.s88-outside/`，落盘后再一起提交） |
+| 判据本身 | 面 ⑤：命令形态 **133** ⇒ 入库 90 / 未入库 0 / 死链 22（**22 全部在册**）/ 占位 6 / 交给面 ④ 5 / 点名举例 10（失效 0），登记册 15 条，`rc=0` |
+| 自测与电池 | `--self-test` **22** 格；`battery90.py` **13/13 KILLED**、退 0；第 89 片 `battery89.py` 15/15、第 87 片 `battery87.py` 7/7 同时复跑仍全绿 |
+
+**作废的那一代**：`4471493` 那一跑（`.wt-s90/report-s90.json` 当时那份）在复核件返回**之前**就启动了。
+它自己读数是干净的，但**测的不是这一代源码**——复核件的 8 项修复随后落进 `scripts/` 与 `tests/`，
+于是那份报告与清单指纹再也绑不上。做法是把报告留下而不是删掉：
+`docs/audit/s90/report-s90-VOID-4471493.json`（sha256 前 12 位 `74f7ed51b037`），
+与有效代 `report-s90.json`（`ed6f1e66727a`）并存，两份的差就是这一轮真正改了什么。
+**流程账**：我在一有界等待之后仍然启动了那一跑，理由是"复核可能不来"。
+代价是一整跑（约 6 分钟）加一代作废的绑定的判断成本。规则应为：
+**只要复核件还没交回，就不启动会被终读数引用的那一跑**——把"等"当成进度的一部分，
+而不是把它洗成"先跑起来再说"。
+
+## 八、顺手抓到的一条无人守的面（属主：下一片）
+
+`ruff check src tests state_service` 在 **HEAD 现读复现 1 条 E501**
+（`tests/test_release_evidence_preflight.py:344`，自第 84 片起就在；已按 CI 口径改短并计入本片）。
+这不是那一条行的问题，而是**认证链根本不跑 lint**：常驻用例里没有任何一条 spawn `ruff`
+（现读 `grep -rln ruff tests/` 只有 `test_repo_hygiene.py`，而它讲的是 `.ruff_cache` 目录卫生，
+不是执行这把尺），CI 那一头（`.github/workflows/ci.yml`）跑，但本仓的收口判据
+（全量 + 门 + 验签）不消费它的结果 ⇒ 一个可以长期存在的红，六轮无人看见。
+下一片入口：把 CI 的 lint 命令做成一条常驻门（缺工具要 SKIP 而不是 FAIL，
+见 `[[feedback-clean-checkout-attestation]]` 那一族），或在验签器里加"CI lint 口径"这一格。
