@@ -247,6 +247,13 @@ mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只�
 - 复核件还指出：`SELF_STEMS` 式的自指排除**没有**应用到面 ⑤，而面 ⑤ 的语料含
   `docs/audit/`，且登记册自己是 `.json`（不在 `.md` 遍历里）⇒ **登记册文件本身没被任何尺子
   要求入库**：本地未提交时作者看 0 违规、干净签出的人看 20 条。这条也进第 89 片。
+- 同轮自己查实的一条（原属 #6 的成因）：面 ⑤ 的语料里住着一个**生成件**——
+  `scripts/capability_matrix.py:206` 的 `--out` 默认 `docs/audit`，`:184` 直接
+  `capability_matrix.md.write_text(...)`，而该 `.md` 是入库文件（`git ls-files` 列它）。
+  ⇒ 面 ⑤ 的分母不只被"我写文档"改动，还被**跑一次生成器**改动（今天它那行
+  `python scripts/research/search_papers_by_{arxiv,…}.py` 因捕获字符类不含 `{`，
+  连一行读数都不产生）。第 89 片要在"生成件不进语料"与"进语料但漂移记账"之间明选一个，
+  不能像现在这样两个都不是。
 
 ## 十、复算入口
 
