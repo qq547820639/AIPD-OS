@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 346621,
-      "sha256": "4aeb6cf51d87f1ae320b98cdd9ea5aa1521818330e569fd5b39234668e5c980c"
+      "size": 348986,
+      "sha256": "6464fbb659a1f98f8591bf995ae8b3c3bd6b178d835bd73f809343ee49b18026"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 66074,
-      "sha256": "369159bdd3c200903a28a708688cdccbf6a68761b7de5d40ba2556fe05f1891b"
+      "size": 67316,
+      "sha256": "23f84a612e0035808af7cfaa9d58cae34688ece60b6f5fac6d77082bc7ff54bd"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -762,8 +762,8 @@
     },
     {
       "path": "scripts/doc_command_census.py",
-      "size": 45172,
-      "sha256": "08d59fffa256a5c62f669125e8c0f52b110a6d49dd159f7cd28f364ef961fb9c"
+      "size": 64932,
+      "sha256": "2a43da69dd24e2ecb60cc06f8dc760767536053da0b3228930f75f99c92c466d"
     },
     {
       "path": "scripts/doc_reference_census.py",
@@ -2652,8 +2652,8 @@
     },
     {
       "path": "tests/test_doc_command_census.py",
-      "size": 31036,
-      "sha256": "f27ed819a5573dd5d5140a05a21c133dd7ba270c9d4add9f0e9ceea8f9e442e1"
+      "size": 39467,
+      "sha256": "da0159b979f0422739ca097474b24162b26bbb56e74995f2c6989762b15c0ad7"
     },
     {
       "path": "tests/test_doc_reference_census.py",
