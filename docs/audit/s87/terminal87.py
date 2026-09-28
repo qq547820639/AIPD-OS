@@ -74,7 +74,7 @@ def main() -> int:
             g = load(S / n)
             if g is None:
                 continue
-            if "checks" in g:      # 发布门形状：checks 是列表，项键叫 check
+            if isinstance(g.get("checks"), list):      # 发布门：checks 是列表，项键叫 check
                 bad = [c["check"] for c in g["checks"] if not c.get("passed")]
                 print(f"{label} [{n}] release_ready={g.get('release_ready')} / "
                       f"{len(g['checks'])} 项 / 未过：{bad or '无'}")
