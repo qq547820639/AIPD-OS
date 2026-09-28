@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import release_evidence  # noqa: E402
+import release_fingerprint  # noqa: E402
 import sign_release  # noqa: E402
 from production_release_gate import run_release_ready  # noqa: E402
 
@@ -70,12 +71,19 @@ def _make_repo(tmp_path, commit_evidence: bool, tag: str | None):
     # 测试报告（pytest 机器可读 JSON；v5.8.1 Commit 15：必须携带 source_commit/
     # package_version/generated_at —— Audit Freshness 门禁要求）
     head = _git(repo, "rev-parse", "HEAD")
+    # 第 84 片：带 `--test-report` 的绑定会核对"报告自记的清单摘要 == 即将写出的那份清单"。
+    # 夹具必须照生产（`tests/conftest.py`）的形状造报告，否则这条链在测试里从来没被走过；
+    # 下面两次 `write_evidence` 之间被跟踪的文件集合没变（新产物都是未跟踪 + 被排除），
+    # 所以同一份指纹对第二轮仍然成立。
+    pending = release_evidence.generate_source_manifest(repo)
+    pending["version"] = "5.6.0"
     report = repo / "report.json"
     report.write_text(json.dumps({
         "summary": {"passed": 10, "failed": 0, "total": 10},
         "source_commit": head,
         "package_version": "5.6.0",
         "created": "2026-01-01T00:00:00Z",
+        "source_manifest_fingerprint": release_fingerprint.fingerprint_of_document(pending),
     }), encoding="utf-8")
 
     bundle = repo / "aipd-os-5.6.0.zip"

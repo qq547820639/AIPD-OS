@@ -157,6 +157,43 @@ if new and new in src:
 这次是它的对偶。**两版日志都留着**：`battery84.run1.log` 就是那个错读数本身，
 删掉它等于把"我们曾经这样误判过"一起删掉。
 
+## 四之二、闸的真实爆炸半径（第一次干净签出全量换来的，记账）
+
+第一次按配方跑干净签出全量（worktree 检出 `d457981`）读到的不是 0 failed，而是
+**`3 failed, 2661 passed, 5 skipped, 8 errors`（507.6 s）**。两组红，成因完全不同，
+都必须写下来，因为它们才是"这道闸到底改了谁的契约"的答案。
+
+**第一组：`tests/test_release_evidence.py` 8 个 fixture ERROR + 2 个 FAILED，全是我改的契约的下游。**
+`BindPreflightError` 在日志里命中 40 次。根因：`_make_repo`（`tests/test_release_evidence.py:47-102`）
+自己造一份 `report.json`，形状是"第 83 片之前的世界"——没有 `source_manifest_fingerprint`。
+第 83 片只给**真 conftest**加了那个字段，所以这副手写夹具从没被要求带上它；
+第 84 片把闸放进 `write_evidence`，它就成了第一批撞墙的用户。
+修法是让夹具**照生产形状造报告**（用 `generate_source_manifest` + `version` 现算指纹再写进去），
+不是把闸改成"缺字段只警告"。这是本仓反复记过的那条形状的又一例（手写夹具全绿 ≠ 生产侧走得通），也是**我自己的流程错**：启动那一跑之前我只跑了
+`test_release_evidence_preflight` / `test_closeout_verifier` / `test_report_manifest_fingerprint` /
+`test_changelog_integrity` 四个文件，**没有跑既有消费者的那一套**。
+判据（写进习惯）：**动一个函数之前，先 grep 出它的全部调用点并把那些文件列进本轮的必跑集合**——
+本轮这一条的实测代价是一整个 507 s 的全量。
+
+**第二组：`test_closeout_verifier.py::test_dropping_a_whole_resident_file_fires_only_the_roster`
+——这一条不是本轮写坏的，是它一直藏着的一个跨轮耦合被本轮暴露。**
+它拿**仓库里已绑定的那份报告**当夹具底料（fp 是上一片的 `74b031491f1a`），
+删掉一个测试文件的条目，然后断言"只有名单那一格开火"。而本轮已经把清单重锚成
+`228cc2e36516` ⇒ C11 `report_fingerprint_matches_disk` 作为**无关连带**一起开火。
+
+关键在于：**这个窗口不是异常，而是每一轮收口的必经状态**——"清单已重锚、报告还是上一片那份"
+这段区间里，任何读取"已绑定报告 + 当前磁盘清单"这一对的断言都会红。
+上一片为同类形状（C10 判红导致自锁）付过三次全量的代价。
+修法不是把那一格从名单里豁免掉（那是把判据改窄来迁就历史读数），而是
+**让夹具自带它需要的那个前提**：把合成报告的指纹盖成磁盘现算值，
+于是这条用例回到"只测它 docstring 所说的那件事"。C11 自己的正反面由
+`test_report_manifest_fingerprint.py` 与 `closeout_verifier --self-test` 那两臂守着，
+不靠这条用例顺带看它一眼。
+
+两组各自的净教训：**一道新闸上线时，第一次全量是它的到货检验，不是收尾**；
+红要么说明下游夹具停在旧世界（要修夹具），要么说明既有断言偷偷依赖了跨轮一致
+（要把依赖变成夹具内的显式前提）。两种都不能靠放宽判据解决。
+
 ## 五、镜像清单（本轮实际改到的每一处）
 
 命令面三张分母、census 分母、`command_contract.py`、`cli/main.py`、SKILL 计数**全不动**
@@ -223,3 +260,22 @@ cd /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
    `version`/`source_commit`/`coverage`/`files`"），而实现只剥 `VOLATILE_KEYS`，顶层的 `name`
    其实**也在**摘要里。本片顺手就地改正为黑名单叙述（同一个文件第 5-9 行）。
    这件事没有任何常驻用例守着——它是本轮改指针时读码撞见的，属于"叙述与实现各说各话"的又一例。
+6. **闸的"读不出"那一判把两种形状合并成了一个消息，其中一种是错的**（本轮自查读码抓的，
+   判决方向没错、只有归因文案错，所以**没有推迟收口去改它**——那要多烧一整个全量，见 §六 第 3 条）。
+   由 `_parse_pytest_report` 现读，走到 `not report_info.get("parsed")` 这一支的输入其实有两种：
+
+   | 输入形状 | `_parse_pytest_report` 的返回 | 我的消息 |
+   | --- | --- | --- |
+   | 文件在、JSON 坏 | `{"present": True, "parsed": False, ...}` | ✓ 正确 |
+   | `--test-report` 给了不存在的路径 | `{"present": False, "path": ...}`（**根本没有 `parsed` 键**） | ✗ 说成"present 但 parsed=false" |
+
+   第二种恰恰是**操作员最容易犯的那个**（旗子值打错一个字母）。修法很小且必须成对做：
+   按 `present` 与 `parsed` 分两条消息，并给"路径不存在"补一条常驻用例——
+   现在树上只有 `test_refuses_an_unparsable_report` 覆盖第一种（它断的 `"读不出"` 对那一种是准确的），
+   第二种是**一条没有任何用例经过的分支**。这两处请搭下一片的必经重锚一起做，不要为一句文案单独跑一整个全量。
+7. **"整批不写"精确到面**：`write_evidence` 第一句是 `out_dir.mkdir(parents=True, exist_ok=True)`，
+   它在闸之前 ⇒ 被拒时**输出目录本身会被创建**，只是里面没有任何文件。
+   常驻用例与 §六 的现场演示断的都是"目录里文件清单为空"（`left == []`），这个强度是够的；
+   但 docstring 与 README 里"一个字节都不落盘"这句要读成"没有任何证据文件落盘"。
+   要把措辞也拧成绝对零副作用，就把 `mkdir` 挪到闸之后——那一行改动请搭下一片的必经重锚做，
+   别为它单独跑一整个全量。

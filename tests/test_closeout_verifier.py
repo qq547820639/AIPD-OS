@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "src"))
 
 import closeout_verifier as cov  # noqa: E402
+import release_fingerprint as rf  # noqa: E402
 
 TOOL = ROOT / "scripts" / "closeout_verifier.py"
 REPORT = ROOT / "docs" / "audit" / "pytest-report-v5.6.0.json"
@@ -358,6 +359,12 @@ def test_dropping_a_whole_resident_file_fires_only_the_roster(tmp_path: Path,
         src["summary"]["skipped"] = hist["skipped"]
     if hist.get("failed"):
         src["summary"]["failed"] = hist["failed"]
+    # 这条用例只该点亮名单那一格：磁盘清单在本轮重锚过，而 `REPORT` 是上一片绑定的那份，
+    # 两者内容摘要必然不同 ⇒ C11 会作为**无关的连带**开火（每个收口周期的"换绑窗口"都如此）。
+    # 把这个夹具的指纹盖成磁盘现值，让它回到"只测自己声称的那件事"。
+    disk_fp, fp_err = rf.fingerprint_from_file(ROOT / "SOURCE_MANIFEST.json")
+    assert not fp_err, fp_err
+    src["source_manifest_fingerprint"] = disk_fp
     report = tmp_path / "pytest-report.json"
     report.write_text(json.dumps(src, ensure_ascii=False), encoding="utf-8")
     prov = tmp_path / "PROVENANCE.json"
