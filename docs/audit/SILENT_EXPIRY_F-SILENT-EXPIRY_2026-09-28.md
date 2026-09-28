@@ -152,8 +152,29 @@
 
 （待两个复核件交回后填：每条含它的探针读数、我重开代码后的判定，以及是否升格为第 89 片条目。）
 
-## 十、终局读数
+## 十、终局读数（全部由 `docs/audit/s88/closeout88.sh` 现场产生）
 
-（绑定、发布门、收尾验签三步的退码与读数由 `docs/audit/s88/closeout88.sh` 现场产生，
-落盘在 `docs/audit/s88/gate.json`、`closeout.json`、`gate.log`、`closeout.log`；
-本节在拿到读数后按"命令 + 实际读数"的形状写，不写"已验证"三个字。）
+| 步 | 命令 | 实际读数 |
+| --- | --- | --- |
+| 0 | 脚本内 `PRECHECK` | `2697 passed / 5 skipped / collected 2702 / 676.8s / fp 9d912fcbf7d0`（报告锚点逐字 == `git rev-parse v5.6.0^{commit}` = `a66040520139405095648461f7144d4f00629924`；报告自记指纹与 `release_fingerprint.py SOURCE_MANIFEST.json` 同为 `9d912fcbf7d0…`） |
+| 1 | `release_evidence.py --source-commit --test-report`（一次绑定） | `BIND_RC=0`；回读 `source_commit=a66040520139 test_report=2697p/0f/2702t fp=9d912fcbf7d0`；提交 `5ac551c` |
+| 2 | `production_release_gate.py --release-ready --tag v5.6.0` | `GATE_RC=0`；`release_ready: True \| 未过: 无 \| 项数: 8` |
+| 3 | `closeout_verifier.py --tag v5.6.0 --expect-test ×2 --min-tests 2702` | `CV_RC=0`；11 格全绿：`report_bound_to_provenance`（报告 sha256 `7a6a10590bbe` 与 PROVENANCE 一致）、`counts_counted_from_roster`、`terminal_clean`、`roster_covers_tree`（树 218 文件 / 2608 个 def ↔ 报告 218 文件 / 2702 条，双向差集为空）、`pinned_source_binding`（`a660405…` 是 HEAD `ba51b7ff` 的祖先）、`content_parity_measured`（2 条清单哈希用例 passed）、`report_fingerprint_recorded`、`report_fingerprint_matches_disk`、`worktree_clean`、`plaintiffs_measured`（2 条本轮原告）、`size_ratchet`（2702 ≥ 2702） |
+| 4 | `git worktree remove --force .wt-s88` | `git worktree list` 只剩主树（当时 HEAD `7d294bd`），目录 `No such file or directory` |
+
+三条读数要单独说一句，否则容易被当成"绿就是绿"：
+
+- **`collected` 从 2692 涨到 2702 的加数账**：本片新增 6 个 `def test_`
+  （preflight 3、census 3），其中参数化那条把 1 个 def 摊成 5 个 case ⇒ 净 +10。
+  `--min-tests` 因此取**本轮现读的 2702**，而"必须严格大于上一轮下界 2692"这一步
+  写在脚本的 `PRECHECK` 里（`assert s["collected"] > prior`），不是靠我记住上一轮的数——
+  这样"本片新增用例根本没跑到"仍会红。
+- **跳过面没有缩**：本轮 5 条 skip 与上一轮那份**逐条相同**（两个方向的差集都为空），
+  所以 `FAIL=0` 这次确实意味着"同一覆盖面"，不是把某档换成了 skip。
+- **`environment` 那一格仍是 `{}`**：`pytest-json-report 1.5.0` 读 `config._metadata`
+  而 `pytest-metadata ≥3.0` 写 `config.stash`，所以这份报告的该键恒空（已知量具缺陷，
+  不在本片范围，已单独记在项目记忆）。绑定不消费它。
+
+回收后再复验一次（证明取证件没被回收动作带走）：命令与读数见 §十一，
+本节写在这里只为了给"回收前"的读数留位——§十一 的读数是**换树之后**重跑门与验签得到的，
+两节不许互换引用。
