@@ -951,6 +951,27 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.48 F-RECOMPUTE-ENTRYPOINTS 第 87 片：文档里的"复算入口"第一次有人判它落不落得了地**：
+  第 86 片收口时顺手清点 `tmp/` 的 16 个 worktree 登记，量出一个比"要不要清理"大得多的问题——
+  把 `docs/audit/*.md` + `CHANGELOG.md` + `README.md` 里所有 `tmp/sNN/...` 形态的路径片段
+  按整路径求差（144 个），**122 个**指向从没入库的工件：历轮的变异电池、探针脚本、`state.db`
+  写在宿主 `/tmp`，重启即没（第 63 片那把 `closeout_verifier` 的起因就是这件事，
+  但那只解决了"验签脚本"一种，没人管"复算入口"这一整类主张）。
+  本轮把这一类立成 `doc_command_census` 的判红面 ⑤：文档里 `<解释器> 路径.py|.sh` 的入口判五档
+  `tracked / untracked / dead / delegated / placeholder`——**"文件在本地但 `git ls-files` 不列它"
+  判红**（本轮自己就差点栽在这格：一份取证件写完没提交），绝对路径与仓库内不存在的算死链，
+  必须逐条写进 `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json` 并说明为什么不再可复算，
+  没登记就判红；登记册还双向对账（条目"现在又能解析了"或"再没被引用"都反向开火）。
+  上线前量的分母（不是抄的，现读）：命令形态 **107** 处 ⇒ 入库可解析 5 / 未入库 0 /
+  死链 18（全部已登记，去重 13 条）/ 占位模板 5 / 交给面 ④ 的 `scripts/…` 79。
+  **占位那一档是被自测逼出来的**：不写它，README 里描述面 ④ 的那行 `python scripts/X.py`
+  会让新尺一上线就咬自己。git 读不出的树（合成语料、无 `.git` 的镜像）自动退成"存在即合规"
+  并把 `git_unknown` 记进读数——不知道不折成违规。选型（引依赖／借语义／自研）与六维对比、
+  四臂反证、以及本轮**我自己的三个操作错误**（按基名压平覆盖 15 个已入库脚本、
+  拿 `Path.glob` 当跟踪面尺把"库内同件"读成恒无、回退时按未跟踪状态整片删而带走第一版摘要件）
+  逐条写在 `docs/audit/RECOMPUTE_ENTRYPOINTS_F-RECOMPUTE-ENTRYPOINTS_2026-09-28.md`；
+  顺带修掉两处陈旧镜像：本尺模块 docstring 从没写面 ④（第 85 片漏的），
+  以及它抄在文中的两份旧分母改成"由 `--json` 现读"。
 - **v5.47 F-ANCHOR-REQUIRED 第 86 片：`--source-commit` 从"记得给"变成"不给就拒"，关掉记忆里两次实测代价的第三条腿**：
   第 52 片与第 62 片各为同一个形状多跑一整个全量——少给锚点旗子**不当场报错**，
   `source_commit or _default_source_commit(repo)` 把它默认成当时的 HEAD，于是下一环

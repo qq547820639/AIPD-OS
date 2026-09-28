@@ -25,6 +25,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -548,3 +549,146 @@ def test_fourth_judging_face_is_live_in_the_real_repo() -> None:
     assert c["script_rows"] >= 4, c
     assert c["script_rows_judged"] >= 4, c
     assert c["script_rows_judged"] <= c["script_rows"], c
+
+
+# ---------------------------------------------------------------------------
+# 判红面 ⑤（第 87 片）：文档里 `<解释器> 路径.py|.sh` 形态的复算入口要能落地。
+# ---------------------------------------------------------------------------
+
+DEAD = "/tmp/zzz_unregistered_battery.py"
+
+
+def _git(tmp: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(tmp), *args], capture_output=True, check=True)
+
+
+def _seed_git(tmp: Path, track: list[str]) -> None:
+    _git(tmp, "init", "-q")
+    _git(tmp, "add", *track)
+    _git(tmp, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "seed")
+
+
+def test_dead_entrypoint_without_register_fires(tmp_path: Path, tmp_scope) -> None:
+    """必开火臂：让人跑一条绝对 /tmp 脚本、册上又没登记 ⇒ 「入口不可解析」。"""
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      code="# 参见 aipd usage 的说明\nVALUE = 1\n",
+                      prose=f"复算入口：`.venv/bin/python {DEAD}` 杀 9/9\n")
+    rep = census.audit(tree)
+    assert "入口不可解析" in fields(rep, DEAD), rep["violations"]
+    assert not rep["problems"], rep["problems"]      # 判红面三档都非空，否则退 2 不是退 4
+    assert census.main(["--repo", str(tree)]) == 4
+
+
+def test_register_is_load_bearing_for_the_same_line(tmp_path: Path, tmp_scope) -> None:
+    """同一行、同一判据，只多一本登记册 ⇒ 由红转只记。
+
+    先证它是红的再登记：豁免类判据最常见的退化是"名单其实没被消费"，
+    两趟同树读数才能把这条排除掉。
+    """
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      prose=f"复算入口：`python {DEAD}`\n")
+    assert "入口不可解析" in fields(census.audit(tree), DEAD)
+    reg = tree / census.ENTRY_REGISTER_REL
+    reg.parent.mkdir(parents=True, exist_ok=True)
+    reg.write_text(json.dumps({"entries": [{"path": DEAD, "note": "宿主 /tmp，已不可再生",
+                                           "cited_by": ["docs/audit/note.md:1"]}]},
+                              ensure_ascii=False), encoding="utf-8")
+    rep = census.audit(tree)
+    assert not fields(rep, DEAD), rep["violations"]
+    assert rep["corpus"]["entry_states"]["dead_registered"] == 1, rep["corpus"]
+
+
+def test_register_entry_that_resolved_again_or_is_uncited_fires(tmp_path: Path,
+                                                                tmp_scope) -> None:
+    """登记册要双向对账：条目"现在能解析了"与"再没被引用"各开一次火。"""
+    (tmp_path / "docs/audit/zzz").mkdir(parents=True)
+    (tmp_path / "docs/audit/zzz/live.sh").write_text("echo ok\n", encoding="utf-8")
+    write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+               prose="入口：bash docs/audit/zzz/live.sh\n")
+    reg = tmp_path / census.ENTRY_REGISTER_REL
+    reg.write_text(json.dumps({"entries": [
+        {"path": "docs/audit/zzz/live.sh", "note": "已入库，还挂在死链册上"},
+        {"path": "docs/audit/zzz/gone.sh", "note": "再没有任何文档引用"}]},
+        ensure_ascii=False), encoding="utf-8")
+    _seed_git(tmp_path, ["docs/audit/zzz/live.sh"])
+    rep = census.audit(tmp_path)
+    got = {v["written"]: v["detail"] for v in rep["violations"] if v["field"] == "登记册该撤"}
+    assert set(got) == {"docs/audit/zzz/live.sh", "docs/audit/zzz/gone.sh"}, rep["violations"]
+    assert "已入库" in got["docs/audit/zzz/live.sh"] or "能解析" in got["docs/audit/zzz/live.sh"]
+    assert "引用" in got["docs/audit/zzz/gone.sh"], got
+
+
+def test_untracked_entrypoint_fires_only_when_git_is_readable(tmp_path: Path,
+                                                              tmp_scope) -> None:
+    """「文件在本地但没入库」这一档：没有 git 时必须退成不判，而不是整片假红。"""
+    (tmp_path / "docs/audit/zzz").mkdir(parents=True)
+    (tmp_path / "docs/audit/zzz/lab.py").write_text("print(1)\n", encoding="utf-8")
+    write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+               prose="入口：python docs/audit/zzz/lab.py\n")
+    rep = census.audit(tmp_path)           # 还没有 .git ⇒ 读不出跟踪面
+    assert not any(v["field"] == "入口未入库" for v in rep["violations"]), rep["violations"]
+    assert rep["corpus"]["entry_states"].get("git_unknown") == 1, rep["corpus"]
+    _seed_git(tmp_path, ["README.md"])     # 提交一半：lab.py 仍未入库
+    rep2 = census.audit(tmp_path)
+    assert "入口未入库" in fields(rep2, "docs/audit/zzz/lab.py"), rep2["violations"]
+    assert not rep2["corpus"]["entry_states"].get("git_unknown"), rep2["corpus"]
+
+
+def test_placeholder_and_scripts_forms_are_counted_not_judged(tmp_path: Path,
+                                                              tmp_scope) -> None:
+    """模板写法与 `scripts/…` 各归一格：都不判红，但必须数得到（否则是漏判不是不判）。"""
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      prose="模板：python scripts/X.py\n已判面：python scripts/"
+                            "zzz_delegated_tool.py --zzz 1\n")
+    rep = census.audit(tree)
+    st = rep["corpus"]["entry_states"]
+    assert st["placeholder"] >= 1 and st["delegated"] >= 1, st
+    assert not any(v["field"].startswith("入口") for v in rep["violations"]
+                   if v["written"].startswith("scripts/")), rep["violations"]
+
+
+def test_real_repo_entry_face_is_live_and_every_dead_link_is_registered() -> None:
+    """真仓库侧：面 ⑤ 不是摆设，且现在 0 条未登记死链。"""
+    rep = census.audit(ROOT)
+    assert not rep["problems"], rep["problems"]
+    st = rep["corpus"]["entry_states"]
+    assert st["dead"] == st["dead_registered"] > 0, st
+    assert st["untracked"] == 0, st
+    assert st["tracked"] > 0 and st["delegated"] > 0 and st["placeholder"] > 0, st
+    assert not [v for v in rep["violations"]
+                if v["field"].startswith("入口") or v["field"] == "登记册该撤"], rep["violations"]
+    reg = json.loads((ROOT / census.ENTRY_REGISTER_REL).read_text(encoding="utf-8"))
+    assert len(reg["entries"]) >= 1, reg
+    for e in reg["entries"]:
+        assert e["note"], f"登记条目 {e['path']} 没写为什么不再可复算"
+        assert e["path"].startswith("/") or not (ROOT / e["path"]).exists(), e["path"]
+    # 独立分母（比判据宽：不看有没有解释器前缀）：登记册必须落在它的真子集里
+    loose: set[str] = set()
+    for d in [ROOT / "README.md", ROOT / "QUICKSTART.md", ROOT / "SKILL.md"] + \
+             sorted((ROOT / "docs").rglob("*.md")) + sorted((ROOT / "references").rglob("*.md")):
+        if d.is_file():
+            loose.update(re.findall(r"/tmp/[A-Za-z0-9_./-]+\.py", d.read_text(encoding="utf-8")))
+    registered = {e["path"] for e in reg["entries"]}
+    assert registered <= loose, sorted(registered - loose)
+    assert loose - registered, "登记册与宽口径分母相等 ⇒ 宽尺多半也没看见东西"
+    # 宽尺可见、判据没判的，只允许是"非命令形态的叙述引用"（本轮普查已登记为度量，不做门）
+    assert census.main(["--repo", str(ROOT)]) == 0
+
+
+def test_absolute_path_is_dead_even_when_that_file_exists(tmp_path: Path,
+                                                          tmp_scope) -> None:
+    """绝对路径那一支为什么不能省：`Path(root) / "/tmp/x.py"` 会把 root 丢掉，
+    于是"这台机器上恰好还有那个文件"会被读成可解析。判据必须按"干净签出"判，
+    所以绝对路径一律算死链——本用例就是那支的唯一反证（电池 X1 臂靠它翻红）。"""
+    outside = tmp_path / "abs"
+    outside.mkdir()
+    (outside / "battery.py").write_text("print(1)\n", encoding="utf-8")
+    written = f"{outside}/battery.py"
+    tree = write_tree(tmp_path, GOOD_README, GOOD_REGISTRY,
+                      code="# 参见 aipd usage 的说明\nVALUE = 1\n",
+                      prose=f"复算入口：python {written}\n")
+    assert outside.is_dir() and (outside / "battery.py").is_file()
+    rep = census.audit(tree)
+    assert "入口不可解析" in fields(rep, written), rep["violations"]
+    assert rep["corpus"]["entry_states"]["dead"] == 1, rep["corpus"]
+    assert not any(v["field"] == "入口未入库" for v in rep["violations"]), rep["violations"]

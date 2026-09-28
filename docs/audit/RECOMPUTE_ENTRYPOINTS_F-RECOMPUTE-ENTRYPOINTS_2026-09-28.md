@@ -1,0 +1,168 @@
+# F-RECOMPUTE-ENTRYPOINTS 第 87 片：文档里的"复算入口"第一次有人判它落不落得了地
+
+## 一、入口：一次 worktree 分诊量出的不是"要不要清理"，而是一整类主张
+
+第 86 片收口后清账，把 `docs/audit/*.md` + `CHANGELOG.md` + `README.md` 里所有
+`tmp/sNN/...` 形态的路径片段做一次精确求差（正则 `tmp/s[0-9]+[A-Za-z0-9_./-]*`，
+按整路径匹配而不是按基名——第一遍我按基名数，`__init__.py`/`out.md` 这类重名把读数撑歪）。
+读数写在 `docs/audit/WORKTREE_INVENTORY_2026-09-28.md` §六，摘三行：
+
+- 被引用的路径片段 **144** 个；磁盘上还在的 **5** 个，且这 5 个在仓库内都没有同名入库件；
+- **122** 个指向的工件从没入过库、内容确已不可再生（第 30—64 片把电池脚本、探针日志、
+  `state.db` 写在 `tmp/` 下；第 63 片那份验签脚本被宿主重启清掉是同一形状，
+  见 `docs/audit/CLOSEOUT_VERIFIER_F-CLOSEOUT-VERIFY_2026-09-27.md:4-5`）；
+- **6** 个是"文件没了但库内有同名件"——历轮自己迁过 `docs/audit/sNN/`，那是陈旧指针而不是内容丢失。
+
+所以真正的缺口不是"磁盘占了多少"，而是：**"复算入口"这一类主张从来没有一面尺子看着**。
+第 63 片造 `closeout_verifier` 只治了"验签脚本"那一种；文档正文里
+`python /tmp/s46/battery.py  # 电池（10 条）` 这种句子——它是给下一个读者用的操作说明——
+今天没人判它可不可执行。
+
+## 一之二、选型（本轮真正要拍的是：引依赖、借语义，还是自研）
+
+三个候选都是本轮**亲自打开**的来源，读数取自页面本身：
+
+| 候选 | 功能匹配度 | License | 维护活跃度 | 安全风险 | 代码质量 | 适配成本 |
+| --- | --- | --- | --- | --- | --- | --- |
+| **lychee**（`github.com/lycheeverse/lychee`，raw README 实读） | 检的是**链接**（http/文件 URL），相对链接按 `--base-url` 解析；不解析代码块里的 shell 命令 | 双许可 "Apache License, Version 2.0" 或 "MIT license"（README 原文） | README 给出 `--exclude`、`--exclude-path`、`.lycheeignore` 三个成形的排除面 | 外部二进制 + 网络探测，本仓取证链不需要出网 | Rust 单一 CLI，配置面稳定 | 本机 `which lychee` → **lychee not found**，要先装 Rust 二进制 |
+| **mdBook**（`rust-lang.github.io/mdBook/format/mdbook.html` 实读） | 唯一真正"跑文档里的例子"的先例：标记 `ignore` / `no_run` / `compile_fail`，`mdbook test` 编译但不执行 `no_run` | MPL（本项目不引依赖，未逐项核对——不影响判决） | mdBook 是 Rust 官方文档工具，长期维护 | 若真执行代码块，本仓的收口链会**再跑一次绑定/全量**，风险不可接受 | 成熟 | 文档不是 mdBook 目录结构（无 `SUMMARY.md`），要重排整个 `docs/` |
+| **markdown-link-check**（`github.com/tcort/markdown-link-check` 实读） | 配置项 `ignorePatterns` / `replacementPatterns` / `aliveStatusCodes`；页面自述**只检 markdown 链接**，不含代码块命令 | ISC | 以 npm 包分发 | Node 依赖树进入一个以"发布证据"为产品物的仓库 | 单一用途，实现薄 | 本机无 Node 侧门禁；CI 只装 Python |
+
+**择一决定：自研，借语义，不引依赖。** 理由两句：
+① 三者判的对象都不是我要判的东西——我要判的是「文档给人抄的那行命令，其路径在干净签出里存不存在」，
+链接器看不见它（它不是链接），mdBook 只在"真执行"的框架里看它（本仓一旦执行就会重跑绑定）；
+② 关键谓词 `git ls-files`（"文件在本地但没入库"）是版本库状态，三个外部工具都没有这个概念。
+借来的两样落到实现里：lychee 的"豁免是一份**显式配置文件**而不是行内注释"
+（→ `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json`，面 ⑤ 只认这本册子）、
+mdBook 的"不跑要**标出来**"（→ `placeholder` / `delegated` 两档只数不判，并在读数里点名），
+`markdown-link-check` 的 `projectBase`（→ 解析根只有仓库根，不跟着 `cwd` 漂）。
+
+## 二、判据形状：五档归属，其中两档是"刻意不判"
+
+`scripts/doc_command_census.py` 的面 ⑤（函数 `entry_points` / `entry_corpus` / `load_entry_register`）：
+
+| 档 | 含义 | 判决 |
+| --- | --- | --- |
+| `tracked` | 路径在仓库内且 `git ls-files` 列它 | 合规 |
+| `untracked` | 在仓库内、磁盘上就在，但没入库 | **判红**「入口未入库」 |
+| `dead` | 绝对路径，或仓库内不存在 | 在册则只记；不在册 **判红**「入口不可解析」 |
+| `delegated` | `scripts/…` | 只数不判——存在性与旗子归第 85 片的面 ④ |
+| `placeholder` | `scripts/X.py`、`sNN`、`..`、尖括号、通配、`${}` | 只数不判 |
+
+三条不那么显然的：
+
+1. **绝对路径必须无条件算死链**。`Path(root) / "/tmp/x.py"` 在 pathlib 里会丢掉 `root`，
+   于是"这台机器 `/tmp` 恰好还留着那个文件"会被读成可解析——判据要按**干净签出**说话。
+   这一支第一版没有任何用例能证明它在做事（见 §五 X1 臂）。
+2. **`git ls-files` 读不出时退成"存在即合规"并记 `git_unknown`**，不记 problem。
+   写成 problem 会让合成语料与无 `.git` 的镜像整片 rc=2；把"不知道"折成违规或折成通过都错。
+3. **`scripts/…` 交出去**：同一缺陷在两处各记一笔红会把"还剩几处"读歪
+   （第 85 片那面已经把 `scripts/zzz_missing_tool.py` 判成「脚本缺失」了）。
+
+登记册要**双向**对账：只核"引用的都在册"看不见"在册但已无用"。
+两个反向判决各一条：条目现在处处可解析（文件已入库）⇒「该撤」；条目再没被任何文档引用 ⇒「该撤」。
+
+## 三、立条前先量分母（这一格不是橡皮章，也不是自我伤害）
+
+真仓库现读（`python scripts/doc_command_census.py`）：
+
+```
+判红面 ⑤（复算入口）：命令形态 107 处 ⇒ 入库可解析 5 / 未入库 0 / 死链 18（其中已登记 18）/ 占位不判 5；登记册 13 条
+```
+
+- **死链 18 处 / 去重 13 条**，全部是 `/tmp/…battery.py`、`/tmp/mutate_*.py` 这类
+  历轮写在宿主 `/tmp` 的电池与探针 ⇒ 若不先量就直接上线，新尺第一跑就报 18 条红，
+  而这些**修不了**（内容已不可再生）——只能逐条登记并写明"为什么不再可复算"。
+- **占位 5 处**里就有 README 描述面 ④ 的那行 `python scripts/X.py`。
+  这一档是被自测逼出来的：第一版没写免判分支时，`--self-test` 立刻把
+  "描述判据自己的写法"读成缺陷。**新尺必须先证明它不咬自己的说明书。**
+- 登记后真仓库 rc=**0**（未登记死链 0 条，`登记册该撤` 0 条）。
+
+## 四、自测与常驻的两极
+
+- `--self-test` 的运行时标记从 **9** 条加到 **14** 条（`git show HEAD:… | --self-test` 现读的 9，
+  与本版 14 各跑一次；新增 5 条都是面 ⑤ 的）——
+  六格归属各落一位、端到端"未入库开火／未登记死链开火／已登记的不开火／两条『该撤』各按自己的理由开火／
+  `scripts/` 不重复判"、分母自证（四档之和 == 入口总读数，登记的另记一格）、
+  `git` 读不出时降级、没有登记册＝空册即全判红。
+  合成语料里的 `git init` + 只提交一半是**真跑 `git ls-files`**，不是测试注入的集合。
+- 常驻用例 `tests/test_doc_command_census.py` 从 23 条加到 **30** 条（+7）：
+  `test_dead_entrypoint_without_register_fires`（必开火）、
+  `test_register_is_load_bearing_for_the_same_line`（同树两趟：先证红，再登记，证它承重）、
+  `test_register_entry_that_resolved_again_or_is_uncited_fires`（两条「该撤」各有理由）、
+  `test_untracked_entrypoint_fires_only_when_git_is_readable`（降级与开火两极）、
+  `test_placeholder_and_scripts_forms_are_counted_not_judged`、
+  `test_absolute_path_is_dead_even_when_that_file_exists`（X1 的唯一反证）、
+  `test_real_repo_entry_face_is_live_and_every_dead_link_is_registered`（真仓库：`dead == dead_registered > 0`、
+  0 条未登记、每条登记都写了 note 且确实不可解析，外加一把**比判据更宽的独立尺**
+  ——不看有没有解释器前缀的 `/tmp/*.py` 全文匹配——要求登记册落在它的真子集里且真子集非空）。
+
+## 五、电池：7 臂，其中一臂第一版真的没牙
+
+`docs/audit/s87/battery87.py`（每臂锚点唯一、变异后可编译的体检先跑；落地证明用 sha；归因打用例名）：
+
+```
+原文件 sha=2a43da69dd24
+[CONTROL OK] X0 原样全绿
+[KILLED]   X1-absolute-not-dead（绝对路径不再算死链）被抓住：tests/test_doc_command_census.py::test_absolute_path_is_dead_even_when_that_file_exists
+[KILLED]   X2-register-not-consumed（登记册不再被消费（豁免成空转））被抓住：…self_test…; …real_repo_clean…
+[KILLED]   X3-no-stale-register-check（登记册单向：撤掉「该撤」那一半）被抓住：…self_test…; …register_entry_that_resolved…
+[KILLED]   X4-placeholder-check-dropped（模板形态不再免判）被抓住：…self_test…; …placeholder_and_scripts_forms…
+[KILLED]   X5-untracked-not-judged（「没入库」这一档被撤）被抓住：…self_test…; …untracked_entrypoint_fires…
+[KILLED]   X6-git-unknown-becomes-guilty（git 读不出时折成违规）被抓住：…self_test…; …untracked_entrypoint_fires…
+[KILLED]   X7-scripts-delegated-dropped（`scripts/…` 又回到两处各记一笔红）被抓住：…self_test…; …script_rows_fire…
+合计 KILLED 7 / 7；其余按判决分类：无
+收尾复算 sha=2a43da69dd24（应等于 2a43da69dd24）
+```
+
+**X1 第一版是 SURVIVED**，而且这不是"测试没写好"那么简单：撤掉那三支 `if path.startswith("/")`
+后判决**不变**，因为 pathlib 的 `/` 组合会把绝对路径顶掉根，而夹具里的 `/tmp/zzz_*.py`
+本来就不存在，两条路径都落进 `dead`。也就是说这支臂测的是一台"`/tmp` 里还留着那个文件"的机器，
+而我的夹具里没有那种机器。补的 fixture 是**在 tmp 目录下真造一个文件**再用它的绝对路径引用，
+于是"存在即合规（错）"与"绝对路径一律死链（对）"第一次在行为上分叉，X1 才由存活转成被杀。
+这与第 84 片记过的"注入必须落在守卫的时钟框里"是同一类：变异臂开不开火取决于夹具能不能造出那条分支的存在条件。
+
+## 六、本轮我自己的三个操作错误（现场留在原处，不在这里粉饰）
+
+见 `docs/audit/WORKTREE_INVENTORY_2026-09-28.md` §六末尾：
+① 抢救 `tmp/` 取证件时按基名压平目的位且没比 `git ls-files`，覆盖 15 个已入库脚本；
+② 拿 `Path.glob("docs/audit/**/<基名>")` 当"是否已入库"的尺，把"6 个有同名件"读成"一个都没有"；
+③ 回退时按 `git status` 的未跟踪状态整片删，连带删掉刚写的摘要件（源已回收，只能重建窄一点的版本）。
+面 ⑤ 的 `untracked` 那一档正是②③的可执行版本：以后写完取证件没提交，尺子会自己说。
+
+## 七、镜像清单（本轮实际改到的每一处）
+
+| 位置 | 改了什么 |
+| --- | --- |
+| `scripts/doc_command_census.py` | 面 ⑤ 的四个函数、`audit()` 接线与 `entry_states` 读数、`render()` 三行判决文案、`--emit-register` |
+| `scripts/doc_command_census.py` 模块 docstring | 补上第 85 片漏写的面 ④，新增面 ⑤ 段；把两处**抄在文中的旧分母**（"88 条路径"、"1389/1012/73%"）改成"由 `--json` 现读"并标所属轮次 |
+| `tests/test_doc_command_census.py` | +7 条常驻用例（含一把比判据宽的独立尺）；补 `import re` |
+| `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json` | 新建，13 条死链逐条带 `cited_by` 与 note |
+| `README.md` | 量具目录里 `doc_command_census` 那块加面 ⑤ 的说明与分母口径 |
+| `CHANGELOG.md` | v5.48 条目 |
+| `docs/audit/s87/battery87.py` + `battery87.log` | 电池与执行读数（`.log` 被 `.gitignore` 第 43 行挡着 ⇒ 入库要 `git add -f`） |
+| 项目记忆 `project-aipd-command-surface-mirrors.md` | 第 87 片入口项闭合、复算入口普查读数 |
+
+## 八、遗留（开着，不在本轮顺手做）
+
+1. **叙述型指针不做门**：`tmp/sNN/final`、`docs/audit/…` 这类**没带解释器前缀**的路径主张
+   （本轮普查里 122 处那一批）不在面 ⑤ 的语料里。要判它们得再加一档"文本里点名的文件路径
+   必须可解析或登记"，而 `docs/audit/*.md` 里合法的历史叙述远多于可执行入口——
+   第 85 片量过的"宽判据 40 处假阳性"是同一种形状，先量再说。
+2. **登记册的 note 目前是同一句话**：逐条写"为什么不再可复算"更值钱，但那是 13 段历史叙述，
+   本轮只保证每条非空（常驻用例钉了这一点）。
+3. **`--emit-register` 不做幂等合并**：它整体覆盖目标文件，重跑会丢掉人工写的 note。
+   本轮用法是"先生成草案、再由人填 note"，没打算让它长期当同步器；要做成增量合并得先定
+   键与冲突语义（同一 path 被不同文档引用多次时的取舍）。
+4. **面 ⑤ 的语料只有 `.md`**：`QUICKREF_DIRS` 里的 `.rst`/`.txt` 与 `templates/` 没进
+   `ENTRY_DIRS`。今天没有那种写法，所以登记不建档。
+
+## 九、复算入口
+
+```bash
+cd AIPD-OS
+.venv/bin/python scripts/doc_command_census.py                      # rc 0；看"判红面 ⑤"那一行
+.venv/bin/python scripts/doc_command_census.py --self-test          # 14 条标记
+PYTHONPATH=$PWD/src .venv/bin/python -m pytest -q tests/test_doc_command_census.py
+.venv/bin/python docs/audit/s87/battery87.py                        # 7/7 KILLED
+```

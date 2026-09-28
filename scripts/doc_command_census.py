@@ -8,13 +8,14 @@
 权威面（本轮实测决定的，不是抄来的）：
 - **不是** `COMMAND_FUNCS`。`aipd usage` 在派发表里查不到，却能跑（`cli/main.py:33` 注册 subparser、
   `_cmd_usage` 处理，实测 `main(["usage"])` 退 0 并打出命令清单）；
-- 权威面是 `build_parser()` 走出来的 **argparse 声明树**（实测 88 条路径），
+- 权威面是 `build_parser()` 走出来的 **argparse 声明树**（条数由 `--json` 的
+  `authority_paths` 现读，本文不抄），
   `COMMAND_FUNCS` 是它的真子集（「派发表有而 parser 没有」为空）。CLI 契约里 10 条
   `deprecated` 别名**不再并进权威面**——第 60 片电池实测那是死代码（它们全部还注册在树上），
   改成一条活的前置：契约声称存在的命令必须还在树上（`alias_unregistered`）。
 
 判据分两档，分档理由是本轮量过的假阳性面：
-- **判红面（现状面）**＝这三处，语义都是"照着跑/这是真命令"，不存在
+- **判红面（现状面）**＝下面编号 ①②②b③④⑤ 这几处（第 87 片加了 ⑤），语义都是"照着跑/这是真命令"，不存在
   "合法地指向一条不存在的命令"的用法：
   ① 登记表 `run_command` 字段里以 `aipd` 开头的每一段（AST 读常量，不靠 ±N 行窗口）；
   ② 文档里**行首**形如 `aipd …` 的可执行速查行（README / SKILL / QUICKSTART /
@@ -36,6 +37,17 @@
      分母**不在本文抄**（抄一份就会漂——本轮就抓到自己的 docstring 抄了一份更早范围的读数）：
      现算值看 `--json` 的 `corpus.code_mentions / code_negated`，两个键非空由常驻用例
      `test_real_repo_clean_and_all_three_judging_faces_live` 钉下界。
+  ④ 文档里**行首**的 `python scripts/X.py …`（第 85 片）：脚本必须存在，且行内 `--旗子`
+     必须在它自己的 argparse 声明里（AST 读，不跑 `--help`——拿执行结果当权威就是把待证的
+     东西当用了）。旗子集合静态不封闭（`add_argument(*NAMES)`）的脚本**不判**，
+     只进 `corpus.script_rows_unbounded`。立档前量过真语料，并当场抓出 1 处真缺陷
+     （`references/cad-runtime-acceptance.md` 的 `--require-cad`，脚本只认 `--require-any-cad`）。
+  ⑤ 文档里 `<解释器> 路径.py|.sh` 形态的**复算入口**（第 87 片）：五档归属
+     `tracked / untracked / dead / delegated / placeholder`，前两档之外的死链必须出现在
+     `docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json`，否则判红；登记册还要双向对账
+     （条目"现在能解析了"或"再没被引用"都算「登记册该撤」）。语料含 `docs/audit/`——
+     历轮取证文档的复算入口小节就是案发现场，排除它判据就只剩象征意义。
+     `scripts/…` 交给面 ④，这里只数不判（一个缺陷记两笔红会把半径读歪）。
 - **只报面**＝其余一切正文里的 `aipd` 提及。它必须只报不红，因为正文会**合法地**提到
   不存在的命令：第 60 片实测的两处原件——registry 的限制句「没有 `aipd ctq list`」
   （第 62 片已把它接成主线命令）与 CHANGELOG/取证文档里我引用来记错的
@@ -57,7 +69,8 @@
   真仓库的历史读数与逐档撤销的对照表在
   `docs/audit/DOC_COMMAND_CENSUS_F-DOC-CMD_2026-09-27.md` §九。
 
-第 75 片把只报面拆成两桶（占比是现读的：全量扫描 1389 处提及里 1012 处、即 73% 属于记录面）：
+第 75 片把只报面拆成两桶（**当时**的读数是：全量扫描 1389 处提及里 1012 处、即 73% 属于记录面；
+今天的对应键是 `corpus.report_total_mentions / report_record_mentions`，别在这里抄数）：
 ``live`` = 现在还有人在照它敲的文本（src / scripts / templates / docs/architecture / .github / …），
 ``record`` = 记当时事实的文本（``CHANGELOG.md``、``docs/audit/``、``tests/``、``.trae/``）。
 **可行动清单（``report_only_unmatched``）只从 live 出**——拆之前那张名单长期被"当初为什么这么判"
@@ -77,6 +90,7 @@ import ast
 import difflib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -120,7 +134,7 @@ REPORT_ONLY_DIRS = ("docs", "src", "tests", "scripts", "state_service", "templat
 # 只报面再分两半（第 75 片，占比是现读的，不是猜的）：
 #   live   = 现在还有人在照它敲的地方（src / scripts / templates / docs/architecture / …）
 #   record = 记当时事实的文本（`CHANGELOG.md`、`docs/audit/`、`tests/`、`.trae/`）
-# 实测本仓：全量扫描 1389 处提及里，docs/audit 820 + tests 65 + .trae 46 + CHANGELOG 81
+# 第 75 片实测本仓：全量扫描 1389 处提及里，docs/audit 820 + tests 65 + .trae 46 + CHANGELOG 81
 # = **1012 处（73%）**落在 record。把它们和 live 混在一个"只报面 1059 处"里，
 # 结果就是可行动清单（未命中名）长期被"当初为什么这么判"的记录与测试里的**故意幻影名**占满
 # ——`aipd ctq zzz-listy` 那类名字本来就是为了让判据开火才写的。
@@ -387,6 +401,144 @@ def script_rows(root: Path) -> tuple[list[tuple[str, int, str, list[str]]],
     return out, unbounded, problems
 
 
+ENTRY_INTERP = r"(?:\.venv/bin/python|python3?|bash|sh|zsh)"
+# 前缀用"否定型 lookbehind"而不是固定字符类：中文文档里这条常写成
+# 「复算入口：bash x.sh」「跑 `python foo.py`」，只列 ASCII 空白/反引号/竖线会把
+# 全角冒号后面的那些整批漏掉——一种拼写≠全部形态（第 78 片记过的文本面病）。
+ENTRY_LINE_RE = re.compile(r"(?<![A-Za-z0-9_./-])" + ENTRY_INTERP +
+                           r"\s+([A-Za-z0-9_./-]+\.(?:py|sh))\b")
+# 模板/区间/变量形态不是"给人照抄的具体命令"：写了 X.py、sNN、`..`、尖括号、通配、
+# `${VAR}` 的都走**不判**，单列读数。第 85 片量分母时 README:508 那行
+# `python scripts/X.py` 就是这种形状——把它判红等于让尺子咬自己：
+# 那一行正是在描述本判据的占位写法。
+ENTRY_PLACEHOLDER_RE = re.compile(r"(?:X\.(?:py|sh)$|NN|\.\.|…|[<>{}*]|\$\{|s\d+\.\.s)")
+ENTRY_FILES = ("README.md", "SKILL.md", "QUICKSTART.md")
+ENTRY_DIRS = ("docs", "references")
+ENTRY_REGISTER_REL = "docs/audit/RECOMPUTE_ENTRYPOINT_REGISTER.json"
+
+
+def entry_corpus(root: Path) -> tuple[list[tuple[str, list[str]]], list[str]]:
+    """面 ⑤ 的语料：入口清单 + `docs/**` + `references/**` 的 `.md`。
+
+    与 `quickref_corpus` 唯一的差别是这里**必须含 `docs/audit/`**：
+    历轮取证文档的「复算入口」小节就是死链集中地（本轮实测 122 处引用指向
+    从没入库的 `tmp/` 工件），把案发现场排除在外，判据就只剩象征意义。
+    """
+    files: list[tuple[str, list[str]]] = []
+    problems: list[str] = []
+    for rel in ENTRY_FILES:
+        p = root / rel
+        if not p.is_file():
+            continue
+        try:
+            files.append((rel, p.read_text(encoding="utf-8").splitlines()))
+        except (OSError, UnicodeDecodeError) as exc:
+            problems.append(f"entry_corpus_unreadable: {rel} 读不出：{exc}")
+    for d in ENTRY_DIRS:
+        base = root / d
+        if not base.is_dir():
+            continue
+        for p in sorted(base.rglob("*.md")):
+            try:
+                files.append((p.relative_to(root).as_posix(),
+                              p.read_text(encoding="utf-8").splitlines()))
+            except (OSError, UnicodeDecodeError) as exc:
+                problems.append(f"entry_corpus_unreadable: {p} 读不出：{exc}")
+    return files, problems
+
+
+def tracked_paths(root: Path) -> tuple[set[str] | None, str]:
+    """`git ls-files` 的跟踪面。返回 None 表示"这不是 git 仓库/读不出"——
+    那是**不知道**，不能折成"未入库"，否则合成语料与镜像仓会整片假红。"""
+    try:
+        proc = subprocess.run(["git", "-C", str(root), "ls-files"],
+                              capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return None, f"git 读不出：{exc}"
+    if proc.returncode != 0:
+        return None, f"git ls-files rc={proc.returncode}"
+    return {one for one in proc.stdout.splitlines() if one}, ""
+
+
+def load_entry_register(root: Path) -> tuple[dict[str, str], list[str]]:
+    """死链登记册：`{"path": note}`。文件不存在＝一本空册，
+    于是所有不可解析入口都判红——grandfather 必须靠显式登记，不靠"反正没人管"。"""
+    p = root / ENTRY_REGISTER_REL
+    if not p.is_file():
+        return {}, []
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return {}, [f"entry_register_unparsable: {ENTRY_REGISTER_REL} 读不出：{exc}"]
+    out: dict[str, str] = {}
+    problems: list[str] = []
+    for e in doc.get("entries", []):
+        path = str(e.get("path") or "")
+        if not path:
+            problems.append("entry_register_entry_without_path: 登记册有条目没有 path")
+            continue
+        if path in out:
+            problems.append(f"entry_register_duplicate: {path!r} 登记了两次")
+        out[path] = str(e.get("note") or "")
+    return out, problems
+
+
+def entry_points(root: Path,
+                 tracked_override: set[str] | None = None,
+                 ) -> tuple[list[tuple[str, int, str, str]], bool, list[str]]:
+    """判红面 ⑤（第 87 片）：文档里 `<解释器> <路径>.py|.sh` 形态的复算入口要能落地。
+
+    五种归属：
+      tracked     —— 路径在仓库内且已入库 ⇒ 合规；
+      untracked   —— 路径在仓库内、磁盘上就在，但 `git ls-files` 里没有 ⇒
+                     **只有这台机器跑得动**（本轮就犯过一次：取证件写完没提交）；
+      dead        —— 绝对路径（`/tmp/...`）或仓库内不存在 ⇒ 干净签出跑不了，
+                     除非在登记册里挂着；
+      delegated   —— `scripts/…`，那一批的存在性由判红面 ④ 负责，这里只数不判；
+      placeholder —— 模板形态，不判，只数。
+
+    分母由本轮实测得到：命令形态引用 104 处 / 其中占位 5 处 /
+    真死链 18 处（全是 `/tmp/…battery.py` 这类历轮写在宿主 /tmp 的电池脚本）/
+    其余可解析。没有这个数就不上线，是第 85 片"先量再立"的同一条纪律。
+    """
+    files, problems = entry_corpus(root)
+    if tracked_override is not None:
+        tracked = tracked_override
+    else:
+        tracked, _git_err = tracked_paths(root)
+    rows: list[tuple[str, int, str, str]] = []
+    for rel, lines in files:
+        for no, line in enumerate(lines, 1):
+            for m in ENTRY_LINE_RE.finditer(line):
+                path = m.group(1)
+                if ENTRY_PLACEHOLDER_RE.search(path):
+                    rows.append((rel, no, path, "placeholder"))
+                    continue
+                if path.startswith("scripts/"):
+                    # `scripts/X.py` 的存在性与旗子封闭性已由判红面 ④ 负责（第 85 片）。
+                    # 这里再判一次不会多抓一个缺陷，只会把一个缺陷记成两笔红——
+                    # 面 ⑤ 的对象是**仓库里没人管过的那一批**入口：docs/、references/、
+                    # 历轮 lab 脚本，以及任何绝对路径。
+                    rows.append((rel, no, path, "delegated"))
+                    continue
+                if path.startswith("/"):
+                    rows.append((rel, no, path, "dead"))
+                    continue
+                inside = root / path
+                if not inside.exists():
+                    rows.append((rel, no, path, "dead"))
+                    continue
+                if tracked is None:
+                    rows.append((rel, no, path, "tracked"))
+                    continue
+                rows.append((rel, no, path,
+                             "tracked" if path in tracked else "untracked"))
+    # git 读不出时**不记 problem**：那会把合成语料与无 git 的镜像仓一律打成 rc=2。
+    # 未入库那一档在这种树上自然为空（tracked is None ⇒ 按存在即合规），
+    # 读数里用 git_unknown 明说"这一档本轮没判"，而不是假装判过。
+    return rows, (tracked is None), problems
+
+
 def production_code_mentions(root: Path) -> tuple[list[tuple[str, int, str]],
                                                   list[tuple[str, int, str]],
                                                   list[str]]:
@@ -506,6 +658,44 @@ def audit(root: Path) -> dict[str, Any]:
                           f"{' '.join(sorted(decl)) or '（一个都没有）'}"
                           + (f"；近形候选 {' '.join(near)}" if near else ""))
 
+    # 判红面 ⑤（第 87 片）：文档里 `<解释器> 路径.py|.sh` 形态的复算入口，
+    # 要么在仓库内且已入库，要么在死链登记册里挂着。登记册缺失＝一本空册，
+    # 于是所有死链都判红：grandfather 要显式登记，不靠"反正没人管"。
+    erows, egit_unknown, p7 = entry_points(root)
+    ereg, p8 = load_entry_register(root)
+    problems += p7 + p8
+    e_counts = {"tracked": 0, "untracked": 0, "dead": 0, "placeholder": 0,
+                "delegated": 0, "dead_registered": 0}
+    for rel, no, path, state in erows:
+        e_counts[state] += 1
+        if state == "untracked":
+            key = ("入口未入库", rel, no, path)
+            judged.append(key)
+            extra[key] = ("文件在这台机器上，但 `git ls-files` 不列它 ⇒ "
+                          "干净签出里这条入口跑不了（取证件要提交）")
+        elif state == "dead":
+            if path in ereg:
+                e_counts["dead_registered"] += 1
+                continue
+            key = ("入口不可解析", rel, no, path)
+            judged.append(key)
+            extra[key] = (("绝对路径在任何签出里都不可解析" if path.startswith("/")
+                           else "仓库内没有这个文件") + "，且没进死链登记册")
+    # 登记册要双向对账：只核"引用的都在册"会看不见"在册但已无用"的那一半。
+    reg_stale: list[tuple[str, str]] = []
+    for path, _note in sorted(ereg.items()):
+        states = [s for _r, _n, p, s in erows if p == path]
+        if not states:
+            reg_stale.append((path, "再没有任何文档引用它 ⇒ 撤登记"))
+        elif all(s == "tracked" for s in states):
+            reg_stale.append((path, "现在处处都能解析（文件已入库）⇒ 该从死链册撤"))
+    for path, why in reg_stale:
+        key = ("登记册该撤", ENTRY_REGISTER_REL, 0, path)
+        judged.append(key)
+        extra[key] = why
+    if egit_unknown:
+        e_counts["git_unknown"] = 1
+
     # 只报面 = 全量扫描里**未被按名判过**的提及，再补上"代码里带否定标记"那批中
     # 尚未被全量扫描覆盖的（今天 `CODE_DIRS ⊂ REPORT_ONLY_DIRS` 都含 src，五条全已被覆盖 ⇒
     # 补集为空；第 60 片写成 `+ code_neg` 是把它们数了两遍，report_only 因此恒多 5）。
@@ -563,7 +753,10 @@ def audit(root: Path) -> dict[str, Any]:
                    "report_only_mentions": len(live_rows),
                    "report_record_mentions": len(record_rows),
                    "report_total_mentions": len(report_rows),
-                   "report_record_dirs": record_dirs},
+                   "report_record_dirs": record_dirs,
+                   "entry_points": len(erows), "entry_states": e_counts,
+                   "entry_register_size": len(ereg),
+                   "entry_register_stale": [p for p, _w in reg_stale]},
         "report_record_unmatched": [{"doc": d, "line": n, "written": w}
                                     for d, n, w in record_bad],
         "violations": [{"field": f, "doc": d, "line": n, "written": w,
@@ -589,6 +782,15 @@ def render(rep: dict[str, Any]) -> str:
                  f"（判 {c['script_rows_judged']} 行，"
                  f"{len(c['script_rows_unbounded'])} 行因旗子集合静态不封闭而不判："
                  f"{', '.join(c['script_rows_unbounded']) or '无'}）")
+    es = c["entry_states"]
+    lines.append(f"判红面 ⑤（复算入口）：命令形态 {c['entry_points']} 处 ⇒ "
+                 f"入库可解析 {es['tracked']} / 未入库 {es['untracked']} / "
+                 f"死链 {es['dead']}（其中已登记 {es['dead_registered']}）/ "
+                 f"占位不判 {es['placeholder']}；登记册 {c['entry_register_size']} 条"
+                 + (f"，其中该撤 {len(c['entry_register_stale'])} 条"
+                    if c["entry_register_stale"] else "")
+                 + ("；注意：`git ls-files` 读不出 ⇒ 未入库那档本轮不判"
+                    if es.get("git_unknown") else ""))
     lines.append(f"只报面（live，可行动）{c['report_only_mentions']} 处；"
                  f"记录性引述（只数不列名）{c['report_record_mentions']} 处 "
                  f"{c['report_record_dirs']}；全量扫描 {c['prose_mentions']} 处，"
@@ -603,6 +805,21 @@ def render(rep: dict[str, Any]) -> str:
         if v["field"] == "脚本缺失":
             lines.append(f"  ✗ 脚本缺失 {v['doc']}:{v['line']} 点名 `{v['written']}`"
                          " ⇒ 仓库里没有这个脚本，那行不可执行")
+            continue
+        if v["field"] == "入口未入库":
+            lines.append(f"  ✗ 入口未入库 {v['doc']}:{v['line']} 让人跑 `{v['written']}`"
+                         " ⇒ 文件在本地但没入库，干净签出拿不到它"
+                         + (f"（{v.get('detail', '')}）" if v.get("detail") else ""))
+            continue
+        if v["field"] == "入口不可解析":
+            lines.append(f"  ✗ 入口不可解析 {v['doc']}:{v['line']} 让人跑 `{v['written']}`"
+                         " ⇒ 这条复算入口已经跑不动了：要么把工件迁进 `docs/audit/sNN/` 并入库，"
+                         "要么写进死链登记册并说明它为什么不再可复算"
+                         + (f"（{v.get('detail', '')}）" if v.get("detail") else ""))
+            continue
+        if v["field"] == "登记册该撤":
+            lines.append(f"  ✗ 登记册该撤 {v['written']}（登记册自己的格，不指文档行）"
+                         f" ⇒ {v.get('detail', '')}")
             continue
         if v["field"] == "续行":
             lines.append(f"  ✗ {v['field']} {v['doc']}:{v['line']} 以 `\\` 收尾，而下一行是"
@@ -754,8 +971,109 @@ def _self_test(tmp: Path) -> int:
                                                         encoding="utf-8")
     assert main(["--repo", str(empty)]) == 2, "判红面为空必须判前提不成立"
     _mark(marks, "空语料读成「前提不成立」（退 2），不是「零违规」")
+
+    # ---- 判红面 ⑤（第 87 片）：复算入口可解析性 ----
+    e = tmp / "entry"
+    (e / "docs/audit/zzz").mkdir(parents=True)
+    (e / "docs/audit/zzz/live.sh").write_text("echo ok\n", encoding="utf-8")
+    (e / "docs/audit/zzz/loose.py").write_text("print(1)\n", encoding="utf-8")
+    (e / "docs/audit/zzz/doc.md").write_text(
+        "入口 A：bash docs/audit/zzz/live.sh\n"
+        "入口 B：python docs/audit/zzz/loose.py\n"
+        "入口 C：python /tmp/zzz_dead_battery.py\n"
+        "入口 D：bash tmp/zzz_outside.sh\n"
+        "入口 E：python scripts/X.py\n"
+        "入口 F：python scripts/zzz_missing_tool.py --zzz 1\n", encoding="utf-8")
+    reg = e / ENTRY_REGISTER_REL
+    reg.parent.mkdir(parents=True, exist_ok=True)
+    reg.write_text(json.dumps({"entries": [
+        {"path": "/tmp/zzz_dead_battery.py", "note": "历轮电池，写在宿主 /tmp，已不可再生"},
+        {"path": "docs/audit/zzz/live.sh", "note": "这条其实早就入库了——专打「该撤」那一档"},
+        {"path": "docs/audit/zzz/never_cited.sh", "note": "再没被任何文档引用——另一档「该撤」"},
+    ]}, ensure_ascii=False), encoding="utf-8")
+    # 真 git 仓库：未入库那一档必须由 `git ls-files` 说，不是由测试注入
+    for git_args in (["init", "-q"], ["add", "docs/audit/zzz/live.sh"],
+                     ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "seed"]):
+        subprocess.run(["git", "-C", str(e), *git_args], capture_output=True, check=True)
+    assert tracked_paths(e)[0] == {"docs/audit/zzz/live.sh"}, tracked_paths(e)
+    rows, git_unknown, ep = entry_points(e, tracked_override={"docs/audit/zzz/live.sh"})
+    state = {p: s for _r, _n, p, s in rows}
+    assert git_unknown is False and not ep, (git_unknown, ep)
+    assert state == {"docs/audit/zzz/live.sh": "tracked",
+                     "docs/audit/zzz/loose.py": "untracked",
+                     "/tmp/zzz_dead_battery.py": "dead",
+                     "tmp/zzz_outside.sh": "dead",
+                     "scripts/X.py": "placeholder",
+                     "scripts/zzz_missing_tool.py": "delegated"}, state
+    _mark(marks, "面 ⑤ 六格归属各自落位：入库/未入库/两种死链/占位不判/scripts 交给面 ④")
+    ereg, rp = load_entry_register(e)
+    assert not rp and set(ereg) == {"/tmp/zzz_dead_battery.py", "docs/audit/zzz/live.sh",
+                                    "docs/audit/zzz/never_cited.sh"}, (ereg, rp)
+    # 「已能解析还挂着」与「再没被引用」两半都由 audit() 自己判，下面端到端断言；
+    # 这里不再在测试里重抄一遍筛选逻辑——抄一份只会证明两份抄得一致。
+    # 端到端：audit() 在真登记册下的判决集合
+    rep5 = audit(e)
+    fields5 = {(v["written"], v["field"]) for v in rep5["violations"]}
+    assert ("docs/audit/zzz/loose.py", "入口未入库") in fields5, fields5
+    assert ("tmp/zzz_outside.sh", "入口不可解析") in fields5, fields5
+    assert "/tmp/zzz_dead_battery.py" not in {w for w, _f in fields5}, fields5
+    assert ("docs/audit/zzz/live.sh", "登记册该撤") in fields5, fields5
+    assert ("docs/audit/zzz/never_cited.sh", "登记册该撤") in fields5, fields5
+    assert not any(f.startswith("入口") and w.startswith("scripts/")
+                   for w, f in fields5), fields5
+    _mark(marks, "面 ⑤ 端到端：未入库开火、未登记死链开火、已登记的不开火、"
+                 "登记册里两条「该撤」各按自己的理由开火、scripts/ 一律不重复判")
+    c5 = rep5["corpus"]["entry_states"]
+    assert c5["tracked"] == 1 and c5["untracked"] == 1 and c5["dead"] == 2, c5
+    assert c5["dead_registered"] == 1 and c5["placeholder"] == 1 and c5["delegated"] == 1, c5
+    assert rep5["corpus"]["entry_points"] == sum(
+        c5[k] for k in ("tracked", "untracked", "dead", "placeholder", "delegated")), c5
+    _mark(marks, "面 ⑤ 分母自证：五档之和等于入口总读数，登记掉的另记一格"
+                 "（少一档或把已登记的漏计都会在这里红）")
+    # 没有 git 的树：未入库那一档要自动退成"不判"，不能把磁盘上存在的件全判成违规
+    ng = tmp / "entry_nogit"
+    (ng / "docs/audit/zzz").mkdir(parents=True)
+    (ng / "docs/audit/zzz/loose.py").write_text("print(1)\n", encoding="utf-8")
+    (ng / "docs/audit/zzz/doc.md").write_text("入口 B：python docs/audit/zzz/loose.py\n",
+                                              encoding="utf-8")
+    ng_rows, ng_unknown, _ng_p = entry_points(ng)
+    assert ng_unknown is True, ng_unknown
+    assert [s for _r, _n, _p, s in ng_rows] == ["tracked"], ng_rows
+    _mark(marks, "git 读不出时按「存在即合规」降级并把 git_unknown 记进读数，"
+                 "不把合成语料/镜像仓整片假红")
+    reg.unlink()
+    assert load_entry_register(e) == ({}, []), "登记册不在时应读成空册而不是报错"
+    rep5b = audit(e)
+    assert ("/tmp/zzz_dead_battery.py", "入口不可解析") in {
+        (v["written"], v["field"]) for v in rep5b["violations"]}, rep5b["violations"]
+    _mark(marks, "没有登记册＝一本空册：所有死链判红，grandfather 只能靠显式登记")
+
     print(f"--self-test：{len(marks)} 条合成读数全部对上")
     return 0
+
+
+def emit_register(root: Path, dst: Path) -> int:
+    """把当前判为死链的入口写成登记册草案（note 留空，由人补"为什么不再可复算"）。"""
+    erows, _git_unknown, _p = entry_points(root)
+    by: dict[str, list[str]] = {}
+    for rel, no, path, state in erows:
+        if state == "dead":
+            by.setdefault(path, []).append(f"{rel}:{no}")
+    doc = {
+        "what": ("文档里点名、但在干净签出中不可解析的复算入口登记册"
+                 "（判红面 ⑤ 的 grandfather 名单）"),
+        "rule": ("面 ⑤ 对每一条 `<解释器> 路径.py|.sh` 形态的入口判五种归属；"
+                 "落不到仓库里的必须在本文列出，否则判红。列进来不等于放过： "
+                 "`cited_by` 为空或某条现在已能解析时，判据会以「登记册该撤」反向开火。"),
+        "shape_borrowed_from": ("lychee 的 --exclude/--exclude-path/.lycheeignore（豁免是一份"
+                                "显式配置文件而不是行内注释）；mdBook 的 ignore/no_run/compile_fail"
+                                "（把「不跑」说成一种被记录的形状）"),
+        "entries": [{"path": k, "cited_by": v, "note": ""} for k, v in sorted(by.items())],
+    }
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(json.dumps(doc, ensure_ascii=False, indent=1, sort_keys=True) + "\n",
+                   encoding="utf-8")
+    return len(doc["entries"])
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -763,12 +1081,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--repo", default=str(ROOT))
     ap.add_argument("--json", default="", help="把读数写成 JSON")
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--emit-register", default="",
+                    help="把当前死链入口写成登记册草案（人工补 note 后入库）")
     args = ap.parse_args(argv)
     if args.self_test:
         import tempfile
         with tempfile.TemporaryDirectory() as td:
             return _self_test(Path(td))
     root = Path(args.repo).resolve()
+    if args.emit_register:
+        n = emit_register(root, Path(args.emit_register).resolve())
+        print(f"登记册草案：{n} 条死链入口 → {args.emit_register}")
+        return 0
     rep = audit(root)
     print(render(rep))
     if args.json:
