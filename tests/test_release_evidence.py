@@ -72,9 +72,11 @@ def _make_repo(tmp_path, commit_evidence: bool, tag: str | None):
     # package_version/generated_at —— Audit Freshness 门禁要求）
     head = _git(repo, "rev-parse", "HEAD")
     # 第 84 片：带 `--test-report` 的绑定会核对"报告自记的清单摘要 == 即将写出的那份清单"。
-    # 夹具必须照生产（`tests/conftest.py`）的形状造报告，否则这条链在测试里从来没被走过；
-    # 下面两次 `write_evidence` 之间被跟踪的文件集合没变（新产物都是未跟踪 + 被排除），
-    # 所以同一份指纹对第二轮仍然成立。
+    # 夹具必须照生产（`tests/conftest.py`）的形状造报告，否则这条链在测试里从来没被走过。
+    # 同一份指纹对第二轮 `write_evidence` 仍然成立，理由要说准：清单按 `git ls-files` 取集合，
+    # 而**两次调用之间 git 索引没有动过**（`commit_evidence` 分支的 `add/commit` 在两次调用之后），
+    # 所以被跟踪集合不变；`report.json` 并不是被 `SOURCE_EXCLUDE*` 排除的，它只是此刻尚未跟踪——
+    # 谁要把那对 `add/commit` 挪到两次调用之间，这份指纹就会当场过期并由闸拒绑（失败方向是响的）。
     pending = release_evidence.generate_source_manifest(repo)
     pending["version"] = "5.6.0"
     report = repo / "report.json"

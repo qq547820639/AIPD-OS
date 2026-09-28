@@ -108,13 +108,18 @@ C 的拒绝理由与翻案条件写进 §八 第 4 条。
 `SOURCE_MANIFEST` 已被重写、`PROVENANCE` 还是旧的（或反之）的中间态，而这次运行对外报的是"被拒"。
 这不是设想——电池臂 `W4-gate-moved-after-the-write` 就是把闸挪到 `SOURCE_MANIFEST` 落盘之后，
 翻红的正是 `test_refusal_does_not_touch_evidence_already_on_disk`：它先合法绑一次、再拿坏报告去绑，
-要求 `out/` 下每个文件**逐字节**不变。
+要求 `out/` 下每个文件**逐字节**不变，且合规那一跑确实落下了 ≥2 个文件
+（`after == before` 在两边都空时恒真，所以分母本身也要钉）。
 
 因此定形成两阶段：三份内容全部算完 → 过闸 → 才第一次 `write_text`。
 AST 面另有一条接线断言（`test_gate_is_wired_into_write_evidence_before_any_write`）：
 `write_evidence` 里那个 `if test_report is not None:` 的体内必须调 `preflight_report_vs_source`，
-且该 `if` 节点必须排在函数里**第一个** `.write_text(` 之前。两条各管一面：字节面证"确实没半写"，
-AST 面证"顺序不是碰巧"。
+且该 `if` 节点必须排在函数里**第一个落盘副作用**之前。
+这条最初只收集 `.write_text(`，于是对 `mkdir` / `write_bytes` / `open(...,'w')` 全盲——
+而 `mkdir` 不是假想，它当时**就**排在闸之前（独立复核件点的正是这一处）。
+现在把 sink 集合写成 `{write_text, write_bytes, mkdir, mkdirat, open}`，
+并配电池臂 `W8` 证明收窄回"只看 write_text"会被当场抓住。
+两条各管一面：字节面证"确实没半写"，AST 面证"顺序不是碰巧"。
 
 ## 三、落点为什么不在 `_parse_pytest_report`
 
@@ -128,16 +133,23 @@ AST 面证"顺序不是碰巧"。
 `BindPreflightError` 单独成类、`main()` 只 catch 它并退 2，也是同一个道理：
 退 2 是"这一步被拒"，不能和别处的 2 混。
 
-## 四、电池：七臂，以及电池自身那次误判
+## 四、电池：八臂，以及电池自己的两次 BAD-ANCHOR（一假一真）
 
 `docs/audit/s84/battery84.py`，靶面 `tests/test_release_evidence_preflight.py` +
-`tests/test_closeout_verifier.py`。基线**不全绿**
-（`test_roster_gap_equals_tests_changed_since_the_report` 在本片新用例文件还没提交、报告还没重跑的
-窗口里合法地红，形状与第 83 片同款），因此按**增量开火**记分，不按退码。
+`tests/test_closeout_verifier.py`。整支八臂那一跑基线已经**全绿**
+（`基线 rc=0 29 passed` —— 新用例文件提交之后 `test_roster_gap_...` 那条在途红自己消了），
+仍然按**增量开火**记分（基线不全绿时"退码非零就算杀掉"这条判法会失效，形状与第 83 片同款）。
 
-终局：`合计 KILLED+CRASH-KILL 7 / 7；其余按判决分类：无`（逐臂见 `battery84.log`）。
+| 日志 | 读数 |
+| --- | --- |
+| `battery84.log`（整支八臂） | `合计 KILLED+CRASH-KILL 7 / 8；其余按判决分类：BAD-ANCHOR 1`（W1-W4、W6-W8 全 KILLED） |
+| `battery84.w5.log`（修锚点后单臂复算） | `合计 KILLED+CRASH-KILL 1 / 1`（W5 增量开火 4 条） |
 
-**第一次跑出来的是 `6/7 + BAD-ANCHOR 1`，那条 BAD-ANCHOR 是假读数**，值得单独记：
+**净读数：八臂全都有牙，但 W5 那支的牙是在第二次复算里才落地的。**
+
+### 第一次：假的 BAD-ANCHOR（判据过严，把有牙的臂读成没牙）
+
+第一次跑整支电池记 `KILLED 6/7 + BAD-ANCHOR 1`，那条 BAD-ANCHOR 是**假读数**。
 每臂落地前有一道"注入必须是真改写"的前提，写作
 
 ```python
@@ -146,16 +158,33 @@ if new and new in src:
 ```
 
 对**删除型** rep 这条必然为真——W4 的第一步是把整段闸摘掉，替换体 `    results = {}`
-本来就是被摘那一段的尾巴，当然是 `src` 的子串。于是那条有牙的臂从未落地过就被判成"没牙"。
-收窄成 `if old in new and new in src`（只在纯插入形状上成立）后复跑 7/7。
+本来就是被摘那一段的尾巴，当然是 `src` 的子串。于是那条唯一能证明"闸必须排在写盘之前"的臂
+从未落地过就被判成"没牙"。收窄成 `if old in new and new in src`（只对纯插入成立）后复跑，
 "什么都没改"这件事仍由后面的 `mutated == src` 判，那一条对所有形状都成立。
 
-失败方向值得写清：这不是"注入没打中"（那会读成 SURVIVED，往**假绿**方向错），
+失败方向值得记牢：这不是"注入没打中"（那读成 SURVIVED，往**假绿**方向错），
 而是**判据过严把一条有牙的臂读成没牙**——它给出的读数是"这块没有护栏"，
-而真相是"这块有护栏，我的尺子把它误杀了"。第 81 片 §终局读数记过记分面的同族纪律
-（`docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md:195`"一臂多红 6 支"），
-这次是它的对偶。**两版日志都留着**：`battery84.run1.log` 就是那个错读数本身，
-删掉它等于把"我们曾经这样误判过"一起删掉。
+而真相是"这块有护栏，我的尺子把它误杀了"。它看起来还像量具在自律（主动报了 `BAD-*`），
+所以比 SURVIVED 更容易被当成结论接受。
+
+### 第二次：真的 BAD-ANCHOR（臂自己被本轮的文案改动打断）
+
+修完 mkdir 位置之后重跑整支八臂，`W5-refusal-laundered-to-zero` 记
+`BAD-ANCHOR old 命中 0 次`——**这次是真的**：W5 的锚点里抄着
+`print(f"拒绝写入证据（一个字节都没落盘）：{exc}")`，而本轮为了收掉那句过 claim
+把 print 改成了"未建目录、未写任何文件"。锚点当场失配，注入从没落到树上。
+改锚之后单臂复算 `1/1 KILLED`（4 条增量开火）。
+
+两次读数在日志里**长得一模一样**（都是 `[BAD-ANCHOR]`），含义正好相反：
+一次是尺子错杀，一次是臂真断了。能把它们分开的只有"old 命中几次"这半句——
+命中 0 次才是真断，命中 ≥1 次而报"new 已在树上"是判据写宽了。
+这条就是记忆里的"上一片写的注入对照会腐化"在本轮自己的树上当场复现一次。
+
+### W8：复核件点名的那个盲区
+
+`W8-mkdir-moved-before-the-gate` 把 `out_dir.mkdir` 挪回闸之前，
+KILLED 且增量开火 2 条。它证明的不是"闸有牙"，而是**接线断言现在看得见非-`write_text` 的落盘面**
+（原来只收集 `.write_text(`，对 `mkdir` 全盲，而 mkdir 当时确实排在闸之前）。
 
 ## 四之二、闸的真实爆炸半径（第一次干净签出全量换来的，记账）
 
@@ -221,11 +250,16 @@ if new and new in src:
 
 ```bash
 cd /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
+# 1) 闸自己的常驻牙 + 两处被它影响到的既有套件（少了第三行就会重演 §四之二 那次 8 errors）
 .venv/bin/python -m pytest tests/test_release_evidence_preflight.py \
-    tests/test_closeout_verifier.py tests/test_report_manifest_fingerprint.py -q
-.venv/bin/python docs/audit/s84/battery84.py        # 约 6 分钟，会临时改写两个 scripts/ 文件
-.venv/bin/python scripts/closeout_verifier.py --tag v5.6.0 \
-    --expect-test tests/test_release_evidence_preflight.py
+    tests/test_closeout_verifier.py tests/test_report_manifest_fingerprint.py \
+    tests/test_release_evidence.py -q
+# 2) 变异电池（八臂；会**临时改写** scripts/release_evidence.py 与 closeout_verifier.py）
+.venv/bin/python docs/audit/s84/battery84.py
+# 3) 收口链：换绑报告 → 一次绑定 → 提交 → 发布门 → 收尾验签（每步退码由该步自己读出）
+bash docs/audit/s84/closeout84.sh
+# 4) 把终局读数写进本文 §六（六道闸门任一不过就整节不写；它还会现场演示一次拒写）
+.venv/bin/python docs/audit/s84/terminal84.py
 ```
 
 电池会**临时改写** `scripts/release_evidence.py` 与 `scripts/closeout_verifier.py`，
@@ -273,8 +307,13 @@ cd /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
    按 `present` 与 `parsed` 分两条消息，并给"路径不存在"补一条常驻用例——
    现在树上只有 `test_refuses_an_unparsable_report` 覆盖第一种（它断的 `"读不出"` 对那一种是准确的），
    第二种是**一条没有任何用例经过的分支**。这两处请搭下一片的必经重锚一起做，不要为一句文案单独跑一整个全量。
-7. **"整批不写"精确到面**：`write_evidence` 第一句是 `out_dir.mkdir(parents=True, exist_ok=True)`，
-   它在闸之前 ⇒ 被拒时**输出目录本身会被创建**，只是里面没有任何文件。
+7. ~~`out_dir.mkdir` 在闸之前，被拒时会留下一个空目录~~ —— **本轮已修**（独立复核件点名之后）。
+   原来：`write_evidence` 第一句是 `out_dir.mkdir(parents=True, exist_ok=True)`，它在闸之前 ⇒
+   被拒时输出目录本身被创建，只是里面没有任何文件。当时的措辞"一个字节都不落盘"因此是过 claim。
+   现在：`mkdir` 挪到闸之后，被拒时**连目录都不建**，并新增一条常驻断言钉住它
+   （`test_refuses_a_report_without_the_fingerprint_and_writes_nothing` 里的 `assert not out.exists()`），
+   以及电池臂 `W8-mkdir-moved-before-the-gate` 专门证明这一格有牙。
+   顺带把三处叙述（模块 docstring、`main()` 打印那句、README）统一改成"任何落盘动作之前 / 整批不写"。
    常驻用例与 §六 的现场演示断的都是"目录里文件清单为空"（`left == []`），这个强度是够的；
    但 docstring 与 README 里"一个字节都不落盘"这句要读成"没有任何证据文件落盘"。
    要把措辞也拧成绝对零副作用，就把 `mkdir` 挪到闸之后——那一行改动请搭下一片的必经重锚做，

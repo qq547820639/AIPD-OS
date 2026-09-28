@@ -109,7 +109,7 @@ C11 那一格读成 `kind="skipped"`；有字段才做磁盘对账。
 与**生产侧常驻用例**（真 `pytest --json-report` 端到端那条，删掉注入就翻）。
 > 更正（第 84 片，2026-09-28）：括号里那句"下一片接进本体"已经做完——比对现在长在
 > `scripts/release_evidence.py` 自己的 `preflight_report_vs_source()` 里，`write_evidence`
-> 在**第一个字节落盘之前**调用它，缺席/读不出/不同源一律拒写并退 2。
+> 在**任何落盘动作之前**调用它（连输出目录都不建），缺席/读不出/不同源一律拒写并退 2。
 > 上面那句"由更靠前的一道闸拦下"从本片起才是真的（见 §八 第 4 项的同处更正）。
 格名集合与 `STAGE_BOUND` 同步改到十一格；`test_eight_checks…` 那条"真语料必须全绿"的用例
 现在**限定**地允许 `problems ⊆ {report_fingerprint_recorded}`，并要求这一判能由
@@ -218,7 +218,7 @@ python docs/audit/s83/battery83.py                                   # 六臂，
    > ① 比对**没有**放进 `_parse_pytest_report`——那个函数只做"读报告、抄字段"，把判决塞进去会让
    > 它同时依赖"即将写出的清单"这个它本来看不到的参数；新增的是独立函数
    > `preflight_report_vs_source(report_info, source_doc)`，由 `write_evidence` 在三份内容全部
-   > 算完、**第一个字节落盘之前**调用，抛 `BindPreflightError` → `main()` 退 2。
+   > 算完、**任何落盘动作之前**调用，抛 `BindPreflightError` → `main()` 退 2。
    > ② 坏形状从一种变成三种：除"缺字段""不同源"外还补了"报告读不出（present 但 parsed=false）"，
    > 因为那种报告根本没有可比对象，写成证据就是一条无法归因的记录。
    > ③ 除"必须拒"两极外还补了第三极：**拒写不半写**——先合法绑一次，再拿坏报告去绑，

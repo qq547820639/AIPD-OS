@@ -35,7 +35,7 @@
 `write_evidence` 是两阶段的：先把三份文件的内容**全部算完**，再用
 `preflight_report_vs_source` 核对「报告自记的 `source_manifest_fingerprint`
 == 即将写出的这份 `SOURCE_MANIFEST` 的**内容**摘要」，任一不符即抛
-`BindPreflightError`、`main()` 退 **2**，且**一个字节都不落盘**（不是"写完再删"）。
+`BindPreflightError`、`main()` 退 **2**，且**整批不写**（不是"写完再删"；连输出目录都不建——`mkdir` 也在闸之后）。
 三种拒绝形状各配一条常驻用例：报告读不出、缺字段、清单内容在跑完之后被改过。
 比的是规范摘要而不是原始字节 sha——`generated_at` 每轮都换，比原始字节会把
 正常收尾全部拒掉（那条假红控制也在常驻用例里）。

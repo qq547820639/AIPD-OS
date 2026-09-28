@@ -15,7 +15,8 @@
 
 仅依赖标准库 + ``cryptography``（用于 build_environment 的包版本信息，非强制）。
 
-带 ``--test-report`` 时先过一道闸（第 84 片）：三份内容全部算完之后、**第一个字节落盘之前**，
+带 ``--test-report`` 时先过一道闸（第 84 片）：三份内容全部算完之后、**任何落盘动作之前**
+（连输出目录都不建），
 `preflight_report_vs_source` 核对"报告自记的清单**内容**摘要 == 即将写出的这份清单"，
 报告读不出 / 缺字段 / 不同源一律抛 `BindPreflightError` 并**整批不写**。
 比的是 `release_fingerprint` 的规范摘要而不是原始字节——`generated_at` 每轮都换。
@@ -356,9 +357,9 @@ def write_evidence(repo: Path, out_dir: Path, version: str,
     """生成并写出三份证据文件，返回 (path -> manifest dict)。
 
     两阶段：先把要写的内容全算出来、过一遍 `preflight_report_vs_source`，
-    任何拒绝都发生在**第一个字节落盘之前**——半写会让树里留一份与清单不同源的证据。
+    任何拒绝都发生在**任何落盘动作之前**——连输出目录都不建，
+    因为半写会让树里留一份与清单不同源的证据。
     """
-    out_dir.mkdir(parents=True, exist_ok=True)
     source = generate_source_manifest(repo, source_commit)
     source["version"] = version
     prov = generate_provenance(repo, bundle, test_report, source_commit)
@@ -371,6 +372,7 @@ def write_evidence(repo: Path, out_dir: Path, version: str,
     if test_report is not None:
         preflight_report_vs_source(prov.get("test_report") or {}, source)
 
+    out_dir.mkdir(parents=True, exist_ok=True)
     results = {}
     if bundle_manifest is not None:
         (out_dir / "BUNDLE_MANIFEST.json").write_text(
@@ -408,7 +410,7 @@ def main(argv=None) -> int:
     try:
         results = write_evidence(repo, out, a.version, bundle, test_report, source_commit)
     except BindPreflightError as exc:
-        print(f"拒绝写入证据（一个字节都没落盘）：{exc}")
+        print(f"拒绝写入证据（未建目录、未写任何文件）：{exc}")
         return 2
     for name in results:
         print(f"wrote: {out / name}")

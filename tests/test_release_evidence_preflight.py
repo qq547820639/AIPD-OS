@@ -1,6 +1,6 @@
 """绑定前那道闸的常驻牙（F-BIND-PREFLIGHT 第 84 片）。
 
-`release_evidence.py` 现在带 `--test-report` 时，必须在**第一个字节落盘之前**核对
+`release_evidence.py` 现在带 `--test-report` 时，必须在**任何落盘动作之前**核对
 "报告自记的清单指纹 == 即将写出的这份清单的内容摘要"，不符就退 2 且不写任何文件。
 这一片的存在理由：第 83 片把 C10 从判红改成前提塌（判红会自锁），于是"缺字段"这一判
 在验签侧只剩下"挡配方"的分量——真正的拦截必须回到写入侧，否则守的还是"我记得跑那一步"。
@@ -78,8 +78,9 @@ def test_refuses_a_report_without_the_fingerprint_and_writes_nothing(tmp_path: P
     rc, text = _bind(tmp_path, repo, out, _report(tmp_path, None))
     assert rc == 2, (rc, text)
     assert "source_manifest_fingerprint" in text, text
-    assert not (out / "SOURCE_MANIFEST.json").exists(), "拒写必须在一个字节落盘之前"
+    assert not (out / "SOURCE_MANIFEST.json").exists(), "拒写必须发生在任何落盘动作之前"
     assert not (out / "PROVENANCE.json").exists()
+    assert not out.exists(), "被拒之后连输出目录都不该建（mkdir 已挪到闸之后）"
 
 
 def test_refuses_when_the_manifest_content_moved_after_the_run(tmp_path: Path) -> None:
@@ -141,6 +142,9 @@ def test_refusal_does_not_touch_evidence_already_on_disk(tmp_path: Path) -> None
     want = _want(repo)
     assert _bind(tmp_path, repo, out, _report(tmp_path, want))[0] == 0
     before = {p.name: p.read_bytes() for p in out.iterdir()}
+    # 分母不许是空集：`after == before` 在两边都空时恒真，那等于什么都没判
+    assert len(before) >= 2, f"夹具前提：合规那一跑至少要落下东西，实得 {sorted(before)}"
+    assert "SOURCE_MANIFEST.json" in before and "PROVENANCE.json" in before, sorted(before)
     (repo / "src" / "more.py").write_text("more = 2\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(repo), "add", "-A"], capture_output=True, check=True)
     subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "又动了"],
@@ -168,12 +172,16 @@ def test_gate_is_wired_into_write_evidence_before_any_write() -> None:
               if isinstance(n, ast.FunctionDef) and n.name == "write_evidence")
     guard = [n for n in ast.walk(fn) if isinstance(n, ast.If)
              and "test_report is not None" in ast.unparse(n.test)]
-    assert len(guard) == 1, ast.dump(fn.test if hasattr(fn, "test") else guard[0].test)[:200]
+    assert len(guard) == 1, (f"闸的 if 节点应当恰好一个，实得 {len(guard)}；"
+                             f"函数体首行：{ast.unparse(fn.body[0])[:120]}")
     body_src = "\n".join(ast.unparse(s) for s in guard[0].body)
     assert "preflight_report_vs_source" in body_src, body_src[:300]
+    # 只盯 `write_text` 会漏掉别的落盘面（`write_bytes` / `open(...,'w')` / `mkdir`）：
+    # 闸排在这些之前同样是半写。`mkdir` 不是比喻——它一度真的是第一处副作用。
+    SINKS = {"write_text", "write_bytes", "mkdir", "mkdirat", "open"}
     writes = [n for n in ast.walk(fn) if isinstance(n, ast.Call)
-              and isinstance(n.func, ast.Attribute) and n.func.attr == "write_text"]
-    assert writes, "write_evidence 里没有写盘调用，这条接线断言是空的"
+              and (getattr(n.func, "attr", None) in SINKS or getattr(n.func, "id", None) in SINKS)]
+    assert writes, "write_evidence 里没有任何落盘动作，这条接线断言是空的"
     first_write = min(n.lineno for n in writes)
     needle = "preflight_report_vs_source"
     call = next(n for n in ast.walk(guard[0]) if isinstance(n, ast.Call)

@@ -957,7 +957,7 @@
   `scripts/release_evidence.py` 带 `--test-report` 时，`write_evidence` 改成两阶段，三份内容全部
   算完之后先过 `preflight_report_vs_source()`，比对"报告自记的 `source_manifest_fingerprint`"与
   "即将写出的这份 `SOURCE_MANIFEST` 的**内容**摘要"，三种坏形状（报告读不出 / 缺字段 / 清单在跑完
-  之后被动过）一律抛 `BindPreflightError` → `main()` 退 2，**一个字节都不落盘**。
+  之后被动过）一律抛 `BindPreflightError` → `main()` 退 2，**整批不写**（`mkdir` 也挪到了闸之后，被拒时连目录都不建）。
   **选型沿用第 83 片已经对过权威源的那条思路，本轮不开新轮子**：比对逻辑复用
   `scripts/release_fingerprint.py`（同一把尺，生产者/验签者/绑定者三方共用其
   `fingerprint_of_document`），新增的只有"在写之前调它"这一步。落点为什么不在
@@ -972,11 +972,16 @@
   ③ **这道闸的第一个真实靶子就是上一片自己**：由 git blob 现算，第 83 片在 `3d5e0f6`
   换入的那份报告自记 fp=`424e343708fd`，而 §七 改判重锚（`1f46a21`）之后的清单是
   `74b031491f1a`——两者不同源。当年靠 C11 在**绑定之后**读成红，本片之后是**写之前**直接拒。
-  **电池自身的缺陷也算本轮读数**：第一次跑 `docs/audit/s84/battery84.py` 记 `KILLED 6/7 + BAD-ANCHOR 1`，
+  **电池自身的缺陷与一处盲区都算本轮读数**：第一次跑 `docs/audit/s84/battery84.py` 记 `KILLED 6/7 + BAD-ANCHOR 1`，
   那条 BAD-ANCHOR 是假读数——它的 preflight 判据写作 `if new and new in src`，而**删除型 rep 的
   `new` 天然是 `old` 的子串**，于是把一条合法注入判成"空改写"，W4 因此从未落地过。
-  收窄成 `if old in new and new in src`（只对纯插入成立）后复跑 `KILLED 7/7`；两版日志都留着
-  （`battery84.run1.log` 是错读数本身）。记分面第 81 片已经留过一条同族纪律（那一轮终局读数里的"一臂多红 6 支"，
+  收窄成 `if old in new and new in src`（只对纯插入成立）后，W4 落地并 KILLED（4 条增量开火）。
+  加了 W8 之后整支八臂记 `KILLED 7/8 + BAD-ANCHOR 1`，而**这一次是真的**：W5 的锚点里抄着
+  `print(f"拒绝写入证据（一个字节都没落盘）…")`，本轮为收掉那句过 claim 把 print 改了文案，锚点当场命中 0 次。
+  改锚后 `--only W5` 单臂复算 `1/1 KILLED`。两份日志都留着（`battery84.run1.log` 是第一次那个假读数、
+  `battery84.log` 整支八臂、`battery84.w5.log` 单臂复算）。**两次 BAD-ANCHOR 在日志里长得一模一样，
+  含义相反**——一次是判据过严错杀有牙的臂，一次是臂真被本轮的文案改动打断；
+  能分开的只有"old 命中几次"这半句（命中 0 才是真断）。这是"注入对照会随产品文案腐化"当场复现一次。记分面第 81 片已经留过一条同族纪律（那一轮终局读数里的"一臂多红 6 支"，
   `docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md:195`）；这次是它的**反向**：
   不是把一笔注入记成多红，而是**判据过严把一条有牙的臂读成没牙**。
   镜像面这一圈：`tests/conftest.py` 那句"缺席由 `report_fingerprint_recorded` 判红"是第 83 片

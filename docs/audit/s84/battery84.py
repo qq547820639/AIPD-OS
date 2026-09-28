@@ -37,14 +37,16 @@ ARMS = [
                '    want = hashlib.sha256(json.dumps(source_doc, ensure_ascii=False).encode()).hexdigest()')],
      "note": "改成比原始字节：每轮刷清单都会换 generated_at ⇒ 正常收尾被自己拒掉（假红档）"},
     {"id": "W4-gate-moved-after-the-write", "file": EV,
-     "reps": [('    if test_report is not None:\n        preflight_report_vs_source(prov.get("test_report") or {}, source)\n\n    results = {}',
-               '    results = {}'),
+     "reps": [('    if test_report is not None:\n        preflight_report_vs_source(prov.get("test_report") or {}, source)\n\n',
+               ''),
               ('        json.dumps(source, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")\n    (out_dir / "PROVENANCE.json").write_text(',
                '        json.dumps(source, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")\n    if test_report is not None:\n        preflight_report_vs_source(prov.get("test_report") or {}, source)\n    (out_dir / "PROVENANCE.json").write_text(')],
      "note": "闸挪到 SOURCE_MANIFEST 落盘之后：拒写变成半写，树里留下一份与清单不同源的证据"},
     {"id": "W5-refusal-laundered-to-zero", "file": EV,
-     "reps": [('        print(f"拒绝写入证据（一个字节都没落盘）：{exc}")\n        return 2',
-               '        print(f"拒绝写入证据（一个字节都没落盘）：{exc}")\n        return 0')],
+     # 锚点必须跟着那句文案走：本文件把 print 改成"未建目录、未写任何文件"之后，
+     # 旧锚点命中 0 次 ⇒ 这一臂被记 BAD-ANCHOR（不是存活，是注入没落地）。
+     "reps": [('        print(f"拒绝写入证据（未建目录、未写任何文件）：{exc}")\n        return 2',
+               '        print(f"拒绝写入证据（未建目录、未写任何文件）：{exc}")\n        return 0')],
      "note": "退码被洗成 0：配方看不出这一步被拒过，绑定就当成成功了"},
     {"id": "W6-production-doesnt-record-field", "file": EV,
      "reps": [('        "source_manifest_fingerprint": (data.get("source_manifest_fingerprint")\n'
@@ -58,6 +60,14 @@ ARMS = [
                '                        "failed": max(total - passed - skipped, 0), "total": total}')],
      "note": "验签夹具与生产形状脱钩：量具只读其中几格，这种漂移它自己永远不红，"
              "只有那条跨文件键集对照用例看得见（两处各写一遍的标准失效方式）"},
+    {"id": "W8-mkdir-moved-before-the-gate", "file": EV,
+     "reps": [("    source = generate_source_manifest(repo, source_commit)",
+               "    out_dir.mkdir(parents=True, exist_ok=True)\n"
+               "    source = generate_source_manifest(repo, source_commit)"),
+              ("    out_dir.mkdir(parents=True, exist_ok=True)\n    results = {}",
+               "    results = {}")],
+     "note": "落盘副作用（建目录）挪回闸之前：'拒写不半写'退化成'拒写但留下一个空目录'，"
+             "AST 那条只盯 write_text 的接线断言对它是盲的——这一臂证明盲区已经被堵上"},
 ]
 
 
@@ -82,11 +92,22 @@ for f in sorted(BASE_FIRED):
     print(f"              基线红（非电池判据）: {f}")
 
 
-def main() -> int:
-    srcs = {a["file"]: a["file"].read_text(encoding="utf-8") for a in ARMS}
+def main(argv=None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    only = None
+    if "--only" in argv:
+        only = argv[argv.index("--only") + 1]
+    arms = [a for a in ARMS if not only or only in a["id"]]
+    if only and not arms:
+        print(f"--only {only!r} 一支都没匹配上；现有臂：" + ", ".join(a["id"] for a in ARMS))
+        return 2
+    if only:
+        print(f"子集复算：只跑 {len(arms)}/{len(ARMS)} 臂（{', '.join(a['id'] for a in arms)}）"
+              "——合计行的分母按本次实跑的臂数算，不是整支电池")
+    srcs = {a["file"]: a["file"].read_text(encoding="utf-8") for a in arms}
     bases = {k: sha(k) for k in srcs}
     rows = []
-    for arm in ARMS:
+    for arm in arms:
         tgt = arm["file"]
         src = srcs[tgt]
         mutated = src
@@ -140,9 +161,9 @@ def main() -> int:
     for _r, v, _d, _f in rows:
         if v not in ("KILLED", "CRASH-KILL"):
             other[v] = other.get(v, 0) + 1
-    print(f"合计 KILLED+CRASH-KILL {good} / {len(ARMS)}；其余按判决分类："
+    print(f"合计 KILLED+CRASH-KILL {good} / {len(arms)}；其余按判决分类："
           + ("、".join(f"{k} {n}" for k, n in sorted(other.items())) or "无"))
-    return 0 if good == len(ARMS) else 1
+    return 0 if good == len(arms) else 1
 
 
 if __name__ == "__main__":

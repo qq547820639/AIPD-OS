@@ -498,7 +498,7 @@ python scripts/closeout_verifier.py --tag v5.6.0 --expect-test tests/test_new_th
 #     报告是不可变的历史产物，判红会自锁——attestation 必须 0 failed，而任何"旧报告还在树里"
 #     时跑出来的全量都带着这条红，于是永远拿不到可绑的那一份。
 #     但"退 2 挡住配方"只等于挡住了记得跑这一步的人，所以第 84 片把强制力补到写入侧：
-#     `release_evidence.py` 带 `--test-report` 时在**第一个字节落盘之前**核对
+#     `release_evidence.py` 带 `--test-report` 时在**任何落盘动作之前**核对（连输出目录都不建）
 #     「报告自记的清单指纹 == 即将写出的那份清单的内容摘要」，缺席/读不出/不同源一律
 #     `BindPreflightError` → 退 2 且三份证据一个都不写（拒写不半写）。
 #     闸的常驻牙见 `tests/test_release_evidence_preflight.py`。
