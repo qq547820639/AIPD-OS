@@ -249,3 +249,33 @@ ruff 侧复核报"本轮新增 246 行最长 95 < 100"，`pyproject.toml:84` 的
 一把尺跑多久的现读值：本轮邻居会话在跑另一棵树的整体验证（宿主 load 23.9），
 四把电池的**判决计数没变、时长变了**（s88 约 13 分钟、s84 约 28 分钟，平静时段分别是 8 与 10）。
 读数按 `KILLED n/n` 记，不按耗时记——这条是第 84/85 片那条"邻居会话抢 CPU"纪律的又一次兑现。
+
+## 十三、第二代认证读数（收紧形状与牙之后重跑的那一代），含我又一次自红
+
+第二代与第一代的分界是提交 `23877d2`+`c09905e`（复核交回的收紧动的是 `scripts/` 与 `tests/`，
+即清单收录的哈希面 ⇒ 第一代那一跑不再描述当前树）。
+命令与落盘件由 `docs/audit/s88/closeout88b.sh` 产生，全部另起 `-b` 后缀，第一代的原件一字未动。
+
+| 步 | 实际读数 |
+| --- | --- |
+| PRECHECK | `2698 passed / 5 skipped / collected 2703 / 634.6s / fp 379613b574ac`（锚点逐字 == tag `a66040520139405095648461f7144d4f00629924`） |
+| 脚本内新增的硬断 | `SKIP 面逐条相同：5 条`（本轮把"跳过集合与上一代双向差集为空"从手工核对提成脚本前提） |
+| 绑定 | `BIND_RC=0`；回读 `source_commit=a66040520139 test_report=2698p/0f/2703t fp=379613b574ac`；提交 `ecb0182` |
+| 门·第一次 | `GATE_RC=2`，`release_ready: False \| 未过: ['workspace_clean'] \| 项数: 8` ⇒ **我自己造成的**：绑定之后、跑门之前我又往 `docs/audit/SILENT_EXPIRY_….md` 追加了 §十二，那份文件当时未提交 |
+| 验签·第一次 | `CV_RC=4`，10 格 ✓、唯一 `✗ worktree_clean：工作树有 1 处未提交改动：['M docs/audit/SILENT_EXPIRY_F-SILENT-EXPIRY_2026-09-28.md']` |
+| 门·复算 | 提交那一格之后 `GATE2_RC=0`，`release_ready: True \| 未过: 无 \| 项数: 8`（`gate-b2.json`） |
+| 验签·复算 | `CV2_RC=0`，11 格全绿，`size_ratchet：名单 2703 条 ≥ 下界 2703`（`closeout-b2.json`） |
+| 回收 | `git worktree remove --force .wt-s88b` ⇒ `git worktree list` 只剩主树 |
+| 回收后复验 | 门 `8/8`（`gate-b3.json`）＋ 验签 `11 格全绿`（`closeout-b3.json`） |
+
+三次读数都留在库里（`gate-b.json`/`closeout-b.json` 是带红的那一次，`-b2` 是修正后的那一次，
+`-b3` 是回收签出树之后的复算），**不删红色原件**：那一次红本身就是
+"未跟踪也算脏、门看得见"这条判据的正面证据，也是第 85 片那条纪律我**第三次**复发的记录
+（第一次：第 84 片两个自建脚本；第二次：第 86 片 `?? gate.json`；第三次：本轮 §十二）。
+为什么这一红不需要重新绑定：`docs/audit/` 整体不在清单里
+（`SOURCE_EXCLUDE_PREFIXES`，`release_evidence.py:74`），所以提交取证文档
+不牵动清单内容摘要 ⇒ 报告与磁盘清单仍是同一代（`379613b574ac` 两次同源读数可证）。
+
+**两代 collected 的加数账**：第一代 2702 → 第二代 2703，差 1 = 复核后新加的那档
+**大写十六进制反例**（`test_api_refuses_a_malformed_anchor_before_any_write[A660405…]`）。
+CLI 侧的大写档是 `for` 循环里的一元，不增加 collected，只增加会红的可能性。
