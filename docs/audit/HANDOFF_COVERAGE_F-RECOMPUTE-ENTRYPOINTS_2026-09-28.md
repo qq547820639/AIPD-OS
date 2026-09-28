@@ -189,3 +189,18 @@ with space.py
    因复核交回的 7 笔全落在 hashed 面而**当场过期**：未绑定、未提交，报告随工作树回收消失。
    这里记下它的身份，是为了让"本轮只花了一代认证"这件事可核对——
    派复核件在起跑之前，是这一步省下来的（约 8 分钟一跑）。
+
+## 十、绑定之后的三段读数（一次绑定；两代只有一代存在）
+
+| 段 | 命令形状 | 读数 |
+| --- | --- | --- |
+| 绑定 | `release_evidence.py --repo . --out . --version 5.6.0 --source-commit <tag SHA> --test-report docs/audit/pytest-report-v5.6.0.json` | `BIND_RC=0`；回读 `source_commit=a66040520139…`、`test_report=2713p/0f/2718t`、`fp=8956ec96dafe`（提交 `8bc6e36`） |
+| 发布门 | `production_release_gate.py --release-ready --tag v5.6.0 --test-report … --json-out docs/audit/s89/gate.json`（PATH 带 `.venv/bin`） | `GATE_RC=0`，`release_ready: True`，8/8 项无未过（提交 `2a04794`） |
+| 收尾验签 | `closeout_verifier.py --tag v5.6.0 --expect-test <两条原告> --min-tests 2718` | `CV_RC=0`，11 格全绿：`roster_covers_tree` 树 219 文件 / 2623 个 def ↔ 报告 219 文件 / 2718 条，双向差集为空；`size_ratchet` 2718 ≥ 2718；`worktree_clean` ✓ |
+| 回收签出树后复算 | 同上两条门再各跑一次（`-b` 后缀另起文件，不覆盖绑定那一代） | 发布门 `GATE_B_RC=0`（8/8），验签 `CV_B_RC=0`（11 格全绿，含 `report_fingerprint_matches_disk 8956ec96dafe`）——证明"证件绿"不依赖那棵 worktree 还在 |
+
+三条口径：① `--min-tests` 由脚本从本轮报告现读 `collected=2718` 再传给验签器，
+上一代下界 2703 只用作"必须严格大于"的硬断，不当地沿用的数字；
+② 跳过面在绑定前逐条比过（5 条双向差集为空），所以 `FAIL=0` 这里不等于覆盖面变了；
+③ 本轮**没有**第二代认证：第二轮复核全部在起跑之前落完，那一代（`7d2cc22`，2702/5）
+从未绑定，身份只记在 §九 第 2 条。
