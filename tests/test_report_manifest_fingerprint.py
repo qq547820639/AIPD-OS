@@ -34,11 +34,35 @@ SEED_FILE = "tests/test_report_manifest_fingerprint.py"
 SEED_SPEC = SEED_FILE + "::test_reordering_keys_does_not_move_the_digest"
 
 
+def _flatten(node: object):
+    """另一种写法（生成器深度优先，不共用模块里那把 `find_floats`）。"""
+    if isinstance(node, dict):
+        for value in node.values():
+            yield from _flatten(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _flatten(value)
+    else:
+        yield node
+
+
 def _independent_digest(path: Path) -> str:
     doc = json.loads(path.read_text(encoding="utf-8"))
     del doc["generated_at"]          # 缺键就该翻：夹具前提是生产形状
+    if any(isinstance(v, float) for v in _flatten(doc)):
+        raise ValueError("float 出现在清单里，规范摘要不可比")
     blob = json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def _independent_digest_from_dict(doc: dict) -> str:
+    """把另写那份的算法套到内存文档上（写盘再读回即可，夹具不为省一步而少一条极）。"""
+    tmp = Path("/tmp/zzz-indep-digest.json")
+    tmp.write_text(json.dumps(doc), encoding="utf-8")
+    try:
+        return _independent_digest(tmp)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def test_module_digest_matches_an_independently_written_copy() -> None:
@@ -129,3 +153,50 @@ def test_production_conftest_stamps_a_real_json_report(tmp_path: Path) -> None:
     assert fp, f"真报告没带清单指纹——conftest 的注入没生效：{sorted(data)}"
     assert fp == _independent_digest(MANIFEST), "生产侧算的数与另写一遍的那份不一致"
     assert data["source_commit"], "夹具前提：同一只 hook 的旧面（source_commit）还在写"
+
+
+def test_a_float_in_the_manifest_refuses_instead_of_hashing_ambiguous_text(
+        tmp_path: Path) -> None:
+    """本尺只做整数/字符串/布尔/None——出现 float 就**当场拒**，不许算出一个不可比的数。
+
+    为什么不是"接上 RFC 8785 再说"：`json.dumps` 落浮点走 Python 的 `repr`，
+    `1` 与 `1.0` 语义相同却得**不同**摘要，跨解释器/跨生产者就漂；RFC 8785 自己也写明
+    NaN 与 Infinity 必须让合规实现报错终止（§一 的引用见取证文档）。现读
+    `SOURCE_MANIFEST.json` 里 float 为 0 个 ⇒ 这条是**前提门**，不是给现有数据补的换算。
+    两条极都要在：拒的极性（顶层被剥掉的 `generated_at` 不算）与不拒的极性（整数照算）。
+    """
+    import pytest
+
+    doc = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    assert rf.find_floats(doc) == [], "真清单里出现 float ⇒ 本条的极性与现实脱节"
+    base = rf.fingerprint_of_document(doc)
+
+    nested = json.loads(json.dumps(doc))
+    nested["files"][0]["size"] = 1.0
+    with pytest.raises(ValueError) as ei:
+        rf.fingerprint_of_document(nested)
+    assert ".files[0].size" in str(ei.value), str(ei.value)
+    with pytest.raises(ValueError):
+        _independent_digest_from_dict(nested)      # 另写那份也必须拒，不然两份写法会分叉
+
+    deep = json.loads(json.dumps(doc))
+    deep["coverage"] = {"rate": 0.5}
+    assert rf.find_floats(deep) == [".coverage.rate"], rf.find_floats(deep)
+
+    top_volatile = json.loads(json.dumps(doc))
+    top_volatile["generated_at"] = 1790637169.0965   # 剥键之后不该再看见它
+    assert rf.fingerprint_of_document(top_volatile) == base, \
+        "只换 generated_at（哪怕是浮点）必须仍读成同一份清单"
+
+    as_int = json.loads(json.dumps(doc))
+    as_int["files"][0]["size"] = 1
+    assert rf.fingerprint_of_document(as_int) != base, "整数照算：动了内容就该是不同的数"
+
+    bad = tmp_path / "SOURCE_MANIFEST.json"
+    bad.write_text(json.dumps(nested), encoding="utf-8")
+    fp, err = rf.fingerprint_from_file(bad)
+    assert fp == "" and "float" in err, (fp, err)      # 拒绝读成前提塌，不是"内容不同"
+    good = tmp_path / "good.json"
+    good.write_text(json.dumps(doc), encoding="utf-8")
+    fp2, err2 = rf.fingerprint_from_file(good)
+    assert fp2 == base and err2 == "", (fp2, err2)

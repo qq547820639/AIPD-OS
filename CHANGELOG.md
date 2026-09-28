@@ -951,6 +951,40 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.54 F-DEP-LICENSE 第 93 片：给许可证门禁加第二个读入面（wheel 里的正文），并把
+  "重复安装记录"变成可见事实**：第 92 片那把尺读的是**上游自述**（元数据三信号），
+  本片起它还打开 `*.dist-info/**` 下打包的 LICENSE/COPYING 正文对一次账 —— 正文断言的档位
+  比元数据**更严** ⇒ 判红 `许可证正文与元数据打架`（"元数据写 MIT、正文是 AGPL"是上游低报）。
+  判据形状全部由现读逼出来：`docs/audit/s93/probe93_license_bodies.py` 报闭包 45 个名字 /
+  已装 43 / dist-info 正文 48 个文件 / 无正文 1（casadi 只打包 58 份 vendored 第三方许可证）/
+  头部认不出 5。三格反证读数定了"断言 vs 提及"必须分两级：全文窗口会把
+  `typing-extensions`（PSF 正文提到 GPL）、`numpy`（第 140/210 行 quoted 了 GPL 全文）、
+  `cadquery-ocp`（`LICENSES_bundled` 键值行列了 AGPL）三格误报成禁用 ⇒
+  只认**行首标题或前 8 个非空行**为断言，其余落提及、只报不红（`body-severe-mention` 8）。
+  连带三处口径：包树里的 LICENSE 一律不算自己的正文（reportlab 的字体 GPL）；
+  同名多份元数据记录取**最严**那份判档且只对账**全量名册**（`aipd-os` 有 wheel dist-info +
+  遗留 `src/aipd_os.egg-info` 两份，原本"名册上看得见、一个桶都不进"——对账只在闭包内跑，
+  而项目自身走不到）；元数据把整段许可证全文写进 `License` 字段（实测 numpy / multimethod /
+  reportlab / cadquery 四家）时 ids 清洗成标识符、台账允许粗名 `bsd` 覆盖细串 `BSD-3-Clause`，
+  否则这类包挂上裁定条目也永远红（出口被闸门自己拦死）。
+  诚实降级：**这一面在真语料上 0 条判红**，是防御性加严，牙齿在 8 条自测标记
+  （5→8）与 17 条常驻用例（9→17，含一条造真 dist-info 走 `RECORD`+`locate()` 的生产路径反证）
+  与 14 臂电池里。选型四段（含"两个真检测器都被本仓 Python 3.9.6 挡在 `requires_python>=3.10`
+  之外、`license-expression` 实测 `LicenseSymbol` 没有 `is_copy_left` 也没有 text"）与
+  边界六条见 `docs/audit/DEPENDENCY_LICENSE_BODY_F-DEP-LICENSE_2026-09-29.md`；
+  两格只报档（`nlopt` 的 LGPL 提及、`cadquery-ocp` 的 bundled AGPL 列举）已写进
+  `docs/security/dependency-license-review.md` 等属主拍。
+  同片第二项：清单指纹那把尺（`scripts/release_fingerprint.py`）对 float 从"静默按
+  `repr` 落文本"改成**当场拒算** —— 现读 `SOURCE_MANIFEST.json` 里 float 0 个
+  （唯一带浮点的 `PROVENANCE.json · test_report.generated_at` 不进摘要），
+  所以本轮不接 RFC 8785（没有消费者的换算就是死码），只把"一旦出现"钉成前提门：
+  `find_floats()` 有命中 ⇒ `ValueError` ⇒ `fingerprint_from_file()` 返回
+  `(空, 说明)` ＝ 前提塌而不是"内容不同"（沿用第 92 片"不可变证据产物读不出只能阻塞"
+  那条规矩）。RFC 8785 §3 关于 NaN/Infinity 必须报错终止一句是本轮亲自开
+  `datatracker.ietf.org/doc/html/rfc8785` 读到的。常驻用例 6 条 → **7** 条，
+  新那条把"另写一遍的独立算式"也逼着同拒，并留两条不拒的极（整数照算、
+  只换 `generated_at` 即便写成浮点仍同一份清单）。
+
 - **v5.53 F-DEP-LICENSE 第 92 片：把"依赖许可证审查"从散文变成会红的门，第一枪打在 casadi/LGPL 上**：
   第 91 片对账 CI 面时看到的形状问题——`license-scan` job 跑裸 `pip-licenses`，
   **没有可失败的断言**（只打印、退码恒 0）；而仓里唯一一次许可证判断

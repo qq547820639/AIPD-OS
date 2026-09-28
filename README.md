@@ -578,6 +578,17 @@ python scripts/dependency_license_gate.py
 #     要写在 `DECLARED_NOT_INSTALLED` 里给理由，没写就判红。
 #     分母由脚本自报（`corpus.*`），不抄进正文。裁决依据与三个选项见
 #     `docs/security/dependency-license-review.md`。
+#     第 93 片加了第二个读入面＝**wheel 里打包的许可证正文**（只认 `*.dist-info/**` 下的
+#     LICENSE*/COPYING*；包树里的是 vendored 第三方，实测 reportlab 的字体许可证会把 BSD
+#     读成 GPL）。判决只在"正文比元数据**更严**"时开火（元数据低报才是要拦的方向）；
+#     认不出/没正文/提及档一律只报——三态不许折算成合规，也不许擅自折算成违规。
+#     形状关键：**标题行或前 8 个非空行**里的家族名才算"这个包给自己选的许可证"，
+#     出现在正文中间或 `license: X` 键值行里的一律算"提及"（少了这一级，本仓 3 个包会误红：
+#     typing-extensions 的 PSF 正文提到 GPL、numpy quoted 了 GPL 全文、
+#     cadquery-ocp 的 `LICENSES_bundled` 列了 AGPL）。同名多份元数据记录取**最严**那份判档。
+python docs/audit/s93/probe93_license_bodies.py
+#   ↑ 上一行那把尺的**分母探针**（第 93 片）：逐包报正文在哪、断言认不认得出、哪些只是提及。
+#     判据不复刻在这里——它调 `detect_body` / `bodies_of` / `package_license` 本尊。
 python scripts/absence_claim_census.py
 #   ↑ 登记表否定句对账（第 65 片）：`src/aipd_os/registry_data.py` 里每句「X 仍没有」都配一个
 #     **反证锚点**（哪个文件/符号一旦出现，这句话就算过期）。判决四档：成立、过期（判红）、

@@ -1,8 +1,10 @@
 """依赖许可证门禁的常驻牙（F-DEP-LICENSE 第 92 片）。
 
-分四组：① 量具必须被真的 spawn；② 真仓库上分母非空且**退码由判据自己决定**；
+分五组：① 量具必须被真的 spawn；② 真仓库上分母非空且**退码由判据自己决定**；
 ③ 注入的两极（看得见但不合规 ⇒ 红；裁对了 ⇒ 绿）；④ 两处信号阶梯的形状，
-其中"只有泛化 classifier + 具体 License 字段"那一格就是本面立起的真原因（casadi）。
+其中"只有泛化 classifier + 具体 License 字段"那一格就是本面立起的真原因（casadi）；
+⑤ 第 93 片加的**正文面**与重复记录对账（`body_face` / `package_license` / `bodies_of`），
+其中"同一份 AGPL 文字在标题位判红、在键值行只记档"那一极是本面的形状关键。
 """
 from __future__ import annotations
 
@@ -184,3 +186,222 @@ def test_premise_missing_pyproject_is_not_zero_risk(tmp_path: Path) -> None:
     rep = dlg.audit(empty)
     assert rep["ok"] is False and any(p.startswith("pyproject_missing") for p in rep["problems"]), \
         rep["problems"]
+
+
+# ---- 第 93 片：许可证**正文**与元数据对账 ----
+
+AGPL_BODY = ("GNU AFFERO GENERAL PUBLIC LICENSE\n"
+             "Version 3, 19 November 2007\n\n"
+             "Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>\n"
+             "Everyone is permitted to copy and distribute verbatim copies\n")
+MIT_BODY = ("MIT License\n\nCopyright (c) 2020 someone\n\n"
+            "Permission is hereby granted, free of charge, to any person obtaining a copy\n"
+            "of this software and associated documentation files.\n")
+LGPL_BODY = ("GNU LESSER GENERAL PUBLIC LICENSE\n"
+             "Version 3, 29 June 2007\n\n"
+             "This version of the GNU Lesser General Public License incorporates\n"
+             "the terms and conditions of version 3 of the GNU General Public License,\n"
+             "supplemented by the additional permissions listed below.\n")
+# bundled 声明文件的真实形状（实测 cadquery-ocp 的 `LICENSES_bundled`）：
+# 许可证名只出现在 `license:` 这种**键值行**里，不在标题位。
+BUNDLED_BODY = ("This wheel distribution bundles a number of libraries\n"
+                "that are compatibly licensed. We list them here.\n\n"
+                "name: someothersub\nfiles: pkg/_vendor/*\n"
+                "license: GNU AFFERO GENERAL PUBLIC LICENSE\n")
+
+
+def test_body_stricter_than_metadata_fires_but_a_bundled_list_does_not(
+        tmp_path: Path) -> None:
+    """正文面三极：同一份 AGPL 文字，**位置**决定判决。
+
+    标题行 ⇒ 判红（元数据低报）；MIT 正文 ⇒ 不红；`license: AGPL…` 键值行 ⇒ 只记档。
+    少了第三极，本仓 BSD/Apache 的包只要附带一份 vendored 第三方声明就会被判红
+    （实测 cadquery-ocp 的 `LICENSES_bundled` 里真有 AGPL/GPL/LGPL 三个更严的名字）。
+    """
+    tree = _tree(tmp_path / "b1", ["zzz-body"])
+    idx = {"zzz-body": [_rec("zzz-body", expr="MIT")]}
+
+    def rep_with(text: str):
+        return dlg.audit(tree, idx=idx, declared_not_installed={},
+                         bodies={"zzz-body": [("zzz_body-1.0.dist-info/licenses/LICENSE",
+                                              text)]})
+
+    fired = {(v["field"], v["doc"]) for v in rep_with(AGPL_BODY)["violations"]}
+    assert ("许可证正文与元数据打架", "zzz-body") in fired, fired
+    assert rep_with(AGPL_BODY)["corpus"]["inspected"] == 1, rep_with(AGPL_BODY)["corpus"]
+    assert not rep_with(MIT_BODY)["violations"], rep_with(MIT_BODY)["violations"]
+    bundled = rep_with(BUNDLED_BODY)
+    assert ("许可证正文与元数据打架", "zzz-body") not in {
+        (v["field"], v["doc"]) for v in bundled["violations"]}, bundled["violations"]
+    assert bundled["buckets"]["body-severe-mention"] == 1, bundled["buckets"]
+    assert bundled["buckets"]["body-unrecognized"] == 1, bundled["buckets"]
+
+
+def test_lgpl_body_text_does_not_escalate_to_gpl(tmp_path: Path) -> None:
+    """LGPL 正文按 FSF 写法必然逐字引用 GPL ⇒ 断言只算 lgpl，GPL 连"提及"都不算。
+
+    少了这条豁免，一条 LGPL 依赖会因为自己的正文引用了 GPL 而**二次误红**
+    （把"禁用"的帽子扣到弱 copyleft 上）。反向对照：纯 GPL 正文配 MIT 元数据必须开火。
+    """
+    tree = _tree(tmp_path / "b2", ["zzz-lgpl"])
+    rep = dlg.audit(tree, idx={"zzz-lgpl": [_rec("zzz-lgpl", expr="LGPL-3.0-or-later")]},
+                    declared_not_installed={},
+                    bodies={"zzz-lgpl": [("x.dist-info/licenses/LICENSE", LGPL_BODY)]})
+    row = next(r for r in rep["rows"] if r["package"] == "zzz-lgpl")
+    assert row["body"]["asserted"] == ["lgpl-3.0-or-later"], row["body"]
+    assert "gpl-3.0-or-later" not in row["body"]["mentioned"], row["body"]
+    assert ("许可证正文与元数据打架", "zzz-lgpl") not in {
+        (v["field"], v["doc"]) for v in rep["violations"]}, rep["violations"]
+    gpl = dlg.audit(tree, idx={"zzz-lgpl": [_rec("zzz-lgpl", expr="MIT")]},
+                    declared_not_installed={},
+                    bodies={"zzz-lgpl": [("x.dist-info/licenses/LICENSE",
+                                          "GNU GENERAL PUBLIC LICENSE\nVersion 3\n")]})
+    assert ("许可证正文与元数据打架", "zzz-lgpl") in {
+        (v["field"], v["doc"]) for v in gpl["violations"]}, gpl["violations"]
+
+
+def test_body_states_are_three_not_two(tmp_path: Path) -> None:
+    """「没有正文」「正文认不出」都不许折算成合规，也不许折算成违规——它们是第三态。"""
+    tree = _tree(tmp_path / "b3", ["zzz-none", "zzz-odd"])
+    idx = {"zzz-none": [_rec("zzz-none", expr="MIT")],
+           "zzz-odd": [_rec("zzz-odd", expr="MIT")]}
+    rep = dlg.audit(tree, idx=idx, declared_not_installed={},
+                    bodies={"zzz-odd": [("y.dist-info/LICENSE",
+                                         "Proprietary notice. All rights reserved.\n")]})
+    b = rep["buckets"]
+    assert b["body-missing"] == 1 and b["body-unrecognized"] == 1 and b["body-checked"] == 0, b
+    assert not rep["violations"], rep["violations"]
+    states = {r["package"]: r["body"]["state"] for r in rep["rows"]}
+    assert states == {"zzz-none": "missing", "zzz-odd": "unrecognized"}, states
+
+
+def test_duplicate_metadata_records_take_the_stricter_saying(tmp_path: Path) -> None:
+    """同名多份记录：档位不同 ⇒ 判红并取**最严**那份；同族两种写法 ⇒ 不算两种说法。
+
+    真读到的形状：本环境里 `aipd-os` 有 wheel 的 `.dist-info` 与遗留
+    `src/aipd_os.egg-info` 两份记录。按"取第一份"判＝拿排在前面那份当结论。
+    """
+    tree = _tree(tmp_path / "b4", ["zzz-dup"])
+    conflict = {"zzz-dup": [_rec("zzz-dup", expr="MIT"),
+                            _rec("zzz-dup", expr="AGPL-3.0-or-later")]}
+    rep = dlg.audit(tree, idx=conflict, declared_not_installed={}, bodies={})
+    fired = {(v["field"], v["doc"]) for v in rep["violations"]}
+    assert ("同名多份元数据不一致", "zzz-dup") in fired, fired
+    assert ("依赖许可证禁用", "zzz-dup") in fired, fired        # 取最严那份，不是取第一份
+    assert rep["corpus"]["inspected"] == 1, rep["corpus"]      # 分母按名字计一次
+    assert rep["corpus"]["duplicate_conflicts"] == ["zzz-dup"], rep["corpus"]
+
+    samefam = {"zzz-dup": [_rec("zzz-dup", cls=["BSD License"]),
+                           _rec("zzz-dup", expr="BSD-3-Clause")]}
+    rep2 = dlg.audit(tree, idx=samefam, declared_not_installed={}, bodies={})
+    assert ("同名多份元数据不一致", "zzz-dup") not in {
+        (v["field"], v["doc"]) for v in rep2["violations"]}, rep2["violations"]
+    assert rep2["corpus"]["duplicate_conflicts"] == [], rep2["corpus"]
+
+
+def test_outside_closure_duplicate_records_still_reconcile(tmp_path: Path) -> None:
+    """重复记录的对账不许只在闭包内跑：本仓唯一真原告 `aipd-os` 就在闭包外。
+
+    这一格是"覆盖面自己漏了自己"的形状——判据遍历声明根，而项目自身走不到，
+    于是 `同名多份：['aipd-os']` 出现在名册上却一个桶都不进（读成 0 个）。
+    """
+    tree = _tree(tmp_path / "b4x", ["zzz-seen"])
+    idx = {"zzz-seen": [_rec("zzz-seen", expr="MIT")],
+           "zzz-away": [_rec("zzz-away", expr="MIT"), _rec("zzz-away", expr="AGPL-3.0")]}
+    rep = dlg.audit(tree, idx=idx, declared_not_installed={}, bodies={})
+    assert rep["buckets"]["duplicate-records"] == 1, rep["buckets"]
+    assert rep["buckets"]["duplicate-conflict"] == 1, rep["buckets"]
+    assert ("同名多份元数据不一致", "zzz-away") in {
+        (v["field"], v["doc"]) for v in rep["violations"]}, rep["violations"]
+
+
+def test_bodies_are_read_from_a_real_wheel_not_only_from_injection(
+        tmp_path: Path) -> None:
+    """生产读文件这条路自己也要被走到：造一个**真** dist-info，让量具自己去读。
+
+    注入的 `bodies=` 只证明判决逻辑；`RECORD + locate()` 这条路走不通的话，
+    真仓库那一跑会安静地读到一个空名册（"没有正文"被读成"没有风险"）。
+    """
+    import importlib.metadata as md
+
+    site = tmp_path / "site"
+    dist = site / "zzzreal-1.0.dist-info"
+    (dist / "licenses").mkdir(parents=True)
+    (dist / "METADATA").write_text("Metadata-Version: 2.1\nName: zzzreal\n"
+                                   "Version: 1.0\nLicense-Expression: MIT\n",
+                                   encoding="utf-8")
+    (dist / "licenses" / "LICENSE").write_text(AGPL_BODY, encoding="utf-8")
+    (dist / "RECORD").write_text("zzzreal-1.0.dist-info/METADATA,,\n"
+                                 "zzzreal-1.0.dist-info/licenses/LICENSE,,\n",
+                                 encoding="utf-8")
+    got = dlg.bodies_of(md.Distribution.at(dist))
+    assert [n for n, _t in got] == ["zzzreal-1.0.dist-info/licenses/LICENSE"], got
+    assert AGPL_BODY.splitlines()[0] in got[0][1], got
+    # 包树里的 vendored 许可证不算它自己的正文（实测 casadi 有 58 个、numpy 3 个）
+    (site / "zzzreal").mkdir()
+    (site / "zzzreal" / "LICENSE").write_text(MIT_BODY, encoding="utf-8")
+    (dist / "RECORD").write_text("zzzreal-1.0.dist-info/METADATA,,\n"
+                                 "zzzreal-1.0.dist-info/licenses/LICENSE,,\n"
+                                 "zzzreal/LICENSE,,\n", encoding="utf-8")
+    assert [n for n, _t in dlg.bodies_of(md.Distribution.at(dist))] == [
+        "zzzreal-1.0.dist-info/licenses/LICENSE"], dlg.bodies_of(md.Distribution.at(dist))
+    rep = dlg.audit(_tree(tmp_path / "b5", ["zzzreal"]),
+                    idx={"zzzreal": [_rec("zzzreal", expr="MIT")]},
+                    declared_not_installed={}, bodies={"zzzreal": got})
+    assert ("许可证正文与元数据打架", "zzzreal") in {
+        (v["field"], v["doc"]) for v in rep["violations"]}, rep["violations"]
+
+
+def test_ledger_can_adjudicate_a_package_whose_metadata_gives_only_a_coarse_name(
+        tmp_path: Path) -> None:
+    """整段许可证全文写在元数据里（实测 numpy / multimethod / reportlab / cadquery 四家）
+    ⇒ ids 只留标识符；classifier 只给粗名 `BSD License` 时，台账裁 `BSD-3-Clause` 要能对上。
+    两条都没有的话，这类包挂上裁定条目也永远红——那是闸门自己把出口拦死了。
+    """
+    tree = _tree(tmp_path / "b6", ["zzz-para"])
+    para = ("Copyright (c) 2005-2024, somebody. All rights reserved.\n"
+            "Redistribution and use in source and binary forms, with or without\n"
+            "modification, are permitted provided that the following conditions\n")
+    idx = {"zzz-para": [_rec("zzz-para", cls=["BSD License"], fields=[para])]}
+    led = tree / dlg.POLICY_REL
+    led.parent.mkdir(parents=True)
+    led.write_text(json.dumps({"entries": [{"package": "zzz-para", "license": "BSD-3-Clause",
+                                            "decision": "accepted", "why": "合成"}]},
+                              ensure_ascii=False), encoding="utf-8")
+    rep = dlg.audit(tree, idx=idx, declared_not_installed={}, bodies={})
+    row = [r for r in rep["rows"] if r["package"] == "zzz-para"][0]
+    assert row["licenses"] == ["bsd"], row
+    assert not rep["violations"], rep["violations"]          # 粗名覆盖细串 ⇒ 不判「该撤」
+    led.write_text(json.dumps({"entries": [{"package": "zzz-para", "license": "MIT",
+                                            "decision": "accepted", "why": "真换族"}]},
+                              ensure_ascii=False), encoding="utf-8")
+    rep2 = dlg.audit(tree, idx=idx, declared_not_installed={}, bodies={})
+    assert ("台账该撤", "zzz-para") in {(v["field"], v["doc"]) for v in rep2["violations"]}, \
+        rep2["violations"]
+
+
+def test_real_corpus_body_face_is_populated_and_has_no_false_red() -> None:
+    """真仓库那一跑：正文面必须有分母，且已知误报形状都不开火。
+
+    钉的是**关系**不是绝对数（覆盖面会变）：断言可比的名词数压得住"认不出"，
+    casadi 落"无正文"，而本仓今天没有任何一格判红是正文面报的。
+    """
+    rep = dlg.audit(ROOT)
+    b, c = rep["buckets"], rep["corpus"]
+    assert c["body_files"] >= 40, c
+    assert b["body-checked"] >= 30 and b["body-checked"] > b["body-unrecognized"], b
+    assert b["body-severe-mention"] >= 5, b        # 真语料里 bundled 声明是常态，不是异常
+    missing = {r["package"] for r in rep["rows"] if r["body"]["state"] == "missing"}
+    assert missing == {"casadi"}, (missing, b)
+    fired = {v["field"] for v in rep["violations"]}
+    assert "许可证正文与元数据打架" not in fired, rep["violations"]
+    assert "同名多份元数据不一致" not in fired, rep["violations"]
+    # 已知误报名单逐个点名不许开火（它们就是"窗口判据"会红的那几格）
+    rows = {r["package"]: r for r in rep["rows"]}
+    for pkg in ("typing-extensions", "numpy", "cadquery-ocp", "mypy", "pillow", "nlopt",
+                "pathspec", "librt"):
+        body = rows[pkg]["body"]
+        assert "gpl-3.0-or-later" not in body["asserted"], (pkg, body)
+        assert "agpl-3.0-or-later" not in body["asserted"], (pkg, body)
+    assert c["duplicated_names"] == ["aipd-os"], c
+    assert b["duplicate-records"] == 1 and b["duplicate-conflict"] == 0, b
