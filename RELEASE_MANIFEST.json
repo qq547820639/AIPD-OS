@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 344476,
-      "sha256": "9d58aa474daa64e72d187dc7f4b6ad15aadd741662787e887b95d8b1f4fc1379"
+      "size": 346621,
+      "sha256": "4aeb6cf51d87f1ae320b98cdd9ea5aa1521818330e569fd5b39234668e5c980c"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -837,8 +837,8 @@
     },
     {
       "path": "scripts/release_evidence.py",
-      "size": 19389,
-      "sha256": "d3f63ee6ff31c027ee686d33ff175b959e6b1c62b27b827dc7993a3b922b6c9b"
+      "size": 20943,
+      "sha256": "5abb31706cf90130877718163ade6926e20f9cf08cc273e015948b677b448ecc"
     },
     {
       "path": "scripts/release_fingerprint.py",
@@ -3142,8 +3142,8 @@
     },
     {
       "path": "tests/test_release_evidence_preflight.py",
-      "size": 12317,
-      "sha256": "f311649aa39859559545981ad5565c515984a22d2a0a8e18735c7f2adb517050"
+      "size": 15363,
+      "sha256": "6d934367cefc25dcc7dc5556512899b49997700791c64e80fe1b8750c0f3effa"
     },
     {
       "path": "tests/test_release_manifest.py",
