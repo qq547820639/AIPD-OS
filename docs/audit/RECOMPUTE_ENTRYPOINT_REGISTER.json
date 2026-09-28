@@ -1,4 +1,5 @@
 {
+ "cited_by_semantics": "这一列是 `--emit-register` 生成/刷新时的快照，不是权威：面 ⑤ 的语料含 docs/audit/，所以本文档自己新增一行引用就会让它过期。权威是判据现读的结果（常驻用例核的是『每条都在册、每条都仍不可解析且仍被引用』，不是这一列）。",
  "entries": [
   {
    "cited_by": [
@@ -53,7 +54,9 @@
   {
    "cited_by": [
     "docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md:130",
-    "docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md:146"
+    "docs/audit/DRAWING_DXF_LINEAGE_F-LINEAGE-DXF_2026-09-26.md:146",
+    "docs/audit/RECOMPUTE_ENTRYPOINTS_F-RECOMPUTE-ENTRYPOINTS_2026-09-28.md:18",
+    "docs/audit/RECOMPUTE_ENTRYPOINTS_F-RECOMPUTE-ENTRYPOINTS_2026-09-28.md:82"
    ],
    "note": "历轮（第 30—55 片）把变异电池／探针脚本写在宿主 /tmp 下，从没入库；宿主重启或清理即不可再生。该轮读数已逐条抄在引用它的那份取证文档里，本条登记的是「入口不再可复算」这个事实，而不是「读数丢了」。要再算：照同文档的判决表重建脚本，并按第 87 片的形状落到 docs/audit/sNN/ 且提交。",
    "path": "/tmp/s46/battery.py"
