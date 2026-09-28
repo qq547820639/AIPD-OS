@@ -1,12 +1,7 @@
 {
  "command": "closeout verify",
  "problems": [],
- "violations": [
-  {
-   "check": "worktree_clean",
-   "detail": "工作树有 1 处未提交改动：['M docs/audit/CI_SURFACE_F-CI-SURFACE_2026-09-28.md']"
-  }
- ],
+ "violations": [],
  "checks": {
   "report_bound_to_provenance": {
    "ok": true,
@@ -30,7 +25,7 @@
   },
   "pinned_source_binding": {
    "ok": true,
-   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD 2a357849 的祖先",
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 HEAD ca3d7155 的祖先",
    "kind": "violation"
   },
   "content_parity_measured": {
@@ -49,8 +44,8 @@
    "kind": "violation"
   },
   "worktree_clean": {
-   "ok": false,
-   "detail": "工作树有 1 处未提交改动：['M docs/audit/CI_SURFACE_F-CI-SURFACE_2026-09-28.md']",
+   "ok": true,
+   "detail": "工作树干净",
    "kind": "violation"
   },
   "plaintiffs_measured": {
@@ -76,10 +71,10 @@
   "tree_files": 221,
   "tree_defs": 2641,
   "report_files": 221,
-  "worktree_head": "2a3578497855b09322a2c57268af0f9ddd571165",
+  "worktree_head": "ca3d715501ba78d2ff25ebbeb2fd32e36cbcec31",
   "pinned_commit": "a66040520139405095648461f7144d4f00629924",
   "report_fingerprint": "25e395e2b788",
   "disk_manifest_fingerprint": "25e395e2b788"
  },
- "ok": false
+ "ok": true
 }
