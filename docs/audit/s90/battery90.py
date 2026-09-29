@@ -34,7 +34,11 @@ Z10 是本轮第一支"两处一起撤"的臂：只删判决分支会落回占�
 """
 from __future__ import annotations
 
+import ast
+import contextlib
 import hashlib
+import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -113,15 +117,25 @@ def sha(b: bytes) -> str:
 
 
 def run_tests() -> tuple[int, str]:
-    proc = subprocess.run([str(REPO / ".venv/bin/python"), "-m", "pytest", "-q",
+    proc = subprocess.run([str(REPO / ".venv/bin/python"), "-B", "-m", "pytest", "-q",
                            "--no-header", "-p", "no:cacheprovider", *TESTS],
                           cwd=REPO, capture_output=True, text=True,
                           env={"PATH": "/usr/bin:/bin", "PYTHONPATH": str(REPO / "src"),
-                               "HOME": str(Path.home())})
+                               "HOME": str(Path.home()),
+                               "PYTHONDONTWRITEBYTECODE": "1"})
     return proc.returncode, proc.stdout + proc.stderr
 
 
+def _drop_cache() -> None:
+    """删掉靶文件在 pycache_prefix / __pycache__ 里的两份缓存（防陈旧字节码遮蔽还原后的源）。"""
+    for cand in (importlib.util.cache_from_source(str(CEN)),
+                 str(CEN.parent / "__pycache__" / (CEN.stem + f".{sys.implementation.cache_tag}.pyc"))):
+        with contextlib.suppress(OSError):
+            os.remove(cand)
+
+
 def main() -> int:
+    _drop_cache()
     original = CEN.read_bytes()
     print(f"原文件 sha={sha(original)}")
     text = original.decode("utf-8")
@@ -153,15 +167,21 @@ def main() -> int:
             marks["BAD-ANCHOR"] += 1
             CEN.write_bytes(original)
             continue
-        chk = subprocess.run([str(REPO / ".venv/bin/python"), "-m", "py_compile",
-                              str(CEN)], capture_output=True, text=True)
-        if chk.returncode != 0:
-            print(f"[BAD-ANCHOR] {name} 变异体编译不过：{chk.stderr[-160:]}")
+        # 语法门用进程内 ast.parse：外部字节码编译会往 `sys.pycache_prefix` 落缓存，
+        # 而缓存有效性只看 (源 mtime 整秒, 字节数) ⇒ 同长度变异＋同秒还原会遮蔽还原后的源。
+        try:
+            ast.parse(CEN.read_text(encoding="utf-8"))
+            chk_rc, chk_err = 0, ""
+        except SyntaxError as exc:
+            chk_rc, chk_err = 1, str(exc)
+        if chk_rc != 0:
+            print(f"[BAD-ANCHOR] {name} 变异体语法不过：{chk_err[:200]}")
             marks["BAD-ANCHOR"] += 1
             CEN.write_bytes(original)
             continue
         rc, out = run_tests()
         CEN.write_bytes(original)
+        _drop_cache()
         if sha(CEN.read_bytes()) != sha(original):
             print(f"[!] 复位失败 {name}")
             return 6

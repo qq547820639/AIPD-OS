@@ -1,0 +1,12 @@
+原文件 sha=fd15679e72c4
+[ANCHORS OK] 7 支臂、7 处编辑各命中 1 次
+[CONTROL OK] B0 原样全绿
+[KILLED]   B1-forbidden-not-red（强 copyleft 不再判红）被抓住 3 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_forbidden_family_cannot_be_waived_by_the_ledger; tests/test_dependency_license_gate.py::test_duplicate_metadata_records_take_the_stricter_saying
+[KILLED]   B2-drop-license-field（只看 License-Expression，丢掉 License 字段（与 classifier 那一支））被抓住 4 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_casadi_stays_red_until_a_human_adjudicates_it; tests/test_dependency_license_gate.py::test_generic_classifier_alone_is_invisible_not_compliant; tests/test_dependency_license_gate.py::test_ledger_can_clear_a_review_package_only_with_a_matching_license
+[KILLED]   B3-flatten-or-and（`OR`/`AND` 拍平成候选集合（任一可用即放行））被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_or_branch_is_usable_but_and_pair_is_not
+[KILLED]   B4-needs-review-clears（台账挂上条目就放行（不再要求 accepted））被抓住 2 条：tests/test_dependency_license_gate.py::test_casadi_stays_red_until_a_human_adjudicates_it; tests/test_dependency_license_gate.py::test_ledger_can_clear_a_review_package_only_with_a_matching_license
+[KILLED]   B5-ledger-can-waive-forbidden（去掉「台账越权放行」这一笔）被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_forbidden_family_cannot_be_waived_by_the_ledger
+[KILLED]   B6-declared-missing-needs-no-reason（声明了却没装 ⇒ 全部当已登记）被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_declared_but_uninstalled_needs_a_written_reason
+[KILLED]   B7-unresolved-counts-as-clean（把没装的传递依赖折成 allowed 而不是只报）被抓住 1 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green
+合计 KILLED 7 / 7；其余按判决分类：无
+收尾复算 sha=fd15679e72c4（应等于 fd15679e72c4）

@@ -1,0 +1,4 @@
+原文件 sha=5c4c6b6df8e3
+[BAD-ANCHOR] Y11-reverse-arm-reads-state-names 锚点命中 0 次（要 1）
+[BAD-ANCHOR] Y12-reverse-arm-trusts-delegated 锚点命中 0 次（要 1）
+锚点普查不过 ⇒ 一支臂都不跑。跑完再读「N 臂作废」比先数一遍贵一个数量级。

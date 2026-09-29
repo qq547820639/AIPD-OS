@@ -131,7 +131,7 @@ def run_tests() -> tuple[int, str]:
 def _drop_cache() -> None:
     """删掉本文件在 pycache_prefix / __pycache__ 里的两份缓存（防陈旧字节码遮蔽还原后的源）。"""
     for cand in (importlib.util.cache_from_source(str(TOOL)),
-                 str(TOOL.parent / "__pycache__" / (TOOL.stem + ".cpython-39.pyc"))):
+                 str(TOOL.parent / "__pycache__" / (TOOL.stem + f".{sys.implementation.cache_tag}.pyc"))):
         with contextlib.suppress(OSError):
             os.remove(cand)
 
