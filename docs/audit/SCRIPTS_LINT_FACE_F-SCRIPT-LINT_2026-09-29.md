@@ -120,4 +120,33 @@ B1 的豁免语义与"数到真债"这对矛盾不能靠"补一条断言"消掉�
 - **`EMPTY_EXCEPT` 记号与 ruff 的 `# noqa` 语法对撞**（6 处警告 + `src/` 里 3 处，面内 rc 仍 0）：
   改名要同时动 `tests/test_exception_hygiene.py` 的判据文案与 9 处记号，且与 `SIM105` 的建议互相
   拆台（同一批 try 块两边各说各话）。留给单独一片，本轮不动。
-- 认证读数见 `docs/audit/s100/closeout100.log`、`gate100.log`、`closeout100.json`（收口后填）。
+- **债务偿还本身**没做（上面第一条），且 `--emit` 的下调窗口要靠人接着跑：可下调档今天 0 格，
+  偿完一片之后才可能出现——那一格的读数不进任何判决，所以它不会自己催。
+
+## 八、认证读数（一手，2026-09-29 收口后填）
+
+干净签出 `.wt-s100`（绝对路径、仓库**外**）在 `28b507a` 上跑全量：
+**2790 passed / 5 skipped / 0 failed，collected 2795，398.5s，exitcode=0**，
+报告自带清单指纹 `8fa29399bddf`（日志 `docs/audit/s100/run-s100.log`）。
+
+`bash docs/audit/s100/closeout100.sh` 一次跑通，四道退码 `BIND=0 GATE=0 CV=0`（逐项见
+`closeout100.log`、`gate100.log`、`closeout.json`、`gate.json`）：
+
+| 步 | 现读 |
+| --- | --- |
+| 硬前提 | `PRECHECK OK: 2790 passed / 5 skipped / collected 2795 / 398.5s`；跳过面与上一代**逐条相同 5 条** |
+| 一次绑定（两旗同给） | `BIND_RC=0`，回读 `source_commit=a66040520139`、`test_report=2790p/0f/2795t`、`fp=8fa29399bddf` ⇒ 提交 `721e1d4` |
+| 发布门 | `GATE_RC=0`，`release_ready True / 未过 无 / 项数 8` |
+| 门读数先入库 | `GATE_COMMIT_RC=0` ⇒ `ee0c5c8`（未跟踪也算脏，所以取证件排在验签之前） |
+| 收尾验签 | `CV_RC=0`，**11 格全绿**，含 `size_ratchet：名单 2795 条 ≥ 下界 2795`、`roster_covers_tree：树 225 文件 / 2700 个 def ↔ 报告 225 文件 / 2795 条，双向差集为空` ⇒ `c01dce2` |
+
+签出回收（`git worktree remove --force` ⇒ `git worktree list` 只剩主树）后 B 档复跑：
+`GATE_B_RC=0 / 8 项全过`、`CV_B_RC=0 / 11 格全绿`，复跑当时 `git status --short` **0 行**
+（`gate-b.json`、`closeout-b.json`、`gate100-b.log`、`closeout100-b.log`）。
+
+**B 档第一跑被判红过一次，如实记**：那版把 `--json-out`/`--json` 直接写进
+`docs/audit/s100/`（树内），于是 `✗ worktree_clean：工作树有 1 处未提交改动：
+['?? docs/audit/s100/gate-b.json']`（`CV_RC=4`，其余 10 格仍绿）。这是**量具把自己的产物
+写进被它检查的树**（同一形状第 99 片已记过一次），不是发布状态变了：改成一落树外、
+读完后才 `cp` 入库，同一棵 HEAD 立刻 `rc=0`。取证件面本轮无新增 `.py`/`.sh`，
+名册重 emit 后仍是 **73 条**且与已提交版本逐字节相同。
