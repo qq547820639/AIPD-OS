@@ -238,3 +238,24 @@ def test_soft_face_reads_zero_on_the_real_repo_and_the_zero_is_a_real_zero() -> 
                       r"--warn-only\b|--ignore-errors\b", raw, re.M)
     coe = len(re.findall(r"continue-on-error", raw))
     assert len(hits) == 0 and coe == 0, (len(hits), coe)
+
+
+def test_a_step_whose_line_cannot_be_located_is_a_named_diagnostic_not_a_silent_zero(
+        tmp_path: Path) -> None:
+    """定不到行号时**必须点名**（`run_mark_unmatched`），不许静默记 0。
+
+    形状：折叠标量 `>-` —— 解析时两行并成一条 `ruff check src`，文件里根本没有这样一行，
+    包含式匹配必然失败（取证文档 §四.2 那条边界就是这么被兜住的：不是给个错行号，
+    而是点名"这一条定不到"）。这一格今天在本仓 ci.yml 里 0 次；把它静默化，
+    `line` 就会重新变成恒 0 而看上去一切正常。
+    （第一版我用带引号的多空格标量来造这一格，结果**匹配成功**——引号标量的值
+    与文件行仍逐字包含，于是那条用例读不到"定不到"这一档。换成折叠标量才真造得出来。）
+    """
+    _wf(tmp_path, "name: q\njobs:\n  a:\n    steps:\n"
+                  "      - run: >-\n          ruff\n          check src\n")
+    rows, probs = csc.ci_commands(tmp_path)
+    assert not rows or rows[0]["line"] == 0, rows
+    assert any(x.startswith("run_mark_unmatched") for x in probs), probs
+    rep = csc.audit(tmp_path)
+    assert rep["problems"], rep
+    assert csc.main(["--repo", str(tmp_path)]) == 2, rep["problems"]
