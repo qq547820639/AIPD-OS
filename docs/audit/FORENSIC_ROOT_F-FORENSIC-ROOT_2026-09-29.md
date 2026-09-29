@@ -105,14 +105,51 @@ filtering new issues while tracking resolved ones via diffs"）。
    第 8 支"只报不红"的对照臂当场读到它的原告。`_clean()` 改成整片
    `shutil.rmtree(docs/audit)` 再重建，并把这条写进函数 docstring。
 
+## 四之二、电池层的一处污染（`derived 0` 那一红逼出来的）
+
+`derive_closeout96.py` 落盘后再跑 `--repo .`，读数从 `derived 17` 变成 `derived 0`
+而 `py_files` 是 68、`exempt` 是 50 ⇒ 18 个文件哪一档都没进。常驻用例里那条
+**档位求和 == 分母** 的断言当场翻红，于是顺着查：
+
+- 源码是对的（`inspect.getsource` 读到 `buckets["derived"] += 1`）；
+- `sys.settrace` 显示那一行**执行了 18 次**，可结果仍是 0 ⇒ 执行的语句不是屏幕上那句；
+- 真因：`sys.pycache_prefix = /Users/panhao/Library/Caches/com.apple.python`（macOS 默认），
+  电池每支臂用 `python -m py_compile` 做语法检查，于是**变异体**的字节码落进那个目录；
+  CPython 的缓存有效性判据是 `(源 mtime 的整秒, 源字节数)`，而 Z14 那支臂把 `+= 1`
+  改成 `+= 0` —— 字节数不变、`write_bytes(original)` 又与 `py_compile` 落在同一秒 ⇒
+  缓存被判"仍然有效"，之后每一次 import 该文件读的都是那个变异体。
+  一手读数：`pyc 记录 mtime/size: 1790646957 20515 / 磁盘源: 1790646957 20515 / 判为有效: True`。
+
+三处修（都已落盘并复跑）：
+
+1. 电池：语法检查改 `ast.parse`（不落字节码）、pytest 子进程带 `-B` 与
+   `PYTHONDONTWRITEBYTECODE=1`、开局与每臂复位后各清一次
+   `importlib.util.cache_from_source(TOOL)` 与 `__pycache__` 两份路径（`_drop_cache()`）。
+2. 常驻用例：`_mod()` 改成 `compile(TOOL.read_text(), …)` + `exec` 载入，
+   **不经过任何缓存**——判据读的必须是盘上那份源码。
+3. 复位判据从"源文件 sha 相等"补成"电池跑完立刻复算真语料读数"：
+   `--repo .` 现读 `exempt 50 / derived 18 / unwatched 0`、`py_files 68`，退 0。
+
+对以往几片的连带判断（**推断，未逐片复验**）：s93/s94 的电池同样用过 `py_compile`，
+但那些臂的编辑多数改变了字节数，且常驻用例走 `import`（`scripts/` 下的量具也吃同一套缓存规则）；
+只有"同长度 + 同秒还原"这一组合才会静默，因此不声称历轮读数被污染，只把这一格的
+防护按上面的形状关掉。
+
 ## 五、读数
 
 见 §六（认证那一节由收口脚本回填）。尺子侧现读：
 
-- `--self-test`：14 条臂全部立住，退 0。
-- 真仓库（`--repo .`）：`写死仓库内 50 / 写死仓库外 21 / 用 tempfile 2`，
-  名册 50 条，`exempt 50 + derived 17 == py_files 67`，`unwatched 0`，退 0。
+- `--self-test`：15 条臂全部立住（第 15 条是给电池 Z8 存活补的「名册重复 ⇒ 退 2」），退 0。
+- 真仓库（`--repo .`，见 `docs/audit/s96/audit-repo.log` 与复跑后的现读）：
+  `.py 68 / 写死仓库内 50 / 写死仓库外 21 / 用 tempfile 2`，名册 50 条
+  （`battery` 30 条、`terminal` 20 条，`closeout` 规则**现读 0 条命中**——
+  历轮的 `derive_closeoutNN.py` 都不带仓库内绝对字面量，所以这一档今天是空词表，
+  留着它的理由只有一条：将来真有这种脚本时必须先归类才进得了册），
+  `exempt 50 + derived 18 == py_files 68`，`unwatched 0`，退 0。
 - 门禁自己抓到的第一笔真原告：新增 `docs/audit/s96/battery96.py` 之后
   `--repo .` 当场退 4、点名 `名册缺条目 docs/audit/s96/battery96.py:40`（现读），
   再 `--emit` 才归零——这条不是合成的，是本片过程中自然发生的。
-- `tests/test_forensic_scripts_root.py`：8 passed；`ruff check` 与 `mypy` 各自 0 错。
+- `tests/test_forensic_scripts_root.py`：9 passed；`ruff check` 与 `mypy` 各自 0 错。
+- 变异电池 `docs/audit/s96/battery96.py`：Z0 对照绿 + 14 支撤销臂，**KILLED 14/14**
+  （第一轮 Z8 存活 ⇒ 补判据与自测各一臂后复跑），收尾 `sha` 与开局相等。
+  读数见 `docs/audit/s96/battery96-run.log`（硬化前的那一份）与本轮复跑输出。

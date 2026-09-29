@@ -20,11 +20,18 @@ REGISTER = ROOT / "docs" / "audit" / "FORENSIC_ROOT_REGISTER.json"
 
 
 def _mod() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("bfr96", str(TOOL))
-    assert spec is not None and spec.loader is not None, "量具文件读不到"
-    m = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = m
-    spec.loader.exec_module(m)
+    """**从源码文本现编译**，不走 `importlib` 的字节码缓存。
+
+    本机 `sys.pycache_prefix` 指向 `~/Library/Caches/com.apple.python`（macOS 默认），
+    而缓存有效性只看 (源 mtime 的整秒, 源字节数)。第 96 片实测：变异电池把
+    `buckets["derived"] += 1` 改成 `+= 0`（**同长度**）之后 `py_compile` 落了缓存，
+    还原源文件落在同一秒 ⇒ 缓存被判"仍然有效"，之后每一次 import 跑的都是变异体。
+    """
+    code = compile(TOOL.read_text(encoding="utf-8"), str(TOOL), "exec")
+    m = importlib.util.module_from_spec(
+        importlib.util.spec_from_loader("bfr96", loader=None))
+    m.__file__ = str(TOOL)
+    exec(code, m.__dict__)
     return m
 
 

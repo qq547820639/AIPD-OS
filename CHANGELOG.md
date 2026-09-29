@@ -975,8 +975,15 @@
   截错或丢标签在退码上一个字节都不动，故直读那个字符串、两档标签各配一极）。
   变异电池 `docs/audit/s96/battery96.py`：Z0 对照 + 14 支撤销臂，第一轮 Z8
   （名册同一路径登记两遍）存活 ⇒ 当场给判据与自测各补一臂，复跑 14/14 KILLED、复位 sha 相等。
-  现读（`--repo .`）：`.py 67 / 写死仓库内 50 / 写死仓库外 21 / tempfile 2`，
-  `exempt 50 + derived 17 == 67`、`unwatched 0`。这把尺自己抓到的第一笔真原告不是合成件：
+  现读（`--repo .`）：`.py 68 / 写死仓库内 50 / 写死仓库外 21 / tempfile 2`，
+  `exempt 50 + derived 18 == 68`、`unwatched 0`。**这个 18 是常驻断言逼出来的**：
+  加完 `derive_closeout96.py` 之后同一棵树读成 `derived 0` 而 `py_files 68`，
+  档位求和 ≠ 分母的断言当场翻红 ⇒ 顺藤摸出电池层的一处污染——电池用 `py_compile` 做语法检查，
+  而 macOS 的 `sys.pycache_prefix` 把字节码写到 `~/Library/Caches/com.apple.python`，
+  缓存有效性只看 (源 mtime 整秒, 源字节数)；Z14 那支臂把 `+= 1` 改成 `+= 0`（**同长度**），
+  还原源文件又落在同一秒 ⇒ 之后每一次 `import` 该量具跑的都是变异体。
+  三处修：电池改 `ast.parse` + `-B` + 前后清缓存，常驻用例改为 `compile()` 从源码文本现载入
+  （不碰任何缓存），并把这条写进 `_mod()` 的 docstring。这把尺自己抓到的第一笔真原告不是合成件：
   新增 `battery96.py` 之后 `--repo .` 当场退 4 点名「名册缺条目」，`--emit` 之后归零。
   取证与四段选型见 `docs/audit/FORENSIC_ROOT_F-FORENSIC-ROOT_2026-09-29.md`。
 - **v5.56 F-CERT-ANCHOR 第 95 片：报告锚点从"操作员自述"改成"跑内实测 + 跑内祖先关系"**：
