@@ -238,3 +238,24 @@ B1 的豁免语义与"数到真债"这对矛盾不能靠"补一条断言"消掉�
 还把 `state/db.py:1073` 读成越界——那是我的临时尺撞了同名文件，不是语料缺陷。
 分母、下一刀形状与那条"借判据要连解析面一起借"的更正全部落在
 `docs/audit/LINE_PIN_BLINDSPOT_MEASURED_2026-09-29.md`，任务表里第 103 片入口按它更正过。
+
+## 十一、SIM105 那一档为什么卡住：本轮裁决落笔（2026-09-29 现读）
+
+批次表里 SIM105 那一档一直挂"blocked"，理由写的是"动它会撞 `EMPTY_EXCEPT` 豁免"。本轮把这条前提复算完：
+
+- `# noqa: EMPTY_EXCEPT` 形态**全仓 13 处**（`src` 3 / `scripts` 5 / `state_service` 0 / `tests` 0，
+  其余 5 处是 `tests/test_exception_hygiene.py` 的散文与正则说明），形态只有这一种（`# EMPTY_EXCEPT`
+  这种不带 `noqa:` 的写法 0 处）。
+- 它不是 ruff 的规则码 ⇒ ruff 每次跑都打 "Invalid `# noqa` directive" 警告（实测 `scripts` 6 条 +
+  `src` 3 条，退码仍 0）。也就是说：**这 13 处的豁免效力来自本仓那把 `test_exception_hygiene.py` 尺子，
+  与 ruff 无关**，而 ruff 只把它当噪声。
+- 于是 SIM105（`try/except: pass` → `contextlib.suppress`）与这 13 处**并不互斥**：
+  `suppress` 形态根本不需要 `noqa`，冲突只发生在"改完之后豁免还在不在"这一格——
+  真正的阻塞点是 `test_exception_hygiene.py` 里那条"带 `EMPTY_EXCEPT` 标记的处理器数量为 0"类断言
+  与标记迁移要同一轮改口，不是 SIM105 本身。
+
+裁决（自决，不再索要确认）：**下一片先把标记搬家，再吃 SIM105**。搬家形状取
+`# noqa: EMPTY_EXCEPT` → `# aipd: empty-except`（ruff 完全不认的注释，噪声消失；豁免判据改读新串），
+代价面：13 处站点 + `tests/test_exception_hygiene.py` 的正向与反向断言 + 本文与 README 的措辞镜像，
+全部落在参与哈希的面上 ⇒ 必须与取证件同轮定稿。搬家后 SIM105 那一档的语料才真正可动。
+复算入口：`grep -rn 'EMPTY_EXCEPT' --include='*.py' src scripts state_service tests | wc -l`（本轮 14 行）。
