@@ -135,6 +135,35 @@ filtering new issues while tracking resolved ones via diffs"）。
 只有"同长度 + 同秒还原"这一组合才会静默，因此不声称历轮读数被污染，只把这一格的
 防护按上面的形状关掉。
 
+## 四之三、第一次干净签出那一跑的 5 条红：尺子把"仓库内"判成了目录前缀
+
+按配方在 `.wt-s96`（`git worktree add` 出去的 detached HEAD 签出）里跑全量，
+`5 failed` —— **红的全是这把新尺自己**：
+
+- `test_register_on_disk_matches_the_rules_table`：名册 50 条，`inside` 算出 0 条；
+- `test_real_repo_face_is_live…` / `test_the_abs_probe…` / `test_outside_repo…`：跟着翻；
+- `test_ci_face_gates::test_mypy_face_is_clean`：另一处独立缺陷（`spec_from_loader` 返回
+  `Optional[ModuleSpec]`，`module_from_spec` 的实参位不收 `None`）——它是我把 `_mod()`
+  改成"从源码文本现编译"时引进的，全量是唯一能看见它的地方。
+
+根因不是环境，是**判据的口径**：`repo_inside(root, lit)` 拿"当前这棵树"做前缀比较，
+而历轮取证脚本里的字面量指的都是同一座仓库的主工作树 ⇒ 在签出树里它们全都"逃出了仓库",
+`facts()` 于是报 0 个原告，而名册那 50 条同时全判「该撤」——一棵合法签出读出一片不存在的缺陷。
+这正是记忆里那一族（复算绿线要同时换树和换环境）的又一格：**换树会改变判据的分母**。
+
+修法（`build_forensic_root_register.py`）：新增 `repo_roots(tree)`，用
+`git worktree list --porcelain` 取同一座仓库的全部落点（主工作树 + 每个签出），
+"仓库内"按**仓库身份**判；git 不在场（合成语料、无 `.git` 的镜像）就退回只认这棵树。
+牙齿：常驻用例 `test_a_worktree_checkout_of_the_same_repo_still_counts_as_repo_inside`
+真做一次 `git init` + `git worktree add`，既断"主树字面量在另一签出仍算仓库内、
+名册零红"，也断反极"`/tmp/other-repo` 这种陌生目录不算"（少了反极，把判据放宽成
+"任何绝对路径都算仓库内"也能骗过这一条——电池臂 Z9 就是那一支）。
+撤销臂 Z15 把这行改回前缀判 ⇒ 现读 `1 failed`（`退回前缀判 ⇒ 1 failed, 9 deselected`），
+复位后文件逐字相等。
+
+一条夹具教训同时记：清理签出用 `git worktree remove` 会被"工作树脏"拒（本条故意往签出里
+写了反极那个文件），要 `--force`；这不是判据的事，但少了它用例会在 `finally` 里炸红。
+
 ## 五、读数
 
 见 §六（认证那一节由收口脚本回填）。尺子侧现读：
@@ -149,7 +178,8 @@ filtering new issues while tracking resolved ones via diffs"）。
 - 门禁自己抓到的第一笔真原告：新增 `docs/audit/s96/battery96.py` 之后
   `--repo .` 当场退 4、点名 `名册缺条目 docs/audit/s96/battery96.py:40`（现读），
   再 `--emit` 才归零——这条不是合成的，是本片过程中自然发生的。
-- `tests/test_forensic_scripts_root.py`：9 passed；`ruff check` 与 `mypy` 各自 0 错。
+- `tests/test_forensic_scripts_root.py`：10 passed；`ruff check` 与 `mypy` 各自 0 错
+  （mypy 那一处 `Optional[ModuleSpec]` 是第一次干净签出全量抓出来的，见 §四之三）。
 - 变异电池 `docs/audit/s96/battery96.py`：Z0 对照绿 + 14 支撤销臂，**KILLED 14/14**
   （第一轮 Z8 存活 ⇒ 补判据与自测各一臂后复跑），收尾 `sha` 与开局相等。
   读数见 `docs/audit/s96/battery96-run.log`（硬化前的那一份）与本轮复跑输出。

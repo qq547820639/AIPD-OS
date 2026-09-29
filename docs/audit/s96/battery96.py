@@ -17,9 +17,11 @@ r"""第 96 片变异电池：取证脚本根路径门禁**每个判决与每个�
 | Z12 | `--emit` 的归属唯一闸只拦 ≥2 条，命中 0 条的静默不进册 |
 | Z13 | 名册读不到不再算前提塌（退码从 2 掉到 0） |
 | Z14 | 分母与档位求和不再同源（`derived` 少计一档） |
+| Z15 | 「仓库内」退回只按**当前这次签出**的目录前缀判（在 worktree 里跑就一片假红） |
 
 用例简名：`self` = `test_instrument_self_test_is_actually_spawned_and_green`（spawn
 `--self-test`，读的是**变异后的盘上文件**，所以量具自己的 15 支臂也算一层牙）；
+`worktree` = `test_a_worktree_checkout_of_the_same_repo_still_counts_as_repo_inside`（Z15 的原告）；
 `live` = `test_real_repo_face_is_live_and_return_code_follows_the_verdict`；
 `nonascii` = `test_the_abs_probe_reaches_a_non_ascii_repo_path`；
 `poles` = `test_an_unlisted_script_fires_and_the_listed_one_does_not`；
@@ -93,6 +95,9 @@ ARMS = [
     ("Z13-missing-register-not-premise", "读不到名册不再算前提塌",
      '        return {}, [f"register_missing: 读不到 {REL}"]',
      '        return {}, []'),
+    ("Z15-prefix-only-inside", "「仓库内」退回只按当前签出的目录前缀判",
+     '        inside = [(ln, lit) for ln, lit in lits if any(repo_inside(r, lit) for r in roots)]',
+     '        inside = [(ln, lit) for ln, lit in lits if repo_inside(root, lit)]'),
     ("Z14-bucket-denominator-split", "档位少计一档",
      '                buckets["derived"] += 1\n            continue',
      '                buckets["derived"] += 0\n            continue'),

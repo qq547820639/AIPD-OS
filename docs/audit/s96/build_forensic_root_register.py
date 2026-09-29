@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -62,9 +63,33 @@ def repo_inside(root: Path, lit: str) -> bool:
     return resolved == root or root in resolved.parents
 
 
+def repo_roots(tree: Path) -> list[Path]:
+    """同一座仓库有几个合法落点：主工作树 + 每一个 `git worktree` 签出。
+
+    "仓库内"必须按**仓库身份**判，不能按这一次签出的目录前缀判。第 96 片的认证那一跑
+    就是在 `.wt-s96` 里跑的：按前缀判时 50 个原告全部读成 0（于是名册那 50 条同时
+    全判「该撤」），而它们指的确实是同一座仓库的主工作树。
+    """
+    roots = [tree]
+    try:
+        out = subprocess.run(["git", "-C", str(tree), "worktree", "list", "--porcelain"],
+                             capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return roots                      # git 不在场（合成语料、无 .git 的镜像）：只认这棵树
+    if out.returncode != 0:
+        return roots
+    for ln in out.stdout.splitlines():
+        if ln.startswith("worktree "):
+            p = Path(ln[len("worktree "):].strip()).resolve()
+            if p != tree:
+                roots.append(p)
+    return roots
+
+
 def facts(root: Path) -> list[dict]:
     """每个取证 `.py` 一条读数；本脚本自己不算（它的模式串里就带着被判的字面量）。"""
     root = Path(root).resolve()
+    roots = [root] + [r for r in repo_roots(root) if r != root]
     rows: list[dict] = []
     for f in sorted((root / "docs" / "audit").rglob("*.py")):
         rel = f.relative_to(root).as_posix()
@@ -72,7 +97,7 @@ def facts(root: Path) -> list[dict]:
             continue
         text = f.read_text(encoding="utf-8", errors="replace")
         lits = literals(text)
-        inside = [(ln, lit) for ln, lit in lits if repo_inside(root, lit)]
+        inside = [(ln, lit) for ln, lit in lits if any(repo_inside(r, lit) for r in roots)]
         ins = set(inside)
         rows.append({
             "path": rel,

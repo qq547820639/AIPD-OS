@@ -1,19 +1,20 @@
-原文件 sha=58fa5b2b764f
-[ANCHORS OK] 14 支臂、14 处编辑各命中 1 次
+原文件 sha=feec0e3224f0
+[ANCHORS OK] 15 支臂、15 处编辑各命中 1 次
 [CONTROL OK] Z0 原样全绿
 [KILLED]   Z1-unclassified-folds-to-derived（未归类静默算合规）被抓住 3 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_an_unlisted_script_fires_and_the_listed_one_does_not; tests/test_forensic_scripts_root.py::test_a_name_shape_rule_can_mis_bucket_a_file
 [KILLED]   Z2-stale-listing-never-fires（该撤判据谓词取反）被抓住 4 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_real_repo_face_is_live_and_return_code_follows_the_verdict; tests/test_forensic_scripts_root.py::test_an_unlisted_script_fires_and_the_listed_one_does_not; tests/test_forensic_scripts_root.py::test_outside_repo_literals_are_reported_but_never_judge
 [KILLED]   Z3-overlap-not-judged（规则不唯一不开火）被抓住 1 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green
 [KILLED]   Z4-missing-listing-not-judged（缺条目不开火）被抓住 1 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green
-[KILLED]   Z5-rule-drift-not-judged（规则过期不开火）被抓住 4 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_real_repo_face_is_live_and_return_code_follows_the_verdict; tests/test_forensic_scripts_root.py::test_an_unlisted_script_fires_and_the_listed_one_does_not; tests/test_forensic_scripts_root.py::test_outside_repo_literals_are_reported_but_never_judge
+[KILLED]   Z5-rule-drift-not-judged（规则过期不开火）被抓住 5 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_real_repo_face_is_live_and_return_code_follows_the_verdict; tests/test_forensic_scripts_root.py::test_an_unlisted_script_fires_and_the_listed_one_does_not; tests/test_forensic_scripts_root.py::test_outside_repo_literals_are_reported_but_never_judge; tests/test_forensic_scripts_root.py::test_a_worktree_checkout_of_the_same_repo_still_counts_as_repo_inside
 [KILLED]   Z6-empty-reason-passes（空理由换免跑）被抓住 1 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green
 [KILLED]   Z7-gone-entry-kept（已不存在的登记不再判该撤）被抓住 1 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green
 [KILLED]   Z8-duplicate-listing-quiet（同一路径登记两遍不再算前提问题）被抓住 2 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_a_duplicated_register_entry_is_a_premise_failure
-[KILLED]   Z9-inside-is-absolute（repo_inside 恒真）被抓住 4 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_real_repo_face_is_live_and_return_code_follows_the_verdict; tests/test_forensic_scripts_root.py::test_outside_repo_literals_are_reported_but_never_judge; tests/test_forensic_scripts_root.py::test_register_on_disk_matches_the_rules_table
+[KILLED]   Z9-inside-is-absolute（repo_inside 恒真）被抓住 5 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_real_repo_face_is_live_and_return_code_follows_the_verdict; tests/test_forensic_scripts_root.py::test_outside_repo_literals_are_reported_but_never_judge; tests/test_forensic_scripts_root.py::test_a_worktree_checkout_of_the_same_repo_still_counts_as_repo_inside; tests/test_forensic_scripts_root.py::test_register_on_disk_matches_the_rules_table
 [KILLED]   Z10-ascii-only-charset（识别面退回 ASCII 白名单）被抓住 4 条：tests/test_forensic_scripts_root.py::test_real_repo_face_is_live_and_return_code_follows_the_verdict; tests/test_forensic_scripts_root.py::test_the_abs_probe_reaches_a_non_ascii_repo_path; tests/test_forensic_scripts_root.py::test_outside_repo_literals_are_reported_but_never_judge; tests/test_forensic_scripts_root.py::test_register_on_disk_matches_the_rules_table
 [KILLED]   Z11-host-prefix-loosened（HOST_RE 放宽成任何绝对路径）被抓住 1 条：tests/test_forensic_scripts_root.py::test_outside_repo_literals_are_reported_but_never_judge
 [KILLED]   Z12-emit-drops-unclassified（--emit 把没归类的静默跳过）被抓住 1 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green
 [KILLED]   Z13-missing-register-not-premise（读不到名册不再算前提塌）被抓住 2 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_premise_missing_register_is_not_zero_risk
+[KILLED]   Z15-prefix-only-inside（「仓库内」退回只按当前签出的目录前缀判）被抓住 1 条：tests/test_forensic_scripts_root.py::test_a_worktree_checkout_of_the_same_repo_still_counts_as_repo_inside
 [KILLED]   Z14-bucket-denominator-split（档位少计一档）被抓住 2 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_real_repo_face_is_live_and_return_code_follows_the_verdict
-合计 KILLED 14 / 14；其余按判决分类：无
-收尾复算 sha=58fa5b2b764f（应等于 58fa5b2b764f）
+合计 KILLED 15 / 15；其余按判决分类：无
+收尾复算 sha=feec0e3224f0（应等于 feec0e3224f0）

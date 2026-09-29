@@ -28,8 +28,9 @@ def _mod() -> ModuleType:
     还原源文件落在同一秒 ⇒ 缓存被判"仍然有效"，之后每一次 import 跑的都是变异体。
     """
     code = compile(TOOL.read_text(encoding="utf-8"), str(TOOL), "exec")
-    m = importlib.util.module_from_spec(
-        importlib.util.spec_from_loader("bfr96", loader=None))
+    spec = importlib.util.spec_from_loader("bfr96", loader=None)
+    assert spec is not None, "构造不出 ModuleSpec ⇒ 量具根本没被载入，别说它绿了"
+    m = importlib.util.module_from_spec(spec)
     m.__file__ = str(TOOL)
     exec(code, m.__dict__)
     return m
@@ -41,6 +42,16 @@ bfr = _mod()
 def _spawn(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, str(TOOL), *args],
                           capture_output=True, text=True, cwd=str(ROOT), timeout=300)
+
+
+def cov_git(repo: Path) -> str:
+    """最小 git 夹具：init + add + commit，返回提交号（只为本条用例的 worktree 服务）。"""
+    for cmd in (["init", "-q"], ["config", "user.email", "f@e"], ["config", "user.name", "f"],
+                ["add", "-A"], ["commit", "-q", "-m", "fixture"]):
+        subprocess.run(["git", "-C", str(repo), *cmd], check=True,
+                       capture_output=True, text=True)
+    return subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"],
+                          check=True, capture_output=True, text=True).stdout.strip()
 
 
 def _lit(tmp: Path, sub: str) -> str:
@@ -137,6 +148,43 @@ def test_outside_repo_literals_are_reported_but_never_judge(tmp_path: Path) -> N
     assert not rep2["violations"], rep2["violations"]
     assert rep2["corpus"]["outside_hardcoded"] == 1, rep2["corpus"]
     assert [o["path"] for o in rep2["outside"]] == ["docs/audit/s1/battery1.py"], rep2["outside"]
+
+
+def test_a_worktree_checkout_of_the_same_repo_still_counts_as_repo_inside(
+        tmp_path: Path) -> None:
+    """判"仓库内"要按**仓库身份**判，不是按这一次签出的目录前缀判。
+
+    第 96 片的认证那一跑就是这么红的：在 `.wt-s96` 里跑，按前缀判时历轮 50 个原告
+    全部读成 0（它们指的都是同一座仓库的主工作树），而名册那 50 条同时全判「该撤」
+    ⇒ 一棵合法的签出树读出一片不存在的缺陷。这一条同时钉两极：
+    主工作树的字面量在另一签出里仍算仓库内；真正的陌生目录（`/tmp/...`）不算。
+    """
+    repo = tmp_path / "mainrepo"
+    inside = str(repo)
+    _write(repo, "docs/audit/s1/battery1.py", f"REPO = {json.dumps(inside)}\n")
+    _write(repo, bfr.REL, json.dumps({"entries": [{
+        "path": "docs/audit/s1/battery1.py", "rule": "battery", "hardcoded": True,
+        "line": 1, "reason": "合成：电池就地改靶文件"}]}, ensure_ascii=False))
+    cov_git(repo)                                     # git init + add + commit
+    wt = tmp_path / "wt"
+    subprocess.run(["git", "-C", str(repo), "worktree", "add", str(wt), "HEAD"],
+                   check=True, capture_output=True, text=True)
+    try:
+        rows = bfr.facts(wt)
+        row = next(r for r in rows if r["path"] == "docs/audit/s1/battery1.py")
+        assert row["inside"], (row, bfr.repo_roots(wt.resolve()))
+        rep = bfr.audit(wt)
+        assert not rep["violations"], rep["violations"]
+        assert rep["buckets"]["exempt"] == 1, rep["buckets"]
+        # 反极：陌生目录的字面量仍然不算仓库内
+        _write(wt, "docs/audit/s2/foreign.py", f'R = {json.dumps("/tmp/other-repo/src")}\n')
+        row2 = next(r for r in bfr.facts(wt) if r["path"] == "docs/audit/s2/foreign.py")
+        assert not row2["inside"], row2
+    finally:
+        # `--force`：本条用例故意往签出里写了一个文件（反极那一手），
+        # 不加 force 时 git 以"工作树脏"拒绝清理 ⇒ 夹具自伤，与被测判据无关
+        subprocess.run(["git", "-C", str(repo), "worktree", "remove", "--force", str(wt)],
+                       check=True, capture_output=True, text=True)
 
 
 def test_a_name_shape_rule_can_mis_bucket_a_file(tmp_path: Path) -> None:

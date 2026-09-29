@@ -970,11 +970,17 @@
   ③ py3.9 的 f-string 嵌同族引号会吃掉尾引号，注入的夹具落成 `Path("/…/hard/src)`——
   一支"必须开火"的臂读到 0 条判决，看起来与"量具没牙"不可区分；改由 `json.dumps` 生成引号，
   且 `_write()` 落盘前 `ast.parse`（夹具必须是合法 Python）。
-  常驻：`tests/test_forensic_scripts_root.py` 新建 9 条、`tests/test_closeout_verifier.py` +1 条
+  常驻：`tests/test_forensic_scripts_root.py` 新建 10 条、`tests/test_closeout_verifier.py` +1 条
   （C5 读数标签不再被 `[:8]` 截半：`anc_src` 与 `anc_ref` 拼在同一条 f-string 里，
   截错或丢标签在退码上一个字节都不动，故直读那个字符串、两档标签各配一极）。
-  变异电池 `docs/audit/s96/battery96.py`：Z0 对照 + 14 支撤销臂，第一轮 Z8
-  （名册同一路径登记两遍）存活 ⇒ 当场给判据与自测各补一臂，复跑 14/14 KILLED、复位 sha 相等。
+  **判"仓库内"要按仓库身份判，不是按这次签出的目录前缀判**：第一次干净签出全量在 `.wt-s96`
+  里读出「写死仓库内 0」而名册那 50 条同时全判「该撤」（`5 failed`，红的全是新尺自己），
+  因为那些字面量指的都是同一座仓库的主工作树。改成用 `git worktree list --porcelain` 取
+  同一仓库的全部落点后再判，并补一条常驻用例在**真 git worktree**上钉两极（主树字面量在另一
+  签出仍算仓库内；`/tmp/other-repo` 不算），外加电池臂 Z15 当这条回归的撤销臂
+  ——退回前缀判时该用例现读 `1 failed`。
+  变异电池 `docs/audit/s96/battery96.py`：Z0 对照 + 15 支撤销臂，第一轮 Z8
+  （名册同一路径登记两遍）存活 ⇒ 当场给判据与自测各补一臂，复跑 15/15 KILLED、复位 sha 相等。
   现读（`--repo .`）：`.py 68 / 写死仓库内 50 / 写死仓库外 21 / tempfile 2`，
   `exempt 50 + derived 18 == 68`、`unwatched 0`。**这个 18 是常驻断言逼出来的**：
   加完 `derive_closeout96.py` 之后同一棵树读成 `derived 0` 而 `py_files 68`，

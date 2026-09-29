@@ -28,7 +28,7 @@ SUBS = [
     ("#   （第 95 片的原告在两个文件里：`tests/test_closeout_verifier.py` 的 C5 三极\n"
      "#    与 `tests/test_report_manifest_fingerprint.py` 的真跑那极；只点一条就会让\n"
      "#    \"另一半修复没跑到\"读成通过）。",
-     "#   （第 96 片的原告在两个文件里：`tests/test_forensic_scripts_root.py` 那 9 条\n"
+     "#   （第 96 片的原告在两个文件里：`tests/test_forensic_scripts_root.py` 那 10 条\n"
      "#    与 `tests/test_closeout_verifier.py` 补的 C5 读数标签那一极；只点一条就会让\n"
      "#    \"另一半没跑到\"读成通过）。"),
     ("    --expect-test tests/test_report_manifest_fingerprint.py \\\n",
