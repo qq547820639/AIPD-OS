@@ -595,6 +595,13 @@ python scripts/dependency_license_gate.py
 #     出现在正文中间或 `license: X` 键值行里的一律算"提及"（少了这一级，本仓 3 个包会误红：
 #     typing-extensions 的 PSF 正文提到 GPL、numpy quoted 了 GPL 全文、
 #     cadquery-ocp 的 `LICENSES_bundled` 列了 AGPL）。同名多份元数据记录取**最严**那份判档。
+python scripts/closeout_verifier.py
+#   ↑ 收尾验签器（第 85 片收进量具目录）。第 95 片把 C5 的祖先关系从"验签时刻的工作树 HEAD"
+#     换成"那一跑自己实测的 HEAD"：`tests/conftest.py` 现在无条件 `git rev-parse HEAD` 并落
+#     `source_commit_measured`，而 `source_commit` 仍是操作员给的声明值（工具不许替操作员改证件）。
+#     为什么必须换：收口链在绑定之后还要再提两个提交，验签时刻的 HEAD 已经是被测树的后代
+#     ⇒ "锚点是它的祖先"恒真；老报告没带该字段时不判红（缺席判红会自锁下一代认证，
+#     第 83/92 片两次实测到），但要在读数里点名"这一格弱一档"。
 python docs/audit/s93/probe93_license_bodies.py
 #   ↑ 上一行那把尺的**分母探针**（第 93 片）：逐包报正文在哪、断言认不认得出、哪些只是提及。
 #     判据不复刻在这里——它调 `detect_body` / `bodies_of` / `package_license` 本尊。

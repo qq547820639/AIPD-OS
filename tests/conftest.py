@@ -51,15 +51,22 @@ def pytest_json_modifyreport(json_report: dict) -> None:
     """
     import os
 
-    head = os.environ.get("AIPD_SOURCE_COMMIT", "")
-    if not head:
-        try:
-            head = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                capture_output=True, text=True, timeout=15,
-            ).stdout.strip()
-        except Exception:  # noqa: BLE001 - git 不可用时留空，由门禁判 STALE
-            head = ""
+    # 第 95 片：无条件实测那一跑的 HEAD。改之前是"环境变量优先、测不到才 fallback"，
+    # 而收口配方每一跑都显式传 `AIPD_SOURCE_COMMIT=<tag SHA>` ⇒ 那个分支永远不执行，
+    # "报告锚点 == 被测那棵树的 HEAD"这件事从没在跑内被核过（锚点合法地是 tag，
+    # 被测树是它的后代，所以真正该记的是**实测**那一份，祖先关系交给门禁判）。
+    measured = ""
+    try:
+        measured = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=str(_ROOT),
+            capture_output=True, text=True, timeout=15,
+        ).stdout.strip()
+    except Exception:  # noqa: BLE001 - git 不可用时留空，由门禁判 STALE
+        measured = ""
+    declared = os.environ.get("AIPD_SOURCE_COMMIT", "")
+    if measured:
+        json_report["source_commit_measured"] = measured
+    head = declared or measured
     if head:
         json_report["source_commit"] = head
     try:

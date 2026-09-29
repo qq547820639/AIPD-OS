@@ -24,7 +24,10 @@
   C2 counts_counted_from_roster   汇总数由 tests[] 现数，summary 与 provenance 两处副本都对得上
   C3 terminal_clean               exitcode 0 且没有 failed/error 终态（setup/teardown 也算）
   C4 roster_covers_tree           树上的测试文件与名单里的文件双向求差为空；每文件名单 ≥ 树上 def 数
-  C5 pinned_source_binding        报告与 provenance 的 source_commit 都等于给定锚点，且锚点是工作树 HEAD 的祖先
+  C5 pinned_source_binding        报告与 provenance 的 source_commit 都等于给定锚点，且锚点是
+                                  「那一跑实测的 HEAD」的祖先（第 95 片）。报告若没带
+                                  `source_commit_measured` 就退回验签时刻的工作树 HEAD 并在读数里点名
+                                  —— 验签时刻的树可能已被收口链后续提交推前，那时旧判据恒真。
   C6 content_parity_measured      两条清单哈希用例在名单里且 passed——这是"测的就是这棵树"的替身证明
   C7 worktree_clean               工作树 `git status --porcelain` 为空
   C8 plaintiffs_measured          本轮新补的用例（`--expect-test`）确实在名单里跑过并且过了
@@ -333,11 +336,19 @@ def audit(report_path: Path, worktree: Path, provenance_path: Path,
         c5.append(f"报告 source_commit={report.get('source_commit')} != 给定锚点 {pinned}")
     if prov.get("source_commit") != pinned:
         c5.append(f"PROVENANCE source_commit={prov.get('source_commit')} != 给定锚点 {pinned}")
-    anc = _run_git(worktree, ["merge-base", "--is-ancestor", pinned, head])
+    # 祖先关系优先用**那一跑自己测到的 HEAD**：验签时刻的工作树 HEAD 可能已经被本轮
+    # 后续的提交推前（收口链在绑定之后还要提门读数、验签读数），那时"pinned 是 HEAD 的祖先"
+    # 只说明锚点在这条历史上，不说明**被测的那棵树**在锚点之后。
+    measured = str(report.get("source_commit_measured") or "")
+    anc_ref, anc_src = (measured, "报告实测 HEAD") if measured else (head, "工作树 HEAD")
+    anc = _run_git(worktree, ["merge-base", "--is-ancestor", pinned, anc_ref])
     if anc[0] != 0:
-        c5.append(f"锚点不是工作树 HEAD 的祖先（{anc[1] or 'rev 不在这个仓库的历史里'}）")
+        c5.append(f"锚点不是{anc_src} {anc_ref[:8]} 的祖先"
+                  f"（{anc[1] or 'rev 不在这个仓库的历史里'}）")
+    absent = "" if measured else \
+        "（报告未带 source_commit_measured ⇒ 只能按验签时刻的工作树判，这一格弱一档）"
     judge("pinned_source_binding", not c5, "；".join(c5) if c5 else
-          f"报告与 PROVENANCE 都绑在 {pinned}，且它是 HEAD {head[:8]} 的祖先")
+          f"报告与 PROVENANCE 都绑在 {pinned}，且它是 {anc_src[:8]} 的祖先{absent}")
 
     # C6 内容一致性替身
     by_node = {str(t["nodeid"]): str(t.get("outcome")) for t in tests}
@@ -466,7 +477,8 @@ def _resolve_pinned(args: argparse.Namespace, worktree: Path) -> tuple[str, str]
 def _pristine_report(base: Path, nodeids: list[str], source_commit: str,
                      summary_overrides: dict | None = None,
                      outcomes: dict | None = None, root: str = "",
-                     manifest: Path | None = None) -> Path:
+                     manifest: Path | None = None,
+                     measured_commit: str = "") -> Path:
     """写一份形状与 pytest-json-report 一致的报告（`--self-test` 与常驻用例共用）。
 
     `failed`/`error` 键在计数为 0 时**不写**：第 63 片就是把缺键读成了红，夹具必须复现
@@ -485,7 +497,11 @@ def _pristine_report(base: Path, nodeids: list[str], source_commit: str,
     if hist.get("failed"):
         summary["failed"] = hist["failed"]
     summary.update(summary_overrides or {})
-    payload = {"exitcode": 0, "source_commit": source_commit, "root": root or str(base),
+    # 默认让"实测"等于锚点本身：`merge-base --is-ancestor X X` 退 0，
+    # 既有夹具的语义不变（它们测的不是这一格）。要测这一格就显式传 measured_commit。
+    payload = {"exitcode": 0, "source_commit": source_commit,
+               "source_commit_measured": measured_commit or source_commit,
+               "root": root or str(base),
                "package_version": "0.0.0", "duration": 1.0,
                "summary": summary, "tests": tests}
     if manifest is not None:

@@ -951,6 +951,26 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.56 F-CERT-ANCHOR 第 95 片：报告锚点从"操作员自述"改成"跑内实测 + 跑内祖先关系"**：
+  `tests/conftest.py:54` 原本是 `os.environ.get("AIPD_SOURCE_COMMIT","")` **优先**、
+  测不到才 fallback 到 `git rev-parse HEAD`，而收口配方每跑都显式传该变量 ⇒
+  fallback 分支**永不执行**，"报告锚点 == 被测那棵树的 HEAD"这句在跑内从没被核过。
+  现在无条件实测并落 `source_commit_measured`，`source_commit` 仍照声明落
+  （不许工具偷偷把证件改成实测值）；C5 的祖先关系相应改按**那一跑实测的 HEAD** 判——
+  非改不可的第二条理由：验签发生在绑定之后，那时 HEAD 已被"门读数／验签读数"两个提交推前，
+  旧判据 `锚点是 HEAD 的祖先` 于是**恒真**。
+  老报告（不带该字段）不判红、只在读数里点名"这一格弱一档"：第 83/92 片两次实测到
+  "把不可变证据产物的缺席判成违规会自锁认证"，而**生成侧**由真跑用例守住
+  （复制真 conftest 到临时 git 仓库、传一个非祖先锚点，断两字段各记各的）。
+  常驻用例 `tests/test_closeout_verifier.py` +3 条（含一条"旧判据全绿、新判据判红"的
+  合成历史反证：报告实测 HEAD 取锚点的父提交、验签时刻 HEAD 取锚点的后代）、
+  `tests/test_report_manifest_fingerprint.py` 7 → 8 条。
+  夹具布局也交过一次学费：conftest 的 `_ROOT = parents[1]`，把副本放到 `repo/conftest.py`
+  会让 `_ROOT` 落到仓库上一层 ⇒ git 探针空返回 ⇒ **整个键不写**且无人报错——
+  这恰好是"静默留空比判红难查"的现场样本，故该极必须**断字段存在**。
+  取证与边界（含"报告整体仍可伪造，要外部见证才算闭合，属属主侧"）见
+  `docs/audit/CERT_ANCHOR_F-CERT-ANCHOR_2026-09-29.md`。
+
 - **v5.55 F-CI-SURFACE 第 94 片：CI 那条对账尺第一次报到 `ci.yml:NNN`，并新增一档
   「门禁被声明为可失败」**：第 91 片那把尺的 `line` 字段落地后一直是 0（判红只能说
   "哪条命令没人守"，不能说"在第几行"）。本片从 `yaml.compose` 的标量标记定行号——

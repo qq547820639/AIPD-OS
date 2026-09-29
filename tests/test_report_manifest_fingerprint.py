@@ -200,3 +200,49 @@ def test_a_float_in_the_manifest_refuses_instead_of_hashing_ambiguous_text(
     good.write_text(json.dumps(doc), encoding="utf-8")
     fp2, err2 = rf.fingerprint_from_file(good)
     assert fp2 == base and err2 == "", (fp2, err2)
+
+
+def test_conftest_stamps_the_measured_head_alongside_the_declared_anchor(
+        tmp_path: Path) -> None:
+    """生产侧两极：`source_commit` 是**操作员声明**的锚点，`source_commit_measured` 是
+    那一跑**自己实测**的 HEAD——第 95 片之前后者不存在，于是"报告测的是锚点之后那棵树"
+    这句话在跑内从没被核过（收口配方永远传 `AIPD_SOURCE_COMMIT`，fallback 分支不执行）。
+
+    同一棵树上声明一个**不是它祖先**的锚点时，声明值仍照原样落（那是操作员给的证件，
+    工具不许偷偷改成实测值），判红交给 `closeout_verifier.py` 的 C5——那条在
+    `tests/test_closeout_verifier.py::test_pinned_must_be_ancestor_of_the_measured_head`
+    里判；这一条只管"两个字段各记各的、且都盖上了"。
+    """
+    import subprocess
+
+    repo = tmp_path / "src-repo"
+    (repo / "tests").mkdir(parents=True)
+    (repo / "tests" / "zzz_stamp.py").write_text("def test_ok():\n    assert True\n",
+                                                 encoding="utf-8")
+    # 夹具布局必须与生产同形：真 conftest 在 `tests/` 下，它的 `_ROOT = parents[1]`
+    # 才等于仓库根。放成 `repo/conftest.py` 会让 `_ROOT` 落到上一层（不是 git 仓库），
+    # 于是 git 探针空返回、`source_commit_measured` 整个键不写 —— 我第一版就这么错的，
+    # 而它恰好演示了"静默留空"比判红更难查：只有断字段存在才看得见。
+    (repo / "tests" / "conftest.py").write_text(
+        (ROOT / "tests" / "conftest.py").read_text(encoding="utf-8"), encoding="utf-8")
+    for args in (["init", "-q"], ["-c", "user.email=t@t", "-c", "user.name=t", "add", "-A"],
+                 ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "seed"]):
+        subprocess.run(["git", *args], cwd=str(repo), check=True, capture_output=True)
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(repo),
+                          capture_output=True, text=True).stdout.strip()
+    out = repo / "r.json"
+    # 复制过去的 conftest 会按**自己所在位置**算 _ROOT 与 sys.path ⇒ 它找不到
+    # scripts/release_fingerprint（ImportError 让整跑退 4）。把量具目录交给它，
+    # 其余宿主状态一概不给（否则这一跑就不是"干净树 + 已知锚点"那格了）。
+    env = {"AIPD_SOURCE_COMMIT": "f" * 40, "PYTHONDONTWRITEBYTECODE": "1",
+           "PYTHONPATH": str(ROOT / "scripts"),
+           "PATH": str(Path(sys.executable).parent) + ":/usr/bin:/bin",
+           "HOME": str(Path.home())}
+    proc = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                           "tests/zzz_stamp.py", "--json-report",
+                           f"--json-report-file={out}"],
+                          cwd=str(repo), env=env, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, proc.stdout[-1500:] + proc.stderr[-800:]
+    rep = json.loads(out.read_text(encoding="utf-8"))
+    assert rep["source_commit_measured"] == head, (rep.get("source_commit_measured"), head)
+    assert rep["source_commit"] == "f" * 40, rep.get("source_commit")
