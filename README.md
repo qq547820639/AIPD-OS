@@ -562,6 +562,15 @@ python scripts/ci_surface_census.py
 #     同格第二条 `mypy` 对应的注释「本地硬基线 ruff 0 / mypy 0」在第 91 片现读已不成立。
 #     现在这三面（ruff / mypy / schema_check）由 `tests/test_ci_face_gates.py` 真跑，
 #     缺工具走 SKIP（"未覆盖"不算绿），且那个文件与消费表**互相点名**。
+python scripts/ci_surface_census.py --self-test
+#   ↑ 上面那行尺（第 91 片）的第 94 片补强：`line` 不再是恒 0 的占位，
+#     而是从 `yaml.compose` 的标量标记定出来的 `.github/workflows/ci.yml:NNN`
+#     （块标量与内联两种形状都处理，`\` 续行取起始行）；判据与常驻用例一起钉
+#     "那一行的原文确实包含这条命令"。新增一档 `CI面被声明为可失败`：
+#     步骤级 `continue-on-error` 或命令级 `|| true`/`--exit-zero`/`set +e`/`--warn-only`
+#     都算"这段不是一道门"——第 91 片立尺的理由是裸 `pip-licenses` 退码恒 0，
+#     这一档把"本来会红但被声明可忽略"的写法一并拦住。现读 32 条命令、软门 0 条
+#     （0 的真伪由同一条正则扫原文对账，见 docs/audit/CI_SURFACE_LINES_F-CI-SURFACE_2026-09-29.md §一）。
 python scripts/dependency_license_gate.py
 #   ↑ 依赖许可证门禁（第 92 片）。权威面是**已装发行包的元数据**，从 `pyproject.toml` 的
 #     声明根做闭包 BFS；逐包落七档之一：allowed / forbidden（GPL 家族，直接红）/

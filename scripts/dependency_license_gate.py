@@ -569,18 +569,17 @@ def audit(root: Path, idx: dict[str, list[dict]] | None = None,
             continue
         rec = recs[0]
         rank, why, ids, raw, conflict = package_license(recs)
-        if len(recs) > 1:
-            if conflict:
-                buckets["duplicate-conflict"] += 1
-                dup_conflicts.append(name)
-                violations.append({
-                    "field": "同名多份元数据不一致", "doc": name, "line": 0,
-                    "written": f"{len(recs)} 份记录",
-                    "detail": f"{name} 在这个环境里有 {len(recs)} 份元数据记录"
-                              f"（{'；'.join(r['name'] + '/' + r['version'] for r in recs)}）"
-                              f"而它们给出的许可证不一样 ⇒ 取最严的一档判定，"
-                              "并把重复的安装记录清掉（遗留 egg-info 与 wheel 并存，"
-                              "数学上等于「同一依赖两种说法」）"})
+        if len(recs) > 1 and conflict:
+            buckets["duplicate-conflict"] += 1
+            dup_conflicts.append(name)
+            violations.append({
+                "field": "同名多份元数据不一致", "doc": name, "line": 0,
+                "written": f"{len(recs)} 份记录",
+                "detail": f"{name} 在这个环境里有 {len(recs)} 份元数据记录"
+                          f"（{'；'.join(r['name'] + '/' + r['version'] for r in recs)}）"
+                          f"而它们给出的许可证不一样 ⇒ 取最严的一档判定，"
+                          "并把重复的安装记录清掉（遗留 egg-info 与 wheel 并存，"
+                          "数学上等于「同一依赖两种说法」）"})
         body = body_face(bodies.get(name) or [], rank, why)
         if body["state"] == "checked":
             buckets["body-checked"] += 1

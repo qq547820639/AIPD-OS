@@ -67,43 +67,141 @@ def ci_commands(root: Path, workflow_rel: str = WORKFLOW_REL) -> tuple[list[dict
     except ImportError as exc:
         return [], [f"yaml_missing: 解析 workflow 需要 pyyaml（本仓 `full` 档已声明）：{exc}"]
     try:
-        doc = yaml.safe_load(p.read_text(encoding="utf-8"))
+        text = p.read_text(encoding="utf-8")
+        doc = yaml.safe_load(text)
     except (OSError, UnicodeDecodeError, ValueError) as exc:
         return [], [f"workflow_unreadable: {workflow_rel} 读不出/解析失败：{exc}"]
+    problems_extra: list[str] = []
     jobs = (doc or {}).get("jobs") or {}
+    marks = _run_marks(text)
     by_cmd: dict[str, dict] = {}
+    unmatched = 0
     for job, spec in sorted(jobs.items()):
-        for step in (spec or {}).get("steps") or []:
+        for i, step in enumerate((spec or {}).get("steps") or []):
             if not isinstance(step, dict) or "run" not in step:
                 continue
             raw = str(step["run"])
-            line0 = raw.split("\n", 1)[0].strip()
-            for chunk in _split_shell(raw):
-                ent = by_cmd.setdefault(chunk, {"command": chunk, "jobs": [],
-                                                "step": str(step.get("name") or ""),
-                                                "first_line": line0})
+            base = marks.get((job, i))
+            if base is None:
+                unmatched += 1
+            soft = bool(step.get("continue-on-error"))
+            for chunk, off, at in _split_shell(raw):
+                swallow = _SWALLOW_RE.search(chunk)
+                ent = by_cmd.setdefault(
+                    chunk, {"command": chunk, "jobs": [],
+                            "step": str(step.get("name") or ""),
+                            "line": (base + off) if base else 0,
+                            "at": at,
+                            "swallow": swallow.group(0).strip() if swallow else "",
+                            "soft": soft})
+                if soft:
+                    ent["soft"] = True
+                if swallow and not ent["swallow"]:
+                    ent["swallow"] = swallow.group(0).strip()
                 if job not in ent["jobs"]:
                     ent["jobs"].append(job)
-    out = [{"job": ",".join(v["jobs"]), "step": v["step"], "line": 0,
-            "command": k, "job_count": len(v["jobs"])} for k, v in by_cmd.items()]
+    out = [{"job": ",".join(v["jobs"]), "step": v["step"], "line": v["line"],
+            "at": v["at"], "command": k, "swallow": v["swallow"], "soft": v["soft"],
+            "job_count": len(v["jobs"])} for k, v in by_cmd.items()]
+    if unmatched:
+        problems_extra.append(f"run_mark_unmatched: 有 {unmatched} 个 run 步骤定不到行号"
+                              "（块标量形状变了或解析面跟不上）⇒ 那些命令的 `line` 记 0")
     if not out:
         return [], ["workflow_empty: 一条 run 命令都没读到（解析面或文件变了）"]
-    return out, []
+    return out, list(problems_extra)
 
 
-def _split_shell(raw: str) -> list[str]:
-    r"""block 标量 ⇒ 每行一条命令；`\` 续行折回上一条；空行与纯注释行丢掉。"""
-    out: list[str] = []
-    for line in raw.splitlines():
+def _split_shell(raw: str) -> list[tuple[str, int, str]]:
+    r"""block 标量 ⇒ 每行一条命令，并带回 (命令, 起始行在标量里的偏移, 那一行的原文)。
+
+    `\` 续行折回上一条，偏移取它**起始**那一行（不是最后一行）——判据要指的是
+    "这条门禁写在哪儿"，写在末尾那行会把人指到参数的续行上。空行与纯注释行丢掉。
+    原文单独带出来，是为了让常驻用例能做一条**自证**关系：`行号` 处那一行strip 后
+    必须逐字等于 `at`（行号与内容互相对账，不是各报各的）。
+    """
+    out: list[tuple[str, int, str]] = []
+    for idx, line in enumerate(raw.splitlines()):
         s = line.strip()
         if not s or s.startswith("#"):
             continue
-        if out and out[-1].endswith("\\"):
-            out[-1] = _norm(out[-1][:-1] + " " + s)
+        if out and out[-1][0].endswith("\\"):
+            prev, off, at = out[-1]
+            out[-1] = (_norm(prev[:-1] + " " + s), off, at)
         else:
-            out.append(_norm(s))
-    return [o for o in out if o and o != "|"]
+            out.append((_norm(s), idx, s))
+    return [(o, i, a) for o, i, a in out if o and o != "|"]
 
+
+def _run_marks(text: str) -> dict[tuple[str, int], int]:
+    """(job 名, step 序) → run 标量**内容首行**在文件里的行号（1 基）。
+
+    为什么不能只靠 `safe_load`：解析出来的值里没有行号，而行号才是判据要指的位
+    （第 91 片落地时 `line` 恒 0，"无人守"只说哪条命令、不说在哪一行）。
+    两种形状都得处理：块标量 `run: |` 的 `start_mark` 落在指示行、内容从下一行开始；
+    内联 `run: python -m pytest …` 的 `start_mark` 就在内容行上。
+    统一定锚法：从 `start_mark.line` 往后找**第一行其 strip 后包含内容首行**的文件行——
+    指示行 `run: |` 不含内容，所以块标量落到真正的首行；内联那行的 `run: ` 前缀
+    不影响"包含"，所以落在自己那行。定不到就不给行号（由调用方记前提诊断）。
+    """
+    import yaml
+
+    try:
+        root = yaml.compose(__import__("io").StringIO(text), Loader=yaml.SafeLoader)
+    except Exception:                                   # noqa: BLE001 - 解析失败另有前提诊断
+        return {}
+    lines = text.splitlines()
+    out: dict[tuple[str, int], int] = {}
+
+    def first_line(value: str) -> str:
+        """锚点必须取标量**真正的第一行**（注释行也算）——`_split_shell` 的偏移就是从
+        这一行数起的。跳过注释去找第一条命令，会把行号整体推后（一个静默错位）。"""
+        for ln in value.splitlines():
+            if ln.strip():
+                return ln.strip()
+        return value.strip()
+
+    def step_index_map(steps_node) -> None:
+        for i, st in enumerate(steps_node.value):
+            if not isinstance(st, yaml.MappingNode):
+                continue
+            for k, v in st.value:
+                if k.value == "run":
+                    head = first_line(str(v.value))
+                    for j in range(v.start_mark.line, min(len(lines), v.end_mark.line + 2)):
+                        if head and head in lines[j]:
+                            out.setdefault((str(cur_job[0]), i), j + 1)
+                            break
+
+    cur_job: list = [""]
+
+    def walk(node) -> None:
+        if isinstance(node, yaml.MappingNode):
+            for k, v in node.value:
+                if k.value == "jobs":
+                    for jn, js in v.value:
+                        cur_job[0] = str(jn.value)
+                        for kk, vv in (js.value if isinstance(js, yaml.MappingNode) else []):
+                            if kk.value == "steps" and isinstance(vv, yaml.SequenceNode):
+                                step_index_map(vv)
+                elif k.value == "steps" and isinstance(v, yaml.SequenceNode):
+                    step_index_map(v)
+                else:
+                    walk(v)
+        elif isinstance(node, yaml.SequenceNode):
+            for c in node.value:
+                walk(c)
+
+    walk(root)
+    return out
+
+
+
+# 一条命令**自己声明了失败也不拦**的写法。第 94 片现读：本仓 ci.yml 里 0 处
+# （38 个 run 步骤、`continue-on-error` 0 处、`|| true` 0 处、`--exit-zero` 0 处），
+# 所以这一格今天是**防未来**的门，不是抓既往的原告——它必须 fail-closed：
+# "只打印不判" 与 "声明可失败" 正是第 91 片立起的那条病（裸 `pip-licenses`）的两种写法。
+_SWALLOW_RE = re.compile(r"(\|\|\s*(?:true|:)\s*$|\bset\s+\+e\b|--exit-zero\b|"
+                         r"--warn-only\b|--ignore-errors\b)")
 
 
 def load_surface_register(root: Path, rel: str = SURFACE_REGISTER_REL
@@ -152,11 +250,23 @@ def audit(root: Path) -> dict[str, Any]:
     reg, rproblems = load_surface_register(root)
     problems += rproblems
     violations: list[dict] = []
-    buckets = {"consumed": 0, "unwatched": 0, "ci-only": 0}
+    buckets = {"consumed": 0, "unwatched": 0, "ci-only": 0, "soft-declared": 0}
     seen: set[str] = set()
     for c in cmds:
         key = c["command"]
         seen.add(key)
+        if c["swallow"] or c["soft"]:
+            buckets["soft-declared"] += 1
+            violations.append({
+                "field": "CI面被声明为可失败", "doc": WORKFLOW_REL, "line": c["line"],
+                "written": key,
+                "detail": f"这条命令被写成**失败也不会让 job 变红**"
+                          f"（{'continue-on-error' if c['soft'] else ''}"
+                          f"{' + ' if c['soft'] and c['swallow'] else ''}"
+                          f"{c['swallow']}），跑在 {c['job']!r} 的 {c['step']!r} 步 ⇒ "
+                          "它从此只是一段打印，不再是一道门。第 91 片立起的那格病就是"
+                          "`pip-licenses` 只打印、退码恒 0；现在连"
+                          "「退码有 0 但被声明可忽略」这种写法也一并拦住"})
         ent = reg.get(key)
         if ent is None:
             buckets["unwatched"] += 1
@@ -217,7 +327,7 @@ def render(rep: dict[str, Any]) -> str:
     lines.append(f"CI 命令 {c['ci_commands']} 条（{c['jobs']} 个 job），"
                  f"消费表 {c['register_size']} 条")
     lines.append(f"归属：已接住 {b['consumed']} / 免跑有理由 {b['ci-only']} / "
-                 f"无人守 {b['unwatched']}")
+                 f"无人守 {b['unwatched']} / 被声明为可失败 {b['soft-declared']}")
     for v in rep["violations"]:
         lines.append(f"  ✗ {v['field']} {v['doc']}:{v['line']} `{v['written']}` ⇒ {v['detail']}")
     for p in rep["problems"]:
@@ -314,6 +424,62 @@ def _self_test(tmp: Path) -> int:
         (v["field"], v["written"]) for v in rep3["violations"]}, rep3["violations"]
     _mark(marks, "结构性免跑必须带理由：把理由清空 ⇒ 立刻判红"
                  "（否则\"看不见\"会变成一条随时可以自我豁免的后门）")
+    # ---- 第 94 片 A：行号要报到 ci.yml:NNN，且与那一行的原文互相对账 ----
+    deep = tmp / "deep"
+    wfd = deep / WORKFLOW_REL
+    wfd.parent.mkdir(parents=True)
+    wfd.write_text(
+        "name: deep\njobs:\n  alpha:\n    steps:\n"
+        "      - name: Lint\n        run: |\n"
+        "          # 注释行不占一条命令，但占一行\n"
+        "          ruff check src \\\n            tests\n\n          mypy .\n"
+        "      - name: Audit\n        run: pip-audit -r req.txt --exit-zero\n"
+        "  beta:\n    steps:\n"
+        "      - name: Soft\n        continue-on-error: true\n"
+        "        run: python scripts/whatever.py\n", encoding="utf-8")
+    rows, probs = ci_commands(deep)
+    assert not probs, probs
+    by = {r["command"]: r for r in rows}
+    assert set(by) == {"ruff check src tests", "mypy .",
+                       "pip-audit -r req.txt --exit-zero",
+                       "python scripts/whatever.py"}, sorted(by)
+    fl = (wfd).read_text(encoding="utf-8").splitlines()
+    assert by["ruff check src tests"]["line"] == 8, by["ruff check src tests"]   # 续行取起始行
+    assert by["mypy ."]["line"] == 11, by["mypy ."]                              # 空行也算偏移
+    soft_row = by["pip-audit -r req.txt --exit-zero"]
+    assert soft_row["line"] == 13, soft_row
+    assert by["python scripts/whatever.py"]["line"] == 18, by["python scripts/whatever.py"]
+    for cmd, r in by.items():
+        assert r["at"] in fl[r["line"] - 1], (cmd, r["line"], r["at"], fl[r["line"] - 1])
+    _mark(marks, "行号：块标量（含注释行、`\\` 续行、空行）与内联 `run:` 两种形状都定得到 "
+                 "`ci.yml:NNN`，且每条的行号与那一行的原文**互相**对得上"
+                 "（第 91 片落地时这一格恒 0，判红只说哪条命令、不说在哪一行）")
+    # ---- 第 94 片 B：被声明为"失败也不拦"的命令必须开火，合规那条不许开火 ----
+    rep_d = audit(deep)
+    fired_d = {(v["field"], v["written"]) for v in rep_d["violations"]}
+    assert ("CI面被声明为可失败", "pip-audit -r req.txt --exit-zero") in fired_d, fired_d
+    assert ("CI面被声明为可失败", "python scripts/whatever.py") in fired_d, fired_d
+    assert ("CI面被声明为可失败", "mypy .") not in fired_d, fired_d
+    assert rep_d["buckets"]["soft-declared"] == 2, rep_d["buckets"]
+    assert main(["--repo", str(deep)]) == 4, rep_d["violations"]
+    hard = tmp / "hard"
+    (hard / WORKFLOW_REL).parent.mkdir(parents=True)
+    (hard / WORKFLOW_REL).write_text(
+        "name: hard\njobs:\n  z:\n    steps:\n      - run: ruff check src\n",
+        encoding="utf-8")
+    reg_ok = {"entries": [{"command": "ruff check src", "kind": "ci-only",
+                          "why": "合成：只在 CI 跑的结构性门", "consumers": []}]}
+    (hard / SURFACE_REGISTER_REL).parent.mkdir(parents=True)
+    (hard / SURFACE_REGISTER_REL).write_text(json.dumps(reg_ok, ensure_ascii=False),
+                                             encoding="utf-8")
+    rep_h = audit(hard)
+    assert not rep_h["violations"], rep_h["violations"]
+    assert rep_h["buckets"]["soft-declared"] == 0, rep_h["buckets"]
+    _mark(marks, "「被声明为可失败」两极：步骤级 `continue-on-error: true` 与命令级 "
+                 "`--exit-zero`（另收 `|| true`/`|| :`/`set +e`/`--warn-only`/"
+                 "`--ignore-errors`）各开一火，普通 `ruff check src` 那一步照旧不火"
+                 "——这一格是 fail-closed 的防未来门：本仓 ci.yml 现读 38 个 run 步骤、"
+                 "`continue-on-error` 0 处、`|| true` 0 处 ⇒ 今天没有活原告")
     # 前提塌：没有 workflow 文件时不许读成"零违规"
     empty = tmp / "nowf"
     (empty / "tests").mkdir(parents=True)
@@ -343,7 +509,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"拒写草案：{problems}")
             return 2
         entries = [{"command": c["command"], "kind": "TODO", "consumers": [],
-                    "why": "", "job_at_emit_time": c["job"], "line_at_emit_time": c["line"]}
+                    "why": "", "job_at_emit_time": c["job"], "line_at_emit_time": c["line"],
+                    "line_text_at_emit_time": c["at"],
+                    "soft_declared_at_emit_time": bool(c["swallow"] or c["soft"])}
                    for c in cmds]
         if out.is_file():
             old = {e["command"]: e for e in
