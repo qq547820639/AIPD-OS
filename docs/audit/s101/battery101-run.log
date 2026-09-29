@@ -1,0 +1,11 @@
+原文件 sha=e7cfacf91e40
+[ANCHORS OK] 6 支臂各命中 1 次
+[CONTROL OK] A0 原样全绿，且理由门的标记在场上：自测 rc=0（标记在不在=True）/ 用例 rc=0 红 0 条：
+[KILLED]   X1-gate-never-matches（注释门整个关掉 ⇒ 说明行又变原告）被抓住：自测 rc=1（标记在不在=False）/ 用例 rc=1 红 2 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_a_line_leading_comment_is_not_a_plaintiff
+[KILLED]   X2-gate-too-wide（门写成整行判 ⇒ 连着尾注释的真原告一起丢）被抓住：自测 rc=1（标记在不在=False）/ 用例 rc=1 红 2 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_a_line_leading_comment_is_not_a_plaintiff
+[KILLED]   X3-counter-not-fed（挡掉的条数不再累加 ⇒ 收窄变成静默的盲）被抓住：自测 rc=1（标记在不在=False）/ 用例 rc=1 红 2 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_a_line_leading_comment_is_not_a_plaintiff
+[KILLED]   X4-aggregate-hardcoded（corpus 那格聚合写成常量 0 ⇒ 自报与现实脱钩）被抓住：自测 rc=1（标记在不在=False）/ 用例 rc=1 红 1 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green
+[KILLED]   X5-render-drops-reading（自报行不再印这个数字 ⇒ 人读面上这道门不存在）被抓住：自测 rc=1（标记在不在=False）/ 用例 rc=1 红 1 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green
+[KILLED]   X6-row-reading-hardcoded（行读数写成常量 0 ⇒ 分档无从核对聚合）被抓住：自测 rc=1（标记在不在=False）/ 用例 rc=1 红 2 条：tests/test_forensic_scripts_root.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_forensic_scripts_root.py::test_a_line_leading_comment_is_not_a_plaintiff
+合计 KILLED 6 / 6；其余按判决分类：无
+收尾复算 sha=e7cfacf91e40（应等于 e7cfacf91e40）

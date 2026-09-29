@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-28T02:42:46",
-  "source_commit": "a66040520139405095648461f7144d4f00629924",
+  "generated_at": "2026-09-29T13:48:42",
+  "source_commit": "cef11218abfb171a6990f829a78d6da62af946e3",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "a66040520139405095648461f7144d4f00629924",
-  "latest_commit_time": "2026-08-14 14:59:15 +0800",
+  "latest_commit_sha": "cef11218abfb171a6990f829a78d6da62af946e3",
+  "latest_commit_time": "2026-09-29 13:27:42 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -57,7 +57,8 @@
       "templates/",
       "tests/",
       "THIRD_PARTY_NOTICES.md",
-      "THREAT_MODEL.md"
+      "THREAT_MODEL.md",
+      "tmp/"
     ],
     "per_dir_file_count": {
       ".git": 9,
@@ -81,11 +82,12 @@
       "migrations": 2,
       "references": 36,
       "releases": 4,
-      "scripts": 42,
+      "scripts": 46,
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 218
+      "tests": 227,
+      "tmp": 0
     }
   },
   "tags": [
@@ -116,75 +118,38 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 681,
-    "hash_matches": 673,
-    "hash_mismatch_count": 8,
+    "total_files": 695,
+    "hash_matches": 692,
+    "hash_mismatch_count": 3,
     "mismatches": [
       {
         "path": "CHANGELOG.md",
         "reason": "hash_mismatch",
-        "expected": "af290ddfa0f99ef2709466d558b656361232b032583445f1ac8f3332fe9909a5",
-        "actual": "09d280d7633bb7e91da1b4a4a369db3f35c912df194922cf1cba6186fd14e1e2"
+        "expected": "e8585c40fa0978bb1ed059754176fe042372429c4ebf0830569ceccafaf91335",
+        "actual": "30f45b7ea819bc225933f73b53c35c1af84bab9b73c76783c4c3b507a615de6c"
       },
       {
         "path": "README.md",
         "reason": "hash_mismatch",
-        "expected": "ee4d1cf87504007db6bdd914e999022a62f8c7c4391775813582404a728d604f",
-        "actual": "ec0531183b59018ae4deb566129e386bfac09e3ba00665c69dd8d98f4b28bb8b"
+        "expected": "3d18a5f61a580ef5be4e901d54bfe52e7b2dfe7a21198bd533f0247f7bdd1d32",
+        "actual": "0075ab6af6b46ee9005380484eb4bc4ed150571f2347c5b94f43b5c7855038a6"
       },
       {
-        "path": "docs/security/dependency-cve-review.md",
+        "path": "tests/test_forensic_scripts_root.py",
         "reason": "hash_mismatch",
-        "expected": "46e72f61dfc433294a0e7d52463e06926d65ac5e77b970a99daa3e95623f6b64",
-        "actual": "158ceceac858176605e023a4c19885bc298983fb6f7c91c034e2e01dc8064a3d"
-      },
-      {
-        "path": "src/aipd_os/cad/assembly_steps.py",
-        "reason": "hash_mismatch",
-        "expected": "2e17eaacb8dd27bfeb03b7eac022fb7df6f2d78531fc7686dcf067e3731ab675",
-        "actual": "78833a25babcc02b9478ab93c1b283d03044446d56bb2014dabf922d3e0a4e81"
-      },
-      {
-        "path": "src/aipd_os/cad/assembly_steps_pdf.py",
-        "reason": "hash_mismatch",
-        "expected": "96371b7b5d418dd703baaeac9ace181bc469b676648ebc7ee905081bc75dd043",
-        "actual": "f11553a6d37a9366f59c9c1dcf2eeba866c43ea84b09ef0b80b749dad2b83458"
-      },
-      {
-        "path": "src/aipd_os/cli/commands_drawing.py",
-        "reason": "hash_mismatch",
-        "expected": "787c9abc67556143ceceac326e06c0eac3a4a54b827cc7da22f83fc84db984f5",
-        "actual": "128352fba1a6853c5f639af23caf764cbb790f2839fe7d489a3d0706dc8546c4"
-      },
-      {
-        "path": "src/aipd_os/registry_data.py",
-        "reason": "hash_mismatch",
-        "expected": "f97e8ab74108faf84b180aa95c80593154e7b16bd7386db486b60353b61f0188",
-        "actual": "a86599b53901083aadd69902a4c8fd0183cd43c19888347d69670c4b10a9b764"
-      },
-      {
-        "path": "tests/test_assembly_steps_pdf.py",
-        "reason": "hash_mismatch",
-        "expected": "b9a7f40532375b452a604d42fbd95a7b08e12952608048933a61ad22759d4755",
-        "actual": "b8acf9d4c26de360e37a1661491de4e4eec9fb32e2d716931727c213208c4937"
+        "expected": "516cd01f8b6a1a5dc901dcb4ffcd2df31a926a2e200fd127d0750ef4aaf3c1e8",
+        "actual": "653b817d8aea692acf0120b51c273fd60dc6dd337deb5c2cff1d5b5101646ac9"
       }
     ]
   },
   "untracked_or_generated": [
     " M CHANGELOG.md",
     " M README.md",
-    " M docs/audit/ASSEMBLY_PDF_IMAGE_F-ASSEMBLY-PDF-IMAGE_2026-09-27.md",
-    " M docs/audit/capability_matrix.json",
-    " M docs/audit/capability_matrix.md",
-    " M docs/audit/repository_snapshot.json",
-    " M docs/audit/s81/battery81.log",
-    " M docs/audit/s81/battery81.py",
-    " M docs/security/dependency-cve-review.md",
-    " M src/aipd_os/cad/assembly_steps.py",
-    " M src/aipd_os/cad/assembly_steps_pdf.py",
-    " M src/aipd_os/cli/commands_drawing.py",
-    " M src/aipd_os/registry_data.py",
-    " M tests/test_assembly_steps_pdf.py",
+    " M docs/audit/FORENSIC_ROOT_F-FORENSIC-ROOT_2026-09-29.md",
+    " M docs/audit/FORENSIC_ROOT_REGISTER.json",
+    " M docs/audit/s96/build_forensic_root_register.py",
+    " M tests/test_forensic_scripts_root.py",
+    "?? docs/audit/s101/",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],

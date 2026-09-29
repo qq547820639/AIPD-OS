@@ -40,6 +40,15 @@ HOST_RE = re.compile(r"^/(?:Volumes|Users|home|tmp|private/tmp|mnt|opt)/")
 # 里带仓库内绝对路径的 16 个**一个都读不到**（第 99 片现读：引号分支 0 个文件、两分支 16 个）。
 # 测量换一种写法就换一个读数 ⇒ 这条分支与它的反例用例一起入库。
 SHELL_ABS_RE = re.compile(r"""(?:^|[\s=(])(/[^\s"'`\\)$]{4,})""", re.M)
+# 行首注释（`.sh` 的 `# …` 与 `.py` 的 `# …`）里的路径**不算原告**：第 101 片实测——
+# 分支不加这道门时，`# W=/Volumes/…` 这种纯说明行会被读成"这个脚本写死了仓库内路径"，
+# 于是名册要么多一条不做事的豁免、要么作者被推着把它登记进去（判据在教人记噪声）。
+# 只按"行首"判：`R=/x  # 说明` 那种代码 + 尾注释仍然是原告（同一正臂在 `--self-test` 里）。
+# 已知让渡：heredoc 体里的 `#` 在 shell 语义上是正文而不是注释，这道门会把它读成注释。
+# 本表按文本判行首，分不出"注释"与"heredoc 里的 #",这是收窄换来的一条让渡；
+# 第 101 片现算：全语料 `comment_skipped` 合计 0 条（该合计把 heredoc 体一起算在内），
+# 所以今天没有任何原告被这道门带走。日后若出现"挡掉 N 条"且 N>0，必须逐条读原文再判。
+COMMENT_LINE_RE = re.compile(r"^\s*#")
 
 # (规则名, 文件名判据, 这一类的理由)
 BY_DESIGN: list[tuple[str, str, str]] = [
@@ -55,19 +64,35 @@ BY_DESIGN: list[tuple[str, str, str]] = [
 ]
 
 
-def literals(text: str, shell: bool = False) -> list[tuple[int, str]]:
-    """返回 [(行号, 字面量)]：只认引号包住的整串，注释里的手写路径不算。
+def _scan(text: str, shell: bool = False) -> tuple[list[tuple[int, str]], int]:
+    """返回 ([(行号, 字面量)], 被行首注释门挡掉的条数)。
 
-    `shell=True` 时两条分支并跑——`R=/Volumes/…` 没有引号可锚，只用引号分支会把整个
-    `.sh` 面读成空（第一版普查就是这么把 17 读成 1 的）。
+    引号分支只认引号包住的整串；`shell=True` 时两条分支并跑——`R=/Volumes/…` 没有引号可锚，
+    只用引号分支会把整个 `.sh` 面读成空（第一版普查就是这么把 17 读成 1 的）。
+    两条分支都过同一道行首注释门：挡掉的条数**进读数**（`comment_skipped`），
+    不收进原告集合——"看不见"与"看见了但不算"必须能分开，否则收窄判据等于换一把更盲的尺。
     """
-    out = [(text.count("\n", 0, m.start()) + 1, m.group(1)) for m in ABS_RE.finditer(text)]
+    lines = text.splitlines()
+    out: list[tuple[int, str]] = []
+    skipped = 0
+    raw = [(text.count("\n", 0, m.start()) + 1, m.group(1)) for m in ABS_RE.finditer(text)]
     if shell:
         for m in SHELL_ABS_RE.finditer(text):
             item = (text.count("\n", 0, m.start(1)) + 1, m.group(1))
-            if item not in out:
-                out.append(item)
-    return sorted(out)
+            if item not in raw:
+                raw.append(item)
+    for ln, lit in sorted(raw):
+        src = lines[ln - 1] if 1 <= ln <= len(lines) else ""
+        if COMMENT_LINE_RE.match(src):
+            skipped += 1
+            continue
+        out.append((ln, lit))
+    return out, skipped
+
+
+def literals(text: str, shell: bool = False) -> list[tuple[int, str]]:
+    """`_scan` 的原告侧：行首注释里的路径不在返回值里。"""
+    return _scan(text, shell)[0]
 
 
 def repo_inside(root: Path, lit: str) -> bool:
@@ -114,12 +139,13 @@ def facts(root: Path) -> list[dict]:
             continue
         shell = f.suffix == ".sh"
         text = f.read_text(encoding="utf-8", errors="replace")
-        lits = literals(text, shell=shell)
+        lits, skipped = _scan(text, shell=shell)
         inside = [(ln, lit) for ln, lit in lits if any(repo_inside(r, lit) for r in roots)]
         ins = set(inside)
         rows.append({
             "path": rel,
             "shell": shell,
+            "comment_skipped": skipped,
             "inside": inside,
             "outside": [(ln, lit) for ln, lit in lits
                         if (ln, lit) not in ins and HOST_RE.match(lit)],
@@ -227,7 +253,8 @@ def audit(root: Path) -> dict:
                        "script_files": len(rows), "register_size": len(reg),
                        "inside_hardcoded": sum(1 for r in rows if r["inside"]),
                        "outside_hardcoded": len(outside),
-                       "uses_tempfile": sum(1 for r in rows if r["tempfile"])},
+                       "uses_tempfile": sum(1 for r in rows if r["tempfile"]),
+                       "comment_skipped": sum(r["comment_skipped"] for r in rows)},
             "outside": outside, "violations": violations, "problems": problems}
 
 
@@ -255,7 +282,8 @@ def render(rep: dict) -> str:
     lines = ["=" * 60, "取证脚本根路径对账", "=" * 60,
              f"取证脚本 {c['script_files']} 个（.py {c['py_files']} / .sh {c['sh_files']}；"
              f"写死仓库内 {c['inside_hardcoded']}、写死仓库外 {c['outside_hardcoded']}、"
-             f"用 tempfile {c['uses_tempfile']}），名册 {c['register_size']} 条",
+             f"用 tempfile {c['uses_tempfile']}、行首注释挡掉 {c['comment_skipped']} 条），"
+             f"名册 {c['register_size']} 条",
              f"归属：已豁免 {b['exempt']} / 按 __file__ 推根 {b['derived']}"
              f" / 无人守 {b['unwatched']}"]
     for v in rep["violations"]:
@@ -442,6 +470,25 @@ def _self_test(tmp: Path) -> int:
     _mark(marks, "两种书写形态各读到一次：裸赋值与带引号赋值都在 `shell=True` 里出现，"
                  "而只用引号分支（`shell=False`）恰好漏掉裸的那一条 ⇒ "
                  "「测量换写法就换读数」这一格由这条断言钉住")
+
+    _clean(hard)
+    _write(hard, "docs/audit/s2/commented.sh",
+           f'# W = {inside}/只在注释里\nR = {inside}/代码里\nS = {inside}/尾注释  # 说明\n')
+    rowc = next(r for r in facts(hard) if r["path"] == "docs/audit/s2/commented.sh")
+    gotc = {lit for _n, lit in rowc["inside"]}
+    assert gotc == {f"{inside}/代码里", f"{inside}/尾注释"}, (gotc, rowc)
+    assert rowc["comment_skipped"] == 1, rowc
+    _write(hard, "docs/audit/s2/commented.py",
+           f'# q = "{inside}/只在注释里"\np = "{inside}/代码里"\n')
+    rowp = next(r for r in facts(hard) if r["path"] == "docs/audit/s2/commented.py")
+    gotp = {lit for _n, lit in rowp["inside"]}
+    assert gotp == {f"{inside}/代码里"}, (gotp, rowp)
+    assert rowp["comment_skipped"] == 1, rowp
+    assert audit(hard)["corpus"]["comment_skipped"] == 2, audit(hard)["corpus"]
+    assert "行首注释挡掉 2 条" in render(audit(hard)), render(audit(hard)).splitlines()[2]
+    _mark(marks, "行首注释不算原告，但**只按行首判**：shell 面三行里行首注释那条被挡并计入"
+                 "`comment_skipped`，`R=…` 与「代码 + 尾注释」两条仍是原告；py 面带引号的注释行同样被挡"
+                 "（挡掉的条数既进 `corpus` 聚合、也进那行自报，所以这道门不会把判据变成一把更盲的尺）")
 
     _clean(hard)
     _write(hard, "docs/audit/closeout99.sh", f'R = {inside}\n')

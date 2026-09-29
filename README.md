@@ -658,16 +658,20 @@ python docs/audit/s96/build_forensic_root_register.py
 #     规则同步扩成 `\.(py|sh)$`，`s83b.sh` 的仓库根改成由 `BASH_SOURCE` 推。
 #     分母由脚本自报（`corpus.py_files` / `corpus.sh_files` / `corpus.script_files` 与 `buckets`），
 #     档位求和恒等于 `.py` + `.sh` 数、且 `sh_files > 0` 由常驻用例断。
+#     第 101 片加了一道**行首注释门**（两条分支的公共出口，不是只补 shell 那一支）：
+#     `# R=/Volumes/…` 这类纯说明行不再算原告，挡掉的条数进 `corpus.comment_skipped`
+#     与那行自报——"看不见"与"看见了但不算"必须能分开。门只按行首判，
+#     所以 `R=/x  # 说明` 那种代码 + 尾注释仍是原告（写成"`#` 在行里就丢"会被电池抓住）。
 python docs/audit/s96/build_forensic_root_register.py --self-test
-#   ↑ 上一行那把尺的 18 条注入读数（第 96 片 15 条 + 第 99 片 3 条：裸赋值开火、
-#     两种书写形态各读到一次、`closeoutNN.sh` 被点名规则接住且进名册；条数以这一行自己的
-#     自报数为准，别把抄进来的数当现状）。每道判决各配开火与合规两极，
+#   ↑ 上一行那把尺的注入读数臂。条数只认它自己那行"合成语料上 N 条判据读数全部对上"的
+#     自报数——本文不抄这个数（抄进来的每轮都漂）。每道判决各配开火与合规两极，
 #     含"只报不红"那一档的反例（放宽成 `^/` 就会被抓住 ⇒ URL 路由与本档语义不是同一件事），
 #     以及**重叠规则**那一臂——两条规则抢同一个文件在今天的规则表里结构上到不了，
 #     靠临时注入一条 `\.py$` 规则才证明这条闸不是写给人看的摆设。
 #     第 99 片另钉两格**同源**：常驻用例比 `✓立住` 的打印行数与工具自报的 `N 条判据读数`
-#     是否相等（臂 Y2 实测：把 `marks.append(text)` 改成 `pass` 时自报 0 条而照印 18 行，
-#     原先那条 `marks >= 18` 下限结构上看不见 ⇒ 只数打印行的断言等于没数）。
+#     是否相等（臂 Y2 实测：把 `marks.append(text)` 改成 `pass` 时自报 0 条而照印当时那 18 行，
+#     原先那条下限结构上看不见 ⇒ 只数打印行的断言等于没数）。下限本身随轮次抬，
+#     以 `tests/test_forensic_scripts_root.py` 现读为准。
 python scripts/scripts_lint_ratchet.py
 #   ↑ `scripts/` 的 lint 面棘轮（第 100 片）。CI 的 ruff 门原先只跑 `src tests state_service`，
 #     量具脚本整个站在面外。现在今天 0 债的那 16 个文件被**逐个点名**进 `ci.yml` 的那条命令，

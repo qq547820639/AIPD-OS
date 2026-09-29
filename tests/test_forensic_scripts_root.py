@@ -86,7 +86,7 @@ def test_instrument_self_test_is_actually_spawned_and_green() -> None:
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "条判据读数全部对上" in proc.stdout, proc.stdout
     marks = proc.stdout.count("✓立住")
-    assert marks >= 18, f"--self-test 的臂从 18 条缩水成 {marks} 条：注入没跑满就别谈判据"
+    assert marks >= 19, f"--self-test 的臂从 19 条缩水成 {marks} 条：注入没跑满就别谈判据"
     # 第 99 片（与 CI 面同源的一格）：逐条 `✓立住` 是无条件打印的，`N 条判据读数` 是工具
     # 自报的总数。只钉下限 ⇒ 臂 Y2（`marks.append` 改 `pass`）报 0 条而照印 18 行、用例全绿。
     m = re.search(r"合成语料上 (\d+) 条判据读数全部对上", proc.stdout)
@@ -189,6 +189,42 @@ def test_a_bare_shell_assignment_is_not_invisible() -> None:
     both = [lit for _n, lit in bfr.literals(body, shell=True)]
     assert quoted_only == ["/Volumes/aa/cc"], quoted_only
     assert both == ["/Volumes/aa/bb", "/Volumes/aa/cc"], both
+
+
+def test_a_line_leading_comment_is_not_a_plaintiff(tmp_path: Path) -> None:
+    """行首注释里的绝对路径**不进原告集合**（第 101 片收窄），但挡掉的条数必须进读数。
+
+    收窄前 `SHELL_ABS_RE` 按文本扫，`# W=/Volumes/…` 这种纯说明行会被读成原告：要么名册
+    多一条不做事的豁免，要么作者被推着把注释登记成"设计使然"。三格一起钉：
+    ① 行首注释那条被挡（`comment_skipped` 记 1，原告里没有它）；② **只按行首判**——
+    同行里"代码 + 尾注释"的两条路径都还是原告（把门写成 `'#' in line` 会在这里翻）；
+    ③ 只有注释路径的文件不再被判「根路径未点名」。
+    """
+    body = ('# W = /Volumes/aa/只在注释里\n'
+            'R = /Volumes/aa/代码里  # 顺带提一句 /Volumes/aa/尾注释里\n')
+    kept = [lit for _n, lit in bfr.literals(body, shell=True)]
+    assert kept == ["/Volumes/aa/代码里", "/Volumes/aa/尾注释里"], kept
+    _kept, skipped = bfr._scan(body, shell=True)
+    assert skipped == 1, (kept, skipped)
+    assert [lit for _n, lit in
+            bfr.literals('# q = "/Volumes/aa/只在注释里"\np = "/Volumes/aa/代码里"\n')] == \
+        ["/Volumes/aa/代码里"], "py 面的引号分支同样只放过非行首注释"
+
+    hard = _clean_tree(tmp_path)
+    inside = str(hard / "repo")
+    sh = hard / "docs" / "audit" / "s2" / "plain.sh"
+    sh.parent.mkdir(parents=True, exist_ok=True)
+    sh.write_text(f'# W = {inside}/只在注释里\nR = {inside}/代码里  # 也提 {inside}/尾注释里\n',
+                  encoding="utf-8")
+    only = hard / "docs" / "audit" / "s2" / "only.sh"
+    only.write_text(f'# W = {inside}/只在注释里\n', encoding="utf-8")
+    rep = bfr.audit(hard)
+    row = next(r for r in bfr.facts(hard) if r["path"] == "docs/audit/s2/plain.sh")
+    assert {lit for _n, lit in row["inside"]} == {f"{inside}/代码里", f"{inside}/尾注释里"}, row
+    assert row["comment_skipped"] == 1, row
+    assert not any(v["doc"].endswith("only.sh") for v in rep["violations"]), rep["violations"]
+    assert any(v["doc"].endswith("plain.sh") for v in rep["violations"]), \
+        "同行有真原告的那个文件仍要点名——收窄不许把整行一起放过"
 
 
 def test_a_worktree_checkout_of_the_same_repo_still_counts_as_repo_inside(
