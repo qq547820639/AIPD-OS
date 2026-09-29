@@ -1,0 +1,262 @@
+........................................................................ [  2%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+........................................................................ [ 10%]
+........................................................................ [ 13%]
+........................................................................ [ 15%]
+........................................................................ [ 18%]
+........................................................................ [ 20%]
+........................................................................ [ 23%]
+........................................................................ [ 26%]
+........................................................................ [ 28%]
+........................................................................ [ 31%]
+........................................................................ [ 33%]
+........................................................................ [ 36%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+........................................................................ [ 49%]
+........................................................................ [ 52%]
+........................................................................ [ 54%]
+................................................................ss...... [ 57%]
+........................................................................ [ 59%]
+........................................................................ [ 62%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 73%]
+........................................................................ [ 75%]
+........................................................................ [ 78%]
+........................................................................ [ 80%]
+.................ss.............................................s....... [ 83%]
+........................................................................ [ 86%]
+........................................................................ [ 88%]
+........................................................................ [ 91%]
+........................................................................ [ 93%]
+........................................................................ [ 96%]
+........................................................................ [ 99%]
+.........................                                                [100%]
+=============================== warnings summary ===============================
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:609
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:609: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    simple_dir = oneOf(["X", "Y", "Z", "XY", "XZ", "YZ"])
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:613
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:613: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    cqtype = oneOf(
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:616
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:616: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    cqtype = cqtype.setParseAction(pyparsing_common.upcaseTokens)
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:622
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:622: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    direction_op = oneOf([">", "<"])
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:625
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:625: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    center_nth_op = oneOf([">>", "<<"])
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:635
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:635: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    other_op = oneOf(["|", "#", "+", "-"])
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:638
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:638: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    named_view = oneOf(["front", "back", "left", "right", "top", "bottom"])
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:763
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:763: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    delta_op = oneOf(["exc", "except"])
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:770
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:770: PyparsingDeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    atom.setParseAction(atom_callback)
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:793
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:793: PyparsingDeprecationWarning: 'infixNotation' deprecated - use 'infix_notation'
+    expr = infixNotation(
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:50
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:50: PyparsingDeprecationWarning: 'addParseAction' deprecated - use 'add_parse_action'
+    number.addParseAction(lambda t: float(t[0]))  # convert to float
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:51
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:51: PyparsingDeprecationWarning: 'addParseAction' deprecated - use 'add_parse_action'
+    string_ = quotedString.addParseAction(lambda t: t[0][1:-1])  # remove quotes
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:57
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:57: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    Relation = oneOf(["==", "!=", "<", "<=", ">", ">=", "?", "!?"])
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:61
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:61: PyparsingDeprecationWarning: 'setResultsName' deprecated - use 'set_results_name'
+    EntityNames = Group(
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:65
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:65: PyparsingDeprecationWarning: 'infixNotation' deprecated - use 'infix_notation'
+    InfixBoolQuery = infixNotation(
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:65
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:65: PyparsingDeprecationWarning: 'setResultsName' deprecated - use 'set_results_name'
+    InfixBoolQuery = infixNotation(
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:74
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/queryparser.py:74: PyparsingDeprecationWarning: 'setResultsName' deprecated - use 'set_results_name'
+    AttribQueryOptions = Literal("i").setResultsName("AttribQueryOptions")
+
+<frozen importlib._bootstrap>:228
+  <frozen importlib._bootstrap>:228: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:228
+  <frozen importlib._bootstrap>:228: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:62
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:62: PyparsingDeprecationWarning: 'delimitedList' deprecated - use 'DelimitedList'
+    Name = delimitedList(
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:62
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:62: PyparsingDeprecationWarning: 'setResultsName' deprecated - use 'set_results_name'
+    Name = delimitedList(
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:65
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:65: PyparsingDeprecationWarning: 'setResultsName' deprecated - use 'set_results_name'
+    Tag = Word(alphas, alphanums + "_").setResultsName("tag")
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:66
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:66: PyparsingDeprecationWarning: 'setResultsName' deprecated - use 'set_results_name'
+    Selector = _selector_grammar.setResultsName("selector")
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:68
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/assembly.py:68: PyparsingDeprecationWarning: 'setResultsName' deprecated - use 'set_results_name'
+    SelectorType = (
+
+../AIPD-OS/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+    warnings.warn(
+
+tests/test_adapters.py: 9 warnings
+tests/test_cad_assembly_balloons.py: 24 warnings
+tests/test_cad_assembly_bom_link.py: 39 warnings
+tests/test_cad_contract_unify.py: 16 warnings
+tests/test_cad_detail_views.py: 16 warnings
+tests/test_cad_dfm.py: 26 warnings
+tests/test_cad_dfm_hole_land.py: 28 warnings
+tests/test_cad_dfm_wall_normal.py: 1 warning
+tests/test_cad_drawings2d.py: 29 warnings
+tests/test_cad_drawings_chain_tolerance.py: 32 warnings
+tests/test_cad_gdt_deviation.py: 12 warnings
+tests/test_cad_gdt_frames.py: 14 warnings
+tests/test_cad_golden_loop.py: 60 warnings
+tests/test_cad_section_symbols.py: 12 warnings
+tests/test_cad_section_views.py: 13 warnings
+tests/test_cad_spec_from_truth.py: 13 warnings
+tests/test_cad_stackup.py: 15 warnings
+tests/test_drawing_dxf_lineage.py: 9 warnings
+tests/test_dxf_rework.py: 8 warnings
+tests/test_golden_projects_e2e.py: 15 warnings
+tests/test_release_manifest.py: 13 warnings
+tests/test_release_manifest_assembly_step.py: 40 warnings
+tests/test_release_manifest_eco_coverage.py: 32 warnings
+tests/test_truth_drift.py: 1 warning
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/cadquery/selectors.py:865: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'
+    parse_result = _expression_grammar.parseString(selectorString, parseAll=True)
+
+tests/test_adapters.py: 9 warnings
+tests/test_cad_assembly_balloons.py: 29 warnings
+tests/test_cad_assembly_bom_link.py: 46 warnings
+tests/test_cad_assembly_explode.py: 1 warning
+tests/test_cad_contract_unify.py: 16 warnings
+tests/test_cad_detail_views.py: 36 warnings
+tests/test_cad_dfm.py: 26 warnings
+tests/test_cad_dfm_hole_land.py: 28 warnings
+tests/test_cad_dfm_wall_normal.py: 1 warning
+tests/test_cad_drawings2d.py: 29 warnings
+tests/test_cad_drawings_chain_tolerance.py: 32 warnings
+tests/test_cad_gdt_deviation.py: 12 warnings
+tests/test_cad_gdt_frames.py: 14 warnings
+tests/test_cad_golden_loop.py: 60 warnings
+tests/test_cad_section_symbols.py: 33 warnings
+tests/test_cad_section_views.py: 13 warnings
+tests/test_cad_spec_from_truth.py: 13 warnings
+tests/test_cad_stackup.py: 15 warnings
+tests/test_drawing_dxf_lineage.py: 9 warnings
+tests/test_dxf_rework.py: 8 warnings
+tests/test_golden_projects_e2e.py: 15 warnings
+tests/test_release_manifest.py: 13 warnings
+tests/test_release_manifest_assembly_step.py: 40 warnings
+tests/test_release_manifest_eco_coverage.py: 32 warnings
+tests/test_truth_drift.py: 1 warning
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/pyparsing/util.py:466: PyparsingDeprecationWarning: 'parseAll' argument is deprecated, use 'parse_all'
+    return fn(self, *args, **kwargs)
+
+tests/test_cad_assembly_balloons.py: 5 warnings
+tests/test_cad_assembly_bom_link.py: 7 warnings
+tests/test_cad_assembly_explode.py: 1 warning
+tests/test_cad_detail_views.py: 20 warnings
+tests/test_cad_section_symbols.py: 21 warnings
+  /Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/.venv/lib/python3.9/site-packages/ezdxf/query.py:444: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'
+    query_args = EntityQueryParser.parseString(query, parseAll=True)
+
+tests/test_cli.py: 12 warnings
+tests/test_cli_deprecation.py: 1 warning
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd init-project' 已废弃，请使用 'aipd init'
+    return int(func(args))
+
+tests/test_cli.py::test_project_summary_chinese_top_level
+tests/test_cli_deprecation.py::test_legacy_command_json_output[project-summary]
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd project-summary' 已废弃，请使用 'aipd status'
+    return int(func(args))
+
+tests/test_cli.py::test_run_cad_chain_faceted_capped
+tests/test_cli_deprecation.py::test_legacy_command_json_output[run-cad-chain]
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd run-cad-chain' 已废弃，请使用 'aipd cad build'
+    return int(func(args))
+
+tests/test_cli.py::test_submit_decision_resolves
+tests/test_cli_deprecation.py::test_legacy_command_json_output[submit-decision]
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd submit-decision' 已废弃，请使用 'aipd decide'
+    return int(func(args))
+
+tests/test_cli.py::test_build_release_produces_artifacts
+tests/test_cli_deprecation.py::test_legacy_command_json_output[build-release]
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd build-release' 已废弃，请使用 'aipd package'
+    return int(func(args))
+
+tests/test_cli.py::test_run_evals_fake_produces_report
+tests/test_cli_deprecation.py::test_legacy_command_json_output[run-evals]
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd run-evals' 已废弃，请使用 'aipd eval'
+    return int(func(args))
+
+tests/test_cli_deprecation.py::test_legacy_command_json_output[restore-project]
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd restore-project' 已废弃，请使用 'aipd resume'
+    return int(func(args))
+
+tests/test_cli_deprecation.py::test_legacy_command_json_output[run-manual-chain]
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd run-manual-chain' 已废弃，请使用 'aipd manual generate'
+    return int(func(args))
+
+tests/test_cli_deprecation.py::test_legacy_command_json_output[run-supervisor]
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd run-supervisor' 已废弃，请使用 'aipd run'
+    return int(func(args))
+
+tests/test_cli_deprecation.py::test_legacy_command_json_output[run-tests]
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/src/aipd_os/cli/main.py:1013: DeprecationWarning: 'aipd run-tests' 已废弃，请使用 'aipd test'
+    return int(func(args))
+
+tests/test_release_evidence.py: 20 warnings
+tests/test_release_evidence_preflight.py: 13 warnings
+  /Volumes/Extra/CodeProj/AI全链路自研/.wt-s95/scripts/release_evidence.py:235: DeprecationWarning: Accessing jsonschema.__version__ is deprecated and will be removed in a future release. Use importlib.metadata directly to query for jsonschema's version.
+    env["packages"][pkg] = getattr(mod, "__version__", "unknown")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_mail_protocol.py:201: AIPD_MAILPIT_* 未配置，走 HOLD 断言
+SKIPPED [1] tests/test_mail_protocol.py:239: AIPD_MAILPIT_* 未配置，走 HOLD 断言
+SKIPPED [1] tests/test_research_fulltext_live.py:28: integration: 需要出网（AIPD_RESEARCH_INTEGRATION=1 才跑）
+SKIPPED [1] tests/test_research_fulltext_live.py:42: integration: 需要出网（AIPD_RESEARCH_INTEGRATION=1 才跑）
+SKIPPED [1] tests/test_researchstudio_provider.py:233: integration: requires internet (AIPD_RESEARCHSTUDIO_INTEGRATION=1)
+2756 passed, 5 skipped, 1147 warnings in 327.88s (0:05:27)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+RUN_RC=0
