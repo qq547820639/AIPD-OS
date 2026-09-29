@@ -1,8 +1,12 @@
 # 第 99 片收口链【第二代 b】：绑定 → 提交 → 发布门 → 提交门的读数 → 收尾验签。
 # 由本片第一代 `closeout99.sh` 派生（派生器 `derive_closeout99b.py`，同一套锚点计数与工序哨兵），
 #   只换：worktree 名（`.wt-s99b`，绝对路径、落在仓库**外**）/ 报告名（`report-s99b.json`）/
-#   三个日志名的 b 后缀 / PRIOR_FLOOR=第一代实测 collected(2785) / 两处提交信息 / 头部注释。
-#   第二代的原因记在 `docs/audit/s99/` 那份 VOID 报告与本片 §六：绑定之后又动了被哈希的面
+#   三个日志名的 b 后缀 / 两处提交信息 / 头部注释。
+#   **`PRIOR_FLOOR` 沿用已认证的 2783（第 98 片实测 collected），不改**：第一代（2785）已作废、
+#   不当下界；而第二代测的就是同一棵树的内容 ⇒ collected 只会复现 2785，若把下界也写成 2785，
+#   前提判据 `collected > PRIOR_FLOOR` 会把一次合法的重跑读成"用例缩水"。派生器因此
+#   **没有** PRIOR_FLOOR 这条替换锚（哨兵仍要求 `PRIOR_FLOOR=2783` 在场）。
+#   第二代的原因记在本片 §认证读数与那份 VOID 报告：绑定之后又动了被哈希的面
 #   （`CHANGELOG.md`）⇒ 清单与树不同源，绕不过（绑定前预检正是为此而立），只能重锚后重跑一遍。
 #   --expect-test 仍点三条：`tests/test_forensic_scripts_root.py`（.sh 面 12 条）、
 #   `tests/test_ci_surface_census.py`（行钉进自测 + 条数两格同源，15 条）、
@@ -17,7 +21,7 @@ WT=/Volumes/Extra/CodeProj/AI全链路自研/.wt-s99b
 X=/Volumes/Extra/CodeProj/AI全链路自研/.s88-outside
 PY="$R/.venv/bin/python"
 export PATH="$R/.venv/bin:$PATH"
-PRIOR_FLOOR=2785
+PRIOR_FLOOR=2783
 mkdir -p "$X" "$R/docs/audit/s99"
 cd "$R" || exit 9
 
@@ -91,7 +95,8 @@ chore(s99b): 绑定第 99 片第二代的 attestation 报告（第一代作废�
 （补 92 个脚本 / 名册 70 条那组现读），`source_manifest_zero_diff` 判红、逐条对磁盘复算确认
 漂移只有那 1 条（692 条仍一致）⇒ 重锚清单后重跑一遍干净签出。第一代报告按惯例留档
 `docs/audit/s99/report-s99-VOID-tree-51023121-fp-21085171c58e.json`。
-上一代（第 98 片，collected 2783）与第一代（2785）都只作下界对比。
+上一代（第 98 片，collected 2783）仍是下界——第一代（2785）已作废，不拿来当自己的界，
+否则同一份内容重跑一遍就会被 `collected > 下界` 读成用例缩水。
 许可证门禁仍对 casadi/LGPL 判红是有意的（台账 needs-review 等属主拍板），发布门不消费它的退码。
 MSG
 echo "COMMIT_RC=$?"
