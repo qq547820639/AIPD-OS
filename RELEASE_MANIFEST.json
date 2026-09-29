@@ -7,8 +7,8 @@
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "size": 9243,
-      "sha256": "dc7738974453a82b0b0ff2a6fcbb5fe93dd61ecb319265c018b436d75dae4afd"
+      "size": 9753,
+      "sha256": "9ad8b25fa5485fdf30d417bb2430d07359b32579eaae76ad527636cadd420cdd"
     },
     {
       "path": ".gitignore",
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 405087,
-      "sha256": "dcd8c66fa15bbd744d13579bf01f486cd1611417cd4ceb4c23074b67d0c45fd0"
+      "size": 409850,
+      "sha256": "e8585c40fa0978bb1ed059754176fe042372429c4ebf0830569ceccafaf91335"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 82647,
-      "sha256": "9e0c8d756441e511694e39ce86bd671d5ab69bf5e1d6010f085e6e77b874331c"
+      "size": 84722,
+      "sha256": "3d18a5f61a580ef5be4e901d54bfe52e7b2dfe7a21198bd533f0247f7bdd1d32"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -944,6 +944,11 @@
       "path": "scripts/runtime_preflight.py",
       "size": 3710,
       "sha256": "969cd0d0a308c18d3fded084d552db3419235967b3b99185ce9884ae07aae1a4"
+    },
+    {
+      "path": "scripts/scripts_lint_ratchet.py",
+      "size": 20767,
+      "sha256": "6a6b08196fc57f50231fc25b0805245fa33903c8f25863f50551f98a1fcbe1b8"
     },
     {
       "path": "scripts/selftest_quality.py",
@@ -2557,8 +2562,8 @@
     },
     {
       "path": "tests/test_ci_face_gates.py",
-      "size": 4325,
-      "sha256": "717ee09090c2b837a2fd554fd3b59f90e02f9b8466b56b2f534a9b7fad261fa6"
+      "size": 6053,
+      "sha256": "2cc6243df97c41f04c5657f1a8d1079e2be774741feb6c1f4cbd579a9e220372"
     },
     {
       "path": "tests/test_ci_surface_census.py",
@@ -3284,6 +3289,11 @@
       "path": "tests/test_score_contract.py",
       "size": 8090,
       "sha256": "f19972e66eba8906567ed2e6db74a0585c286c50402ae79f514a5c84beecd5ca"
+    },
+    {
+      "path": "tests/test_scripts_lint_ratchet.py",
+      "size": 8749,
+      "sha256": "e7402efb9438a9d8f200215f0ecf9b2f54fd557e7b11c731dfdd318b5a2ade8c"
     },
     {
       "path": "tests/test_secret_policy.py",
