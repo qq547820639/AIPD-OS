@@ -3,13 +3,8 @@
   "checks": [
     {
       "check": "workspace_clean",
-      "passed": false,
-      "detail": [
-        " M docs/audit/DEPENDENCY_LICENSE_BODY_F-DEP-LICENSE_2026-09-29.md",
-        "?? docs/audit/SCRIPTS_LINT_FACE_RULING_2026-09-29.md",
-        "?? docs/audit/s99/closeout99.sh",
-        "?? docs/audit/s99/derive_closeout99.py"
-      ]
+      "passed": true,
+      "detail": "clean"
     },
     {
       "check": "commit_matches_head",
@@ -18,8 +13,11 @@
     },
     {
       "check": "source_manifest_zero_diff",
-      "passed": true,
-      "detail": "zero diff"
+      "passed": false,
+      "detail": [
+        "only on disk: CHANGELOG.md",
+        "only regenerated: CHANGELOG.md"
+      ]
     },
     {
       "check": "bundle_manifest_zero_diff",
