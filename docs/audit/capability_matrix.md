@@ -1,8 +1,8 @@
 # AIPD-OS 能力矩阵（v5.6 Registry 驱动）
 
-- 生成时间：`2026-09-29T15:38:51`
+- 生成时间：`2026-09-29T18:29:29`
 - 仓库：`/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS`
-- 默认分支：`main`；HEAD：`bd544c0a054ed35d21ccf9df65e3299e51d988c7`
+- 默认分支：`main`；HEAD：`282b51a94310545e45cfe50c722f859662bcdf25`
 - 版本：`5.6.0`
 - 能力总数：`84`
 - 分类由 Capability Registry + 运行时证据推导，非静态表。
@@ -23,7 +23,7 @@
 
 | 能力 | 分类 | 声明文件 | 实现文件 | 入口 | 运行命令 | 单元测试 | 当前限制 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 一句话创建项目 | `partially_implemented` | README.md / SKILL.md | src/aipd_os/cli/commands.py; scripts/aipd_supervisor.py | aipd_os.cli.commands:cmd_intake | `aipd intake --prompt "<一句话需求>"` | tests/test_cli.py::cmd_intake | 拆分规模受默认工作包模板约束 |
+| 一句话创建项目 | `partially_implemented` | README.md / SKILL.md | src/aipd_os/cli/commands.py; scripts/aipd_supervisor.py | aipd_os.cli.commands:cmd_intake | `aipd intake --prompt "<一句话需求>"` | tests/test_cli.py::test_intake_creates_project_deterministic | 拆分规模受默认工作包模板约束 |
 | 自动拆分工作包 | `fully_implemented` | references/work-queue-and-routing.md | scripts/aipd_supervisor.py | aipd_supervisor.Supervisor.run_supervisor | `aipd run --project <id>` | tests/test_supervisor_execution.py |  |
 | 依赖排序 | `fully_implemented` | references/work-queue-and-routing.md | scripts/aipd_supervisor.py | aipd_supervisor.Supervisor.next_work | `aipd run --project <id>` | tests/test_supervisor_execution.py |  |
 | 真实工具调用 | `partially_implemented` | references/capability-floor-policy.md | src/aipd_os/execution/execution_router.py; tool_adapters/* | aipd_os.execution.execution_router.ExecutionRouter.run | `aipd run --project <id>` | tests/test_execution_router.py; tests/test_adapters.py | 主循环真实调用工具，但 research/imggen/cad 等外部适配器在无后端时诚实返回 simulated/external 占位，不真实执行 |

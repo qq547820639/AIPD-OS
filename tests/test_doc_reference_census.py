@@ -151,3 +151,64 @@ def test_history_face_sorts_when_line_shapes_mix(tmp_path) -> None:
     assert 455 in lines and 9 in lines, lines
     assert all(isinstance(x, (int, str)) for x in lines), lines
     assert rep["live_defects"] == [], rep["live_defects"]
+
+
+def _mini_repo(tmp_path):
+    """一棵最小仓：两份同名 `twin.py`，符号只在 ROOTS 靠后那份里。"""
+    (tmp_path / "src" / "aipd_os").mkdir(parents=True)
+    (tmp_path / "src" / "twin.py").write_text("def other():\n    return 2\n", encoding="utf-8")
+    (tmp_path / "src" / "aipd_os" / "twin.py").write_text(
+        "def only_here():\n    return 1\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text(
+        "撞同名 `twin.py::only_here`\n撞同名但谁都没有 `twin.py::nowhere`\n", encoding="utf-8")
+    return tmp_path
+
+
+def test_shorthand_symbol_anchor_scans_every_same_name_file(tmp_path) -> None:
+    """简写符号锚不许只查先撞上的那份就判"符号不存在"。
+
+    第 105 片的真原告：`decision_policy.py::should_ask_decision` 真身在
+    `src/aipd_os/execution/decision_policy.py`，而 `resolve()` 按 ROOTS 前缀先撞上
+    `scripts/decision_policy.py`（同名 5 份）⇒ 被判 `symbol-missing`。
+    两极大成一条用例：符号在第二份 ⇒ 必须 `symbol-resolved` 且点名真载体；
+    哪份都没有 ⇒ 必须仍判 `symbol-missing`，不许因为"多查了几份"就被洗成有。
+    """
+    by = {(r["target"], str(r["line"] or "")): r
+          for r in census.audit(_mini_repo(tmp_path))["refs"]}
+    hit = by.get(("twin.py::only_here", ""))
+    miss = by.get(("twin.py::nowhere", ""))
+    assert hit is not None and miss is not None, sorted(by)
+    assert hit["klass"] == "symbol-resolved", hit
+    assert "src/aipd_os/twin.py" in hit["detail"], hit["detail"]
+    assert "撞同名" in hit["detail"], hit["detail"]
+    assert miss["klass"] == "symbol-missing", miss
+
+
+def test_the_two_measured_plaintiffs_now_resolve() -> None:
+    """两条量出来的真原告必须转好，且矩阵剩下的必须只是"产物举例名"。
+
+    第 105 片之前 `symbol-missing` 现读 21 条；修完符号支路（遍历同名候选）与 registry
+    那条写错的载体（registry 的 `unit_test` 从 `::cmd_intake` 改指真测试）
+    之后，两条都进 `symbol-resolved`。矩阵里仍指不回的 5 条**不是**缺陷：那是这台能力
+    产出什么文件的举例（`papers.json`、`assy.step` 等），它们本来就不该在仓里——
+    把它们当原告就是第 41 片"514 条假 missing"的重演，所以这里按**集合**钉死。
+    """
+    rep = census.audit(census.ROOT)
+    by = {r["target"]: r for r in rep["refs"]}
+    for target in ("decision_policy.py::should_ask_decision",
+                   "tests/test_cli.py::test_intake_creates_project_deterministic"):
+        rows = [r for r in rep["refs"] if r["target"] == target]
+        assert rows, f"{target} 一条都没读到"
+        assert all(r["klass"] == "symbol-resolved" for r in rows), \
+            f"{target} 仍在 {sorted({r['klass'] for r in rows})}"
+    # 只在**产物面**要求它消失：审计文档里复述这条坏指针是记录，不是缺陷复活。
+    assert not [r for r in rep["refs"] if r["doc"] == "docs/audit/capability_matrix.md"
+                and r["target"].endswith("::cmd_intake")], "矩阵还在渲染那条坏载体"
+    assert not [r for r in rep["refs"] if r["target"].endswith("::cmd_intake")
+                and r["klass"] == "symbol-missing" and census._is_live(r["doc"])]
+    left = sorted({r["target"] for r in rep["refs"]
+                   if r["doc"] == "docs/audit/capability_matrix.md"
+                   and r["klass"] in ("missing", "symbol-missing")})
+    assert left == ["assy.dxf", "assy.step", "assy.step.evidence.json",
+                    "fulltexts.json", "papers.json"], left
+    assert by and rep["buckets"].get("symbol-resolved", 0) > 50, rep["buckets"]

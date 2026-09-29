@@ -951,6 +951,28 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.66 F-DOC-REF 第 105 片：简写符号锚不许只查先撞上的那份文件就判「符号不存在」**：
+  闭任务 #34 的 (b) 半。动手前先把改法半径量完，两条前提都被现算推翻：
+  ① 「生成物写的指针转判红档」——现读 `docs/audit/capability_matrix.md` 解析不到的是 **6 条而不是 4 条**，
+  其中只有 1 条真缺陷（registry 的 `unit_test` 写 `tests/test_cli.py::cmd_intake`，而 `cmd_intake`
+  实住在 `src/aipd_os/cli/commands.py`），另 5 条（`papers.json`、`assy.step` 等）是「这台能力产出什么文件」
+  的**举例名**，把它们当原告就是第 41 片「514 条假 missing」的重演 ⇒ 那条改法要先有可点名的举例标记档，
+  本轮不开，留在任务 #34 的 (a) 半。
+  ② 「简写且全仓同名 >1 一律落 `multi`」——这样的引用实测 **1323 条实例 / 188 个不同目标**，
+  含 `README.md`（同名 9 份）、`config.py`（11）、`__init__.py`（519）这类散文明显指根目录那一份的合法简写，
+  整片改判等于把 `resolved` 里一大块搬走、尺子当场失去分辨力 ⇒ **文件级归属档一律不动**，
+  改法收窄成符号支路的精度修复。
+  实现：`_classify_symbol` 在首选载体找不到符号且目标是简写时遍历 `same_name_paths()` 全部同名候选，
+  命中即判 `symbol-resolved` 并在 detail 点名真载体与同名份数；一份都没有才判 `symbol-missing`。
+  两极各一条常驻（`tests/test_doc_reference_census.py` 11→13）：符号只在第二份 ⇒ 必须 resolved；
+  哪份都没有 ⇒ 必须仍 missing，不许因为「多查了几份」被洗成有。产品侧把 registry 那条 `unit_test`
+  改指真在的 `tests/test_cli.py::test_intake_creates_project_deterministic` 并重 emit 矩阵。
+  读数：全仓 `symbol-missing` 21 ⇒ **17**（4 条撞同名误判 + 1 条 registry 坏载体），
+  `symbol-resolved` 192 ⇒ 197；矩阵里剩下的正是那 5 条举例名，本轮按**集合**钉住，
+  防下一轮有人把它们当缺陷清零。自己的两处病：① 第一版把「审计文档里复述这条坏指针」也断言成缺陷——
+  历史面提它是记录不是复活，断言必须按面收口；② 新注释与用例 docstring 各踩一条 E501（ruff 抓到，非绕过）。
+  `--self-test` 25 ⇒ 27 条合成读数全立住。
+
 - **v5.65 F-CHANGELOG-ENTRY-CROSSCHECK 第 104 片：条目落没落地，改由提交历史这一侧回答**：
   闭任务 #33。`tests/test_changelog_integrity.py` 那两把尺都是自洽型的（重复块 / 记号三元组唯一），
   **整条缺席**时记号数与口径数一起往下走、两边照样相等 ⇒ 结构上看不见；今天一天撞两次

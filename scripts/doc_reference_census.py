@@ -91,6 +91,12 @@ def corpus(root: Path) -> list[Path]:
     return sorted({p for p in out if p.is_file()})
 
 
+def same_name_paths(rel: str, root: Path) -> list[Path]:
+    """一个简写在盘上的全部同名候选（符号支路要用；文件级归属档一律不动）。"""
+    needle = "/" + rel
+    return [root / q for q in _index(root) if q.endswith(needle) or q == rel]
+
+
 SKIP_DIRS = {".git", ".venv", "__pycache__", ".mypy_cache", ".pytest_cache", "releases"}
 _index_cache: dict[str, list[str]] = {}
 
@@ -232,6 +238,21 @@ def _classify_symbol(doc: str, target: str, symbol: str, ctx: str, root: Path) -
                     if n == 0 else f"{n} 个候选，简写无法唯一定位")
         return r
     span = _symbol_span(p, symbol)
+    if span is None and "/" not in target:
+        # 简写撞同名：`resolve()` 按 ROOTS 前缀先撞哪份算哪份，符号可能在另一份里。
+        # 只在这条支路上把同名候选全查一遍——文件级归属档（resolved/multi）一律不动，
+        # 否则 `README.md`、`config.py` 这类合法简写会被整片打成假原告（实测 188 个目标）。
+        cands = same_name_paths(target, root)
+        for q in cands:
+            if q == p:
+                continue
+            alt = _symbol_span(q, symbol)
+            if alt is not None:
+                r.klass = "symbol-resolved"
+                r.detail = (f"{q.relative_to(root)}:{alt[0]}-{alt[1]} ← {symbol}"
+                            f"（简写撞同名 {len(cands)} 份，命中的不是首选那份 "
+                            f"{p.relative_to(root)}）")
+                return r
     if span is None:
         r.klass = "symbol-missing"
         r.detail = (f"{p.relative_to(root)} 里找不到符号 {symbol!r}"
@@ -412,6 +433,15 @@ def _self_test(tmp: Path) -> int:
     (root / "src" / "aipd_os" / "real.py").write_text("\n".join(f"# {i}" for i in range(30)),
                                                       encoding="utf-8")
     # 带真符号的文件：符号锚的两极（在/不在）与漂移档都要它
+    # 撞同名两极：`resolve()` 按 ROOTS 前缀先撞 `src/twin.py`（没那个符号），
+    # 符号其实在 `src/aipd_os/twin.py` ⇒ 符号支路必须遍历同名候选；
+    # `dead.py` 两份都没有那个符号 ⇒ 不许因为"多查了几份"就把它放过。
+    (root / "src" / "twin.py").write_text("def other():\n    return 2\n", encoding="utf-8")
+    (root / "src" / "aipd_os" / "twin.py").write_text(
+        "def only_here():\n    return 1\n", encoding="utf-8")
+    (root / "src" / "dead.py").write_text("def x():\n    return 0\n", encoding="utf-8")
+    (root / "src" / "aipd_os" / "dead.py").write_text("def y():\n    return 0\n",
+                                                      encoding="utf-8")
     (root / "src" / "aipd_os" / "mod.py").write_text(
         "def helper(a):\n    return a\n\nclass Widget:\n    def audit(self):\n        return 1\n",
         encoding="utf-8")
@@ -422,6 +452,7 @@ def _self_test(tmp: Path) -> int:
         "符号锚 `src/aipd_os/mod.py::helper`\n"
         "类方法锚 `src/aipd_os/mod.py::Widget.audit`\n"
         "符号不存在 `src/aipd_os/mod.py::nope`\n"
+        "简写撞同名 `twin.py::only_here`\n"
         "不存在 `src/aipd_os/gone.py`\n"
 
         "简写歧义 `real.py` 与 `real.py:2`\n"
@@ -438,6 +469,7 @@ def _self_test(tmp: Path) -> int:
         encoding="utf-8")
     (root / "CHANGELOG.md").write_text(
         "- 历史 `src/aipd_os/gone.py:40`\n"
+        "- 简写两份都没有 `dead.py::nothere`（第二极：不许把没有的洗成有）\n"
         "- 历史钉还在 `src/aipd_os/mod.py:1` 上，点名叫 `helper`\n"
         "- 历史钉已漂走 `src/aipd_os/mod.py:6`，点名叫 `helper`\n",
         encoding="utf-8")
@@ -455,6 +487,8 @@ def _self_test(tmp: Path) -> int:
         ("README.md", "src/aipd_os/mod.py::helper", ""): "symbol-resolved",
         ("README.md", "src/aipd_os/mod.py::Widget.audit", ""): "symbol-resolved",
         ("README.md", "src/aipd_os/mod.py::nope", ""): "symbol-missing",
+        ("README.md", "twin.py::only_here", ""): "symbol-resolved",
+        ("CHANGELOG.md", "dead.py::nothere", ""): "symbol-missing",
         ("README.md", "src/aipd_os/gone.py", ""): "missing",
         ("README.md", "real.py", ""): "resolved",          # 唯一同名 ⇒ 简写算解析成功
         ("README.md", ".../real.py", ""): "elided",
