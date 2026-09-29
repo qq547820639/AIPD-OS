@@ -55,3 +55,21 @@ python scripts/doc_reference_census.py --json /tmp/drc.json
 python scripts/changelog_commit_crosscheck.py
 grep -l -- '--self-test' scripts/*.py scripts/research/*.py | wc -l
 ```
+
+## 更正 A 段的前提（本轮认证跑完后现读，动手前复核抓出来的）
+
+A 段原文写"这 4 条转判红档"。**数与性质都不对**，现读 `scripts/doc_reference_census.py --json /tmp/drc105.json`：
+
+- 矩阵里解析不到的引用共 **6 条**，不是 4 条：`tests/test_cli.py::cmd_intake`（真缺陷：载体写错），
+  另 **5 条是产物示例名** `papers.json`、`fulltexts.json`、`assy.step.evidence.json`、`assy.step`、`assy.dxf`。
+- 那 5 条不是"指针指不回"，是**举例**：矩阵的产出列里写的是这台能力会生成什么文件，
+  那些文件本来就不该在仓里。把它们转判红档＝重演第 41 片那次"514 条 missing 全是判据自造的假数"。
+- 因此 GENERATED 面若真开，必须**只核带 `::` 的符号锚**，且举例名要有归属档
+  （现读 `elided` 90 条、`cli-operand` 在代码块内那条规则已经存在；散文里的举例名需要一个显式"举例"标记，
+  点不到标记即判失效——这是 `doc_command_census` 面 ⑤ 已经立的规矩，同一形状）。
+- 全仓 `symbol-missing` 现读 **20 条**（第 103 片认当时是 12 条 ⇒ 会生长，抄数的地方都会漂，
+  本节所有数字都按"2026-09-29 现读"读，落笔前重跑文末复算入口）。
+
+真正要做的三件，代价重新排：① 修 registry 里那条写错的载体（1 处产品数据）；
+② 给散文举例名一个可点名的标记档，否则任何"生成面转判红"的设想都开不了工；
+③ `resolve()` 基名撞同名落 `multi`（B 段不变）。
