@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import json
 import os
 import platform
@@ -230,12 +231,30 @@ def _build_environment() -> dict:
         "packages": {},
     }
     for pkg in ("cryptography", "aipd_os", "jsonschema"):
-        try:
-            mod = __import__(pkg)
-            env["packages"][pkg] = getattr(mod, "__version__", "unknown")
-        except Exception:
-            env["packages"][pkg] = "not-installed"
+        env["packages"][pkg] = _pkg_version(pkg)
     return env
+
+
+def _pkg_version(pkg: str) -> str:
+    """版本号一律先问**打包元数据**，再退回模块属性，两条路都没有才写 `not-installed`。
+
+    直接读 `mod.__version__` 在这个环境里已经是带警告的读法：本机现跑
+    `scripts/release_evidence.py` 会吐
+    `DeprecationWarning: Accessing jsonschema.__version__ is deprecated …`，
+    而 `jsonschema` 下一版移除该属性时，这一格会**静默**变成 `unknown`——
+    它在证件里与"这台机器给不出版本"同形，读的人分不出是包的问题还是工具的问题。
+    元数据那条路（`importlib.metadata.version`）是 PyPA 给的权威来源；
+    名字查不到（例如发行名与导入名不同形）才回退属性。
+    """
+    try:
+        return importlib.metadata.version(pkg)
+    except importlib.metadata.PackageNotFoundError:
+        pass
+    try:
+        mod = __import__(pkg)
+    except Exception:
+        return "not-installed"
+    return getattr(mod, "__version__", "unknown")
 
 
 def _dependency_lock(repo: Path) -> dict:

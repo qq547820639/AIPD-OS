@@ -492,9 +492,9 @@ python scripts/closeout_verifier.py --tag v5.6.0 --expect-test tests/test_new_th
 #     这正是第 62 片真犯过的错。
 #     `--self-test` 是 22 臂合成电池（每臂只点亮自己那一格判决，其中一支是「只换
 #     `generated_at` 必须读成同一份清单」的假红控制——比原始字节 sha 就会每轮都假红），
-#     常驻牙 21 条见 `tests/test_closeout_verifier.py`（第 84 片 +1：跨文件键集对照）；指纹那把尺另见
-#     `tests/test_report_manifest_fingerprint.py` 6 条，含用真 `pytest --json-report`
-#     跑出来的生产侧端到端。`report_fingerprint_recorded` 缺字段读成**前提塌（退 2）**而不是判红：
+#     常驻牙见 `tests/test_closeout_verifier.py` 与 `tests/test_report_manifest_fingerprint.py`
+#     （条数一律现读，别抄进正文：`grep -c '^def test_' tests/test_closeout_verifier.py`；
+#     后者里有一条是用真 `pytest --json-report` 跑出来的生产侧端到端）。`report_fingerprint_recorded` 缺字段读成**前提塌（退 2）**而不是判红：
 #     报告是不可变的历史产物，判红会自锁——attestation 必须 0 failed，而任何"旧报告还在树里"
 #     时跑出来的全量都带着这条红，于是永远拿不到可绑的那一份。
 #     但"退 2 挡住配方"只等于挡住了记得跑这一步的人，所以第 84 片把强制力补到写入侧：
@@ -504,6 +504,19 @@ python scripts/closeout_verifier.py --tag v5.6.0 --expect-test tests/test_new_th
 #     `BindPreflightError` → 退 2 且三份证据一个都不写（拒写不半写）。
 #     闸的常驻牙见 `tests/test_release_evidence_preflight.py`（条数别抄进正文——
 #     用 `grep -c '^def test_' tests/test_release_evidence_preflight.py` 现读）。
+#   ↑ 同一支工具在写入侧的**其它三段**（`build_environment`、`dependency_lock`、
+#     `BUNDLE_MANIFEST`）此前只被历轮 `docs/audit/` 里没人 collect 的取证脚本碰过：
+#     `_build_environment`、`_dependency_lock`、`generate_bundle_manifest`、CLI 的 `--bundle`
+#     在 `tests/` 里各自零命中（第 97 片逐个名字亲手数过）。现在四段都有常驻牙，
+#     条数仍现读：`grep -c '^def test_' tests/test_release_evidence_environment.py`。
+#     版本号那一格改为**先问打包元数据**（`importlib.metadata.version`），因为本机现跑
+#     读 `jsonschema.__version__` 已经在吐 `DeprecationWarning … will be removed in a future
+#     release. Use importlib.metadata directly`——继续只读属性的话，将来三格会一起静默变
+#     `unknown`，而 `unknown`（装了给不出版本）与 `not-installed`（没装）在证件里同形、
+#     下游该做的动作不同。两档都钉，且都不许是空串；另有 `--bundle` 给/不给两极与
+#     「已入库那份 PROVENANCE 的这几格真有内容」的生产侧对账。
+#     电池 `docs/audit/s97/battery97.py`（W0 对照 + 9 支撤销臂）与历轮电池的字节码缓存普查
+#     见 `docs/audit/RELEASE_EVIDENCE_TEETH_F-PROD-READER_2026-09-29.md`。
 python scripts/doc_command_census.py
 #   ↑ 除了 `aipd …` 那一面，第 85 片起它还判**行首 `python scripts/X.py …`**：
 #     脚本必须存在、行内 `--旗子` 必须在该脚本 argparse 声明里（AST 读）；

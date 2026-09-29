@@ -951,6 +951,47 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.58 F-PROD-READER 第 97 片：把发布工具里"没人调的四段"接进常驻，并换掉已废弃的版本号读法**：
+  先更正上一片我自己记错的一条：「`release_evidence.py` 没有常驻读者」是**假否定结论**——
+  按"否定结论要穷举全部书写形态"的规矩一手复算，`grep -rl release_evidence tests/` 现读命中 7 个文件
+  （`tests/test_release_evidence.py:17` 就是 `import release_evidence`）。真正的缺口是**函数级**：
+  `_build_environment`、`_dependency_lock`、`generate_bundle_manifest`、CLI 的 `--bundle`
+  在 `tests/` 里各自零命中（逐个名字数过），也就是这个工具最容易被环境牵着走的几段
+  只被历轮 `docs/audit/` 里没人 collect 的取证脚本碰过（`pyproject.toml:75` `testpaths = ["tests"]`）。
+  新增 `tests/test_release_evidence_environment.py` 8 条：头部四格与独立重算的 `platform.*` 对齐；
+  `not-installed`（没装）与 `unknown`（装了给不出版本）分两档且都不许空串；
+  `pip freeze` 抛异常/退码非 0 都折成 `None` 而**锁文件面照算**（失败不许带走整段信息）；
+  zip 逐条 sha 用 `hashlib` 独立重算、夹具故意逆序写入以免"排序面"断言其实在抄 `zipfile` 顺序；
+  非 zip 退化成"整包自身"一条而不是 0 条；`bundle_path` 必须相对且随 `repo_root`/cwd 变
+  （写成绝对路径不报错，只会让证件在别的机器上指不到包）；`--bundle` 给/不给两极，
+  外加一条读**已入库那份 `PROVENANCE.json`** 的生产侧对账（前七条靠桩，这一条证"真跑出来过"）。
+  补牙时撞到的活风险：原实现读 `getattr(mod, "__version__", "unknown")`，本机现跑直接吐
+  `DeprecationWarning: Accessing jsonschema.__version__ is deprecated and will be removed in a
+  future release. Use importlib.metadata directly`（jsonschema 4.25.1 自己写的文案）⇒
+  新增 `_pkg_version()`：先问 `importlib.metadata.version()`（Python 3.8 起标准库，官方文档明说
+  它是"quickest way"、`supersedes` 那个 now-removed 的 `pkg_resources`；后者本机现跑
+  `ModuleNotFoundError` ⇒ 不引），查不到才回退属性，两条都没有才写 `not-installed`。
+  切换前后三格现读逐字相同（`cryptography 50.0.0 / aipd_os 5.6.0 / jsonschema 4.25.1`）且警告消失
+  ⇒ 这一改只换来源不换数。电池 `docs/audit/s97/battery97.py`：W0 对照 + 9 支撤销臂
+  （属性优先 / 两档合一 / 不看退码 / freeze 失败带走锁文件 / 绝对 `bundle_path` /
+  非 zip 不退化 / 每条 sha 用整包顶 / 不排序 / `packages` 循环不跑），KILLED 9/9。
+  连带把第 96 片那格字节码污染做成一次**静态普查**：普查手法本身也交了学费——第一版用
+  `importlib` 逐个 `exec_module` 电池来读 `ARMS`，而 `battery83/84/86` 有模块级副作用
+  （`docs/audit/s84/battery84.py:90` 是顶层 `print(f"基线 rc=…")`），于是普查自己跑了两三轮 pytest；
+  改成纯 `ast.parse` 后读数：`py_compile` 且存在**同长度编辑**的臂只在
+  `battery92(B3)`、`battery93(Y5)`、`battery94(W3,W11)`、`battery96(Z5,Z14)` 四支里，
+  这四位已按硬化形状（`ast.parse` + `-B` + `PYTHONDONTWRITEBYTECODE=1` + 前后清缓存）改写并重跑。
+  重跑读数：`battery90 13/13`、`battery92 7/7`（含被标的 `B3`）、`battery93 14/14`（含 `Y5`）、
+  `battery94 13/13`（含 `W3`/`W11`）⇒ 四支同长度臂的历史读数成立；`battery89`/`battery91` 因靶代码在
+  第 90/94 片被改过而**锚点作废拒跑（退 7）**，各自 0 支同长度臂 ⇒ 历史读数不受影响，
+  不去修锚、也不把拒跑说成已重放。另把八支电池里写死的 `.cpython-39.pyc` 换成
+  `sys.implementation.cache_tag`（现读 `cpython-39`；探针实测本机 `sys.pycache_prefix` 生效时
+  树内 `__pycache__` 那条根本没被写过，两条路都留是因为换环境后树内那条才唯一有效）。
+  又逮到一个漏掉的镜像面：`s95`→`s96` 这类替换吃不到 `bind95.log`/`gate95.log`/`closeout95.log`
+  （数字前是 `out`/`bind`/`gate`），于是第 96 片的目录里躺着三个"名字 95、内容是 96 读数"的日志；
+  本片把三个基名写进替换表并加哨兵断言 `assert "95.log" not in text`，s96 那三个文件按原样留。
+  README 那一段顺带把两处抄死的条数（`常驻牙 21 条`、`6 条`）改成现读指令。
+  四段选型与普查读数见 `docs/audit/RELEASE_EVIDENCE_TEETH_F-PROD-READER_2026-09-29.md`。
 - **v5.57 F-FORENSIC-ROOT 第 96 片：给取证脚本的根路径立一把尺，并把 C5 那条读数钉进常驻**：
   `docs/audit/**.py` 是复算入口，换机/换目录后那些 `Path("/Volumes/…/AIPD-OS")` 会指错树，
   而这件事原先**没有任何尺子看得见**。新尺 `docs/audit/s96/build_forensic_root_register.py`

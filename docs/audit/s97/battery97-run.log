@@ -1,0 +1,14 @@
+原文件 sha=435a99c194b3
+[ANCHORS OK] 9 支臂、9 处编辑各命中 1 次
+[CONTROL OK] W0 原样全绿
+[KILLED]   W1-attribute-first-version（版本号退回属性优先）被抓住 1 条：tests/test_release_evidence_environment.py::test_metadata_wins_and_the_two_missing_shapes_stay_distinct
+[KILLED]   W2-not-installed-folds-to-unknown（没装折成给不出版本）被抓住 1 条：tests/test_release_evidence_environment.py::test_metadata_wins_and_the_two_missing_shapes_stay_distinct
+[KILLED]   W3-freeze-return-code-ignored（freeze 不看退码）被抓住 1 条：tests/test_release_evidence_environment.py::test_dependency_lock_keeps_lockfiles_when_pip_freeze_fails_or_lies
+[KILLED]   W4-lockfiles-die-with-freeze（freeze 失败带走整段锁文件）被抓住 1 条：tests/test_release_evidence_environment.py::test_dependency_lock_keeps_lockfiles_when_pip_freeze_fails_or_lies
+[KILLED]   W5-bundle-path-absolute（bundle_path 写成绝对路径）被抓住 1 条：tests/test_release_evidence_environment.py::test_bundle_path_is_relative_and_not_tied_to_the_dev_machine
+[KILLED]   W6-nonzip-degrades-to-nothing（非 zip 不再退化成一条）被抓住 1 条：tests/test_release_evidence_environment.py::test_non_zip_bundle_degrades_to_exactly_one_self_entry
+[KILLED]   W7-entry-sha-is-bundle-sha（每条 sha 用整包顶替）被抓住 1 条：tests/test_release_evidence_environment.py::test_zip_bundle_lists_every_member_with_independently_recomputed_sha
+[KILLED]   W8-entries-unsorted（条目不再排序）被抓住 1 条：tests/test_release_evidence_environment.py::test_zip_bundle_lists_every_member_with_independently_recomputed_sha
+[KILLED]   W9-packages-loop-dropped（环境段的 packages 不跑）被抓住 1 条：tests/test_release_evidence_environment.py::test_metadata_wins_and_the_two_missing_shapes_stay_distinct
+合计 KILLED 9 / 9；其余按判决分类：无
+收尾复算 sha=435a99c194b3（应等于 435a99c194b3）
