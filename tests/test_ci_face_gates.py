@@ -32,6 +32,7 @@ HERE = "tests/test_ci_face_gates.py"
 SCRIPTS_LINT_FACE = [
     "scripts/aipd_supervisor.py",
     "scripts/benchmark_manifest.py",
+    "scripts/changelog_commit_crosscheck.py",
     "scripts/ci_surface_census.py",
     "scripts/command_surface_census.py",
     "scripts/dependency_license_gate.py",

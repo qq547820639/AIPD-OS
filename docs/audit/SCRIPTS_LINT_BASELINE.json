@@ -460,6 +460,7 @@
     "scripts/cad_maturity_gate.py",
     "scripts/capability_gate.py",
     "scripts/capability_matrix.py",
+    "scripts/changelog_commit_crosscheck.py",
     "scripts/check_skill_package.py",
     "scripts/ci_surface_census.py",
     "scripts/claim_gate.py",
