@@ -263,3 +263,22 @@ B1 的豁免语义与"数到真债"这对矛盾不能靠"补一条断言"消掉�
 代价面：13 处站点 + `tests/test_exception_hygiene.py` 的正向与反向断言 + 本文与 README 的措辞镜像，
 全部落在参与哈希的面上 ⇒ 必须与取证件同轮定稿。搬家后 SIM105 那一档的语料才真正可动。
 复算入口：`grep -rn 'EMPTY_EXCEPT' --include='*.py' src scripts state_service tests | wc -l`（本轮 14 行）。
+
+## 十二、第 106 片落地：标记搬家完成，SIM105 同轮吃完（2026-09-29）
+
+上一节的裁决照单执行，且比裁决多拿了两格：
+
+- 记号搬家：9 处站点全迁 `# aipd: empty-except - 原因`；`release_evidence.py:259` 那处
+  **摘除而非迁移**——它的 handler 体是 `return "not-installed"`，不是空吞，卫生门本就
+  不要求记号，旧记号在那里是装饰。4 处措辞随判据改口。Invalid noqa 警告 10 → 0。
+- SIM105 五处当轮吃完（3 处正是裁决点名的同批 try 块）：改写成
+  `contextlib.suppress(...)` 后吞法还在，只是旧判据看不见——所以卫生门同轮加宽：
+  suppress 块（含裸 `suppress` 导入形）入门、`scripts` 递归收编 research 子目录
+  （盲区里另有 10 处无记号空吞，本轮补齐记号）、`SyntaxError` 静默 `continue` 改为
+  显式第三态。面读数 310 文件 / 吞点分母 23（13 only-pass + 10 suppress，下限钉 23）。
+- 收回臂实测开火：电池 X4 把一处真站点改回旧写法，`test_old_marker_fully_retracted`
+  与 `test_no_unmarked_swallow` 双红；`aipd_supervisor.py` 的教训是**散文里复刻
+  `noqa:` 带码的指令形状也会被 ruff 当指令解析**（本轮第 10 条警告的来源），已改写。
+- 棘轮连锁：`source_worker.py` 偿清 E501+SIM105 成第 22 个 0 债文件，对账格当场点名
+  直连清单不同源 ⇒ 已接进 ci.yml 与 SCRIPTS_LINT_FACE 镜像；基线 86 格持平。
+- 全程读数与复算入口：`docs/audit/s106/EXC_HYGIENE_DESIGN_2026-09-29.md`。
