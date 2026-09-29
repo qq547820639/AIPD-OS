@@ -7,8 +7,16 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from postprocess import (dedup, is_survey, norm_arxiv, norm_doi, rank,
-                         relevance_score, term_words, title_norm)
+from postprocess import (
+    dedup,
+    is_survey,
+    norm_arxiv,
+    norm_doi,
+    rank,
+    relevance_score,
+    term_words,
+    title_norm,
+)
 
 RESULTS = []
 

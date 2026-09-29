@@ -16,7 +16,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 FACT_STATUSES = {"V", "S", "C", "E", "A", "P", "T", "R"}
 PROJECT_STATUSES = {"active", "awaiting_owner_decision", "blocked_external", "internal_rework", "released", "archived"}

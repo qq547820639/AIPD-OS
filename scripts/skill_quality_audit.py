@@ -35,11 +35,7 @@ for _p in (ROOT, ROOT / "src", ROOT / "scripts"):
         sys.path.insert(0, str(_p))
 
 # 从 canonical contract 导入，而非硬编码
-from aipd_os.cli.command_contract import (
-    ALL_REGISTERED_COMMANDS,
-    DEPRECATED_COMMANDS,
-    PUBLIC_COMMANDS,
-)
+from aipd_os.cli.command_contract import PUBLIC_COMMANDS
 
 # 命令名：单/双词小写（如 "manual plan"、"cad preflight"、"release check"）
 _CMD_NAME = r"[a-z][a-z0-9-]*(?: [a-z][a-z0-9-]*)?"

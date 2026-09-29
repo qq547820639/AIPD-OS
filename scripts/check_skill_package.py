@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, ast, re, sys
+
+import argparse
+import ast
+import re
+import sys
 from pathlib import Path
 
 MAX_ZIP=50*1024*1024; MAX_FILE=25*1024*1024; MAX_COUNT=500

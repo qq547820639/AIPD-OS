@@ -30,6 +30,8 @@ HERE = "tests/test_ci_face_gates.py"
 # 又会造出"键与 ci.yml 不再逐字相同"的假绿。清单本身的正确性由
 # `scripts/scripts_lint_ratchet.py` 的 `lint面直连清单不同源` 那一格判。
 SCRIPTS_LINT_FACE = [
+    "scripts/aipd_supervisor.py",
+    "scripts/benchmark_manifest.py",
     "scripts/ci_surface_census.py",
     "scripts/command_surface_census.py",
     "scripts/dependency_license_gate.py",
@@ -42,9 +44,11 @@ SCRIPTS_LINT_FACE = [
     "scripts/release_fingerprint.py",
     "scripts/research/fetch_fulltexts.py",
     "scripts/research/postprocess.py",
+    "scripts/research/selftest_postprocess.py",
     "scripts/scripts_lint_ratchet.py",
     "scripts/selftest_quality.py",
     "scripts/selftest_state.py",
+    "scripts/selftest_v4.py",
     "scripts/state_perf_gate.py",
 ]
 RUFF_CMD = " ".join(["ruff", "check", "src", "tests", "state_service",

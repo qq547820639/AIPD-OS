@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Search for academic papers using the OpenReview API."""
 
-import os
 import argparse
+import os
 import time
 from datetime import datetime
 from typing import Optional

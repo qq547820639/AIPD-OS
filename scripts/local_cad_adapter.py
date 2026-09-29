@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """Run and validate a project-local parametric CAD generator."""
 from __future__ import annotations
-import argparse, json, subprocess, sys
+
+import argparse
+import json
+import subprocess
+import sys
 from pathlib import Path
+
 
 def main():
  ap=argparse.ArgumentParser(); ap.add_argument('--project-root',required=True); ap.add_argument('--model-script',default='cad/model.py'); ap.add_argument('--json-out'); a=ap.parse_args()

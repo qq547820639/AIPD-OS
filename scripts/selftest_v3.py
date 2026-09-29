@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-import json, tempfile, subprocess, sys
+import json
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
+
 ROOT=Path(__file__).resolve().parent.parent
 
 def run(cmd,ok=True):

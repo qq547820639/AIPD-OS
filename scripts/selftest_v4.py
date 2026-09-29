@@ -13,9 +13,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "src"))
 
-from aipd_os.state.db import AIPDStateDB  # noqa: E402
 from aipd_supervisor import Supervisor  # noqa: E402
 from decision_policy import evaluate  # noqa: E402
+
+from aipd_os.state.db import AIPDStateDB  # noqa: E402
 
 
 def run(cmd, expect=0):

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, hashlib, json
+
+import argparse
+import hashlib
+import json
 from pathlib import Path
+
 from PIL import Image
 
 

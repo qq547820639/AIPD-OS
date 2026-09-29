@@ -674,20 +674,27 @@ python docs/audit/s96/build_forensic_root_register.py --self-test
 #     以 `tests/test_forensic_scripts_root.py` 现读为准。
 python scripts/scripts_lint_ratchet.py
 #   ↑ `scripts/` 的 lint 面棘轮（第 100 片）。CI 的 ruff 门原先只跑 `src tests state_service`，
-#     量具脚本整个站在面外。现在今天 0 债的那 16 个文件被**逐个点名**进 `ci.yml` 的那条命令，
+#     量具脚本整个站在面外。现在**今天真正 0 债**的那批文件被逐个点名进 `ci.yml` 的那条命令
+#     （条数只由这把尺自报，本文不抄——第 100 片接面时 16 个，第 102 片偿完机械档之后 20 个），
 #     其余有债的文件不进 CI、改由**测量基线**管：`docs/audit/SCRIPTS_LINT_BASELINE.json`
 #     逐 `(文件, 规则码)` 记命中数，判据跑真 ruff 现数并与之比。
 #     五档且求和恒等于并集格数：持平 / 上涨（判红）/ 未登记（判红）/ 已偿待撤（判红）/
 #     可下调（**只报不红**，进 `outside` 与 `--json`）；另有 `lint面文件未覆盖`（新脚本必须记账）
 #     与 `lint面直连清单不同源`（ci.yml 点名的集合必须恰等于今天的 0 债集合——
 #     多点会让 CI 当场红，少点是"有人清了债却没接面"）。
+#     偿债那一批的实际形状（第 102 片）：机械档只吃 I001/E401（ruff 自带 fix）＋
+#     逐条判过的 F401；**F401 不能整批 --fix**，因为 `scripts/aipd_supervisor.py` 是
+#     按设计 re-export 的兼容 wrapper，删名字等于悄悄收面对外表面 ⇒ 它改用 `__all__` 声明清单
+#     （由 `tests/test_supervisor_package.py` 两极核：清单与 import 块集合相等、每个名字真取得到），
+#     而不是逐行 `# noqa: F401`——noqa 只让 lint 闭嘴，`__all__` 是一张可核对的承诺。
 #     为什么不用 ruff 的 `per-file-ignores`：它按"文件×规则码"全有全无地豁免，
 #     **同码新增命中会一起被吞**；要绕开它数真债只能再喂一份复刻 pyproject 的临时配置
 #     （`--config` 只收简单 TOML 键值，复杂值本轮实测 `error: invalid value`）⇒ 那是把规则集抄第二遍。
 #     分母与档位一律由本脚本自报（`corpus.*` / `buckets`），别抄进正文；现读见
-#     docs/audit/SCRIPTS_LINT_FACE_F-SCRIPT-LINT_2026-09-29.md §四。
+#     docs/audit/SCRIPTS_LINT_FACE_F-SCRIPT-LINT_2026-09-29.md §四 与 §七之二（偿债批次表）。
 python scripts/scripts_lint_ratchet.py --self-test
-#   ↑ 上一行那把尺的 9 条合成读数。每档都配开火与合规两极，含"可下调只报不红≠不报"那一格；
+#   ↑ 上一行那把尺的合成读数臂（条数只认它自己那行自报，本文不抄）。每档都配开火与合规两极，
+#     含"可下调只报不红≠不报"那一格；
 #     前提塌两档各钉一次（判据侧 `audit()` 与生成侧 `--emit` 是两条分支）。
 #     靶文件自己就在被量的面上 ⇒ 变异电池多一道**债中性**门：`if False and …` 这类常量条件
 #     会被 ruff 判成 SIM223、给基线凭空添一格"未登记"，那种"臂被抓住"是夹具变了不是判据变了

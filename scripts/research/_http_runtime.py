@@ -21,7 +21,6 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-
 DEFAULT_CONNECT_TIMEOUT_SECONDS = 15.0
 DEFAULT_READ_TIMEOUT_SECONDS = 300.0
 DEFAULT_MAX_ATTEMPTS = 4

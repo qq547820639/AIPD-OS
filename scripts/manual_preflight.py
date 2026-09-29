@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, json, math
+
+import argparse
+import json
 from pathlib import Path
-from PIL import Image
+
 import numpy as np
+from PIL import Image
 
 
 def entropy(gray: np.ndarray) -> float:

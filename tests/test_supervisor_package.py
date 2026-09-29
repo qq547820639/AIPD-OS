@@ -113,3 +113,31 @@ def test_wrapper_re_exports_package_identity():
     assert aipd_supervisor.Supervisor is PkgSupervisor
     assert aipd_supervisor.main is pkg_main
     assert PkgPhases == aipd_supervisor.PHASES
+
+
+def test_wrapper_declared_surface_is_the_import_block_and_resolves():
+    """wrapper 用 `__all__` 声明对外表面（不是逐行 `# noqa: F401`）⇒ 这张清单必须两边对得上。
+
+    两极各钉一件事：① `__all__` 与源码里那串 import 的名字**集合相等**
+    （清单漏写一个名字 ⇒ lint 会把那一条重新判成"未用"，而删掉它就是悄悄收面）；
+    ② 清单里每个名字在模块上**真的取得到**（写了不存在的名字 ⇒ 承诺落空，
+    而 `import` 阶段不会报，只有 `from aipd_supervisor import X` 的使用者当场炸）。
+    """
+    tree = ast.parse(WRAPPER.read_text(encoding="utf-8"))
+    imported: set[str] = set()
+    declared: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "aipd_os.supervisor":
+            imported |= {a.name for a in node.names}
+        if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets):
+            assert isinstance(node.value, (ast.List, ast.Tuple)), "__all__ 要写成字面量清单"
+            declared |= {ast.literal_eval(e) for e in node.value.elts}
+    assert imported == declared, (sorted(imported - declared), sorted(declared - imported))
+    sys.path.insert(0, str(SCRIPTS))
+    try:
+        import aipd_supervisor  # noqa: PLC2701
+    finally:
+        sys.path.remove(str(SCRIPTS))
+    missing = [n for n in sorted(declared) if not hasattr(aipd_supervisor, n)]
+    assert not missing, f"声明了但取不到：{missing}"

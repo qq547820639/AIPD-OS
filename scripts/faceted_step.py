@@ -6,9 +6,11 @@ runtime or provider CAD skill is unavailable. It is not a replacement for native
 feature-history CAD, analytic B-Rep, GD&T, or tooling release.
 """
 from __future__ import annotations
+
 import re
 from pathlib import Path
 from typing import Any
+
 
 class FacetedStepWriter:
     def __init__(self): self.entities=[]

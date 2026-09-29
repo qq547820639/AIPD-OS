@@ -15,7 +15,11 @@
 退出码：0=PASS（可发布），1=HOLD（缺外部能力/黄金数据，需所有者处理），
 2=FAIL（硬件失败：结构/非视觉维度/渲染缺失）。
 """
-import argparse, json, os, subprocess, sys
+import argparse
+import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 # 允许独立运行 / 被测试子进程调用时导入 src 下的 aipd_os 包
@@ -73,7 +77,7 @@ def main():
     hold_reasons = []
 
     if a.pages_dir:
-        from aipd_os.visual_audit import VisualAuditor, VisionAuditProvider
+        from aipd_os.visual_audit import VisionAuditProvider, VisualAuditor
         # 真实视觉审核依赖 VisionAuditProvider 凭据（AIPD_VISION_PROVIDER_URL+KEY）；
         # 仅传 --vision-backend 字符串不再导致假通过（P1-1 修复）。
         vision_provider = VisionAuditProvider() if os.environ.get("AIPD_VISION_PROVIDER_URL") else None

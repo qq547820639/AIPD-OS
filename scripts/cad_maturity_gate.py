@@ -15,7 +15,9 @@ Semantics:
   C7  Substantive suppliers, DVT/PVT, quality closed-loop
 """
 from __future__ import annotations
-import argparse, json
+
+import argparse
+import json
 from pathlib import Path
 
 LEVELS = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']

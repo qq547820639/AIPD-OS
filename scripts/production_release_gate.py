@@ -22,10 +22,17 @@ Additional evidence-gate checks are reported additively in `evidence_checks`
 fails the overall gate. Existing (a)..(h) logic is preserved unchanged.
 """
 from __future__ import annotations
-import argparse, hashlib, json, shutil, subprocess, sys
-import jsonschema
+
+import argparse
+import hashlib
+import json
+import shutil
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+import jsonschema
 
 LEVELS = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7']
 

@@ -141,7 +141,7 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install -e ".[full,dev]"
       - name: Run ruff
-        run: ruff check src tests state_service scripts/ci_surface_census.py scripts/command_surface_census.py scripts/dependency_license_gate.py scripts/doc_reference_census.py scripts/migrate_capability_registry.py scripts/product_capabilities_extra.py scripts/quality_gate.py scripts/regenerate_release_manifest.py scripts/release_evidence.py scripts/release_fingerprint.py scripts/research/fetch_fulltexts.py scripts/research/postprocess.py scripts/scripts_lint_ratchet.py scripts/selftest_quality.py scripts/selftest_state.py scripts/state_perf_gate.py
+        run: ruff check src tests state_service scripts/aipd_supervisor.py scripts/benchmark_manifest.py scripts/ci_surface_census.py scripts/command_surface_census.py scripts/dependency_license_gate.py scripts/doc_reference_census.py scripts/migrate_capability_registry.py scripts/product_capabilities_extra.py scripts/quality_gate.py scripts/regenerate_release_manifest.py scripts/release_evidence.py scripts/release_fingerprint.py scripts/research/fetch_fulltexts.py scripts/research/postprocess.py scripts/research/selftest_postprocess.py scripts/scripts_lint_ratchet.py scripts/selftest_quality.py scripts/selftest_state.py scripts/selftest_v4.py scripts/state_perf_gate.py
       - name: Run mypy
         run: mypy
 

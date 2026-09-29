@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """Runtime capability check. Capability is not project closure."""
 from __future__ import annotations
-import argparse, importlib.util, json, os, shutil, subprocess, sys
+
+import argparse
+import importlib.util
+import json
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 _SRC = str(Path(__file__).resolve().parents[1] / "src")

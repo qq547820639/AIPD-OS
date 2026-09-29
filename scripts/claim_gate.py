@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse,json,sys
+
+import argparse
+import json
+import sys
 from pathlib import Path
+
 CLAIMS={
  'theory_foundation_ready':['theory_foundation','evidence_register','risk_register'],
  'manual_complete':['manual_complete','manual_quality_report','page_lineage'],

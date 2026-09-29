@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-import argparse, json
+import argparse
+import json
 from pathlib import Path
+
 
 def load(p): return json.loads(Path(p).read_text(encoding='utf-8'))
 def present(v): return v not in (None,'',[],{})

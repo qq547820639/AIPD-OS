@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse,json,sys
+
+import argparse
+import json
+import sys
 from pathlib import Path
+
 REQ={
  'S0_intake':['project_brief','truth_baseline','risk_register','work_plan'],
  'S1_theory':['theory_foundation','evidence_register','concept_options'],

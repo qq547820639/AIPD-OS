@@ -951,7 +951,32 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
-- **v5.62 F-FORENSIC-ROOT 第 101 片：取证根路径那把尺加了一道行首注释门——两条分支一起，不是只补 `.sh`**：
+- **v5.63 F-SCRIPT-LINT 第 102 片：机械档先吃下来，0 债集合从 16 涨到 20**（§七之二 那张批次表的第一批）：
+  I001 28 + E401 16（ruff 自带 fix，`--select I001,E401 --fix scripts` 一次报 "30 fixed, 0 remaining"）
+  之外，F401 那 13 条**不整批 --fix**，逐条读完再分两档：
+  ① 真死的 import 删掉（`capability_matrix.hashlib`、`e2e_acceptance.json`、`manual_preflight.math`、
+  `aipd_store.Iterable`、`skill_quality_audit` 里那两个没用上的 contract 名字——该文件的
+  canonical 消费者 `tests/test_command_coverage.py` 是直接从 `command_contract` 取，不经这个脚本）；
+  ② `scripts/aipd_supervisor.py` 是**按设计 re-export** 的兼容 wrapper（文件头 docstring 第 2 条写明
+  "保证旧引用 `from aipd_supervisor import Supervisor` 与 CLI 兼容"，且它列在 `releases/*/RELEASE_MANIFEST` 里），
+  删名字等于把对外表面悄悄收掉 ⇒ 改判据形状而不是删代码：用 `__all__` 声明清单，不用逐行 `# noqa: F401`。
+  两个候选的取舍按可核对性判：noqa 只让 lint 闭嘴，`__all__` 是一张能被读的承诺
+  （ruff 对 `__all__` 里的名字不再报 F401 由现算证实——该文件随后进 0 债集合）。
+  连带把这张承诺接上读者：`tests/test_supervisor_package.py::test_wrapper_declared_surface_is_the_import_block_and_resolves`
+  两极钉（`__all__` 与 import 块集合相等 + 每个名字 `hasattr` 取得到）；原先只有 3 个名字有读者，
+  另外 5 个是"写了没人核"的表面。反证实测：把 `__all__` 少写一个名字 ⇒ 该用例当场 `FAILED`，还原即绿。
+  读数：基线 138 格 / 642 条 ⇒ **89 格 / 584 条**，有债文件 44 ⇒ **40**，0 债 16 ⇒ **20**，
+  `ci.yml:144` 点名同步 16 ⇒ 20（漏接会被 `lint面直连清单不同源` 判红，本轮它就是先报出 `+0/-4`
+  才去改面的），`scripts_lint_ratchet.py` rc=0 且"现状面缺陷 0 条"；
+  主树全量（不是认证那一跑）2789 passed / 5 skipped / **3 failed**，三条红全是已知形状——
+  `test_roster_gap…`（tests 改了还没 commit）与两条 `*_manifest_hashes_match_disk`（清单还没重刷），
+  ⇒ 26 个脚本的行结构改动没有行为回归。
+  一处工具复用失败如实记：想拿第 100 片的 `docs/audit/s100/patch_ci_lint_face.py` 加这 4 个文件，
+  它 BAD-ANCHOR 且**一个字节都没落盘**——那件的一次性锚是"迁移前的旧命令行"，接完面之后就再也不命中；
+  本轮改面的动作因此由整行手改两面 + 棘轮复验完成。批次表里第二刀（`manual_chain.py` 的 E702 86 条）
+  仍挂着，且它撞上一个新登记的尺子盲区（任务 #32：`doc_reference_census` 只判 `line > EOF`，
+  指向会生长文件的行钉漂了约 47 行而四轮门禁全绿）。
+
   闭的是第 99 片留的入口项（shell 分支不分注释行）。动手前先复算那条前提，**前提本身写窄了**：
   §七 原话"引号那一分支天然不会（注释里没有配对引号就匹配不上）"只在注释里**没有**引号时成立，
   合成反证 `# q = "/Volumes/aa/只在注释里"` 喂 `literals()` 现读命中第 1 行 ⇒ 两条分支都会把

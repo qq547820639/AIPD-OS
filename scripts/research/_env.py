@@ -11,6 +11,7 @@ Search order (first match wins):
   2. any skills/<name>/.env under the repo root (keys currently live in skills/ResearchStudio-Idea/.env)
 """
 from __future__ import annotations
+
 import os
 from pathlib import Path
 from typing import Optional

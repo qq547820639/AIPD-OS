@@ -8,6 +8,7 @@
 runtime 包不依赖 scripts；本 wrapper 只 import aipd_os 包。
 """
 from __future__ import annotations
+
 import sys
 from pathlib import Path
 
@@ -21,14 +22,19 @@ except ImportError:
 
 from aipd_os.supervisor import (  # noqa: E402
     PHASES,
-    WORK_STATUSES,
     SCHEMA,
+    WORK_STATUSES,
     Supervisor,
-    now,
     jd,
-    parser,
     main,
+    now,
+    parser,
 )
+
+# 这个文件的存在理由就是 re-export（见文件头 docstring 第 2 条）。`__all__` 而不是
+# 逐行 `# noqa: F401`：把"对外承诺的表面"写成一份可核对的清单，删掉任何一个名字都会被
+# 读这张清单的人看见，而 noqa 只是让 lint 闭嘴。
+__all__ = ["PHASES", "SCHEMA", "WORK_STATUSES", "Supervisor", "jd", "main", "now", "parser"]
 
 if __name__ == '__main__':
     sys.exit(main())

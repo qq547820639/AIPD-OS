@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse,json,sys
+
+import argparse
+import json
+import sys
+
 ORDER=['C0','C1','C2','C3','C4','C5','C6','C7']
 def allowed(capability,target):
  if capability not in ORDER or target not in ORDER: return False

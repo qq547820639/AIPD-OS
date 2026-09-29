@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse,json,sys
+
+import argparse
+import json
+import sys
+
 MANDATORY={'product_architecture_fork','brand_value_judgment','key_interface_freeze','safety_or_regulatory','human_trial','formal_drawing_release','tooling_or_purchase','production_release','hard_constraint_conflict','ip_or_claim_risk'}
 def evaluate(event):
  reasons=[]

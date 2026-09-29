@@ -17,14 +17,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
-import requests
-
 import _http_runtime
+import requests
 import search_papers
 import search_papers_by_arxiv
-import source_worker
 import search_papers_by_openreview
-
+import source_worker
 
 ENV_KEYS = {
     "PAPER_SEARCH_TIMEOUT_SECONDS",

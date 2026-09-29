@@ -147,6 +147,22 @@ B1 的豁免语义与"数到真债"这对矛盾不能靠"补一条断言"消掉�
 排批（按"改完能不能一把接进 CI"切，不按"哪个文件最脏"切）：
 
 - **第一批（机械）**：I001 / E401 / F401 / UP045。改完把**清零**的文件逐个点名进面（见下面那三条同改）。
+  **【第 102 片已做，UP045 留在这里没做】** I001+E401 由 `--select I001,E401 --fix` 一口吃掉
+  （现读 "30 fixed, 0 remaining"，26 个文件 +116/−34）；F401 那 13 条**逐条读过再分档**，
+  因为它不是机械档：`scripts/aipd_supervisor.py` 的 7 条是**按设计 re-export** 的兼容 wrapper
+  （文件头 docstring 第 2 条 + 它列在 `releases/*/RELEASE_MANIFEST`），`--fix` 会把对外表面删掉
+  而文件"看起来更干净"。处置取 `__all__` 声明清单而不是逐行 `# noqa: F401`（ruff 对 `__all__`
+  里的名字不再报 F401，由该文件随后进 0 债集合现算证实），并补常驻两极
+  `tests/test_supervisor_package.py::test_wrapper_declared_surface_is_the_import_block_and_resolves`
+  ——注入反证：`__all__` 少写一个名字当场 `FAILED`。其余 6 条是真死的 import，删。
+  结果：基线 138 格 / 642 条 ⇒ **89 格 / 584 条**，有债 44 ⇒ **40**，0 债 16 ⇒ **20**，
+  `ci.yml:144` 与 `tests/test_ci_face_gates.py` 的清单同批 16 ⇒ 20，棘轮 rc=0。
+  主树全量（非认证那一跑）2789 passed / **3 failed**，三条红是"tests 未提交"与"清单未刷"那一族
+  已知形状（`test_roster_gap…` + 两条 `*_manifest_hashes_match_disk`）⇒ 行结构改动无行为回归。
+  **UP045 没做**：`requires-python >=3.9` 下把 `Optional[X]` 写成 `X | None` 只在注解求值时机上安全，
+  这 5 处得逐条看是不是运行期真会被求值（如 pydantic/typing.get_type_hints 路径），不属于"机械档"。
+  **一次工具复用失败**：`docs/audit/s100/patch_ci_lint_face.py` 不能再用来加文件——它的一次性锚写的是
+  "迁移前的旧命令行"，接完面就永不命中，本轮它 BAD-ANCHOR 且一个字节都没落盘（两阶段闸门按设计拦住）。
 - **第二批**：`manual_chain.py` 的 E702 86 条（本片 §七 已点名为第一刀）——先决条件是"这个文件有没有
   被任何常驻工具按 `file:line` 钉住"，拆行会把后面的行号整体下移；派了只读普查，读数回来才动手。
 - **第三批**：E501 的 191 条按文件收（`aipd_store.py` 29 条最多）。

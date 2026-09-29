@@ -42,28 +42,8 @@
     },
     {
       "file": "scripts/aipd_store.py",
-      "code": "F401",
-      "count": 1
-    },
-    {
-      "file": "scripts/aipd_store.py",
       "code": "SIM105",
       "count": 3
-    },
-    {
-      "file": "scripts/aipd_store.py",
-      "code": "UP035",
-      "count": 1
-    },
-    {
-      "file": "scripts/aipd_supervisor.py",
-      "code": "F401",
-      "count": 7
-    },
-    {
-      "file": "scripts/aipd_supervisor.py",
-      "code": "I001",
-      "count": 2
     },
     {
       "file": "scripts/audit_dependency_ack.py",
@@ -74,16 +54,6 @@
       "file": "scripts/audit_repo.py",
       "code": "E501",
       "count": 3
-    },
-    {
-      "file": "scripts/benchmark_manifest.py",
-      "code": "E401",
-      "count": 1
-    },
-    {
-      "file": "scripts/benchmark_manifest.py",
-      "code": "I001",
-      "count": 1
     },
     {
       "file": "scripts/c6_coverage.py",
@@ -102,11 +72,6 @@
     },
     {
       "file": "scripts/cad_handoff_gate.py",
-      "code": "E401",
-      "count": 1
-    },
-    {
-      "file": "scripts/cad_handoff_gate.py",
       "code": "E501",
       "count": 4
     },
@@ -121,28 +86,8 @@
       "count": 6
     },
     {
-      "file": "scripts/cad_handoff_gate.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/cad_maturity_gate.py",
-      "code": "E401",
-      "count": 1
-    },
-    {
       "file": "scripts/cad_maturity_gate.py",
       "code": "E501",
-      "count": 1
-    },
-    {
-      "file": "scripts/cad_maturity_gate.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/capability_gate.py",
-      "code": "E401",
       "count": 1
     },
     {
@@ -161,33 +106,13 @@
       "count": 5
     },
     {
-      "file": "scripts/capability_gate.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
       "file": "scripts/capability_matrix.py",
       "code": "E501",
       "count": 1
     },
     {
       "file": "scripts/capability_matrix.py",
-      "code": "F401",
-      "count": 1
-    },
-    {
-      "file": "scripts/capability_matrix.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/capability_matrix.py",
       "code": "W292",
-      "count": 1
-    },
-    {
-      "file": "scripts/check_skill_package.py",
-      "code": "E401",
       "count": 1
     },
     {
@@ -206,16 +131,6 @@
       "count": 8
     },
     {
-      "file": "scripts/check_skill_package.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/claim_gate.py",
-      "code": "E401",
-      "count": 1
-    },
-    {
       "file": "scripts/claim_gate.py",
       "code": "E501",
       "count": 3
@@ -231,11 +146,6 @@
       "count": 7
     },
     {
-      "file": "scripts/claim_gate.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
       "file": "scripts/closeout_verifier.py",
       "code": "E501",
       "count": 7
@@ -244,11 +154,6 @@
       "file": "scripts/closeout_verifier.py",
       "code": "SIM115",
       "count": 2
-    },
-    {
-      "file": "scripts/decision_policy.py",
-      "code": "E401",
-      "count": 1
     },
     {
       "file": "scripts/decision_policy.py",
@@ -272,11 +177,6 @@
     },
     {
       "file": "scripts/decision_policy.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/decision_policy.py",
       "code": "SIM115",
       "count": 1
     },
@@ -288,11 +188,6 @@
     {
       "file": "scripts/doc_command_census.py",
       "code": "SIM102",
-      "count": 1
-    },
-    {
-      "file": "scripts/e2e_acceptance.py",
-      "code": "E401",
       "count": 1
     },
     {
@@ -311,16 +206,6 @@
       "count": 4
     },
     {
-      "file": "scripts/e2e_acceptance.py",
-      "code": "F401",
-      "count": 1
-    },
-    {
-      "file": "scripts/e2e_acceptance.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
       "file": "scripts/faceted_step.py",
       "code": "E501",
       "count": 11
@@ -329,16 +214,6 @@
       "file": "scripts/faceted_step.py",
       "code": "E702",
       "count": 5
-    },
-    {
-      "file": "scripts/faceted_step.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/lifecycle_gate.py",
-      "code": "E401",
-      "count": 1
     },
     {
       "file": "scripts/lifecycle_gate.py",
@@ -356,16 +231,6 @@
       "count": 7
     },
     {
-      "file": "scripts/lifecycle_gate.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/local_cad_adapter.py",
-      "code": "E401",
-      "count": 1
-    },
-    {
       "file": "scripts/local_cad_adapter.py",
       "code": "E501",
       "count": 3
@@ -379,11 +244,6 @@
       "file": "scripts/local_cad_adapter.py",
       "code": "E702",
       "count": 8
-    },
-    {
-      "file": "scripts/local_cad_adapter.py",
-      "code": "I001",
-      "count": 1
     },
     {
       "file": "scripts/manual_chain.py",
@@ -407,27 +267,12 @@
     },
     {
       "file": "scripts/manual_chain_gate.py",
-      "code": "E401",
-      "count": 1
-    },
-    {
-      "file": "scripts/manual_chain_gate.py",
       "code": "E501",
       "count": 3
     },
     {
       "file": "scripts/manual_chain_gate.py",
-      "code": "I001",
-      "count": 2
-    },
-    {
-      "file": "scripts/manual_chain_gate.py",
       "code": "W292",
-      "count": 1
-    },
-    {
-      "file": "scripts/manual_preflight.py",
-      "code": "E401",
       "count": 1
     },
     {
@@ -444,21 +289,6 @@
       "file": "scripts/manual_preflight.py",
       "code": "E702",
       "count": 2
-    },
-    {
-      "file": "scripts/manual_preflight.py",
-      "code": "F401",
-      "count": 1
-    },
-    {
-      "file": "scripts/manual_preflight.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/outcome_acceptance.py",
-      "code": "E401",
-      "count": 1
     },
     {
       "file": "scripts/outcome_acceptance.py",
@@ -476,29 +306,14 @@
       "count": 6
     },
     {
-      "file": "scripts/outcome_acceptance.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
       "file": "scripts/production_release_gate.py",
       "code": "B007",
       "count": 2
     },
     {
       "file": "scripts/production_release_gate.py",
-      "code": "E401",
-      "count": 1
-    },
-    {
-      "file": "scripts/production_release_gate.py",
       "code": "E501",
       "count": 3
-    },
-    {
-      "file": "scripts/production_release_gate.py",
-      "code": "I001",
-      "count": 1
     },
     {
       "file": "scripts/production_release_gate.py",
@@ -517,18 +332,8 @@
     },
     {
       "file": "scripts/research/_env.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/research/_env.py",
       "code": "UP045",
       "count": 2
-    },
-    {
-      "file": "scripts/research/_http_runtime.py",
-      "code": "I001",
-      "count": 1
     },
     {
       "file": "scripts/research/_http_runtime.py",
@@ -556,11 +361,6 @@
       "count": 2
     },
     {
-      "file": "scripts/research/search_papers_by_arxiv.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
       "file": "scripts/research/search_papers_by_crossref.py",
       "code": "E501",
       "count": 3
@@ -581,28 +381,13 @@
       "count": 3
     },
     {
-      "file": "scripts/research/search_papers_by_openreview.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
       "file": "scripts/research/search_papers_by_semantic_scholar.py",
       "code": "E501",
       "count": 3
     },
     {
-      "file": "scripts/research/selftest_postprocess.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
       "file": "scripts/research/selftest_runtime.py",
       "code": "E501",
-      "count": 1
-    },
-    {
-      "file": "scripts/research/selftest_runtime.py",
-      "code": "I001",
       "count": 1
     },
     {
@@ -613,11 +398,6 @@
     {
       "file": "scripts/research/source_worker.py",
       "code": "SIM105",
-      "count": 1
-    },
-    {
-      "file": "scripts/runtime_preflight.py",
-      "code": "E401",
       "count": 1
     },
     {
@@ -636,16 +416,6 @@
       "count": 9
     },
     {
-      "file": "scripts/runtime_preflight.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/selftest_v3.py",
-      "code": "E401",
-      "count": 1
-    },
-    {
       "file": "scripts/selftest_v3.py",
       "code": "E501",
       "count": 2
@@ -661,16 +431,6 @@
       "count": 9
     },
     {
-      "file": "scripts/selftest_v3.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
-      "file": "scripts/selftest_v4.py",
-      "code": "I001",
-      "count": 1
-    },
-    {
       "file": "scripts/sign_release.py",
       "code": "F541",
       "count": 1
@@ -684,11 +444,6 @@
       "file": "scripts/skill_quality_audit.py",
       "code": "E402",
       "count": 1
-    },
-    {
-      "file": "scripts/skill_quality_audit.py",
-      "code": "F401",
-      "count": 2
     }
   ],
   "files": [
@@ -754,8 +509,8 @@
     "scripts/state_perf_gate.py"
   ],
   "totals": {
-    "hits": 642,
-    "rows": 138,
+    "hits": 584,
+    "rows": 89,
     "generated_by": "scripts/scripts_lint_ratchet.py"
   }
 }

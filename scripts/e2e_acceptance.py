@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Compatibility wrapper. AIPD 2.0 no longer treats artifact existence as full closure."""
 from __future__ import annotations
-import argparse, json, subprocess, sys
+
+import argparse
+import subprocess
+import sys
 from pathlib import Path
+
 
 def main()->int:
  ap=argparse.ArgumentParser(); ap.add_argument('--project-root',required=True); ap.add_argument('--json-out'); ap.add_argument('--require-full',action='store_true')

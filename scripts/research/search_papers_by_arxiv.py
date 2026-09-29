@@ -3,8 +3,8 @@
 
 import argparse
 import os
-import tempfile
 import re
+import tempfile
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET

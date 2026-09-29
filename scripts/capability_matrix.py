@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -26,9 +25,14 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.audit_repo import audit_repo  # noqa: E402
+
 from aipd_os.registry import (  # noqa: E402
-    CLASSIFICATIONS, CLASSIFICATION_LABELS, CapabilityRegistry,
-    load_default_registry, probe_classification, probe_entry_callable,
+    CLASSIFICATION_LABELS,
+    CLASSIFICATIONS,
+    CapabilityRegistry,
+    load_default_registry,
+    probe_classification,
+    probe_entry_callable,
     probe_file_has_impl,
 )
 
