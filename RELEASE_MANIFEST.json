@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 424180,
-      "sha256": "94059c7ef08767b3ba91ea08abfee93ce6088d7f3b1e0d3ea155d1510a592149"
+      "size": 424832,
+      "sha256": "0b69410adee930185144c5728dd5768a9d159862a5b9ea7927a56e5bd935a9e8"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -742,8 +742,8 @@
     },
     {
       "path": "scripts/changelog_commit_crosscheck.py",
-      "size": 16960,
-      "sha256": "0f6fd9e720e390662637a3a56f86e382ac46d567801c85b565b52194180dd465"
+      "size": 17576,
+      "sha256": "fa5a9e07cd0150ebf791a92a5135e223c154b81cf0b2886a810de7ce17296370"
     },
     {
       "path": "scripts/check_skill_package.py",
