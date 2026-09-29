@@ -146,8 +146,55 @@ with an appropriate error"（本轮亲自开 `datatracker.ietf.org/doc/html/rfc8
 并带两条不拒的极：整数照算（动了内容就是不同数）、只换 `generated_at`（即便写成浮点）
 仍读成同一份清单。
 
-## 六、认证读数（收口时填，不抄进别的文档）
+## 六、认证读数（2026-09-29 收口，一次跑通，无第二代）
+
+链条：`17439a4` 代码+文档 → `60e1484` 刷清单 → `git worktree add .wt-s93 HEAD` 干净全量
+→ `docs/audit/s93/closeout93.sh`（绑定 → 门 → 读数入库 → 验签）→ 回收 worktree → `-b` 复算。
 
 ```
-（待收口链写入：BIND / GATE / CV / -b 复算 / 全量 collected / 电池 杀-活-注入无效）
+PRECHECK OK: 2749 passed / 5 skipped / collected 2754 / 493.9s / fp a059971de064
+MIN_TESTS=2754 （上一代下界 2745）
+SKIP 面逐条相同：5 条                     ← 双向差集为空（不是只看 FAIL=0）
+BIND_RC=0    回读 OK: source_commit=a66040520139 test_report=2749p/0f/2754t fp=a059971de064
+GATE_RC=0    release_ready: True | 未过: 无 | 项数: 8
+CV_RC=0      11 格全绿（report_bound_to_provenance / counts_counted_from_roster /
+             terminal_clean / roster_covers_tree / pinned_source_binding /
+             content_parity_measured / report_fingerprint_recorded /
+             report_fingerprint_matches_disk / worktree_clean / plaintiffs_measured /
+             size_ratchet）
+CVB_RC=0     回收 worktree 后 -b 复算仍 11/11；主树脏条目 0、worktree 数 1
+提交：fd41e11 绑定 → 5c9b0ad 门读数 → 337b... 验签 → 217db7d 有效代报告 → 本条补记
 ```
+
+被哈希文件数 **691 → 691**，新增/移除差集皆空 ⇒ 本轮所有产物
+（取证文档、探针、电池、派生脚本、报告、日志）都住在 `docs/audit/`，不参与清单哈希；
+参与哈希的只有 `scripts/` 两处与 `tests/` 两处与 `README/CHANGELOG/docs/security` 的文字。
+
+电池是我**亲手重跑**的（子 agent 那份只当导航档）：
+
+```
+$ python docs/audit/s93/battery93.py
+原文件 sha=73b896ada9bd
+[ANCHORS OK] 14 支臂、15 处编辑各命中 1 次
+[CONTROL OK] Y0 原样全绿
+合计 KILLED 14 / 14；其余按判决分类：无
+收尾复算 sha=73b896ada9bd（等于开局，也等于 HEAD）
+```
+
+两条机制读数（不是估算，是基线对照现算）：Y1（窗口退回全文）在真语料上多开
+**1 笔**打架（numpy），`body-checked` 37→40、`body-unrecognized` 5→2；
+Y2（严重度按提及算）多开 **5 笔**（cadquery-ocp / librt / mypy / numpy / pathspec），
+`body-severe-mention` 8→3 ⇒ 两臂都不是等价变异。
+Y10（重复对账只在闭包内跑）`--self-test` 抓不到，只有
+`test_outside_closure_duplicate_records_still_reconcile` 与真语料那条能看见——
+合成语料里那个重复名字 `b-dualrec` 从声明根走得到，正是本仓 `aipd-os` 的反面。
+
+门禁今天仍红一条，且不是收尾失败：
+
+```
+✗ 依赖许可证未裁定 casadi `needs-review`      （rc=4，全量里由常驻用例钉住"它还没被拍板"）
+```
+
+**未证事项**：正文面在真语料上是 **0 条判红**（防御性加严，见 §一），
+未验证的是"上游真的低报许可证"这件事在本仓闭包内是否曾发生过——那需要历史轮子的
+正文比对，本面只保证下一次发生时会被拦下。

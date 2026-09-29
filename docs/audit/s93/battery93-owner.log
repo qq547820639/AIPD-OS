@@ -1,0 +1,19 @@
+原文件 sha=73b896ada9bd
+[ANCHORS OK] 14 支臂、15 处编辑各命中 1 次
+[CONTROL OK] Y0 原样全绿
+[KILLED]   Y1-window-back-to-full（断言窗口退回全文）被抓住 1 条：tests/test_dependency_license_gate.py::test_real_corpus_body_face_is_populated_and_has_no_false_red
+[KILLED]   Y2-severity-from-mentions（严重度按提及算而不是断言）被抓住 1 条：tests/test_dependency_license_gate.py::test_real_corpus_body_face_is_populated_and_has_no_false_red
+[KILLED]   Y3-title-substring-not-prefix（标题判据从行首退回子串）被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_body_stricter_than_metadata_fires_but_a_bundled_list_does_not
+[KILLED]   Y4-drop-lgpl-gpl-carveout（撤掉 LGPL 引用 GPL 的豁免（循环体置 pass））被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_lgpl_body_text_does_not_escalate_to_gpl
+[KILLED]   Y5-missing-counts-as-checked（没有正文折算成已核对）被抓住 3 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_body_states_are_three_not_two; tests/test_dependency_license_gate.py::test_real_corpus_body_face_is_populated_and_has_no_false_red
+[KILLED]   Y6-unrecognized-counts-as-checked（正文不识别折算成合规）被抓住 3 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_body_stricter_than_metadata_fires_but_a_bundled_list_does_not; tests/test_dependency_license_gate.py::test_body_states_are_three_not_two
+[KILLED]   Y7-no-asserted-early-return（无断言时不再算提及档（把提前 return 放回去））被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_body_stricter_than_metadata_fires_but_a_bundled_list_does_not
+[KILLED]   Y8-conflict-by-id-face（重复记录按 id 面判不一致）被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_duplicate_metadata_records_take_the_stricter_saying
+[KILLED]   Y9-take-first-not-strictest（重复记录取第一份而不是最严）被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_duplicate_metadata_records_take_the_stricter_saying
+[KILLED]   Y10-dupes-only-in-closure（重复对账只在闭包内跑）被抓住 2 条：tests/test_dependency_license_gate.py::test_outside_closure_duplicate_records_still_reconcile; tests/test_dependency_license_gate.py::test_real_corpus_body_face_is_populated_and_has_no_false_red
+[KILLED]   Y11-ids-not-tokenised（ids 不再清洗成标识符）被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_ledger_can_adjudicate_a_package_whose_metadata_gives_only_a_coarse_name
+[KILLED]   Y12-ledger-verbatim-equality（台账比对退回逐字相等）被抓住 2 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_ledger_can_adjudicate_a_package_whose_metadata_gives_only_a_coarse_name
+[KILLED]   Y13-tree-files-count-as-bodies（包树里的许可证也算正文）被抓住 2 条：tests/test_dependency_license_gate.py::test_bodies_are_read_from_a_real_wheel_not_only_from_injection; tests/test_dependency_license_gate.py::test_real_corpus_body_face_is_populated_and_has_no_false_red
+[KILLED]   Y14-body-fight-does-not-fire（正文打架不开火（append 的守卫改成 False））被抓住 4 条：tests/test_dependency_license_gate.py::test_instrument_self_test_is_actually_spawned_and_green; tests/test_dependency_license_gate.py::test_body_stricter_than_metadata_fires_but_a_bundled_list_does_not; tests/test_dependency_license_gate.py::test_lgpl_body_text_does_not_escalate_to_gpl; tests/test_dependency_license_gate.py::test_bodies_are_read_from_a_real_wheel_not_only_from_injection
+合计 KILLED 14 / 14；其余按判决分类：无
+收尾复算 sha=73b896ada9bd（应等于 73b896ada9bd）
