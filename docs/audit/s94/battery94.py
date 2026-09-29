@@ -19,7 +19,7 @@ harness 与 `docs/audit/s93/battery93.py` 同构（逐字沿用）：对照臂�
 | W10 | 定不到行号时静默记 0（删掉 `run_mark_unmatched` 那条前提诊断）|
 | W11 | 桶计数不数软门（`soft-declared` 加 0）|
 | W12 | `--emit-register` 不写 `line_text_at_emit_time`（写成空串）|
-| W13 | 软门判红不指位（该违规 dict 的 `line` 写回 0）|
+| W13 | 两档判红都不指位：软门与「无人守」的 `line` 各写回 0（一处锚点命中 2 次 ⇒ 必须两处一起撤）|
 
 W5 的具体做法（照臂表字面执行，不另改）：只把
 `for idx, line in enumerate(raw.splitlines()):` 的分母换成
@@ -39,13 +39,38 @@ harness 的预数门会直接退 7、一支都不跑。这里不改判决也不�
 `soft` = `test_a_gate_declared_soft_fires_while_a_hard_gate_does_not`
 `zero` = `test_soft_face_reads_zero_on_the_real_repo_and_the_zero_is_a_real_zero`
 `diag` = `test_a_step_whose_line_cannot_be_located_is_a_named_diagnostic_not_a_silent_zero`
+`emit` = `test_emit_register_writes_line_pins_and_keeps_hand_filled_fields`
 
-实测翻红（一支臂一条，冒号后是被抓住的用例数与简名；合计 12 杀 / 1 活 / 0 注入无效）：
+实测翻红（冒号后是被抓住的用例数与简名。靶文件是两个版本，都写清出处）：
+
+跑序 1｜靶 = 11 条用例（`tests/test_ci_surface_census.py` sha256[:12] `357d08d731e5`，
+即 `a3c930e` 那一版）⇒ **12 杀 / 1 活 / 0 注入无效**，退 4：
 W1:4 self line fold soft · W2:2 self line · W3:3 self line fold · W4:2 self fold ·
 W5:2 self fold · W6:2 self soft · W7:2 self soft · W8:2 self soft · W9:2 self soft ·
-W10:1 diag · W11:2 self soft · **W12:0 存活**（emit 草案字段无人读）· W13:1 soft
+W10:1 diag · W11:2 self soft · **W12:0 存活** · W13:1 soft
 
-`zero` 那一格对全部 13 支臂都没翻红，不是漏跑：它断的是"真仓库上桶计数 0
+跑序 2｜同一把臂表重跑时读到 `scripts/ci_surface_census.py` 的 sha 是 `cc5e379135b6`
+（不是 `c1a313c1d2bd`）、W1 锚点命中 0 次 ⇒ 锚点预数门退 7、一支未跑、一个字节没写。
+那一刻并行会话正在改同一个文件；这格正是预数门存在的理由。
+
+跑序 3｜靶 = 12 条用例（sha256[:12] `f7902d0adac7`，即第 94b 片 `eebea06` 补进
+`emit` 那条之后的版本）⇒ **13 杀 / 0 活 / 0 注入无效**，退 0：
+W1:5 self line fold soft emit · W2:3 self line emit · W3:3 self line fold ·
+W4:2 self fold · W5:2 self fold · W6:2 self soft · W7:2 self soft ·
+W8:3 self soft emit · W9:3 self soft emit · W10:1 diag · W11:2 self soft ·
+**W12:1 emit（这一格由并行会话补的读者抓住，本轮未加也没改任何用例）** · W13:1 soft
+
+W12 在跑序 1 存量的暴露面（用 /tmp 里的两份拷贝对同一棵合成树量，未碰仓库）：
+它的 `audit()` 输出（violations / buckets / problems / commands / render / 退码）
+与原版**逐字节相同**（`diff` rc=0，两份 2601 字节），唯一可观测差异是
+`--emit-register` 写出的草案里 `line_text_at_emit_time` 从该行原文变成空串
+（4/4 条目，其余键全等）。全仓 grep 该字段名只有两个落点：写入侧
+`scripts/ci_surface_census.py:513` 与散文
+`docs/audit/CI_SURFACE_LINES_F-CI-SURFACE_2026-09-29.md:83`；
+当时在册的 `docs/audit/CI_SURFACE_REGISTER.json` 里该字段出现 0 次，也没有任何常驻用例
+跑 `--emit-register` ⇒ 判"缺覆盖"（emit 这条出口没有读者），不判"等价变异"。
+
+`zero` 那一格对两个版本的全部臂都没翻红，不是漏跑：它断的是"真仓库上桶计数 0
 与原文正则扫描 0 同为零"，而 W6~W11 撤的都是开火侧——真仓库两边同时是 0，
 读数同形。软门面的极性牙全部落在 `self`（合成树 `--self-test`）与 `soft` 这两条上。
 
@@ -92,8 +117,6 @@ W10_NEW = "        pass\n"
 # 按 harness 的"任一锚点命中 ≠ 1 就一支都不跑"会直接退 7。这里不改判决、不改替换文本，
 # 只把锚点按臂表点名的位置（`CI面被声明为可失败` 那个 violation dict）扩一行上下文，
 # 使字节改动仍精确落在 :261 那一处；`:274` 那笔不碰。
-W13_OLD = '"field": "CI面被声明为可失败", "doc": WORKFLOW_REL, "line": c["line"],'
-W13_NEW = '"field": "CI面被声明为可失败", "doc": WORKFLOW_REL, "line": 0,'
 
 ARMS = [
     ("W0-control-no-change", "对照：原样必须全绿", None, None),
@@ -124,8 +147,14 @@ ARMS = [
     ("W12-emit-loses-line-text", "emit 不带原文字段",
      '"line_text_at_emit_time": c["at"],',
      '"line_text_at_emit_time": "",'),
-    ("W13-soft-violation-line-zero", "判红不指位（line 写回 0）",
-     W13_OLD, W13_NEW),
+    # 臂表原文 `"line": c["line"],` 在靶文件里命中 **2** 次（:261 软门、:274 无人守）。
+    # 上一版把锚点收窄到其中一处 ⇒ 另一处的指位其实没被任何臂撤过；两处一起撤才是
+    # 这一档的完整撤销臂（`pairs()` 支持一支多编辑，见 W10 那一支的写法）。
+    ("W13-violations-lose-line-both-sites", "两档判红都不指位（软门与无人守的 line 各写回 0）",
+     [('"field": "CI面被声明为可失败", "doc": WORKFLOW_REL, "line": c["line"],',
+       '"field": "CI面被声明为可失败", "doc": WORKFLOW_REL, "line": 0,'),
+      ('"field": "CI面无人守", "doc": WORKFLOW_REL, "line": c["line"],',
+       '"field": "CI面无人守", "doc": WORKFLOW_REL, "line": 0,')], None),
 ]
 
 

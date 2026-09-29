@@ -92,6 +92,13 @@ def test_new_ci_command_without_entry_fires_and_reentry_clears(tmp_path: Path) -
     rep = csc.audit(tmp_path)
     fired = {(v["field"], v["written"]) for v in rep["violations"]}
     assert ("CI面无人守", "python scripts/zzz_new_gate.py") in fired, fired
+    # 判红必须**指位**。电池 W13 的锚点 `"line": c["line"],` 在这个文件里命中 2 次
+    # （:261 软门、:274 无人守），而当时只有软门那侧有读者 ⇒ 无人守这条的 `line`
+    # 其实没人钉。这一格正是本片要修的东西，不许留成半个。
+    unwatched = [v for v in rep["violations"] if v["field"] == "CI面无人守"][0]
+    assert unwatched["line"] == 8, unwatched
+    assert "zzz_new_gate.py" in wf.read_text(encoding="utf-8").splitlines()[
+        unwatched["line"] - 1], unwatched
     assert csc.main(["--repo", str(tmp_path)]) == 4, fired
 
     data = json.loads(reg.read_text(encoding="utf-8"))
