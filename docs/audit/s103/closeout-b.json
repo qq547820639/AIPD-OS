@@ -1,12 +1,7 @@
 {
  "command": "closeout verify",
  "problems": [],
- "violations": [
-  {
-   "check": "worktree_clean",
-   "detail": "工作树有 1 处未提交改动：['?? docs/audit/s103/report-s103.json']"
-  }
- ],
+ "violations": [],
  "checks": {
   "report_bound_to_provenance": {
    "ok": true,
@@ -49,8 +44,8 @@
    "kind": "violation"
   },
   "worktree_clean": {
-   "ok": false,
-   "detail": "工作树有 1 处未提交改动：['?? docs/audit/s103/report-s103.json']",
+   "ok": true,
+   "detail": "工作树干净",
    "kind": "violation"
   },
   "plaintiffs_measured": {
@@ -76,10 +71,10 @@
   "tree_files": 226,
   "tree_defs": 2708,
   "report_files": 226,
-  "worktree_head": "667928c55217623119eaa1543220279956012dcd",
+  "worktree_head": "c5f062bb1bf2c4cf8e722fd3efdbd43ac6779abe",
   "pinned_commit": "a66040520139405095648461f7144d4f00629924",
   "report_fingerprint": "94ebcbd7b4d2",
   "disk_manifest_fingerprint": "94ebcbd7b4d2"
  },
- "ok": false
+ "ok": true
 }

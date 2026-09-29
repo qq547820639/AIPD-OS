@@ -1,12 +1,10 @@
 {
-  "release_ready": false,
+  "release_ready": true,
   "checks": [
     {
       "check": "workspace_clean",
-      "passed": false,
-      "detail": [
-        "?? docs/audit/s103/report-s103.json"
-      ]
+      "passed": true,
+      "detail": "clean"
     },
     {
       "check": "commit_matches_head",
