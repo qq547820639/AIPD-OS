@@ -260,10 +260,20 @@ def _gap_and_changed(report_data: dict, report_commit: str,
             changed.add(ln)
     tree = cov.tree_roster(repo / "tests")[0]
     measured = {t["nodeid"].split("::")[0] for t in report_data["tests"]}
-    counts: dict[str, int] = {}
+    # 左边必须按 **def 名**数，不能按报告条目数：`tree_roster` 数的是 `def test_` 条数，
+    # 而参数化用例在报告里一条 def 顶多个 id。两边不同粒度时，参数化文件里"新加一条 def"
+    # 会被参数化的余量吃掉——第 105 片就是这么红的：`counts=6 < tree=6` 判不出缺口，
+    # 而 `changed` 侧（按 def 条数）看见了 ⇒ 一支永真的假红。剥掉 `[参数]` 后按名去重才对得上。
+    names: dict[str, set[str]] = {}
     for node in report_data["tests"]:
-        f = node["nodeid"].split("::")[0]
-        counts[f] = counts.get(f, 0) + 1
+        parts = node["nodeid"].split("::")
+        if len(parts) < 2:
+            continue
+        # 参数化后缀逐段剥掉，但**保留类名**：同名方法挂在两个类下是两件事
+        # （实测 `tests/test_outbox_operations.py` 就是这样，只取末段会把两条并成一条 ⇒ 造出假缺口）
+        f, case = parts[0], "::".join(x.split("[")[0] for x in parts[1:])
+        names.setdefault(f, set()).add(case)
+    counts = {f: len(v) for f, v in names.items()}
     never_ran = {f for f in tree if f not in measured}
     short = {f for f in tree if f in measured and counts[f] < tree[f]}
     return never_ran | short, changed
