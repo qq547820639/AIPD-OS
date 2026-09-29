@@ -489,6 +489,13 @@
       "hardcoded": true,
       "line": 10,
       "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
+      "path": "docs/audit/s99/closeout99b.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 15,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
     }
   ]
 }
