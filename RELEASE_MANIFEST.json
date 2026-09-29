@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 400273,
-      "sha256": "d8528d8c11e59f3149bef5291fe95c5d47851a3e7e715d48190832870888ad30"
+      "size": 404543,
+      "sha256": "ae013542b14d3ea2fede73374eb6766ce1cdf10a8b5043932a23540659fe5688"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 80749,
-      "sha256": "80e39b5502adb8ccbb472daaea147e1878d68b996e2af0fd539b6983482ba17b"
+      "size": 82647,
+      "sha256": "9e0c8d756441e511694e39ce86bd671d5ab69bf5e1d6010f085e6e77b874331c"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -747,8 +747,8 @@
     },
     {
       "path": "scripts/ci_surface_census.py",
-      "size": 33867,
-      "sha256": "b1c79fb8cd74cc03eaa945f80f17507ebfd3c6c304d6c201741c0a855c072253"
+      "size": 36301,
+      "sha256": "42f9dd6c62b1c787c6eaa21961ccd680f9eaae4430c5764b1d3a2061b7c3928b"
     },
     {
       "path": "scripts/claim_gate.py",
@@ -2562,8 +2562,8 @@
     },
     {
       "path": "tests/test_ci_surface_census.py",
-      "size": 20926,
-      "sha256": "7d0f62c1b58c61ab82ab2762e5af80d3bb1b819536a842cb1e50b0c18ad2624c"
+      "size": 21688,
+      "sha256": "08ce486a5c2dc7e9cf7c116e2e73f8c0d0728eb18c853c02576f049249ca48c4"
     },
     {
       "path": "tests/test_claim_assessment.py",
@@ -2797,8 +2797,8 @@
     },
     {
       "path": "tests/test_forensic_scripts_root.py",
-      "size": 12211,
-      "sha256": "5d49e1189bfb295bde37e9500eb38d1d60ecf64241eea12b5f43e1c564921b0b"
+      "size": 14563,
+      "sha256": "516cd01f8b6a1a5dc901dcb4ffcd2df31a926a2e200fd127d0750ef4aaf3c1e8"
     },
     {
       "path": "tests/test_gate_attribution.py",
