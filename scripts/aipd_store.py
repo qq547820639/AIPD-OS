@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
 from contextlib import contextmanager
@@ -191,9 +192,8 @@ class AIPDStore:
         nums=[]
         for value in values:
             if isinstance(value,str) and value.startswith(prefix+'-'):
-                try: nums.append(int(value.split('-')[-1]))
-                except ValueError:  # noqa: EMPTY_EXCEPT - 跳过非数字后缀 id
-                    pass
+                with contextlib.suppress(ValueError):  # aipd: empty-except - 跳过非数字后缀 id
+                    nums.append(int(value.split('-')[-1]))
         return f"{prefix}-{max(nums, default=0)+1:03d}"
 
     def add_fact(self, key: str, value: Any, status: str, unit: str | None=None, tolerance: str | None=None,
@@ -282,13 +282,13 @@ class AIPDStore:
             d=dict(r)
             for k in list(d):
                 if k.endswith('_json') and d[k]:
-                    try: d[k[:-5]]=json.loads(d.pop(k))
-                    except json.JSONDecodeError:  # noqa: EMPTY_EXCEPT - 遗留字段 JSON 解析失败保留原样
-                        pass
+                    # aipd: empty-except - 解析失败该列缺席（pop 已发生）
+                    with contextlib.suppress(json.JSONDecodeError):
+                        d[k[:-5]]=json.loads(d.pop(k))
                 elif k=='value_json':
-                    try: d['value']=json.loads(d.pop(k))
-                    except json.JSONDecodeError:  # noqa: EMPTY_EXCEPT - 遗留字段 JSON 解析失败保留原样
-                        pass
+                    # aipd: empty-except - 同上：解析失败 value 不出现在输出
+                    with contextlib.suppress(json.JSONDecodeError):
+                        d['value']=json.loads(d.pop(k))
             out.append(d)
         return out
 

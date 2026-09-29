@@ -951,6 +951,23 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.67 F-EXC-HYGIENE 第 106 片：吞异常的记号搬家，门跟着加宽——改写不许让吞法消失**：
+  `# noqa: EMPTY_EXCEPT` 全仓收回：它不是 ruff 规则码，只制造 `Invalid # noqa directive`
+  警告（实测 10 条：9 处 EMPTY_EXCEPT + `aipd_supervisor.py` 散文里复刻的 `noqa:` 指令
+  形状）。豁免记号改 `# aipd: empty-except - 原因`（`tests/test_exception_hygiene.py`
+  判据同步改读新串，记号须落在声明行、其上一行或下一行）。SIM105 五处（`aipd_store.py`
+  ×3、`search_papers.py`、`source_worker.py`）改写为 `contextlib.suppress(...)` 并带记号
+  ——改写不让吞法消失，只让旧判据看不见它，所以卫生门同时加宽三处：suppress 块纳入同
+  一道门（裸 `suppress` 导入形也认）；`scripts` 收编子目录（research 盲区 10 处补记号）；
+  `SyntaxError` 从静默 `continue` 改为显式第三态判红。旧记号收回臂：代码面再现一次
+  `EMPTY_EXCEPT` 即判红。面读数：310 文件 / 吞点分母 23（13 only-pass + 10 suppress，
+  下限钉 23 防拆点缩水）/ 无记号 0 / 旧记号 0 / 不可解析 0；必开火控制 8 支（含「隔两行
+  的原因不算豁免」与「带记号不开火」两极）；变异电池 6 臂全 KILLED
+  （`docs/audit/s106/battery106-run.log`）。`release_evidence.py:259` 那处豁免记号摘除
+  ——它有显式返回值不是空吞，卫生门本就不要求记号。连锁：`source_worker.py` 偿清
+  E501+SIM105 成第 22 个 0 债文件，接进 ci.yml 直连清单与 `SCRIPTS_LINT_FACE` 同源镜像；
+  棘轮 86/86 持平（aipd_store E701 15→12 下调）。
+
 - **v5.66 F-DOC-REF 第 105 片：简写符号锚不许只查先撞上的那份文件就判「符号不存在」**：
   闭任务 #34 的 (b) 半。动手前先把改法半径量完，两条前提都被现算推翻：
   ① 「生成物写的指针转判红档」——现读 `docs/audit/capability_matrix.md` 解析不到的是 **6 条而不是 4 条**，

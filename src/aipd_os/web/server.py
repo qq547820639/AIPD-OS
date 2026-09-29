@@ -259,7 +259,7 @@ def serve(console: WebConsole, host: str = "127.0.0.1",
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        # noqa: EMPTY_EXCEPT - Ctrl+C 优雅退出：交由 finally 关闭服务器
+        # aipd: empty-except - Ctrl+C 优雅退出：交由 finally 关闭服务器
         pass
     finally:
         server.server_close()

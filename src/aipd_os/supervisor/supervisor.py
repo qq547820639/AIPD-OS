@@ -204,7 +204,7 @@ class Supervisor:
         nums = []
         for v in vals:
             if isinstance(v, str) and v.startswith(prefix + "-"):
-                with suppress(ValueError):
+                with suppress(ValueError):  # aipd: empty-except - 跳过非数字后缀的既有 id
                     nums.append(int(v.rsplit("-", 1)[1]))
         return f"{prefix}-{max(nums, default=0) + 1:03d}"
 

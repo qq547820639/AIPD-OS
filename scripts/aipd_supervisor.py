@@ -32,8 +32,9 @@ from aipd_os.supervisor import (  # noqa: E402
 )
 
 # 这个文件的存在理由就是 re-export（见文件头 docstring 第 2 条）。`__all__` 而不是
-# 逐行 `# noqa: F401`：把"对外承诺的表面"写成一份可核对的清单，删掉任何一个名字都会被
-# 读这张清单的人看见，而 noqa 只是让 lint 闭嘴。
+# 逐行 noqa 注释：把"对外承诺的表面"写成一份可核对的清单，删掉任何一个名字都会被
+# 读这张清单的人看见，而 noqa 只是让 lint 闭嘴。（上一版散文里复刻了 noqa 带码的
+# 完整指令形状，ruff 会把注释里的它当指令解析并报 Invalid noqa——散文别复刻指令形状。）
 __all__ = ["PHASES", "SCHEMA", "WORK_STATUSES", "Supervisor", "jd", "main", "now", "parser"]
 
 if __name__ == '__main__':

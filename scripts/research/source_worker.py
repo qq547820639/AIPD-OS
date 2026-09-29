@@ -15,6 +15,7 @@ try:
     from _env import load_env_once
     load_env_once()
 except Exception:
+    # aipd: empty-except - .env 是可选的：没有就按环境变量已配好跑
     pass
 
 from _http_runtime import validate_environment
@@ -76,10 +77,9 @@ def write_atomic(path: Path, payload: dict) -> None:
             handle.write("\n")
         os.replace(tmp, path)
     finally:
-        try:
+        # aipd: empty-except - 临时文件已被 os.replace 移走
+        with contextlib.suppress(FileNotFoundError):
             tmp.unlink()
-        except FileNotFoundError:
-            pass
 
 
 def main() -> int:

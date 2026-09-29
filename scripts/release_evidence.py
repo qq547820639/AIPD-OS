@@ -256,7 +256,9 @@ def _attr_version(pkg: str) -> str:
     """`importlib.metadata` 查不到（例如发行名与导入名不同形）时的回退档：问包自己。"""
     try:
         mod = __import__(pkg)
-    except Exception:        # noqa: EMPTY_EXCEPT - 可选依赖探测：导入炸了就按"没装"记，不能让取证工具因为一个包挂掉
+    except Exception:
+        # 可选依赖探测：导入炸了就按"没装"记，不能让取证工具因为一个包挂掉。
+        # 有显式返回值不是空吞，卫生门不要求豁免记号（第 106 片起旧记号收回）。
         return "not-installed"
     return getattr(mod, "__version__", "unknown")
 
@@ -269,7 +271,7 @@ def _dependency_lock(repo: Path) -> dict:
         if freeze.returncode == 0:
             lock["pip_freeze"] = freeze.stdout.strip()
     except (OSError, subprocess.SubprocessError):
-        # noqa: EMPTY_EXCEPT - pip freeze 尽力而为：失败仅置 pip_freeze=None
+        # aipd: empty-except - pip freeze 尽力而为：失败仅置 pip_freeze=None
         pass
     for name in LOCKFILES:
         p = repo / name

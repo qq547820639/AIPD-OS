@@ -266,8 +266,8 @@ def probe_entry_callable(entry_spec: str | None, repo_root=None) -> bool:
         return any(_resolve_entry_candidate(candidate) for candidate in entry_spec.split("/"))
     finally:
         for path in added:
-            with contextlib.suppress(ValueError):
-                sys.path.remove(path)  # 清理 sys.path 失败（路径本就不在）可安全忽略
+            with contextlib.suppress(ValueError):  # aipd: empty-except - sys.path 清理尽力而为
+                sys.path.remove(path)
 
 
 def probe_classification(

@@ -15,6 +15,7 @@ try:
     from _env import load_env_once
     load_env_once()
 except Exception:
+    # aipd: empty-except - .env 是可选的：没有就按环境变量已配好跑
     pass
 
 
@@ -129,6 +130,7 @@ def _fetch_venue_notes(v2_client, v1_client, venue: str) -> list:
         if notes:
             return notes
     except Exception:
+        # aipd: empty-except - v2 接口失败回落 v1 再试
         pass
     for inv_suffix in ("/-/Blind_Submission", "/-/Submission"):
         try:

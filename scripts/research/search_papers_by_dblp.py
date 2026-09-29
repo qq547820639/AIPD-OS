@@ -122,6 +122,7 @@ def _fetch_abstract_from_doi(url: str, session=None) -> str:
                 abstract = re.sub(r'<[^>]+>', '', abstract).strip()
             return abstract
     except Exception:
+        # aipd: empty-except - 摘要尽力而为：任一步失败都按无摘要（空串）继续
         pass
     return ""
 

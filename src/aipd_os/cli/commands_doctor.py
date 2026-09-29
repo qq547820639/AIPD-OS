@@ -112,8 +112,8 @@ def cmd_doctor(args):
             db.ensure_default_tenant()
             _doctor_check(checks, "database", "ok", "AIPDStateDB init + default tenant ok")
         finally:
-            with contextlib.suppress(OSError):
-                os.unlink(db_path)  # 清理探测用临时 db 文件：不存在/被占用时忽略
+            with contextlib.suppress(OSError):  # aipd: empty-except - 清理探测用临时 db 文件
+                os.unlink(db_path)
     except Exception as exc:  # noqa: BLE001
         _doctor_check(checks, "database", "fail", str(exc))
 

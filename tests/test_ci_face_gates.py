@@ -46,6 +46,7 @@ SCRIPTS_LINT_FACE = [
     "scripts/research/fetch_fulltexts.py",
     "scripts/research/postprocess.py",
     "scripts/research/selftest_postprocess.py",
+    "scripts/research/source_worker.py",
     "scripts/scripts_lint_ratchet.py",
     "scripts/selftest_quality.py",
     "scripts/selftest_state.py",

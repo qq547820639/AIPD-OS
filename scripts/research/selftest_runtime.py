@@ -152,6 +152,7 @@ class RuntimeTests(unittest.TestCase):
                         elif self.path == "/progress" and index < len(body) - 1:
                             time.sleep(0.07)
                 except (BrokenPipeError, ConnectionResetError):
+                    # aipd: empty-except - 测试夹具里对端提前断开属预期
                     pass
 
         server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)

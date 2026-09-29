@@ -195,7 +195,7 @@ class ProductTruthStore:
         nums = []
         for r in rows:
             if r["id"].startswith("T-"):
-                with suppress(ValueError):
+                with suppress(ValueError):  # aipd: empty-except - 跳过非数字后缀的既有 id
                     nums.append(int(r["id"].rsplit("-", 1)[1]))
         return f"T-{max(nums, default=0) + 1:03d}"
 

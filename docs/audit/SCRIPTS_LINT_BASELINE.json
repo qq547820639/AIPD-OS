@@ -33,17 +33,12 @@
     {
       "file": "scripts/aipd_store.py",
       "code": "E701",
-      "count": 15
+      "count": 12
     },
     {
       "file": "scripts/aipd_store.py",
       "code": "E702",
       "count": 12
-    },
-    {
-      "file": "scripts/aipd_store.py",
-      "code": "SIM105",
-      "count": 3
     },
     {
       "file": "scripts/audit_dependency_ack.py",
@@ -351,11 +346,6 @@
       "count": 5
     },
     {
-      "file": "scripts/research/search_papers.py",
-      "code": "SIM105",
-      "count": 1
-    },
-    {
       "file": "scripts/research/search_papers_by_arxiv.py",
       "code": "E501",
       "count": 2
@@ -394,11 +384,6 @@
       "file": "scripts/research/selftest_runtime.py",
       "code": "SIM117",
       "count": 2
-    },
-    {
-      "file": "scripts/research/source_worker.py",
-      "code": "SIM105",
-      "count": 1
     },
     {
       "file": "scripts/runtime_preflight.py",
@@ -510,8 +495,8 @@
     "scripts/state_perf_gate.py"
   ],
   "totals": {
-    "hits": 584,
-    "rows": 89,
+    "hits": 576,
+    "rows": 86,
     "generated_by": "scripts/scripts_lint_ratchet.py"
   }
 }

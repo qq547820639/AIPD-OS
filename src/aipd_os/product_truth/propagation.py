@@ -97,8 +97,8 @@ class PropagationEngine:
         nums = []
         for r in rows:
             if r["task_id"].startswith("RW-"):
-                with contextlib.suppress(ValueError):
-                    nums.append(int(r["task_id"].rsplit("-", 1)[1]))  # 跳过非数字后缀的既有任务 id
+                with contextlib.suppress(ValueError):  # aipd: empty-except - 跳过非数字后缀 id
+                    nums.append(int(r["task_id"].rsplit("-", 1)[1]))
         return f"RW-{max(nums, default=0) + 1:03d}"
 
     def list_tasks(self, status: str | None = None) -> list[ReworkTask]:

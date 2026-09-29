@@ -12,6 +12,7 @@ prints exactly what it dropped. --raw restores the legacy per-source view.
 """
 
 import argparse
+import contextlib
 import importlib
 import json
 import os
@@ -31,6 +32,7 @@ try:
     from _env import load_env_once
     load_env_once()
 except Exception:
+    # aipd: empty-except - .env 是可选的：没有就按环境变量已配好跑
     pass
 
 # Map source name -> module that defines `search_papers_by_<source>`. Modules are imported
@@ -121,10 +123,8 @@ def _terminate_workers(processes: list[subprocess.Popen]) -> None:
             else:
                 process.terminate()
         except ProcessLookupError:
+            # aipd: empty-except - 进程已经退出，SIGTERM 这一步无事可做
             pass
-    for process in alive:
-        try:
-            process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             try:
                 if os.name == "posix":
@@ -132,12 +132,12 @@ def _terminate_workers(processes: list[subprocess.Popen]) -> None:
                 else:
                     process.kill()
             except ProcessLookupError:
+                # aipd: empty-except - SIGKILL 阶段进程已退出，无需再杀
                 pass
     for process in alive:
-        try:
+        # aipd: empty-except - 最终宽限等待：超时就放弃回收
+        with contextlib.suppress(subprocess.TimeoutExpired):
             process.wait(timeout=1)
-        except subprocess.TimeoutExpired:
-            pass
 
 
 def _collect_worker(
