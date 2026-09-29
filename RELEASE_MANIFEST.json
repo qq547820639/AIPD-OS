@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 392821,
-      "sha256": "2489d1d503d978adc5cd500948336183f155b625ed60e3cbadee79e22efe8da1"
+      "size": 397436,
+      "sha256": "92d1bc1cebc12f3d06be839eb7ef928cc85ee6d9f0b5f27054bf936072cc87b2"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 78185,
-      "sha256": "704a447a2dda6150388a736d84164fb3f5e9ee33fa4d47543d0b9841d90d7fec"
+      "size": 79554,
+      "sha256": "cd4a762b8e9dc3d4a7fb3b93cc65b2a61bdfa6a6e4a56f9e6aea8f88fc64bdaa"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -852,8 +852,8 @@
     },
     {
       "path": "scripts/release_evidence.py",
-      "size": 22574,
-      "sha256": "4caabee2ac7802425606e3c62f6947b40ffcc51277ddfbf8d42599fba9ec0b95"
+      "size": 23473,
+      "sha256": "435a99c194b3c16077c0f569d07247da9867668ea82c37b31ccba6503b72986c"
     },
     {
       "path": "scripts/release_fingerprint.py",
@@ -3179,6 +3179,11 @@
       "path": "tests/test_release_evidence_ctq_status.py",
       "size": 5436,
       "sha256": "433f717be4f52ec3b3dbef91c04137fc66bf7de42d3096c69e74c8e1be544fa4"
+    },
+    {
+      "path": "tests/test_release_evidence_environment.py",
+      "size": 11634,
+      "sha256": "1214b7a39f3707c79f56654ccf6e78b19b3480bc0bc2dd037692922062b75a6e"
     },
     {
       "path": "tests/test_release_evidence_preflight.py",
