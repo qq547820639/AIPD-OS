@@ -83,3 +83,13 @@
   ⑶ 电池 X2 那一臂顺手证明了单向规则的价值：把方向反过来，真树当场造出 **51 个假原告**。
 - 取证名册随本片新件重 emit 到 79 条（`closeout104.sh` 被 `closeout` 规则接住但名册没有它 ⇒
   这是判据设计里"规则接住 ≠ 豁免落到纸面"那一格，跑 `--emit` 补登记，四个常驻红随之一并转绿）。
+
+## 七、认证读数（2026-09-29，一次跑齐，B 档第一跑即绿）
+
+| 环节 | 读数 |
+| --- | --- |
+| 干净签出 | `git worktree add --detach` 到仓库**外** `.wt-s104` @ `3e61b83`（取证件提交），`status` 0 行；回收后 `git worktree list` 只剩主树 |
+| 全量 | 2804 passed / 5 skipped / collected 2809，`exitcode=0`，1204.8 s（机器被并发作业拖慢，非用例退化） |
+| precheck | 0 failed ✓；`source_commit=a660405…9924` == tag ✓；报告自记指纹 `1f439b8457eb` == 磁盘清单摘要 ✓；collected 2809 > 上代下界 2803 ✓；SKIP 面与上一代逐条相同（5 条） |
+| 绑定 / 门 / 验签 | `BIND_RC=0`（一次绑定、两旗同给）、`GATE_RC=0`（`release_ready=True`、8 项全过）、`CV_RC=0`（11 格全绿，报告 sha256 `bef748f75a24` 与 PROVENANCE 一致，名册 227 文件 / 2713 个 def 双向差集空，3 条原告 passed，size_ratchet 2809 ≥ 2809） |
+| B 档 | 先归档日志再回收签出再复验 ⇒ **第一跑即 `GATE_B_RC=0`（8/8）与 `CV_B_RC=0`（绿勾 11）**，当时 `git status --short` 0 行。上一片那次红在 `workspace_clean` 的自伤没重犯：报告副本不再复制进 `docs/audit/sNN/`，正典只有 `docs/audit/pytest-report-v5.6.0.json` 一份 |
