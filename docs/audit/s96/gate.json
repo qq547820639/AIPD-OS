@@ -1,0 +1,52 @@
+{
+  "release_ready": false,
+  "checks": [
+    {
+      "check": "workspace_clean",
+      "passed": false,
+      "detail": [
+        " M docs/audit/s96/closeout96.sh",
+        " M docs/audit/s96/derive_closeout96.py"
+      ]
+    },
+    {
+      "check": "commit_matches_head",
+      "passed": true,
+      "detail": "provenance source_commit 与 tag 指向同一提交"
+    },
+    {
+      "check": "source_manifest_zero_diff",
+      "passed": true,
+      "detail": "zero diff"
+    },
+    {
+      "check": "bundle_manifest_zero_diff",
+      "passed": true,
+      "detail": "zero diff"
+    },
+    {
+      "check": "test_numbers_from_report",
+      "passed": true,
+      "detail": [
+        "passed=2767 failed=0 total=2772 source_commit=a66040520139405095648461f7144d4f00629924"
+      ]
+    },
+    {
+      "check": "signature_verifiable",
+      "passed": true,
+      "detail": [
+        "Ed25519 signature verified"
+      ]
+    },
+    {
+      "check": "no_secrets",
+      "passed": true,
+      "detail": "no secret patterns found"
+    },
+    {
+      "check": "no_unacknowledged_cve",
+      "passed": true,
+      "detail": "pip-audit: no unacknowledged CVE"
+    }
+  ]
+}
