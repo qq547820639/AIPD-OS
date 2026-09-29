@@ -1,12 +1,7 @@
-Traceback (most recent call last):
-  File "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/docs/audit/s105/battery105.py", line 119, in <module>
-    sys.exit(main())
-  File "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/docs/audit/s105/battery105.py", line 76, in main
-    orig = SRC.read_text(encoding="utf-8")
-  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/pathlib.py", line 1256, in read_text
-    with self.open(mode='r', encoding=encoding, errors=errors) as f:
-  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/pathlib.py", line 1242, in open
-    return io.open(self, mode, buffering, encoding, errors, newline,
-  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/pathlib.py", line 1110, in _opener
-    return self._accessor.open(self, flags, mode)
-FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/docs/scripts/doc_reference_census.py'
+基线：self_rc=0 self_ok=True spec_rc=0 missing=18 resolved=198
+KILLED        X1 关掉整条同名遍历｜self=1 spec=1 missing=22(基线 18) resolved=194
+KILLED        X2 候选清单被截窄成永不命中｜self=1 spec=1 missing=22(基线 18) resolved=194
+KILLED        X3 一份都没有也判 resolved｜self=1 spec=1 missing=0(基线 18) resolved=216
+KILLED        X4 detail 报的是首选那份（假出处）｜self=0 spec=1 missing=18(基线 18) resolved=198
+合计 KILLED 4 / SURVIVED 0 / WRONG-REASON 0 / 共 4 臂
+收尾 sha 80f195ed029c（开跑前 80f195ed029c）
