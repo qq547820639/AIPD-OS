@@ -1,0 +1,28 @@
+tag SHA = a66040520139405095648461f7144d4f00629924
+PRECHECK OK: 2804 passed / 5 skipped / collected 2809 / 1204.0s / fp 1f439b8457eb
+MIN_TESTS=2809 （上一代下界 2803）
+SKIP 面逐条相同：5 条
+BIND_RC=0
+回读 OK: source_commit=a66040520139 test_report=2804p/0f/2809t fp=1f439b8457eb
+COMMIT_RC=0
+6063951 chore(s104): 绑定第 104 片的 attestation 报告
+GATE_RC=0
+release_ready: True | 未过: 无 | 项数: 8
+GATE_COMMIT_RC=0
+CV_RC=0  （0 全绿 / 4 判红 / 2 前提塌）
+  读数：报告 2809 条 / 227 个文件，树 227 个文件 / 2713 个 def，终态 {'passed': 2804, 'skipped': 5}
+  锚点 a66040520139 ← HEAD 54a0f1a03d6d，报告 root=/Volumes/Extra/CodeProj/AI全链路自研/.wt-s104
+  ✓ report_bound_to_provenance：报告 sha256=bef748f75a24 与 PROVENANCE 记录一致
+  ✓ counts_counted_from_roster：现数 passed=2804 skipped=5 total=2809，summary 与 PROVENANCE 两处副本一致
+  ✓ terminal_clean：exitcode=0，2809 条无 failed/error
+  ✓ roster_covers_tree：树 227 文件 / 2713 个 def，报告 227 文件 / 2809 条，双向差集为空
+  ✓ pinned_source_binding：报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 报告实测 HEAD 3e61b83b 的祖先
+  ✓ content_parity_measured：2 条清单哈希用例都在名单里并 passed：测的就是这棵树
+  ✓ report_fingerprint_recorded：报告自带清单指纹 1f439b8457eb
+  ✓ report_fingerprint_matches_disk：报告指纹与磁盘清单 1f439b8457eb 同源（只换 generated_at 不算变）
+  ✓ worktree_clean：工作树干净
+  ✓ plaintiffs_measured：3 条本轮原告都在名单里且 passed
+  ✓ size_ratchet：名单 2809 条 ≥ 下界 2809
+全部判据绿
+FINAL_COMMIT_RC=0
+=== 第 104 片收口结束：BIND=0 GATE=0 CV=0 MIN_TESTS=2809 ===
