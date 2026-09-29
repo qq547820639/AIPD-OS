@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 409850,
-      "sha256": "e8585c40fa0978bb1ed059754176fe042372429c4ebf0830569ceccafaf91335"
+      "size": 413630,
+      "sha256": "30f45b7ea819bc225933f73b53c35c1af84bab9b73c76783c4c3b507a615de6c"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 84722,
-      "sha256": "3d18a5f61a580ef5be4e901d54bfe52e7b2dfe7a21198bd533f0247f7bdd1d32"
+      "size": 85159,
+      "sha256": "0075ab6af6b46ee9005380484eb4bc4ed150571f2347c5b94f43b5c7855038a6"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -2802,8 +2802,8 @@
     },
     {
       "path": "tests/test_forensic_scripts_root.py",
-      "size": 14563,
-      "sha256": "516cd01f8b6a1a5dc901dcb4ffcd2df31a926a2e200fd127d0750ef4aaf3c1e8"
+      "size": 16859,
+      "sha256": "653b817d8aea692acf0120b51c273fd60dc6dd337deb5c2cff1d5b5101646ac9"
     },
     {
       "path": "tests/test_gate_attribution.py",
