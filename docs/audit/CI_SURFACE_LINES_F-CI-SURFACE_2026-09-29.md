@@ -133,8 +133,13 @@ CV_RC=0     11 格全绿（… / content_parity_measured / report_fingerprint_ma
             worktree_clean / plaintiffs_measured / size_ratchet）
             锚点 a66040520139 ← HEAD 65d42e7e，报告 root=/…/.wt-s94
 CVB_RC=0    回收 worktree 后 -b 复算仍 11/11
-提交链：75c37df 代码 → eebea06 emit 读者 → 25a96e3 指位断言 → 有效代报告绑定
-        → b2b… 门读数 → … 验签读数（`git log --oneline` 现读，不凭印象）
+提交链（`git log --oneline` 现读）：
+`75c37df` 代码 → `eebea06` emit 读者 → `058cbb0` 刷清单 → `67aca94` CHANGELOG 计数更正
+→ `2eae256` 再刷清单 → `14599f4` 第 1 代标 VOID → `80d1d0c` 指位断言 + W13 扩两处
+→ `25a96e3` 刷清单 → `c0945d1` 第 2 代标 VOID → `3d0b8c6` 绑定 → `65d42e7` 门读数入库
+→ `262fe66` 验签读数入库 → `73bd9d4` 有效代报告入库 → `1533a82` 本节。
+（本节**第一版**把这条链写成 `25a96e3 指位断言` 并留了 `b2b…` 这样的占位哈希——
+  占位哈希就是编造，与第 93 片 §六 那次凭印象写错哈希是同一种病，故在此留字为证。）
 ```
 
 被哈希文件数 **691 → 691**（第 93 片认证时也是 691）：本轮只改内容、不新增被哈希文件，
