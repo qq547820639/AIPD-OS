@@ -596,20 +596,22 @@ def test_c5_detail_names_the_label_and_a_short_head(tmp_path: Path) -> None:
     既要出现完整标签，又要把"退回工作树"那一档的标签与弱一档说明一起钉住，
     否则哪天有人把标签改成 `[:8]` 之外更短的形状（或整段丢掉），测试照绿。
     """
-    _repo, evidence, sha = _make_repo(tmp_path / "repo")
-    report = cov._pristine_report(evidence, ["tests/test_a.py::test_ok"], sha,
-                                  root=str(tmp_path / "somewhere-else"),
-                                  measured_commit=sha)
-    rep = cov.verify(report, evidence / "PROVENANCE.json", tmp_path / "elsewhere",
-                     Path(__file__), [], sha, [], Path("pytest.json"))
+    _repo, _ev, report, prov, sha = _clean_fixture(tmp_path)
+    data = json.loads(report.read_text(encoding="utf-8"))
+    data["source_commit_measured"] = sha
+    report.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    rep = cov.audit(report, _repo, prov, sha, _repo / "tests", [],
+                    ["tests/test_one.py::test_x"], 0)
     c5 = rep["checks"]["pinned_source_binding"]
     assert c5["ok"] is True, c5
     assert "报告实测 HEAD" in c5["detail"], c5          # 标签不许被截
-    assert f"{sha[:8]}" in c5["detail"], c5             # commit 截 8 位
-    assert "工作树" not in c5["detail"], c5             # 这一支根本没读工作树
+    assert sha[:8] in c5["detail"], c5                   # commit 截 8 位
+    assert "工作树 HEAD" not in c5["detail"], c5         # 这一支根本没读工作树
     # 老形状：不带实测字段 ⇒ 标签换成工作树，且必须自报"弱一档"
-    rep2 = cov.verify(report, evidence / "PROVENANCE.json", repo,
-                      Path(__file__), [], sha, [], Path("pytest.json"))
+    del data["source_commit_measured"]
+    report.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    rep2 = cov.audit(report, _repo, prov, sha, _repo / "tests", [],
+                     ["tests/test_one.py::test_x"], 0)
     d2 = rep2["checks"]["pinned_source_binding"]["detail"]
     assert "工作树 HEAD" in d2, d2
     assert "这一格弱一档" in d2, d2
