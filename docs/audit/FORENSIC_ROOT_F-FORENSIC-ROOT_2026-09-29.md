@@ -183,3 +183,54 @@ filtering new issues while tracking resolved ones via diffs"）。
 - 变异电池 `docs/audit/s96/battery96.py`：Z0 对照绿 + 14 支撤销臂，**KILLED 14/14**
   （第一轮 Z8 存活 ⇒ 补判据与自测各一臂后复跑），收尾 `sha` 与开局相等。
   读数见 `docs/audit/s96/battery96-run.log`（硬化前的那一份）与本轮复跑输出。
+
+
+## 六、认证读数（两代）
+
+代际命名按"实测树 sha + 报告自记清单指纹"两把键，两代读数不许互换引用。
+
+| 代 | 签出 | 实测 HEAD | 结果 | 自记指纹 | 处置 |
+| --- | --- | --- | --- | --- | --- |
+| 第一代 | `.wt-s96` | `311be8e` | `5 failed / 2761 passed / 5 skipped`（collected 2771） | `9cffce278e94` | **作废**，留在树里：`docs/audit/s96/report-s96-VOID-tree-311be8e-fp-9cffce278e94.json`；红因见 §四之三（尺子把"仓库内"判成目录前缀）+ mypy 那处 `Optional[ModuleSpec]` |
+| 第二代 | `.wt-s96b` | `8ff78f7` | `2767 passed / 0 failed / 5 skipped`，collected **2772**，471.8s | `6df360f50ace` | 有效代，绑进 `PROVENANCE.test_report` |
+
+链上读数（全部为当场所跑，非转述）：
+
+- `PRECHECK OK: 2767 passed / 5 skipped / collected 2772 / 471.8s / fp 6df360f50ace`
+- `SKIP 面逐条相同：5 条`（与上一代双向差集为空）
+- `BIND_RC=0`，回读 `source_commit=a66040520139`、`test_report=2767p/0f/2772t`、`fp=6df360f50ace`
+- 发布门：第一跑 `GATE_RC=2`，未过项只有 `workspace_clean`（两处未提交的收口链派生件文本）；
+  按配方"把补记入库 → 只复跑门与验签"处置，复跑 `GATE_RC=0`、`release_ready: True`、`8/8`
+  （`docs/audit/s96/gate.json`）
+- 收尾验签：第一跑 `CV_RC=4`，唯一红格 `worktree_clean`（同一处未提交件）；复跑 `CV_RC=0`、
+  11 格全绿；回收签出后再复算 `-b` 仍 `CV_RC=0`、`checks 11 red []`
+- `pinned_source_binding` 那一格的现读文案（就是本片第 1 项修的那条串）：
+  「报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是
+  **报告实测 HEAD** 8ff78f74 的祖先」⇒ 标签完整、commit 截 8 位、没退到"工作树 HEAD"那一档；
+  这条修复不只被合成用例钉住，在生产收口路径上也走通了一次
+- 本轮量具侧读数：`--self-test` 15 条臂全立住；电池 Z0 对照绿 + **KILLED 15/15**
+  （`docs/audit/s96/battery96-run.log`）；`--repo .` 现读 `.py 68 / 仓库内 50 / 仓库外 21 /
+  tempfile 2`，`exempt 50 + derived 18 == 68`、`unwatched 0`（`docs/audit/s96/audit-repo.log`）
+- 提交链（`git log --format="%h %s" 29cdb55..HEAD` 现读，倒序）：
+  `9426cab` 验签读数入库 → `29c603f` 复跑门读数 → `40e757d` 派生件汉字锚 → `89a4f68` 验签(第一跑)
+  → `7cc1ba7` 门(第一跑) → `20ae681` 绑定 → `8ff78f7` 重刷清单 → `b4da2cb` 仓库身份判据
+  → `311be8e` 重刷清单(第一代) → `9b7315e` SIM105 → `cb78ba9` 字节码缓存 → `c755e74` 派生件
+  → `2a60c5c` 新尺与 9 条牙 → `bff261b` C5 用例修复 → `7b1f25c` C5 标签修复
+- 哈希面文件数：`691 → 692`（新增被哈希的文件只有 `tests/test_forensic_scripts_root.py`；
+  取证件全部住在被排除的 `docs/audit/`），第二代重刷仍是 692 ⇒ 没有误纳
+
+一处自伤，按原样留着当证据：提交 `40e757d` 的**正文**首行丢了半句——我把 commit message
+放在双引号里，而正文写了 `` `s95`→`s96` `` 这样的反引号片段，shell 当场执行它并吐
+`command not found: s95`。subject 完整、正文从那一行起被截断。这是记忆里那条
+「双引号里的反引号/`$?` 会执行或展开」在同一天第三次命中；不 amend（该提交本身就是这一格的证据），
+改用 heredoc 写 message。
+
+未做到 / 未证实（不洗成已做）：
+
+- casadi 的 LGPL 台账仍是 `needs-review` ⇒ 许可证门禁对 `--repo .` 退 4 是**有意的红**，
+  发布门不消费它的退码；要转绿得由属主拍板并同步改那条常驻用例（不许放宽判据）。
+- "报告整体仍可伪造"这一面未闭合：认证链内部自洽（指纹、锚点、终态、名单、跳过面都对得上），
+  但缺**外部见证**（签名/时间戳/第三方存档），属属主侧线下项。
+- 第一代那一跑的红只证明了"尺子在签出树里会读错"，**未**验证是否有其它判据也带同类
+  目录前缀假设（本仓已知同族：`tests/test_forensic_scripts_parse.py` 走目录枚举、
+  历轮电池写死 `REPO` 常量）；这一格留作下一片电池缓存核查时顺带穷举。
