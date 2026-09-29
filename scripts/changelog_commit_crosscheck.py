@@ -41,8 +41,10 @@ ROOT = Path(__file__).resolve().parent.parent
 # 主题行里的片号：`feat(s104):`、`chore(s104):`、`重跑 s99 的电池` 都认；
 # 左边排除 `.`/`-`/`_`/字母数字，于是 `.wt-s103`、`v5.1s104` 这类路径与拼接串不造假片号；
 # 右边禁数字，于是 `s1034` 这种长串整枚不认（宁可少认，也不给出一个错片号）。
+# 左边再排除 `/`：第 105 片本尺被这一格判红过一次——提交主题里写 `docs/audit/s106/` 是「一个路径」，
+# 不是「这一片开账了」。路径段住在主题行里同样会造片号，所以位置不表态，只有 scope 与正文提法表态。
 # 只取两位以上：今天没有 `s9` 这种单档写法，真出现了要新开一档而不是默认吸收。
-SLICE_IN_SUBJECT = re.compile(r"(?<![0-9A-Za-z_.-])s(\d{2,3})(?![0-9])")
+SLICE_IN_SUBJECT = re.compile(r"(?<![0-9A-Za-z_.\-/])s(\d{2,3})(?![0-9])")
 ENTRY_LINE = re.compile(r"^- \*\*v")
 SLICE_REF = re.compile(r"第 (\d+) 片")
 F_TOKEN = re.compile(r"\bF-[A-Za-z0-9-]+")
@@ -216,6 +218,8 @@ def _cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
     eaten = {"subjects": ["feat(s17): 加一把尺", "feat(s18): 第二把尺"],
              "changelog": "- **v5.1 F-SCALE-01 第 17 片：加了尺\n"
                           "  第 18 片的正文留下了，标题行被上一笔插入吃掉\n"}
+    pathy = {"subjects": ["chore(s12): 那次判红的红因是并发子代理建的 `docs/audit/s106/`"],
+             "changelog": "- **v5.9 F-A-01 第 12 片：本体有账\n"}
     merged = {"subjects": ["feat(s17): 加一把尺", "feat(s18): 第二把尺"],
               "changelog": "- **v5.1 F-SCALE-01 第 17 片与第 18 片：两片刻在一行里\n"}
     return [
@@ -227,6 +231,8 @@ def _cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
          {"absent": [], "extra": 1, "ok": True}),
         ("提交侧一个片号都没读到 ⇒ 前提塌（不折成干净）", no_subjects,
          {"premise_broken": True, "ok": False, "problem": "提交侧一个片号都没读到"}),
+        ("主题里的路径段不算开账（本尺自己的真实假原告）", pathy,
+         {"absent": [], "ok": True, "premise_broken": False}),
         ("标题被吃也算缺席（正文留下不救条目）", eaten,
          {"absent": [18], "ok": False, "premise_broken": False}),
         ("两口径只在提交侧片号上对账（不带 F 号 ⇒ 判红）", diverge,
