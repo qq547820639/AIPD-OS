@@ -1,0 +1,80 @@
+{
+ "command": "closeout verify",
+ "problems": [],
+ "violations": [],
+ "checks": {
+  "report_bound_to_provenance": {
+   "ok": true,
+   "detail": "报告 sha256=cfe6d42de6ad 与 PROVENANCE 记录一致",
+   "kind": "violation"
+  },
+  "counts_counted_from_roster": {
+   "ok": true,
+   "detail": "现数 passed=2819 skipped=5 total=2824，summary 与 PROVENANCE 两处副本一致",
+   "kind": "violation"
+  },
+  "terminal_clean": {
+   "ok": true,
+   "detail": "exitcode=0，2824 条无 failed/error",
+   "kind": "violation"
+  },
+  "roster_covers_tree": {
+   "ok": true,
+   "detail": "树 227 文件 / 2727 个 def，报告 227 文件 / 2824 条，双向差集为空",
+   "kind": "violation"
+  },
+  "pinned_source_binding": {
+   "ok": true,
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 报告实测 HEAD d6995da7 的祖先",
+   "kind": "violation"
+  },
+  "content_parity_measured": {
+   "ok": true,
+   "detail": "2 条清单哈希用例都在名单里并 passed：测的就是这棵树",
+   "kind": "violation"
+  },
+  "report_fingerprint_recorded": {
+   "ok": true,
+   "kind": "ok",
+   "detail": "报告自带清单指纹 ca85567b0bf1"
+  },
+  "report_fingerprint_matches_disk": {
+   "ok": true,
+   "detail": "报告指纹与磁盘清单 ca85567b0bf1 同源（只换 generated_at 不算变）",
+   "kind": "violation"
+  },
+  "worktree_clean": {
+   "ok": true,
+   "detail": "工作树干净",
+   "kind": "violation"
+  },
+  "plaintiffs_measured": {
+   "ok": true,
+   "detail": "3 条本轮原告都在名单里且 passed",
+   "kind": "violation"
+  },
+  "size_ratchet": {
+   "ok": true,
+   "detail": "名单 2824 条 ≥ 下界 2824",
+   "kind": "violation"
+  }
+ },
+ "readings": {
+  "report_entries": 2824,
+  "outcome_hist": {
+   "passed": 2819,
+   "skipped": 5
+  },
+  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s106",
+  "report_duration_s": 572.8468759059906,
+  "provenance_binds_report": true,
+  "tree_files": 227,
+  "tree_defs": 2727,
+  "report_files": 227,
+  "worktree_head": "cd1d0b79b84eea3779ddc15e051f35c2ecdb53dd",
+  "pinned_commit": "a66040520139405095648461f7144d4f00629924",
+  "report_fingerprint": "ca85567b0bf1",
+  "disk_manifest_fingerprint": "ca85567b0bf1"
+ },
+ "ok": true
+}

@@ -1,0 +1,9 @@
+基线：FAILED=0（期望 0）
+KILLED        X1 记号窗口整面放行｜红 4 支: ['test_control_bare_suppress_import_shape_also_fires', 'test_control_marker_two_lines_away_does_not_exempt', 'test_control_unmarked_except_pass_fires']
+KILLED        X2 旧记号判据致盲（收回臂假死）｜红 1 支: ['test_control_old_marker_fires_retraction_arm']
+KILLED        X3 suppress 形态看不见（裸导入也放行）｜红 3 支: ['test_control_bare_suppress_import_shape_also_fires', 'test_control_unmarked_suppress_fires', 'test_no_unmarked_swallow']
+KILLED        X4 旧记号真回到代码面（收回臂真开火）｜红 2 支: ['test_no_unmarked_swallow', 'test_old_marker_fully_retracted']
+KILLED        X5 解析不了静默跳过（第三态回潮）｜红 1 支: ['test_control_unparseable_file_is_reported_not_skipped']
+KILLED        X6 扫描面塌到只剩一个目录｜红 2 支: ['test_no_unmarked_swallow', 'test_scan_directories_present']
+合计 KILLED 6 / SURVIVED 0 / WRONG-REASON 0 / 共 6 臂
+收尾 sha c7a90e8b9cbb/0f0c398e1c55（开跑前 c7a90e8b9cbb/0f0c398e1c55）

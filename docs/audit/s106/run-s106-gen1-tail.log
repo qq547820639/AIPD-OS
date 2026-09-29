@@ -1,0 +1,4 @@
+FAILED tests/test_forensic_scripts_root.py::test_register_on_disk_matches_the_rules_table
+4 failed, 2815 passed, 5 skipped, 1114 warnings in 737.81s (0:12:17)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+PYTEST_RC=0
