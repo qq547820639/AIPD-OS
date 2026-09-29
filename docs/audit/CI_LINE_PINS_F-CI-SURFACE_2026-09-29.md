@@ -84,7 +84,8 @@ pip install -e ".[dev]"                               job_count  2  line 209
   `15 passed`；升级的是原有那条"每命令都有行号且那行确实含它"——现在逐 `(job, line)` 对账。
 - 电池 `docs/audit/s98/battery98.py`：V0 对照绿 + 4 支撤销臂，**KILLED 4/4**
   （V1 被 2 条抓住、V2 被 2 条、V3/V4 各 1 条），收尾 sha 与开局相等。
-- `ruff check` / `mypy` 对改动的测试文件各 0 错；`--self-test` 6 条合成读数照旧全对上。
+- `ruff check` / `mypy` 对改动的测试文件各 0 错；`--self-test` 6 条合成读数照旧全对上
+  （**第 98 片当时的读数**；第 99 片把两条行钉判决接进自测后涨到 8 条，见 §七）。
 - 一处夹具教训（本轮真的付了一次空跑）：折叠标量 `>-` **只折一行**时锚仍然成功
   （值与文件行逐字包含），要用两行才造得出"定不到"；第一版夹具因此读不到 `run_mark_unmatched`。
 
@@ -118,3 +119,47 @@ pip install -e ".[dev]"                               job_count  2  line 209
 未做到：`.wt-s98b` 这个名字沿用了上一片的"第二代带 b"约定，但本轮其实只有一代 ⇒
 名字与代次不符。不改（改 `WT=` 会让派生件与已提交脚本不一致），在此点名以免下一位读者
 以为漏了一代；下一片的派生已按 `.wt-sNN` 起。
+
+## 七、第 99 片：两条行钉判决接进 `--self-test`（上一片只上了常驻牙）
+
+第 98 片的形状是"判据 + 常驻牙 + 电池"，`scripts/ci_surface_census.py --self-test` 那 6 条臂里
+**没有一条碰行钉**——也就是说这把尺自己的合成电池看不见这一格，判据退化时只有常驻用例会展红。
+本片补两条读数进去（6 → **8**）：
+
+- **`CI面行钉不穷举` 走真 YAML**：两个 job 跑同一条命令，其中 `beta` 用 `run: >-` 把
+  `pytest` 与 `-q` **分两行**写——折叠标量把两者折回 `pytest -q`，于是命令文本与 `alpha`
+  那条完全相同（去重键撞上），而行号定不到。现读：`occurrences == {'alpha': [7], 'beta': []}`，
+  `problems` 里同时有 `run_mark_unmatched`。这一支不只验判决，还验**接线**：
+  `audit()` 真调 `line_pin_defects()`、`buckets["line-defect"]` 真进档。
+  夹具形状的一处口径边界（第 98 片也踩过）：`>-` **只折一行**时锚仍成功——
+  `run: >-\n  pytest -q` 现读 `occurrences = {'alpha': [7], 'beta': [12]}`、`problems` 为空。
+- **`CI面行钉指错行` 按纯函数喂**：正常解析下行号与原文天然自洽，只能递假行表。
+  两档各一火（行号越界、行号处原文不含命令），合规侧（行号与命令同源）不开火。
+  越界那一档顺带是**防崩**的那道界：去掉 `ln > len(file_lines)` 守卫，读数以 IndexError 冒出来
+  而不是以判决冒出来。
+
+### 这一格是被自己的电池教出来的
+
+常驻用例原先只写 `assert "条合成读数全部对上" in stdout`，本片先加的是 `marks >= 8`
+（数 `✓立住` 的打印行数）。电池臂 **Y1** 把 `ci_surface_census.py` 里 `marks.append(text)`
+改成 `pass` ⇒ **SURVIVED**：`_mark()` 的 `print` 是无条件的，8 行照印，而工具自报的那句
+`--self-test：N 条…` 里的 `N = len(marks)` 掉到 0。两格分家在终端上读成"8 条全过"。
+补成**两格同源**（`re` 抽自报数，断 `stated == marks`）后 Y1 被 `test_instrument_self_test_*`
+抓住。取证面同格一并补（Y2，镜像臂），`tests/test_forensic_scripts_root.py` 的
+`marks >= 18` 同样加了同源那一格。
+
+**已知边界（不装作闭了）**：常驻层看得见"自测报了几条"与"逐条打了几行"是否相等，
+**看不见自测内部单条断言的强度**——把 `buckets["line-defect"] >= 1` 放宽成 `>= 0`
+在常驻层上不可观察。因此这类臂不收录（收了只会以 SURVIVED 出现而凑数）；
+判决强度由 `tests/test_ci_surface_census.py` 那 15 条常驻用例守着。
+
+### 现读与复算
+
+```
+python scripts/ci_surface_census.py --self-test        # --self-test：8 条合成读数全部对上，rc 0
+python scripts/ci_surface_census.py --repo .           # 行钉：跨 job 命令 3 条共 23 处；行钉缺陷 0 处
+python -B docs/audit/s99/battery99.py                  # X0 对照 + 7 支臂 KILLED 7/7，收尾 sha 逐文件相等
+```
+CI 面分母未变（32 条命令 / 17 个 job / 消费表 32 条），本片的改动全在判据侧的自测与常驻断言形状。
+电池对 CI 靶只跑 `tests/test_ci_surface_census.py` 一个文件（15 条，约 6 秒），
+不跑全量——这条臂要验的是"自测条数这格有没有人守"，不是 CI 判据的全部行为。

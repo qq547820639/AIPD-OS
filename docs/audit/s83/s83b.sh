@@ -2,7 +2,7 @@
 # 第 83 片收尾（第二次全量）：干净签出全量 → 前提核对 → 绑定 → 门两轮 → 验签十一格 → 门第二轮。
 # 第 1 步（刷清单）已在 7acaced 完成，3d5e0f6 只换了 docs/audit/ 里那份未绑定的报告（不参与哈希）。
 set -uo pipefail
-R=/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
+R="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"   # 第 99 片：仓库根由脚本自身位置推，不再写死
 T=/Volumes/Extra/CodeProj/AI全链路自研/tmp/s83
 W=$T/final2
 PY=$R/.venv/bin/python
@@ -32,11 +32,11 @@ PY
 cd "$R" || exit 9
 
 echo; echo "===== 2/5 前提核对 + 绑定 + 提交 ====="
-$PY - <<'PY' || exit 8
+$PY - "$R" <<'PY' || exit 8
 import json, subprocess, sys
 from pathlib import Path
 T = Path("/Volumes/Extra/CodeProj/AI全链路自研/tmp/s83")
-R = Path("/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS")
+R = Path(sys.argv[1])          # 由外层 shell 传进来（heredoc 是带引号的，不会自己展开）
 sys.path.insert(0, str(R / "scripts"))
 import release_fingerprint as rf  # noqa: E402
 

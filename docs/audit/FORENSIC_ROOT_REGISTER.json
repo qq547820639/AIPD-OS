@@ -267,11 +267,25 @@
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
     },
     {
+      "path": "docs/audit/s84/closeout84.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 6,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
       "path": "docs/audit/s84/terminal84.py",
       "rule": "terminal",
       "hardcoded": true,
       "line": 24,
       "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s85/closeout85.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 6,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
     },
     {
       "path": "docs/audit/s85/terminal85.py",
@@ -288,11 +302,25 @@
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
     },
     {
+      "path": "docs/audit/s86/closeout86.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 6,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
       "path": "docs/audit/s87/battery87.py",
       "rule": "battery",
       "hardcoded": true,
       "line": 15,
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s87/closeout87.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 6,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
     },
     {
       "path": "docs/audit/s88/battery88.py",
@@ -302,11 +330,32 @@
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
     },
     {
+      "path": "docs/audit/s88/closeout88.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 10,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
+      "path": "docs/audit/s88/closeout88b.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
       "path": "docs/audit/s89/battery89.py",
       "rule": "battery",
       "hardcoded": true,
       "line": 45,
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s89/closeout89.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 7,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
     },
     {
       "path": "docs/audit/s90/battery90.py",
@@ -316,11 +365,25 @@
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
     },
     {
+      "path": "docs/audit/s90/closeout90.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 12,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
       "path": "docs/audit/s91/battery91.py",
       "rule": "battery",
       "hardcoded": true,
       "line": 33,
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s91/closeout91.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
     },
     {
       "path": "docs/audit/s92/battery92.py",
@@ -330,11 +393,25 @@
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
     },
     {
+      "path": "docs/audit/s92/closeout92.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
       "path": "docs/audit/s93/battery93.py",
       "rule": "battery",
       "hardcoded": true,
       "line": 59,
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s93/closeout93.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 10,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
     },
     {
       "path": "docs/audit/s94/battery94.py",
@@ -344,11 +421,32 @@
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
     },
     {
+      "path": "docs/audit/s94/closeout94.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 10,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
+      "path": "docs/audit/s95/closeout95.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
       "path": "docs/audit/s96/battery96.py",
       "rule": "battery",
       "hardcoded": true,
       "line": 46,
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s96/closeout96.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
     },
     {
       "path": "docs/audit/s97/battery97.py",
@@ -358,10 +456,31 @@
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
     },
     {
+      "path": "docs/audit/s97/closeout97.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
       "path": "docs/audit/s98/battery98.py",
       "rule": "battery",
       "hardcoded": true,
       "line": 31,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s98/closeout98.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
+      "path": "docs/audit/s99/battery99.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 37,
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
     }
   ]

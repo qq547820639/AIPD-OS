@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -31,6 +32,14 @@ def test_instrument_self_test_is_actually_spawned_and_green() -> None:
     proc = _spawn("--self-test")
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "条合成读数全部对上" in proc.stdout, proc.stdout
+    marks = proc.stdout.count("✓立住")
+    assert marks >= 8, f"--self-test 的臂从 8 条缩水成 {marks} 条：注入没跑满就别谈判据"
+    # 第 99 片：`✓立住` 是逐条打印的，`--self-test：N 条` 是工具自报的总数——两格必须同源。
+    # 只钉下限时这条闸没有牙：第 99 片的臂 Y1（`marks.append` 改 `pass`）让总数报 0 而
+    # 逐条照印 8 行，`marks >= 8` 照绿 ⇒ 报的条数与真注入的判决各走各的。
+    m = re.search(r"--self-test：(\d+) 条合成读数全部对上", proc.stdout)
+    assert m is not None, "自测那句自报总数的行没匹配上 ⇒ 文案改了，两格同源的断言就空转了"
+    assert int(m.group(1)) == marks, (m.group(1), marks)
 
 
 def test_real_repo_face_is_live_and_every_command_has_a_home() -> None:

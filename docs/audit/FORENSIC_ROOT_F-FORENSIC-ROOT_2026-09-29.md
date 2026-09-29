@@ -234,3 +234,107 @@ filtering new issues while tracking resolved ones via diffs"）。
 - 第一代那一跑的红只证明了"尺子在签出树里会读错"，**未**验证是否有其它判据也带同类
   目录前缀假设（本仓已知同族：`tests/test_forensic_scripts_parse.py` 走目录枚举、
   历轮电池写死 `REPO` 常量）；这一格留作下一片电池缓存核查时顺带穷举。
+
+## 七、第 99 片：这把尺第一次看见 `.sh`（同一片里 CI 自测补的那两格也记在这）
+
+### 现读的前提（改动前，逐文件打印那一版）
+
+| 读数 | 值 | 怎么来的 |
+| --- | --- | --- |
+| `docs/audit/**/*.sh` 文件数 | **17** | 目录枚举（不走 `git ls-files`，电池要在无 .git 的副本里也读得出同样的数） |
+| 其中带**仓库内**绝对字面量的 | **16** | 全是 `closeoutNN.sh` 的 `R=/Volumes/…`；剩一个 `s83b.sh` 当时带的是引号写法 |
+| 只用引号分支（`shell=False`）能读到的 | **0 个文件** | 与两分支那一档同一把 `literals()`，只换参数 |
+| 改动前名册 | 52 条（`.py` 面） | `--emit` 前读 |
+
+第 96 片落地时这条尺的枚举面写的是 `*.py`，所以这 16 个文件从未进过分母——
+不是"CI 侧只有 1 处"，是**测量工具看不见那种写法**（`R=` 右侧是裸路径，没有引号可锚）。
+
+**同一格里我自己写进仓库的一句读数也一并更正**：工具注释与用例 docstring 都写过
+"第一版普查把 17 个 `.sh` 读成 1 个"。那是**去硬编码之前**的现场——当时唯一的引号写法来自
+`s83b.sh:5`；把它改成从 `BASH_SOURCE` 推根之后，引号分支在这一面命中 **0** 个文件。
+两种说法在终端上长得一样（都叫"看不见"），但"读到 1"会让人以为还剩一条能被引号分支接住，
+而真相是这一整面全靠裸赋值分支。按"写下存在性否定前分两侧各数一遍"重跑了一遍逐文件打印的扫描，
+两处措辞已同步改。
+
+### 落法（四个面同时改，缺一个就会出现"分母涨了但没人点名"）
+
+1. `SHELL_ABS_RE`：`` (?:^|[\s=(])(/[^\s"'`\\)$]{4,}) ``，多行模式。字符类同样**不用 ASCII 白名单**
+   （本仓根含中文，第 90 片那一格在 shell 面上会重犯）。
+2. `literals(text, shell=True)` 并跑两条分支并按 (行号, 字面量) 去重。
+3. `facts()` 枚举 `*.py` + `*.sh`，每行带 `shell` 标；读数拆 `py_files` / `sh_files` / `script_files`。
+4. `closeout` 点名规则 `\.(py)$` → `\.(py|sh)$`；`corpus_empty` 前提文案改 `.py/.sh`。
+5. `docs/audit/s83/s83b.sh:5` 去硬编码：`R="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"`，
+   `bash -n` rc 0。
+
+### 电池：`docs/audit/s99/battery99.py`，X0 对照 + 7 支臂 KILLED 7/7
+
+| 臂 | 撤掉的东西 | 被抓住 |
+| --- | --- | --- |
+| X1 | 裸路径分支永不成立 | 6 条 |
+| X2 | 分母退回纯 `.py` | 5 条 |
+| X3 | 点名规则不再接住 `.sh` | 4 条 |
+| X4 | 语料拆档把 `.py` 记成 0 | 1 条 |
+| X5 | 把 `s83b.sh` 的仓库根**重新写死** | 4 条 |
+| Y1 | CI 量具自报条数不再随注入增长 | 1 条 |
+| Y2 | 取证量具同一格（镜像臂） | 1 条 |
+
+- **X5 是本片唯一一支改"被量的树"而不是改尺子的臂**：它同时证明 `.sh` 面不是整片豁免掉、
+  以及这轮对 `s83b.sh` 的去硬编码是承重的（改回去门就红）。
+- **Y1 是先 SURVIVED 之后补出来的**：第一版常驻断言写成 `marks >= 8`，数的是 `✓立住` 的打印行数；
+  而打印在 `_mark()` 里是**无条件**的，工具自报的 `N 条…全部对上` 才跟着注入走。把
+  `marks.append(text)` 改成 `pass` ⇒ 自报 0 条、照印 8 行、`marks >= 8` 照绿。补成
+  "自报数 == 打印行数"两格同源后 Y1/Y2 各被抓 1 条。取证面同格一并补（Y2 是它的镜像臂）。
+- **一支等价变异如实记录、不收录**：`literals()` 里 `if item not in out` 的去重。摘掉它不改变
+  任何判决与读数——`inside_hardcoded` 数的是布尔（有没有原告）、名册每文件只取首个行号、
+  `audit()` 里 `ins = set(inside)` 本就去重、自测那条断言用集合比。按"臂存活先问变异改得了
+  任何可观察输出吗"判为等价变异，不塞进电池凑数。
+- `.sh` 靶的语法门是 `bash -n`（`ast.parse` 只适用 `.py` 靶）；其余沿用第 96/97 片的硬化形状
+  （锚点先数、任一 ≠1 整批不跑退 7；sha 落地证明；`-B` + `PYTHONDONTWRITEBYTECODE`；每臂复位清缓存）。
+
+### 技术选型（`.sh` 的赋值右侧怎么读，四段）
+
+候选清单（一手读 PyPI JSON，`https://pypi.org/pypi/<pkg>/json`，2026-09-29 现读）：
+
+1. `tree-sitter-bash` **0.25.1**，`License :: OSI Approved :: MIT License`，`requires_python >=3.10`。
+2. `shellcheck-py` **0.11.0.1**，license 字段 MIT，`requires_python >=3.9`，
+   summary 自述 "Python wrapper around invoking shellcheck (https://www.shellcheck.net/)"，
+   发布物按平台分 wheel：`macosx_10_9_x86_64` / `macosx_11_0_arm64` / `manylinux…` / `win_amd64`。
+3. `pygments` **2.20.0**（本机 venv 已装，`pip show` 现读 `Required-by: pytest, rich`）。
+
+六维（只写能核到的）：
+
+| 维度 | tree-sitter-bash | shellcheck-py | pygments | 自研一条正则 |
+| --- | --- | --- | --- | --- |
+| 功能匹配度 | 高（真解析赋值节点） | 低：它报的是 shell 写法缺陷，不含"绝对路径落在仓库内"这一格 | 中：Bash lexer 给 Token，仍要自己挑赋值右侧 | 中：只覆盖赋值右侧裸路径这一种写法 |
+| License | MIT，与本项目 Apache-2.0 兼容 | MIT | BSD-2 | 无新增 |
+| 维护活跃度 | 0.23.3 → 0.25.0 → 0.25.1（近期有发版） | 0.9.0.x → 0.11.0.1（跟 shellcheck 版本走） | 活跃 | n/a |
+| 安全风险 | 原生扩展（C 语法库） | 携带上游 Haskell 二进制，版本随包锁死 | 纯 Python | 纯 Python |
+| 代码质量 | 语法绑定层，需另装 `tree-sitter` 核心 | 薄壳，逻辑在 shellcheck 里 | 成熟库 | 与既有 `ABS_RE` 同形状，一套读法 |
+| 适配成本 | **不可用**：本仓 `requires-python = ">=3.9,<3.13"`、venv 实为 3.9.6，包要求 ≥3.10 | 要为 CI 与每台机器装平台 wheel；本机 `lib` 无 shellcheck | 判据会依赖一个**没写进 `[project].dependencies`** 的传递包（默认依赖只有 `jsonschema`） | 一次正则 + 一支反例用例 |
+
+择一决定：**自研那条裸赋值分支（借语义）**——借的是 shell 赋值的语法形状（`NAME=` 右侧无引号、
+以空白或 `)` 收尾），不是借实现。三条外部候选各有决定性障碍：tree-sitter-bash 被版本门直接挡死，
+shellcheck-py 判的不是这一格且要引原生二进制，pygments 会把门禁接到没声明的传递依赖上
+（与"一个配置值只认一个来源"同族的病）。
+
+未亲验：`shellcheck` 自己的规则集没有逐条对官方文档核实，这一维只按 PyPI 的 summary 与
+发布物形状（平台分 wheel ⇒ 二进制分发）下结论；`tree-sitter-bash` 的解析能力未实测装跑。
+
+### 读数（改动后现读）
+
+```
+取证脚本 90 个（.py 73 / .sh 17；写死仓库内 69、写死仓库外 38、用 tempfile 2），名册 69 条
+归属：已豁免 69 / 按 __file__ 推根 21 / 无人守 0
+现状面缺陷 0 条
+```
+档位求和 69 + 21 + 0 = 90 = `corpus.script_files`（常驻用例断这个等式，也断 `sh_files > 0`）。
+名册里 `.sh` 16 条、全部走 `closeout` 规则，非 closeout 命名的 `.sh` 原告 **0** 个。
+`--self-test`：18 条判据读数全部对上，rc 0。
+常驻 `tests/test_forensic_scripts_root.py` 10 → **12** 条；`tests/test_ci_surface_census.py` 15 条
+（条数未涨，但那第一条自测 spawn 用例加了"自报数 == 打印行数"这一格）。
+
+### 认证读数
+
+（本轮干净签出全量 + 绑定 + 发布门 + 收尾验签的读数在收口后填，见
+`docs/audit/s99/closeout99.log`、`docs/audit/s99/gate99.log`、`docs/audit/s99/closeout99.json`。）
+

@@ -951,6 +951,43 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.60 F-FORENSIC-ROOT 第 99 片：取证根路径那把尺第一次看见 `.sh`，并把两条行钉判决接进 CI 自测**：
+  第 96 片立的尺只扫 `*.py`。现读（改动前）：`docs/audit/**/*.sh` 有 **17** 个，其中 **16** 个带
+  仓库内绝对字面量（全是 `closeoutNN.sh` 的 `R=/Volumes/…`），而只用引号分支时这一面**一个文件都
+  读不到**——shell 赋值右侧是裸路径，没有引号可锚。落法：`literals(text, shell=True)` 并跑
+  引号与裸路径两条分支（新增 `SHELL_ABS_RE`），`facts()` 枚举面加 `*.sh` 并给每行带 `shell` 标，
+  语料读数拆成 `py_files` / `sh_files` / `script_files`，`closeout` 点名规则同步扩成
+  `\.(py|sh)$`，`docs/audit/s83/s83b.sh` 的仓库根改成从 `BASH_SOURCE` 推（`bash -n` rc 0）。
+  改动后现读：取证脚本 **90** 个（`.py` 73 / `.sh` 17；写死仓库内 **69**、仓库外 38、tempfile 2），
+  名册 69 条（新增的 16 条全是 `.sh`），归属 已豁免 69 / 推根 21 / **无人守 0**，
+  档位求和 69+21+0=90 与分母相等。常驻 `tests/test_forensic_scripts_root.py` 10 → **12** 条
+  （`.sh` 在分母里且每条被点名 / 裸赋值与带引号两种书写形态两极），`--self-test` 15 → **18** 条读数。
+  **顺手更正一处我自己写进仓库的读数**：工具注释与用例 docstring 原写"第一版普查把 17 读成 1"，
+  那是去硬编码**之前**的旧现场（当时只有 `s83b.sh` 带引号）；现读引号分支命中 **0** 个文件 ⇒
+  两处措辞都改成"整面看不见"，并按"写下存在性否定前先分两侧各数一遍"重跑了一遍逐文件打印的扫描。
+  第二格（F-CI-SURFACE）：第 98 片的两条判决 `CI面行钉不穷举` / `CI面行钉指错行` 只有常驻牙，
+  `scripts/ci_surface_census.py --self-test` 那 6 条臂碰不到 ⇒ 现补成 **8** 条：不穷举那一支从**真
+  YAML** 走到判据（折叠标量 `>-` 把 `pytest`+`-q` 折成与块标量同一条命令，另一 job 定不到行号，
+  同时证 `audit()` 真调用、`buckets["line-defect"]` 真进档），指错行按纯函数喂行表（越界 + 原文
+  不含命令两档各一火，同源时不开火）。
+  **这一片被自己的电池教了一次**：先写的常驻断言是 `marks >= 8`（数 `✓立住` 打印行数），
+  臂 Y1 把 `marks.append(text)` 改成 `pass` 后**照绿**——打印是无条件的，工具自报的 `N 条` 才是活的，
+  两格分结构上看不见。补成两格同源（`re` 抽自报数 == 打印行数）后 Y1/Y2 各被抓 1 条。
+  电池 `docs/audit/s99/battery99.py`：X0 对照 + **7** 支臂 **KILLED 7/7**，收尾 sha 逐文件复算相等；
+  X5 是本片唯一一支改**被量的树**（把 `s83b.sh` 的仓库根重新写死）而不是改尺子的臂，
+  它同时证明 `.sh` 面不是整片豁免掉、以及这轮的去硬编码是承重的。
+  一支**等价变异如实记录不收录**：`literals()` 里 `if item not in out` 的去重——摘掉它不改变任何
+  判决与读数（`inside_hardcoded` 数布尔、名册每文件只取首行号、`audit()` 里本就有 `set(inside)`）。
+  选型三候选（一手读 PyPI JSON）：`tree-sitter-bash` 0.25.1 / MIT，但 `requires_python >=3.10`
+  而本仓 `requires-python = ">=3.9,<3.13"`、venv 实为 3.9.6 ⇒ 版本门直接不可用；
+  `shellcheck-py` 0.11.0.1 / MIT，自述"Python wrapper around invoking shellcheck"且发布物按平台
+  分 wheel（macosx_11_0_arm64 / manylinux / win_amd64）⇒ 引一个原生二进制进来，而它管的是 shell
+  写法缺陷，不含"绝对路径落在仓库内"这一格；`pygments` 2.20.0 本机在 venv 里但
+  `Required-by: pytest, rich`、未进 `[project].dependencies` ⇒ 判据用它就把门禁接到没声明的包上。
+  **择一：自研那条裸赋值分支**，借 shell 赋值的语法形状（右侧无引号、以空白或 `)` 收尾）。
+  未亲验：`shellcheck` 的规则集未逐条对官方文档核实，只按其 PyPI 自述与发布物形状下结论。
+  取证与两处读数见 `docs/audit/FORENSIC_ROOT_F-FORENSIC-ROOT_2026-09-29.md` §七
+  与 `docs/audit/CI_LINE_PINS_F-CI-SURFACE_2026-09-29.md` §七。
 - **v5.59 F-CI-SURFACE 第 98 片：CI 的行钉从"每命令一行"改成"每 (job, 行) 一处"**：
   第 94 片把 `line` 从恒 0 补成 `ci.yml:NNN`，但 `ci_commands()` 按命令文本去重，行号取的是
   **第一个命中它的 job** ⇒ `job` 列是一串名字而 `line` 只有一个。现读（改动前）：32 条命令 /

@@ -36,6 +36,10 @@ REL = "docs/audit/FORENSIC_ROOT_REGISTER.json"
 ABS_RE = re.compile(r"""["'](/[^\s"'`\\]{3,})["']""")
 # 报告侧只收真像文件系统根的那种（URL 路由 `"/api/v1"` 之类不进读数，避免噪声冒充原告）
 HOST_RE = re.compile(r"^/(?:Volumes|Users|home|tmp|private/tmp|mnt|opt)/")
+# shell 的赋值右侧是**裸路径**（`R=/Volumes/…`），没有引号可锚：只用引号分支时，17 个 `.sh`
+# 里带仓库内绝对路径的 16 个**一个都读不到**（第 99 片现读：引号分支 0 个文件、两分支 16 个）。
+# 测量换一种写法就换一个读数 ⇒ 这条分支与它的反例用例一起入库。
+SHELL_ABS_RE = re.compile(r"""(?:^|[\s=(])(/[^\s"'`\\)$]{4,})""", re.M)
 
 # (规则名, 文件名判据, 这一类的理由)
 BY_DESIGN: list[tuple[str, str, str]] = [
@@ -45,14 +49,25 @@ BY_DESIGN: list[tuple[str, str, str]] = [
     ("terminal", r"/terminal\d+\.py$",
      "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，"
      "那些路径本身就是历史记录的一部分"),
-    ("closeout", r"/closeout\d+\.py$",
-     "收口链里按配方要求用绝对路径拼 worktree（见项目配方「worktree 必须写绝对路径」那条）"),
+    ("closeout", r"/closeout\d+[a-z]*\.(?:py|sh)$",
+     "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」"
+     "那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"),
 ]
 
 
-def literals(text: str) -> list[tuple[int, str]]:
-    """返回 [(行号, 字面量)]：只认引号包住的整串，注释里的手写路径不算。"""
-    return [(text.count("\n", 0, m.start()) + 1, m.group(1)) for m in ABS_RE.finditer(text)]
+def literals(text: str, shell: bool = False) -> list[tuple[int, str]]:
+    """返回 [(行号, 字面量)]：只认引号包住的整串，注释里的手写路径不算。
+
+    `shell=True` 时两条分支并跑——`R=/Volumes/…` 没有引号可锚，只用引号分支会把整个
+    `.sh` 面读成空（第一版普查就是这么把 17 读成 1 的）。
+    """
+    out = [(text.count("\n", 0, m.start()) + 1, m.group(1)) for m in ABS_RE.finditer(text)]
+    if shell:
+        for m in SHELL_ABS_RE.finditer(text):
+            item = (text.count("\n", 0, m.start(1)) + 1, m.group(1))
+            if item not in out:
+                out.append(item)
+    return sorted(out)
 
 
 def repo_inside(root: Path, lit: str) -> bool:
@@ -87,20 +102,24 @@ def repo_roots(tree: Path) -> list[Path]:
 
 
 def facts(root: Path) -> list[dict]:
-    """每个取证 `.py` 一条读数；本脚本自己不算（它的模式串里就带着被判的字面量）。"""
+    """每个取证脚本（`.py` 与 `.sh`）一条读数；本脚本自己不算（模式串里就带着被判的字面量）。"""
     root = Path(root).resolve()
     roots = [root] + [r for r in repo_roots(root) if r != root]
     rows: list[dict] = []
-    for f in sorted((root / "docs" / "audit").rglob("*.py")):
+    files = [f for f in sorted((root / "docs" / "audit").rglob("*"))
+             if f.suffix in (".py", ".sh") and f.is_file()]
+    for f in files:
         rel = f.relative_to(root).as_posix()
         if rel == SELF_REL:
             continue
+        shell = f.suffix == ".sh"
         text = f.read_text(encoding="utf-8", errors="replace")
-        lits = literals(text)
+        lits = literals(text, shell=shell)
         inside = [(ln, lit) for ln, lit in lits if any(repo_inside(r, lit) for r in roots)]
         ins = set(inside)
         rows.append({
             "path": rel,
+            "shell": shell,
             "inside": inside,
             "outside": [(ln, lit) for ln, lit in lits
                         if (ln, lit) not in ins and HOST_RE.match(lit)],
@@ -200,10 +219,12 @@ def audit(root: Path) -> dict:
     outside = [{"path": r["path"], "lits": [lit for _ln, lit in r["outside"]]}
                for r in rows if r["outside"]]
     if not rows:
-        problems.append("corpus_empty: docs/audit 下一个 .py 都没扫到")
+        problems.append("corpus_empty: docs/audit 下一个 .py/.sh 都没扫到")
     ok = not violations and not problems
+    n_py = sum(1 for r in rows if not r["shell"])
     return {"ok": ok, "buckets": buckets,
-            "corpus": {"py_files": len(rows), "register_size": len(reg),
+            "corpus": {"py_files": n_py, "sh_files": len(rows) - n_py,
+                       "script_files": len(rows), "register_size": len(reg),
                        "inside_hardcoded": sum(1 for r in rows if r["inside"]),
                        "outside_hardcoded": len(outside),
                        "uses_tempfile": sum(1 for r in rows if r["tempfile"])},
@@ -232,9 +253,9 @@ def render(rep: dict) -> str:
     c = rep["corpus"]
     b = rep["buckets"]
     lines = ["=" * 60, "取证脚本根路径对账", "=" * 60,
-             f".py {c['py_files']} 个（写死仓库内 {c['inside_hardcoded']}、"
-             f"写死仓库外 {c['outside_hardcoded']}、用 tempfile {c['uses_tempfile']}），"
-             f"名册 {c['register_size']} 条",
+             f"取证脚本 {c['script_files']} 个（.py {c['py_files']} / .sh {c['sh_files']}；"
+             f"写死仓库内 {c['inside_hardcoded']}、写死仓库外 {c['outside_hardcoded']}、"
+             f"用 tempfile {c['uses_tempfile']}），名册 {c['register_size']} 条",
              f"归属：已豁免 {b['exempt']} / 按 __file__ 推根 {b['derived']}"
              f" / 无人守 {b['unwatched']}"]
     for v in rep["violations"]:
@@ -401,6 +422,36 @@ def _self_test(tmp: Path) -> int:
     assert main(["--repo", str(hard)]) == 2, main(["--repo", str(hard)])
     _mark(marks, "「名册重复」开火：同一路径登记两遍 ⇒ 算前提塌（退 2）而不是默默取其中一份"
                  "——两条臂各自的理由都还在，取哪一份都不该由遍历顺序决定")
+
+    _clean(hard)
+    _write(hard, "docs/audit/s2/other.sh", f'R = {inside}/extra\necho "$R"\n')
+    rep15 = audit(hard)
+    fired15 = {(v["field"], v["written"]) for v in rep15["violations"]}
+    assert ("根路径未点名", "docs/audit/s2/other.sh") in fired15, fired15
+    _mark(marks, "「.sh 也在分母里」：shell 赋值右侧的裸绝对路径（`R=/…`，没有引号可锚）"
+                 "被认成仓库内字面量并判红——只用引号分支时整个 .sh 面读成空")
+
+    _clean(hard)
+    _write(hard, "docs/audit/s2/both.sh",
+           f'R = {inside}/bare\nQ = "{inside}/quoted"\n')
+    row = next(r for r in facts(hard) if r["path"] == "docs/audit/s2/both.sh")
+    got = {lit for _n, lit in row["inside"]}
+    assert got == {f"{inside}/bare", f"{inside}/quoted"}, (got, row)
+    py_only = literals((hard / "docs/audit/s2/both.sh").read_text(encoding="utf-8"))
+    assert [lit for _n, lit in py_only] == [f"{inside}/quoted"], py_only
+    _mark(marks, "两种书写形态各读到一次：裸赋值与带引号赋值都在 `shell=True` 里出现，"
+                 "而只用引号分支（`shell=False`）恰好漏掉裸的那一条 ⇒ "
+                 "「测量换写法就换读数」这一格由这条断言钉住")
+
+    _clean(hard)
+    _write(hard, "docs/audit/closeout99.sh", f'R = {inside}\n')
+    assert emit(hard) == 0
+    reg99 = load_register(hard)[0]
+    ent = reg99.get("docs/audit/closeout99.sh")
+    assert ent and ent["rule"] == "closeout", reg99
+    assert audit(hard)["ok"], audit(hard)["violations"]
+    _mark(marks, "`.sh` 走 `closeout` 那条点名规则：命名成 closeoutNN.sh 的收口脚本"
+                 "被唯一一条写明理由的豁免接住，且 --emit 会把它写进名册")
 
     empty = tmp / "empty"
     (empty / "docs" / "audit").mkdir(parents=True)

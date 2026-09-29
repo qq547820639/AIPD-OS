@@ -540,6 +540,37 @@ def _self_test(tmp: Path) -> int:
                  "`--ignore-errors`）各开一火，普通 `ruff check src` 那一步照旧不火"
                  "——这一格是 fail-closed 的防未来门：本仓 ci.yml 现读 38 个 run 步骤、"
                  "`continue-on-error` 0 处、`|| true` 0 处 ⇒ 今天没有活原告")
+    # ---- 第 99 片：行钉两条判决各自在自测里开一火（第 98 片只上了常驻牙，自测没碰这一格）----
+    pin = tmp / "pin"
+    (pin / WORKFLOW_REL).parent.mkdir(parents=True)
+    (pin / WORKFLOW_REL).write_text(
+        "name: two\njobs:\n"
+        "  alpha:\n    steps:\n      - name: T\n        run: |\n          pytest -q\n"
+        "  beta:\n    steps:\n      - name: T\n        run: >-\n"
+        "          pytest\n          -q\n", encoding="utf-8")
+    row_pin = {r["command"]: r for r in ci_commands(pin)[0]}["pytest -q"]
+    assert row_pin["occurrences"]["beta"] == [], row_pin["occurrences"]
+    rep_pin = audit(pin)
+    fired_pin = {(v["field"], v["written"]) for v in rep_pin["violations"]}
+    assert ("CI面行钉不穷举", "pytest -q") in fired_pin, fired_pin
+    assert rep_pin["buckets"]["line-defect"] >= 1, rep_pin["buckets"]
+    _mark(marks, "「行钉不穷举」从真 YAML 走到判据：折叠标量把 `pytest`+`-q` 折成同一条命令，"
+                 "另一个 job 因此定不到行号 ⇒ 接线（`audit()` 真调用 `line_pin_defects`、"
+                 "档位真进 `buckets[\"line-defect\"]`）与判决两头都看得见")
+    # 第二查没法靠写真 YAML 喂（解析面自洽），按纯函数喂行表：越界与指到别处两档各一火
+    fed = [{"command": "pytest -q", "at": "pytest -q", "line": 1,
+            "occurrences": {"alpha": [3], "beta": []}}]
+    got_fed = line_pin_defects(fed, ["pytest -q", "name: two", "jobs:"])
+    assert {d["field"] for d in got_fed} == {"CI面行钉不穷举", "CI面行钉指错行"}, got_fed
+    oob = line_pin_defects([{"command": "pytest -q", "at": "pytest -q", "line": 1,
+                             "occurrences": {"alpha": [99]}}], ["pytest -q"])
+    assert [d["field"] for d in oob] == ["CI面行钉指错行"], oob
+    assert line_pin_defects([{"command": "pytest -q", "at": "pytest -q", "line": 2,
+                              "occurrences": {"alpha": [2], "beta": [2]}}],
+                            ["name: two", "  run: pytest -q"]) == [], "合规侧不许开火"
+    _mark(marks, "「行钉指错行」两档各开火（行号越界、行号处原文不含命令），"
+                 "而行号与命令同源时**不**开火——越界那一档同时是防崩的那道界："
+                 "去掉 `ln > len(file_lines)` 守卫这条臂会从 IndexError 而不是判决里冒出来")
     # 前提塌：没有 workflow 文件时不许读成"零违规"
     empty = tmp / "nowf"
     (empty / "tests").mkdir(parents=True)

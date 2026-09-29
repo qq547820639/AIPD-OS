@@ -594,6 +594,13 @@ python scripts/ci_surface_census.py --self-test
 #     名册另存 `lines_per_job_at_emit_time`，那是 emit 时刻的元数据、判据不读它
 #     （与 `cited_by_at_emit_time` 同档，避免名册里长出第二份事实）。
 #     口径边界：`lines_total` 记的是 (job, 行) 对，不是 matrix 展开后的运行次数。
+#     第 99 片把这两条行钉判决**接进 `--self-test`**（原先只有常驻牙，自测那 6 条臂碰不到
+#     这一格）：`不穷举` 用真 YAML 走到判据（折叠标量把 `pytest`+`-q` 折成同一条命令、
+#     另一个 job 因此定不到行号 ⇒ 同时证 `audit()` 真调用、`buckets["line-defect"]` 真进档），
+#     `指错行` 按纯函数喂行表（越界与原文不含命令两档各一火，同源时不许开火）。
+#     自测现为 **8** 条读数，且常驻用例另钉两格同源：`✓立住` 打印行数 == 自报的 `N 条`
+#     （电池臂 Y1 实测：`marks.append(text)` 改 `pass` 时自报 0 条而照印 8 行，
+#     光有 `marks >= 8` 下限看不见）。已知边界：常驻层看得见条数、看不见自测内部单条断言的强度。
 #     取证与选型见 docs/audit/CI_LINE_PINS_F-CI-SURFACE_2026-09-29.md。
 python scripts/dependency_license_gate.py
 #   ↑ 依赖许可证门禁（第 92 片）。权威面是**已装发行包的元数据**，从 `pyproject.toml` 的
@@ -638,19 +645,29 @@ python docs/audit/s96/build_forensic_root_register.py
 #     `tempfile.*`（自造临时目录，可重放，两档都不进）。
 #     判决六道：未点名 / 名册该撤（两极：文件还在但已不写死、文件没了）/
 #     点名规则不唯一 / 名册缺条目 / 名册规则过期 / 豁免理由空缺；
-#     前提两道：名册读不到、一个 `.py` 都没扫到 ⇒ 退 2（不把"没扫到"读成"零风险"）。
+#     前提两道：名册读不到、一个 `.py`/`.sh` 都没扫到 ⇒ 退 2（不把"没扫到"读成"零风险"）。
 #     名册 `docs/audit/FORENSIC_ROOT_REGISTER.json` 是**生成物**：`--emit` 与判据共用
 #     同一把 `facts()`，任一文件命中 0 条或 ≥2 条点名规则就整批拒写（退 3）⇒
 #     重新生成一次洗不出更宽的豁免。规则一律带 `/` 左边界：不带的时候
 #     `s84/after_battery84.py`（电池的接收脚本，不是电池）被词形吞成豁免，本轮真实踩到。
 #     识别面的字符类不许用 ASCII 白名单——本仓根含中文，白名单会静默漏掉全部原告
 #     而只报"写死仓库内 0"（第 90 片同格第二次，常驻用例里带一条非 ASCII 前提断言）。
-#     分母由脚本自报（`corpus.*` 与 `buckets`），档位求和恒等于 `.py` 数由常驻用例断。
+#     第 99 片把**语料面从 `*.py` 扩到 `*.py` + `*.sh`**：shell 赋值右侧是裸路径
+#     （`R=/Volumes/…`，没有引号可锚），只用引号分支时 17 个 `.sh` 里带仓库内绝对路径的
+#     16 个一个都读不到 ⇒ `literals(text, shell=True)` 并跑两条分支，`closeout` 那条点名
+#     规则同步扩成 `\.(py|sh)$`，`s83b.sh` 的仓库根改成由 `BASH_SOURCE` 推。
+#     分母由脚本自报（`corpus.py_files` / `corpus.sh_files` / `corpus.script_files` 与 `buckets`），
+#     档位求和恒等于 `.py` + `.sh` 数、且 `sh_files > 0` 由常驻用例断。
 python docs/audit/s96/build_forensic_root_register.py --self-test
-#   ↑ 上一行那把尺的 15 支注入臂（第 96 片）：每道判决各配开火与合规两极，
+#   ↑ 上一行那把尺的 18 条注入读数（第 96 片 15 条 + 第 99 片 3 条：裸赋值开火、
+#     两种书写形态各读到一次、`closeoutNN.sh` 被点名规则接住且进名册；条数以这一行自己的
+#     自报数为准，别把抄进来的数当现状）。每道判决各配开火与合规两极，
 #     含"只报不红"那一档的反例（放宽成 `^/` 就会被抓住 ⇒ URL 路由与本档语义不是同一件事），
 #     以及**重叠规则**那一臂——两条规则抢同一个文件在今天的规则表里结构上到不了，
 #     靠临时注入一条 `\.py$` 规则才证明这条闸不是写给人看的摆设。
+#     第 99 片另钉两格**同源**：常驻用例比 `✓立住` 的打印行数与工具自报的 `N 条判据读数`
+#     是否相等（臂 Y2 实测：把 `marks.append(text)` 改成 `pass` 时自报 0 条而照印 18 行，
+#     原先那条 `marks >= 18` 下限结构上看不见 ⇒ 只数打印行的断言等于没数）。
 python docs/audit/s93/probe93_license_bodies.py
 #   ↑ 上一行那把尺的**分母探针**（第 93 片）：逐包报正文在哪、断言认不认得出、哪些只是提及。
 #     判据不复刻在这里——它调 `detect_body` / `bodies_of` / `package_license` 本尊。

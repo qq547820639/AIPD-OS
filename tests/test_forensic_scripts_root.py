@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -85,7 +86,12 @@ def test_instrument_self_test_is_actually_spawned_and_green() -> None:
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "条判据读数全部对上" in proc.stdout, proc.stdout
     marks = proc.stdout.count("✓立住")
-    assert marks >= 15, f"--self-test 的臂从 15 条缩水成 {marks} 条：注入没跑满就别谈判据"
+    assert marks >= 18, f"--self-test 的臂从 18 条缩水成 {marks} 条：注入没跑满就别谈判据"
+    # 第 99 片（与 CI 面同源的一格）：逐条 `✓立住` 是无条件打印的，`N 条判据读数` 是工具
+    # 自报的总数。只钉下限 ⇒ 臂 Y2（`marks.append` 改 `pass`）报 0 条而照印 18 行、用例全绿。
+    m = re.search(r"合成语料上 (\d+) 条判据读数全部对上", proc.stdout)
+    assert m is not None, "自测那句自报总数的行没匹配上 ⇒ 文案改了，两格同源的断言就空转了"
+    assert int(m.group(1)) == marks, (m.group(1), marks)
 
 
 def test_real_repo_face_is_live_and_return_code_follows_the_verdict() -> None:
@@ -96,7 +102,7 @@ def test_real_repo_face_is_live_and_return_code_follows_the_verdict() -> None:
     assert c["py_files"] > 40, c
     # 档位求和 == 分母：漏一档或重一档都会在这里翻，而不是靠记住某个数
     b = rep["buckets"]
-    assert b["exempt"] + b["derived"] + b["unwatched"] == c["py_files"], (b, c)
+    assert b["exempt"] + b["derived"] + b["unwatched"] == c["script_files"], (b, c)
     assert b["exempt"] == c["inside_hardcoded"], (b, c)
     assert b["exempt"] > 30, b
     assert b["derived"] > 5, b
@@ -148,6 +154,41 @@ def test_outside_repo_literals_are_reported_but_never_judge(tmp_path: Path) -> N
     assert not rep2["violations"], rep2["violations"]
     assert rep2["corpus"]["outside_hardcoded"] == 1, rep2["corpus"]
     assert [o["path"] for o in rep2["outside"]] == ["docs/audit/s1/battery1.py"], rep2["outside"]
+
+
+def test_the_shell_face_is_in_the_denominator() -> None:
+    """`.sh` 也在分母里（第 99 片补的盲区）：真语料现读它有原告，且每条都被点名。
+
+    只用引号分支时，17 个 `.sh` 里带仓库内绝对路径的 16 个**一个都读不到**
+    （第 99 片现读：引号分支 0 个文件、两分支 16 个）——那不是"`.sh` 都没写死路径"，
+    是**测量工具看不见那种写法**。这一条把两件事一起钉：分母里有 `.sh`，
+    且带仓库内绝对路径的 `.sh` 全部有唯一一条写明理由的豁免。
+    """
+    rep = bfr.audit(ROOT)
+    c = rep["corpus"]
+    assert c["sh_files"] > 0, c
+    assert c["script_files"] == c["py_files"] + c["sh_files"], c
+    rows = bfr.facts(ROOT)
+    sh_inside = [r for r in rows if r["shell"] and r["inside"]]
+    assert sh_inside, "真仓库里已没有带仓库内绝对路径的 .sh ⇒ 本条前提塌，要改判据不是改断言"
+    reg, problems = bfr.load_register(ROOT)
+    assert not problems, problems
+    for r in sh_inside:
+        assert r["path"] in reg, r["path"]
+        assert reg[r["path"]]["rule"] == "closeout", (r["path"], reg[r["path"]])
+    assert not rep["violations"], rep["violations"]
+
+
+def test_a_bare_shell_assignment_is_not_invisible() -> None:
+    """书写形态两极：裸赋值 `R=/…` 与带引号 `Q="/…"` 都要读到，且各自的读法不同源。
+
+    少了这条，`shell=False` 那条分支（只认引号）与"真的没有裸写法"在终端上同形。
+    """
+    body = 'R = /Volumes/aa/bb\nQ = "/Volumes/aa/cc"\n'
+    quoted_only = [lit for _n, lit in bfr.literals(body)]
+    both = [lit for _n, lit in bfr.literals(body, shell=True)]
+    assert quoted_only == ["/Volumes/aa/cc"], quoted_only
+    assert both == ["/Volumes/aa/bb", "/Volumes/aa/cc"], both
 
 
 def test_a_worktree_checkout_of_the_same_repo_still_counts_as_repo_inside(
