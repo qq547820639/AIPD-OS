@@ -243,9 +243,13 @@ B1 的豁免语义与"数到真债"这对矛盾不能靠"补一条断言"消掉�
 
 批次表里 SIM105 那一档一直挂"blocked"，理由写的是"动它会撞 `EMPTY_EXCEPT` 豁免"。本轮把这条前提复算完：
 
-- `# noqa: EMPTY_EXCEPT` 形态**全仓 13 处**（`src` 3 / `scripts` 5 / `state_service` 0 / `tests` 0，
-  其余 5 处是 `tests/test_exception_hygiene.py` 的散文与正则说明），形态只有这一种（`# EMPTY_EXCEPT`
-  这种不带 `noqa:` 的写法 0 处）。
+- `# noqa: EMPTY_EXCEPT` 这个串**全仓命中 13 行**，但要分两张面读：
+  **代码站点 9 处 / 5 个文件**（`src` 3 行 2 文件、`scripts` 6 行 3 文件、`state_service` 0），
+  另 **4 行在 `tests/test_exception_hygiene.py` 的散文与正则说明里**——它们不是豁免点，
+  是"判据怎么描述这个标记"。搬家真正要改的是 9 个站点 + 那 4 行措辞。
+  形态只有一种：带 `noqa:` 的写法；`# EMPTY_EXCEPT`（不带 `noqa:`）0 处。
+  （本段第一版把 13 直接写成"13 处站点"、并把 `scripts` 数成 5，是拿 token 命中数当站点数用的同族病，
+  现按 `grep -rn` 与 `grep -rl` 两个口径各自重跑后更正。）
 - 它不是 ruff 的规则码 ⇒ ruff 每次跑都打 "Invalid `# noqa` directive" 警告（实测 `scripts` 6 条 +
   `src` 3 条，退码仍 0）。也就是说：**这 13 处的豁免效力来自本仓那把 `test_exception_hygiene.py` 尺子，
   与 ruff 无关**，而 ruff 只把它当噪声。
