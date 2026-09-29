@@ -25,7 +25,7 @@
       "check": "test_numbers_from_report",
       "passed": true,
       "detail": [
-        "passed=2806 failed=0 total=2811 source_commit=a66040520139405095648461f7144d4f00629924"
+        "passed=2807 failed=0 total=2812 source_commit=a66040520139405095648461f7144d4f00629924"
       ]
     },
     {

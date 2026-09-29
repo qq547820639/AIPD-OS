@@ -5,27 +5,27 @@
  "checks": {
   "report_bound_to_provenance": {
    "ok": true,
-   "detail": "报告 sha256=22106b157285 与 PROVENANCE 记录一致",
+   "detail": "报告 sha256=de978414debe 与 PROVENANCE 记录一致",
    "kind": "violation"
   },
   "counts_counted_from_roster": {
    "ok": true,
-   "detail": "现数 passed=2806 skipped=5 total=2811，summary 与 PROVENANCE 两处副本一致",
+   "detail": "现数 passed=2807 skipped=5 total=2812，summary 与 PROVENANCE 两处副本一致",
    "kind": "violation"
   },
   "terminal_clean": {
    "ok": true,
-   "detail": "exitcode=0，2811 条无 failed/error",
+   "detail": "exitcode=0，2812 条无 failed/error",
    "kind": "violation"
   },
   "roster_covers_tree": {
    "ok": true,
-   "detail": "树 227 文件 / 2715 个 def，报告 227 文件 / 2811 条，双向差集为空",
+   "detail": "树 227 文件 / 2716 个 def，报告 227 文件 / 2812 条，双向差集为空",
    "kind": "violation"
   },
   "pinned_source_binding": {
    "ok": true,
-   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 报告实测 HEAD 58eecab1 的祖先",
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 报告实测 HEAD 17ddd4c5 的祖先",
    "kind": "violation"
   },
   "content_parity_measured": {
@@ -36,11 +36,11 @@
   "report_fingerprint_recorded": {
    "ok": true,
    "kind": "ok",
-   "detail": "报告自带清单指纹 7870d783f5fe"
+   "detail": "报告自带清单指纹 9d2a4bbf0648"
   },
   "report_fingerprint_matches_disk": {
    "ok": true,
-   "detail": "报告指纹与磁盘清单 7870d783f5fe 同源（只换 generated_at 不算变）",
+   "detail": "报告指纹与磁盘清单 9d2a4bbf0648 同源（只换 generated_at 不算变）",
    "kind": "violation"
   },
   "worktree_clean": {
@@ -55,26 +55,26 @@
   },
   "size_ratchet": {
    "ok": true,
-   "detail": "名单 2811 条 ≥ 下界 2811",
+   "detail": "名单 2812 条 ≥ 下界 2812",
    "kind": "violation"
   }
  },
  "readings": {
-  "report_entries": 2811,
+  "report_entries": 2812,
   "outcome_hist": {
-   "passed": 2806,
+   "passed": 2807,
    "skipped": 5
   },
-  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s105",
-  "report_duration_s": 1389.414664030075,
+  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s105b",
+  "report_duration_s": 1129.2961201667786,
   "provenance_binds_report": true,
   "tree_files": 227,
-  "tree_defs": 2715,
+  "tree_defs": 2716,
   "report_files": 227,
-  "worktree_head": "ca918b834ea380dd03b9d5f68e5a28b6edbeec70",
+  "worktree_head": "293c140b3842d68171d38b7eaff69eb030083f48",
   "pinned_commit": "a66040520139405095648461f7144d4f00629924",
-  "report_fingerprint": "7870d783f5fe",
-  "disk_manifest_fingerprint": "7870d783f5fe"
+  "report_fingerprint": "9d2a4bbf0648",
+  "disk_manifest_fingerprint": "9d2a4bbf0648"
  },
  "ok": true
 }
