@@ -951,6 +951,49 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.61 F-SCRIPT-LINT 第 100 片：`scripts/` 真的进 lint 面了——用测量基线，不用 per-file-ignores**：
+  第 99 片那张代价单把这件事定成 B（按文件棘轮），实施时**B 的形状改了一次**：只做 B2（测量基线 +
+  棘轮），**摘掉 B1（ruff 原生 `per-file-ignores`）**。决定性理由不是工作量而是可见性——B1 按
+  "文件×规则码"全有全无地豁免，**同码新增命中一起被吞**；要让棘轮数到真债就得绕开豁免，而
+  `ruff --config` 只接受简单 TOML 键值（本轮实测 `--config 'lint.per-file-ignores={...}'` ⇒
+  `error: invalid value`），绕开只能再喂一份复刻 pyproject 的临时配置＝把判据的规则集抄第二遍。
+  外部现成 baseline/ratchet 工具**未检索到**（搜索命中的是教程与 issue，astropy #14818 只按搜索结果
+  标题引用、正文未亲验）；ruff 侧本身没有基线概念。
+  现读（改动前）：`ruff check --no-cache scripts` ⇒ **642 条 / 60 个 `.py` / 44 个有债 / 16 个 0 债**；
+  集中度：`manual_chain.py` 126 + `aipd_state.py` 114 + `aipd_store.py` 61 = **295/642 = 46%**。
+- 落法五处：① `.github/workflows/ci.yml:144` 的 ruff 命令**逐个点名**那 16 个 0 债文件（544 列）；
+  ② `tests/test_ci_face_gates.py` 不再抄两遍命令串——一份 `SCRIPTS_LINT_FACE` 清单拼出 `RUFF_CMD`，
+  `COVERED` 的键与本地 argv 都由它来（第一版把 544 列整串写进字典 ⇒ 自己撞上 E501 + 语法断行，
+  且 `COVERED["ruff check src tests state_service"]` 直接 `KeyError`）；③ 同文件里"册子声称的命令
+  要能在本文件找到整串"这一格，因派生键没有字面量而失效，改成钉**更强的那一格**：
+  `RUFF_CMD == ci.yml 上那条命令`（钉权威面而不是钉字符串）；④ `docs/audit/CI_SURFACE_REGISTER.json`
+  由 `docs/audit/s91/build_ci_surface_register.py` 现读现写（32 条不变，键跟着 ci.yml 走）；
+  ⑤ 新量具 `scripts/scripts_lint_ratchet.py` + 生成件 `docs/audit/SCRIPTS_LINT_BASELINE.json`
+  （**138 格 / 642 条 / 60 个文件**）。
+- 判据五档且 Σ == 并集：持平 / 上涨（判红）/ 未登记（判红）/ 已偿待撤（判红，防"豁免只涨不消"）/
+  可下调（**只报不红**，但必须进 `outside`）；另两判 `lint面文件未覆盖`（新脚本不许天然站在面外）与
+  `lint面直连清单不同源`（ci.yml 点名的集合 == 今天的 0 债集合：多点会当场红 CI，漏点是"清了债没接面"）。
+  前提塌四档一律退 2（基线读不到 / 缺键 / ruff 跑不起来 / 语料空 / ruff 退 1 而解析 0 行）；
+  **"债全偿完"不算前提塌**——ruff 退 0 + 语料非空是合法空册，这一格第一版写成 `not hits` 时
+  会把目标状态挡成故障（常驻用例 ④ 把它逼出来后改的）。
+- 牙：常驻 `tests/test_scripts_lint_ratchet.py` **10 条**（每档开火与合规两极 + 基线必须是生成件：
+  逐格与再一次测量相等、文件清单与语料相等）；`--self-test` **9** 条合成读数；
+  镜像三连 `tests/test_ci_face_gates.py` + `tests/test_ci_surface_census.py` **19 passed**；
+  `mypy` **0 error**；`ruff check <ci.yml 那条命令逐字>` **rc=0**。
+- 电池 `docs/audit/s100/battery100.py`：**A0 对照 + 6 支撤销臂 KILLED 6/6**。这一片新长出一道
+  别处没有的门——**债中性**：靶文件 `scripts/scripts_lint_ratchet.py` 自己就在被量的面上，
+  第一版四支臂写成 `if False and …`，ruff 把常量条件判成 **SIM223** ⇒ 基线凭空多一格"未登记" ⇒
+  臂"被抓住"是因为**夹具变了**不是因为判据变了。电池因此每支臂落笔前后各数一次靶文件命中，
+  不等就记 BAD-ANCHOR 而不是 KILLED（第一跑真把这 4 支挡下、0 支误判）。
+  两支等价变异如实记录不收录（`emit()` 的 `zero` 只进打印、`render()` 的 `rowsum` 只进那一行，
+  消费点行号已读码确认）。
+- 派生器 `docs/audit/s100/patch_ci_lint_face.py`：三面同批改、锚点命中数 ≠ 1 就一份都不落盘、
+  落盘后读回复算；幂等靠**整行锚**（第一版用前缀锚 ⇒ 接好面之后那一行仍"含有"前缀，
+  重跑把清单贴了两遍，是"点名数 == 清单长度"这道复验把它拦下的）。
+- 仍未闭（不把线下项洗成已做）：44 个文件的 642 条债还在，本面只保证不再变多；
+  mypy 半边不接（`mypy scripts` rc=2 模块名撞车）；`EMPTY_EXCEPT` 记号与 ruff 的 `# noqa`
+  语法对撞（6 + 3 处警告）留给单独一片。四段选型与全部读数见
+  `docs/audit/SCRIPTS_LINT_FACE_F-SCRIPT-LINT_2026-09-29.md`。
 - **v5.60 F-FORENSIC-ROOT 第 99 片：取证根路径那把尺第一次看见 `.sh`，并把两条行钉判决接进 CI 自测**：
   第 96 片立的尺只扫 `*.py`。现读（改动前）：`docs/audit/**/*.sh` 有 **17** 个，其中 **16** 个带
   仓库内绝对字面量（全是 `closeoutNN.sh` 的 `R=/Volumes/…`），而只用引号分支时这一面**一个文件都

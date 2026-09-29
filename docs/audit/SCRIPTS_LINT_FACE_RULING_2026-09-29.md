@@ -179,6 +179,11 @@ ruff check --no-cache src tests state_service \
    - 未检索到仓外更成熟的第三候选（ruff 侧没有内置 ratchet，`.ruff.toml` 无基线概念）。
 2. **六维对比**（只比这俩真实存在的方案）：功能匹配度——B1 只能按"文件×规则码"**全有全无**地豁免，表达不出"这一格只能变少"（新增命中照样被吞），B2 能；License——两者都是 MIT/本仓自有，无冲突；维护活跃度——B1 随 ruff 走（本仓 `requirements` 钉 `ruff>=0.4`，`pyproject.toml:61`），B2 是自家代码；安全——都无外部执行面；代码质量/适配成本——B1 **约 15 行配置**、B2 **一个新清单 + 一条新用例**（≈60–80 行）。
 3. **择一决定**：**先 B1 后 B2，且 B1 必须配一条计数上限用例**。B1 借的是 ruff 的接口语义（不自研豁免解析），把 44 个未清文件按"文件×规则码"写进 `pyproject.toml`；"只能变少"这一格 B1 结构上看不见，所以必须借 B2 的思路补一条常驻断言（现跑 `ruff check <file> --statistics` 与登记值比 ≤）。纯 B1 不是棘轮，只是把债永久化并给它起名叫棘轮。
+   *（**第 100 片实施时这一条被推翻，只留 B2**——理由不是工作量而是可见性：要让 B2 那条断言数到"真债"，
+   就得绕开 B1 的豁免，而 ruff 的 `--config` 只接受简单 TOML 键值（本轮实测
+   `--config 'lint.per-file-ignores={...}'` ⇒ `error: invalid value`），绕开只能递一份
+   复刻 pyproject 的临时配置＝把判据的规则集抄第二遍。全文见
+   `docs/audit/SCRIPTS_LINT_FACE_F-SCRIPT-LINT_2026-09-29.md` §二"择一决定"。）*
    *（这一择一只定"若拍 B，内部怎么实现"。A/B/C 本身原先被本单写成"待属主拍板"，
    第 99 片撤回那个框架并按 §5.1 **定为 B**——可自决项不外包，且落点全部可回滚。）*
 4. **落地处**：`pyproject.toml:87-89` 之后新增 `[tool.ruff.lint.per-file-ignores]` 段；

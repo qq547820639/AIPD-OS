@@ -25,9 +25,33 @@ REGISTER = ROOT / "docs" / "audit" / "CI_SURFACE_REGISTER.json"
 HERE = "tests/test_ci_face_gates.py"
 
 # 本文件负责接住的 CI 命令（键必须与 ci.yml 里的逐字一致，由 `census` 那边对账）。
+# 第 100 片把 `scripts/` 里今天 0 债的那批直接接进 CI 的 ruff 面：清单只存一份 token，
+# 键（`RUFF_CMD`）与本地 argv 都由它拼出来——抄 544 列整串会撞 E501，拆成续行字符串
+# 又会造出"键与 ci.yml 不再逐字相同"的假绿。清单本身的正确性由
+# `scripts/scripts_lint_ratchet.py` 的 `lint面直连清单不同源` 那一格判。
+SCRIPTS_LINT_FACE = [
+    "scripts/ci_surface_census.py",
+    "scripts/command_surface_census.py",
+    "scripts/dependency_license_gate.py",
+    "scripts/doc_reference_census.py",
+    "scripts/migrate_capability_registry.py",
+    "scripts/product_capabilities_extra.py",
+    "scripts/quality_gate.py",
+    "scripts/regenerate_release_manifest.py",
+    "scripts/release_evidence.py",
+    "scripts/release_fingerprint.py",
+    "scripts/research/fetch_fulltexts.py",
+    "scripts/research/postprocess.py",
+    "scripts/scripts_lint_ratchet.py",
+    "scripts/selftest_quality.py",
+    "scripts/selftest_state.py",
+    "scripts/state_perf_gate.py",
+]
+RUFF_CMD = " ".join(["ruff", "check", "src", "tests", "state_service",
+                     *SCRIPTS_LINT_FACE])
 COVERED = {
-    "ruff check src tests state_service": [sys.executable, "-m", "ruff", "check",
-                                           "src", "tests", "state_service"],
+    RUFF_CMD: [sys.executable, "-m", "ruff", "check", "src", "tests", "state_service",
+               *SCRIPTS_LINT_FACE],
     "mypy": [sys.executable, "-m", "mypy"],
     "python -m aipd_os.scripts.schema_check": [sys.executable, "-m",
                                                "aipd_os.scripts.schema_check"],
@@ -39,10 +63,14 @@ def _run(cmd: list[str]) -> subprocess.CompletedProcess:
 
 
 def test_ruff_face_is_clean() -> None:
-    """CI 的 lint job 第一条：`ruff check src tests state_service`。"""
+    """CI 的 lint job 第一条；第 100 片起它还点名 `scripts/` 里 0 债的那批。
+
+    命令串不写第二遍：`RUFF_CMD` 由 `SCRIPTS_LINT_FACE` 拼出来、
+    与 ci.yml 逐字同源（键抄两份的那版实测过 KeyError）。
+    """
     if importlib.util.find_spec("ruff") is None:
         pytest.skip("ruff 未安装——这一面在本环境未覆盖（不是绿）")
-    proc = _run(COVERED["ruff check src tests state_service"])
+    proc = _run(COVERED[RUFF_CMD])
     assert proc.returncode == 0, (
         f"CI 的 lint 面在本地复算就红（{proc.returncode}）："
         f"{(proc.stdout + proc.stderr)[-1500:]}")
@@ -81,4 +109,12 @@ def test_register_points_here_and_only_here() -> None:
         f"只在实跑 {sorted(set(COVERED) - claimed)}")
     src = Path(__file__).read_text(encoding="utf-8")
     for cmd in claimed:
+        if cmd == RUFF_CMD:
+            lines = [ln.strip()[len("run: "):] for ln in
+                     (ROOT / ".github" / "workflows" / "ci.yml")
+                     .read_text(encoding="utf-8").splitlines()
+                     if ln.strip().startswith("run: ruff check")]
+            assert len(lines) == 1 and lines[0] == cmd, (
+                f"派生键与权威面不同源：ci.yml 上读到 {len(lines)} 条 {lines}")
+            continue
         assert cmd in src, f"{cmd!r} 在册子里挂着，但本文件里没有它的身影"

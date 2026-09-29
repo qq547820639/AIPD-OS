@@ -1,0 +1,761 @@
+{
+  "entries": [
+    {
+      "file": "scripts/absence_claim_census.py",
+      "code": "E501",
+      "count": 1
+    },
+    {
+      "file": "scripts/aipd_state.py",
+      "code": "B904",
+      "count": 1
+    },
+    {
+      "file": "scripts/aipd_state.py",
+      "code": "E501",
+      "count": 20
+    },
+    {
+      "file": "scripts/aipd_state.py",
+      "code": "E701",
+      "count": 15
+    },
+    {
+      "file": "scripts/aipd_state.py",
+      "code": "E702",
+      "count": 78
+    },
+    {
+      "file": "scripts/aipd_store.py",
+      "code": "E501",
+      "count": 29
+    },
+    {
+      "file": "scripts/aipd_store.py",
+      "code": "E701",
+      "count": 15
+    },
+    {
+      "file": "scripts/aipd_store.py",
+      "code": "E702",
+      "count": 12
+    },
+    {
+      "file": "scripts/aipd_store.py",
+      "code": "F401",
+      "count": 1
+    },
+    {
+      "file": "scripts/aipd_store.py",
+      "code": "SIM105",
+      "count": 3
+    },
+    {
+      "file": "scripts/aipd_store.py",
+      "code": "UP035",
+      "count": 1
+    },
+    {
+      "file": "scripts/aipd_supervisor.py",
+      "code": "F401",
+      "count": 7
+    },
+    {
+      "file": "scripts/aipd_supervisor.py",
+      "code": "I001",
+      "count": 2
+    },
+    {
+      "file": "scripts/audit_dependency_ack.py",
+      "code": "W292",
+      "count": 1
+    },
+    {
+      "file": "scripts/audit_repo.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/benchmark_manifest.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/benchmark_manifest.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/c6_coverage.py",
+      "code": "E501",
+      "count": 2
+    },
+    {
+      "file": "scripts/cad_convergence.py",
+      "code": "E501",
+      "count": 18
+    },
+    {
+      "file": "scripts/cad_convergence.py",
+      "code": "E702",
+      "count": 7
+    },
+    {
+      "file": "scripts/cad_handoff_gate.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/cad_handoff_gate.py",
+      "code": "E501",
+      "count": 4
+    },
+    {
+      "file": "scripts/cad_handoff_gate.py",
+      "code": "E701",
+      "count": 3
+    },
+    {
+      "file": "scripts/cad_handoff_gate.py",
+      "code": "E702",
+      "count": 6
+    },
+    {
+      "file": "scripts/cad_handoff_gate.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/cad_maturity_gate.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/cad_maturity_gate.py",
+      "code": "E501",
+      "count": 1
+    },
+    {
+      "file": "scripts/cad_maturity_gate.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/capability_gate.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/capability_gate.py",
+      "code": "E501",
+      "count": 2
+    },
+    {
+      "file": "scripts/capability_gate.py",
+      "code": "E701",
+      "count": 2
+    },
+    {
+      "file": "scripts/capability_gate.py",
+      "code": "E702",
+      "count": 5
+    },
+    {
+      "file": "scripts/capability_gate.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/capability_matrix.py",
+      "code": "E501",
+      "count": 1
+    },
+    {
+      "file": "scripts/capability_matrix.py",
+      "code": "F401",
+      "count": 1
+    },
+    {
+      "file": "scripts/capability_matrix.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/capability_matrix.py",
+      "code": "W292",
+      "count": 1
+    },
+    {
+      "file": "scripts/check_skill_package.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/check_skill_package.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/check_skill_package.py",
+      "code": "E701",
+      "count": 10
+    },
+    {
+      "file": "scripts/check_skill_package.py",
+      "code": "E702",
+      "count": 8
+    },
+    {
+      "file": "scripts/check_skill_package.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/claim_gate.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/claim_gate.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/claim_gate.py",
+      "code": "E701",
+      "count": 2
+    },
+    {
+      "file": "scripts/claim_gate.py",
+      "code": "E702",
+      "count": 7
+    },
+    {
+      "file": "scripts/claim_gate.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/closeout_verifier.py",
+      "code": "E501",
+      "count": 7
+    },
+    {
+      "file": "scripts/closeout_verifier.py",
+      "code": "SIM115",
+      "count": 2
+    },
+    {
+      "file": "scripts/decision_policy.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/decision_policy.py",
+      "code": "E501",
+      "count": 4
+    },
+    {
+      "file": "scripts/decision_policy.py",
+      "code": "E701",
+      "count": 10
+    },
+    {
+      "file": "scripts/decision_policy.py",
+      "code": "E702",
+      "count": 6
+    },
+    {
+      "file": "scripts/decision_policy.py",
+      "code": "F821",
+      "count": 1
+    },
+    {
+      "file": "scripts/decision_policy.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/decision_policy.py",
+      "code": "SIM115",
+      "count": 1
+    },
+    {
+      "file": "scripts/doc_command_census.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/doc_command_census.py",
+      "code": "SIM102",
+      "count": 1
+    },
+    {
+      "file": "scripts/e2e_acceptance.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/e2e_acceptance.py",
+      "code": "E501",
+      "count": 2
+    },
+    {
+      "file": "scripts/e2e_acceptance.py",
+      "code": "E701",
+      "count": 2
+    },
+    {
+      "file": "scripts/e2e_acceptance.py",
+      "code": "E702",
+      "count": 4
+    },
+    {
+      "file": "scripts/e2e_acceptance.py",
+      "code": "F401",
+      "count": 1
+    },
+    {
+      "file": "scripts/e2e_acceptance.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/faceted_step.py",
+      "code": "E501",
+      "count": 11
+    },
+    {
+      "file": "scripts/faceted_step.py",
+      "code": "E702",
+      "count": 5
+    },
+    {
+      "file": "scripts/faceted_step.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/lifecycle_gate.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/lifecycle_gate.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/lifecycle_gate.py",
+      "code": "E701",
+      "count": 3
+    },
+    {
+      "file": "scripts/lifecycle_gate.py",
+      "code": "E702",
+      "count": 7
+    },
+    {
+      "file": "scripts/lifecycle_gate.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/local_cad_adapter.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/local_cad_adapter.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/local_cad_adapter.py",
+      "code": "E701",
+      "count": 5
+    },
+    {
+      "file": "scripts/local_cad_adapter.py",
+      "code": "E702",
+      "count": 8
+    },
+    {
+      "file": "scripts/local_cad_adapter.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/manual_chain.py",
+      "code": "E501",
+      "count": 23
+    },
+    {
+      "file": "scripts/manual_chain.py",
+      "code": "E701",
+      "count": 16
+    },
+    {
+      "file": "scripts/manual_chain.py",
+      "code": "E702",
+      "count": 86
+    },
+    {
+      "file": "scripts/manual_chain.py",
+      "code": "SIM102",
+      "count": 1
+    },
+    {
+      "file": "scripts/manual_chain_gate.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/manual_chain_gate.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/manual_chain_gate.py",
+      "code": "I001",
+      "count": 2
+    },
+    {
+      "file": "scripts/manual_chain_gate.py",
+      "code": "W292",
+      "count": 1
+    },
+    {
+      "file": "scripts/manual_preflight.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/manual_preflight.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/manual_preflight.py",
+      "code": "E701",
+      "count": 1
+    },
+    {
+      "file": "scripts/manual_preflight.py",
+      "code": "E702",
+      "count": 2
+    },
+    {
+      "file": "scripts/manual_preflight.py",
+      "code": "F401",
+      "count": 1
+    },
+    {
+      "file": "scripts/manual_preflight.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/outcome_acceptance.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/outcome_acceptance.py",
+      "code": "E501",
+      "count": 6
+    },
+    {
+      "file": "scripts/outcome_acceptance.py",
+      "code": "E701",
+      "count": 4
+    },
+    {
+      "file": "scripts/outcome_acceptance.py",
+      "code": "E702",
+      "count": 6
+    },
+    {
+      "file": "scripts/outcome_acceptance.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/production_release_gate.py",
+      "code": "B007",
+      "count": 2
+    },
+    {
+      "file": "scripts/production_release_gate.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/production_release_gate.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/production_release_gate.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/production_release_gate.py",
+      "code": "SIM102",
+      "count": 1
+    },
+    {
+      "file": "scripts/production_release_gate.py",
+      "code": "SIM108",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/_env.py",
+      "code": "E501",
+      "count": 2
+    },
+    {
+      "file": "scripts/research/_env.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/_env.py",
+      "code": "UP045",
+      "count": 2
+    },
+    {
+      "file": "scripts/research/_http_runtime.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/_http_runtime.py",
+      "code": "UP035",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/_http_runtime.py",
+      "code": "UP045",
+      "count": 3
+    },
+    {
+      "file": "scripts/research/search_papers.py",
+      "code": "E501",
+      "count": 5
+    },
+    {
+      "file": "scripts/research/search_papers.py",
+      "code": "SIM105",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/search_papers_by_arxiv.py",
+      "code": "E501",
+      "count": 2
+    },
+    {
+      "file": "scripts/research/search_papers_by_arxiv.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/search_papers_by_crossref.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/research/search_papers_by_dblp.py",
+      "code": "E501",
+      "count": 2
+    },
+    {
+      "file": "scripts/research/search_papers_by_open_alex.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/research/search_papers_by_openreview.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/research/search_papers_by_openreview.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/search_papers_by_semantic_scholar.py",
+      "code": "E501",
+      "count": 3
+    },
+    {
+      "file": "scripts/research/selftest_postprocess.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/selftest_runtime.py",
+      "code": "E501",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/selftest_runtime.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/research/selftest_runtime.py",
+      "code": "SIM117",
+      "count": 2
+    },
+    {
+      "file": "scripts/research/source_worker.py",
+      "code": "SIM105",
+      "count": 1
+    },
+    {
+      "file": "scripts/runtime_preflight.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/runtime_preflight.py",
+      "code": "E501",
+      "count": 7
+    },
+    {
+      "file": "scripts/runtime_preflight.py",
+      "code": "E701",
+      "count": 8
+    },
+    {
+      "file": "scripts/runtime_preflight.py",
+      "code": "E702",
+      "count": 9
+    },
+    {
+      "file": "scripts/runtime_preflight.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/selftest_v3.py",
+      "code": "E401",
+      "count": 1
+    },
+    {
+      "file": "scripts/selftest_v3.py",
+      "code": "E501",
+      "count": 2
+    },
+    {
+      "file": "scripts/selftest_v3.py",
+      "code": "E701",
+      "count": 2
+    },
+    {
+      "file": "scripts/selftest_v3.py",
+      "code": "E702",
+      "count": 9
+    },
+    {
+      "file": "scripts/selftest_v3.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/selftest_v4.py",
+      "code": "I001",
+      "count": 1
+    },
+    {
+      "file": "scripts/sign_release.py",
+      "code": "F541",
+      "count": 1
+    },
+    {
+      "file": "scripts/sign_release.py",
+      "code": "W292",
+      "count": 1
+    },
+    {
+      "file": "scripts/skill_quality_audit.py",
+      "code": "E402",
+      "count": 1
+    },
+    {
+      "file": "scripts/skill_quality_audit.py",
+      "code": "F401",
+      "count": 2
+    }
+  ],
+  "files": [
+    "scripts/absence_claim_census.py",
+    "scripts/aipd_state.py",
+    "scripts/aipd_store.py",
+    "scripts/aipd_supervisor.py",
+    "scripts/audit_dependency_ack.py",
+    "scripts/audit_repo.py",
+    "scripts/benchmark_manifest.py",
+    "scripts/c6_coverage.py",
+    "scripts/cad_convergence.py",
+    "scripts/cad_handoff_gate.py",
+    "scripts/cad_maturity_gate.py",
+    "scripts/capability_gate.py",
+    "scripts/capability_matrix.py",
+    "scripts/check_skill_package.py",
+    "scripts/ci_surface_census.py",
+    "scripts/claim_gate.py",
+    "scripts/closeout_verifier.py",
+    "scripts/command_surface_census.py",
+    "scripts/decision_policy.py",
+    "scripts/dependency_license_gate.py",
+    "scripts/doc_command_census.py",
+    "scripts/doc_reference_census.py",
+    "scripts/e2e_acceptance.py",
+    "scripts/faceted_step.py",
+    "scripts/lifecycle_gate.py",
+    "scripts/local_cad_adapter.py",
+    "scripts/manual_chain.py",
+    "scripts/manual_chain_gate.py",
+    "scripts/manual_preflight.py",
+    "scripts/migrate_capability_registry.py",
+    "scripts/outcome_acceptance.py",
+    "scripts/product_capabilities_extra.py",
+    "scripts/production_release_gate.py",
+    "scripts/quality_gate.py",
+    "scripts/regenerate_release_manifest.py",
+    "scripts/release_evidence.py",
+    "scripts/release_fingerprint.py",
+    "scripts/research/_env.py",
+    "scripts/research/_http_runtime.py",
+    "scripts/research/fetch_fulltexts.py",
+    "scripts/research/postprocess.py",
+    "scripts/research/search_papers.py",
+    "scripts/research/search_papers_by_arxiv.py",
+    "scripts/research/search_papers_by_crossref.py",
+    "scripts/research/search_papers_by_dblp.py",
+    "scripts/research/search_papers_by_open_alex.py",
+    "scripts/research/search_papers_by_openreview.py",
+    "scripts/research/search_papers_by_semantic_scholar.py",
+    "scripts/research/selftest_postprocess.py",
+    "scripts/research/selftest_runtime.py",
+    "scripts/research/source_worker.py",
+    "scripts/runtime_preflight.py",
+    "scripts/scripts_lint_ratchet.py",
+    "scripts/selftest_quality.py",
+    "scripts/selftest_state.py",
+    "scripts/selftest_v3.py",
+    "scripts/selftest_v4.py",
+    "scripts/sign_release.py",
+    "scripts/skill_quality_audit.py",
+    "scripts/state_perf_gate.py"
+  ],
+  "totals": {
+    "hits": 642,
+    "rows": 138,
+    "generated_by": "scripts/scripts_lint_ratchet.py"
+  }
+}
