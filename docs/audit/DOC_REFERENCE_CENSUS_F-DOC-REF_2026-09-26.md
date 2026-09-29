@@ -171,6 +171,11 @@ D4 一开始只报"抓住 0 条 rc=1"，是电池的半径解析只收 `FAILED` 
    意图与位置分开，位置可以过期，意图不能被打错。
 
 **电池**：`docs/audit/s103/battery103.py`，A0 + 6 臂 **KILLED 6/6**（含债中性门与理由门，
+靶文件在 CI 的 ruff 面上，所以变异形状一律避免常量条件；收尾 sha 与开跑前相同）。
+`--self-test` 现报 25 条合成读数全立住（条数只以该行自报为准，本文与 README 都不抄它）。
+另外本片顺手补了一把新尺：`tests/test_unreachable_code.py`（函数体顶层 `return` 之后还挂语句 ⇒ 判红；
+ruff/mypy 都不抓这一形，而本尺自己的 `resolve()` 里就躺着五条这样的残句——已删，
+且删前后同一棵树逐条 klass 全等，5936 处引用一个读数没变）。
 
 历史树 `8f62f7e` 现算：`symbol-missing` 共 **12 条**，**全部在历史面**（现状面 0 条）。逐条读完分四型，
 每型都带"仓内 grep 过的出处数"作证据（`tmp/drc_now.json` 那一跑的 `--json` 现读，脚本已删）：
@@ -181,8 +186,30 @@ D4 一开始只报"抓住 0 条 rc=1"，是电池的半径解析只收 `FAILED` 
 | **载体写错**（符号存在，但不在那台文件里） | 3 | `capability_matrix.md → tests/test_cli.py::cmd_intake`（`cmd_intake` 实际住在 `src/aipd_os/registry_data.py` 等 3 处，`test_cli.py` 里没有）；`scripts/aipd_supervisor.py::Supervisor.run_supervisor`（supervisor 在 P1-1 已整体迁到 `src/aipd_os/supervisor/`，wrapper 只 re-export） | 这两条**不是历史**：前者是**生成物**写的指针——`capability_matrix.py` 会把 registry 字段原样渲染成 `file::symbol`，字段写错它就跟着错，且没有任何尺子看过它 ⇒ 已进任务清单当入口；后者是文件搬迁后的旧载体 |
 | **同名简写撞错文件** | 1 | `decision_policy.py::should_ask_decision`：真身是 `src/aipd_os/execution/decision_policy.py`，而 `resolve()` 的 basename 解法先撞上 `scripts/decision_policy.py`（该文件里没这个符号）⇒ 判成 `symbol-missing` | 尺子自己的口径缺口：简写在**多同名**时该判 `multi` 而不是先撞到的那个；现状面暂未受害（这类指针在现状面是 0），但这是真盲区 ⇒ 记进本节"还没闭的" |
 | 散文里的截断名 | 2 | `tests/test_packaging.py::test_`（文档写的是"`test_packaging.py::test_*`"这类通配式提法，`SYM_RE` 把 `test_` 当符号名） | 形状病不是事实病；不在现状面 ⇒ 不判红。要收的话给 `SYM_RE` 加一条"`*`/截断 ⇒ `elided`"的档，代价是再一档归属措辞镜像 |
-靶文件在 CI 的 ruff 面上，所以变异形状一律避免常量条件；收尾 sha 与开跑前相同）。
-`--self-test` 现报 25 条合成读数全立住（条数只以该行自报为准，本文与 README 都不抄它）。
-另外本片顺手补了一把新尺：`tests/test_unreachable_code.py`（函数体顶层 `return` 之后还挂语句 ⇒ 判红；
-ruff/mypy 都不抓这一形，而本尺自己的 `resolve()` 里就躺着五条这样的残句——已删，
-且删前后同一棵树逐条 klass 全等，5936 处引用一个读数没变）。
+
+**第 103 片认证读数**（2026-09-29，一次跑齐，无绕闸）：
+
+| 环节 | 读数 |
+| --- | --- |
+| 干净签出 | `git worktree add --detach` 到仓库**外**的 `.wt-s103` @ `96a1994`；回收后 `git worktree list` 只剩主树 |
+| 全量 | 2798 passed / 5 skipped / collected 2803，`exitcode=0`，347.1 s |
+| precheck 四条 | 0 failed ✓；`source_commit=a660405…9924` == tag ✓；报告自记指纹 `94ebcbd7b4d2` == 磁盘 SOURCE_MANIFEST 摘要 ✓；collected 2803 > 上代下界 2797 ✓ |
+| SKIP 面 | 与上一代逐条相同（5 条，双向差集空） |
+| 一次绑定 | `BIND_RC=0`（两个旗子同时给）；回读 `test_report=2798p/0f/2803t` |
+| 发布门 | `GATE_RC=0`、`release_ready=True`、8 项全过（casadi/LGPL 按台账 `needs-review` 不参与发布门退码） |
+| 收尾验签 | `CV_RC=0`、11 格全绿：报告 sha256=`483e2df6d243` 与 PROVENANCE 一致；名册 226 文件 / 2708 个 def 双向差集空；3 条原告 passed；size_ratchet 2803 ≥ 2803 |
+| B 档 | 第一跑 `GATE_B_RC=2 / CV_B_RC=4`，两处都只红在 `workspace_clean`/`worktree_clean`——红因是我把报告副本 cp 进 `docs/audit/s103/` 却没入库。按既有处置补记入库、只复跑门与验签（不重跑 347 s 全量、不绕闸），终读 `GATE_B_RC=0`（8/8）、`CV_B_RC=0`（绿勾 11），当时 `git status --short` **0 行** |
+
+**还没闭的**（本片只登记，不顺手改）：
+
+- 任务 #34 的两处口径缺口已在上表点名。其中"生成物写的指针没人核"这一条要按**生产者**分面而不是按目录分面：
+  `docs/audit/capability_matrix.md` 住在历史面目录里，却是每轮重刷的现状描述，
+  目录分面使它渲染出的 `file::symbol` 指针天然免检。
+- 任务 #33：本片"v5.64 整条缺席"是 `git show --stat` 读出来的，四道文档门
+  （`tests/test_changelog_integrity.py`、`tests/test_version_consistency.py`、
+  `tests/test_doc_reference_census.py`、`tests/test_doc_command_census.py`）全绿看不见，
+  那次中止的跑到 92% 也没红。设计稿与五个真历史 Blob 的开火读数在
+  `docs/audit/s104/CHANGELOG_COMMIT_CROSSCHECK_DESIGN_2026-09-29.md`。
+- 半截那次运行（中止在 92%）的日志按原样入库 `docs/audit/s103/run-s103-aborted-partial.log`：
+  中止理由不是用例，是补写条目动了参与发布哈希的 `CHANGELOG.md` ⇒ 取证件作废、重锚重跑。
+  这是"哈希面必须在链开始前定稿"这条工序的一次真实付费执行，那半截读数只当过程证据、不当认证。
