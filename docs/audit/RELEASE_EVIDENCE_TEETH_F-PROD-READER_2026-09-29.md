@@ -159,9 +159,49 @@ scripts/release_evidence.py:235
 只是本仓卫生门读的记号）——这一格与"scripts/ 要不要进 CI lint 面"是同一个待裁项，本片不动。
 第一代报告（`.wt-s97`@`8faa446`，`1 failed / 2774 passed / 5 skipped`）按 VOID 命名留在树里。
 
-## 六、认证读数
+## 六、认证读数（两代）
 
-（由 `docs/audit/s97/closeout97.sh` 回填。）
+| 代 | 签出 | 实测 HEAD | 结果 | 自记指纹 | 处置 |
+| --- | --- | --- | --- | --- | --- |
+| 第一代 | `.wt-s97` | `8faa446` | `1 failed / 2774 passed / 5 skipped`（collected 2780） | `d3410184f3e1` | **作废**留档：`report-s97-VOID-tree-8faa446-fp-d3410184f3e1.json`（+ `run-s97-VOID-8faa446.log`），红因见 §四之三 3 |
+| 第二代 | `.wt-s97b` | `9b444d6` | `2775 passed / 0 failed / 5 skipped`，collected **2780**，419.3s | `fdd6878cb6ee` | 有效代，绑进 `PROVENANCE.test_report` |
+
+链上读数（当场跑，非转述）：
+
+- `PRECHECK OK: 2775 passed / 5 skipped / collected 2780 / 419.3s / fp fdd6878cb6ee`
+- `MIN_TESTS=2780`（上一代下界 2772，由脚本从本轮报告现读后再传，不手敲）
+- `SKIP 面逐条相同：5 条`
+- `BIND_RC=0`；回读 `source_commit=a66040520139`、`test_report=2775p/0f/2780t`、`fp=fdd6878cb6ee`
+- 发布门 `GATE_RC=0`、`release_ready: True`、`未过: 无`、`项数: 8`（这一代第一跑就绿：
+  启动门之前树里已经没有任何未提交改动）
+- 收尾验签 `CV_RC=0` 11 格全绿；回收签出后 `-b` 复算 `checks 11 red []`
+- `roster_covers_tree`：树 224 文件 / 2685 个 `def`，报告 224 文件 / 2780 条，双向差集为空
+- `pinned_source_binding`：「报告与 PROVENANCE 都绑在 `a66040520139405095648461f7144d4f00629924`，
+  且它是 **报告实测 HEAD** `9b444d69` 的祖先」（第 96 片那条标签修复在本轮生产链上再次现读走通）
+- `plaintiffs_measured`：2 条本轮原告（`--expect-test` 点的是
+  `tests/test_release_evidence_preflight.py` 与 `tests/test_release_evidence_environment.py`）都在名单里且 passed
+- 提交链（`git log --format="%h %s" 8faa446..HEAD` 现读，倒序）：`1d519ba` 验签读数 →
+  `02d8edf` 门读数 → `9943915` 绑定 → `9b444d6` 重刷清单 + 二代签出 → `a612861` 空 except 修正
+- 哈希面文件数：`692 → 693`（唯一新增被哈希文件是 `tests/test_release_evidence_environment.py`），
+  第二代重刷仍是 693 ⇒ 没有误纳
+
+一处按原样留着的自伤（**同一天第三次命中同一个坑**）：提交 `9b444d6` 的正文首行又被截半——
+message 用双引号包住而正文写了反引号片段 `.wt-s97`，shell 当场执行它并吐
+`command not found: .wt-s97`。subject 完整、正文从那一行起丢失。修法不是再解释一次，而是
+**此后所有 `git commit` 一律用 heredoc 写 message**（本片其余提交都是 heredoc，唯独这次为了图快
+用了双引号）；该条已写进用户级记忆 `feedback-shell-launcher-traps`。不开新提交去遮它，
+`9b444d6` 本身就是这一格的证据。
+
+未做到 / 未证实：
+
+- 第一代那一跑的红是**我漏跑卫生门**造成的（定向只跑了新写的四支，`test_exception_hygiene`
+  不在名单里）。门的判定本身正确且有效——这一点已由"改后 `43 passed` + 第二代 0 failed"证明。
+- `scripts/release_evidence.py:272` 那处既有的 `# noqa: EMPTY_EXCEPT` 让 ruff 吐
+  `Invalid # noqa directive`：**本片未处理**，它与"scripts/ 要不要进 CI 的 lint/mypy 面"
+  同属属主侧待裁项（`scripts/` 有 643 条既有 ruff 错误，接进来要先决定怎么落）。
+- 普查只覆盖 `docs/audit/s*/battery*.py` 这一形状；仓库里若还有别的 harness 用
+  `-m py_compile` 做语法门（例如非 `battery*` 命名的取证脚本），本片未穷举 ⇒ 只报"未找到"，
+  不报"没有"。
 
 - 新增常驻：`tests/test_release_evidence_environment.py` 8 条 ⇒ `8 passed`；
   与既有三支同族一起跑 `tests/test_release_evidence*.py tests/test_repo_hygiene.py` ⇒ `50 passed`。
