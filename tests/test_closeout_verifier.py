@@ -586,3 +586,30 @@ def test_fingerprint_verdict_always_has_a_content_level_explanation(real_pair) -
         assert payload["source_manifest_fingerprint"] == \
             cov.release_fingerprint.fingerprint_of_document(at_anchor), \
             "判绿但报告记的指纹对不上锚点那次的清单内容 ⇒ C11 在造假绿"
+
+
+def test_c5_detail_names_the_label_and_a_short_head(tmp_path: Path) -> None:
+    """C5 绿时的读数要**完整点名**它按哪棵树判，且 commit 只截 8 位。
+
+    第 95 片把这行打印成 `它是 报告实测 HEA 的祖先`——判决没错、11 格全绿，
+    截断只有人眼能看见。所以这条用例读的是**字符串本身**：
+    既要出现完整标签，又要把"退回工作树"那一档的标签与弱一档说明一起钉住，
+    否则哪天有人把标签改成 `[:8]` 之外更短的形状（或整段丢掉），测试照绿。
+    """
+    _repo, evidence, sha = _make_repo(tmp_path / "repo")
+    report = cov._pristine_report(evidence, ["tests/test_a.py::test_ok"], sha,
+                                  root=str(tmp_path / "somewhere-else"),
+                                  measured_commit=sha)
+    rep = cov.verify(report, evidence / "PROVENANCE.json", tmp_path / "elsewhere",
+                     Path(__file__), [], sha, [], Path("pytest.json"))
+    c5 = rep["checks"]["pinned_source_binding"]
+    assert c5["ok"] is True, c5
+    assert "报告实测 HEAD" in c5["detail"], c5          # 标签不许被截
+    assert f"{sha[:8]}" in c5["detail"], c5             # commit 截 8 位
+    assert "工作树" not in c5["detail"], c5             # 这一支根本没读工作树
+    # 老形状：不带实测字段 ⇒ 标签换成工作树，且必须自报"弱一档"
+    rep2 = cov.verify(report, evidence / "PROVENANCE.json", repo,
+                      Path(__file__), [], sha, [], Path("pytest.json"))
+    d2 = rep2["checks"]["pinned_source_binding"]["detail"]
+    assert "工作树 HEAD" in d2, d2
+    assert "这一格弱一档" in d2, d2

@@ -347,8 +347,11 @@ def audit(report_path: Path, worktree: Path, provenance_path: Path,
                   f"（{anc[1] or 'rev 不在这个仓库的历史里'}）")
     absent = "" if measured else \
         "（报告未带 source_commit_measured ⇒ 只能按验签时刻的工作树判，这一格弱一档）"
+    # 标签不截、commit 截 8：上一版把 `[:8]` 用在了 `anc_src` 上，读数于是打印
+    # "报告实测 HEA" —— 判决没错，但**只有人眼能看见**这种截断，故下面那条常驻用例
+    # 直接读这条字符串（`test_c5_detail_names_the_label_and_a_short_head`）。
     judge("pinned_source_binding", not c5, "；".join(c5) if c5 else
-          f"报告与 PROVENANCE 都绑在 {pinned}，且它是 {anc_src[:8]} 的祖先{absent}")
+          f"报告与 PROVENANCE 都绑在 {pinned}，且它是 {anc_src} {anc_ref[:8]} 的祖先{absent}")
 
     # C6 内容一致性替身
     by_node = {str(t["nodeid"]): str(t.get("outcome")) for t in tests}
