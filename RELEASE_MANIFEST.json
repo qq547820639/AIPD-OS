@@ -7,8 +7,8 @@
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "size": 9753,
-      "sha256": "9ad8b25fa5485fdf30d417bb2430d07359b32579eaae76ad527636cadd420cdd"
+      "size": 9874,
+      "sha256": "07dcb6c53b670ed7d7a20c810d9e47053b9d9a0bab79a0af0f1998d57bf9c716"
     },
     {
       "path": ".gitignore",
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 413630,
-      "sha256": "30f45b7ea819bc225933f73b53c35c1af84bab9b73c76783c4c3b507a615de6c"
+      "size": 416386,
+      "sha256": "3bfcf6c9311e8478447df2d6d622b8eb6062eeec7d75327e48611e29f8341265"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 85159,
-      "sha256": "0075ab6af6b46ee9005380484eb4bc4ed150571f2347c5b94f43b5c7855038a6"
+      "size": 85949,
+      "sha256": "5cfc83b281c46b8f7434b5ff4ceaac42b15965620118c10f0b6b825b7e34fdfd"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -687,13 +687,13 @@
     },
     {
       "path": "scripts/aipd_store.py",
-      "size": 15277,
-      "sha256": "4296ccf9340bd5a1b21a2c7062b6741c51e5a56305d155c31ae67e10dd623c65"
+      "size": 15267,
+      "sha256": "77648ca196e09f98eb4acd115ccc07c622cbed099ba65e141895f91d1b98e7ab"
     },
     {
       "path": "scripts/aipd_supervisor.py",
-      "size": 999,
-      "sha256": "28373c452653842d59657ec4733d4041b0d7b98a9eb726f337109be84c7906b4"
+      "size": 1385,
+      "sha256": "8af07b11eb4a8cd5f7e2061f2b4441a66024ccc67c2bc1da8946fb373181ea26"
     },
     {
       "path": "scripts/audit_dependency_ack.py",
@@ -707,8 +707,8 @@
     },
     {
       "path": "scripts/benchmark_manifest.py",
-      "size": 1329,
-      "sha256": "bfdb6145cd3c3a274cb86847a792050321c0d9e99e074131805273ab06818c98"
+      "size": 1343,
+      "sha256": "32d2d56d69579d0a0e10015aa3bd16f577b0e47f629a5036606bcefcbecfd7f8"
     },
     {
       "path": "scripts/c6_coverage.py",
@@ -722,28 +722,28 @@
     },
     {
       "path": "scripts/cad_handoff_gate.py",
-      "size": 1579,
-      "sha256": "83db4893c0d2d2faa7f9b4dfbd00597dcd37ee2a24e1977ee73b56e77b3a16d1"
+      "size": 1586,
+      "sha256": "d4a17ecdb40eee1ae124d9bf199f1fb9d5814e3d19cd225c91be1c01b04fbb56"
     },
     {
       "path": "scripts/cad_maturity_gate.py",
-      "size": 4445,
-      "sha256": "da7eaee62d415b3042a250e688ec4d0e38b0dd8090deee9fec9bd58430d919aa"
+      "size": 4452,
+      "sha256": "abc1186bf5fe5a7a16c962ab1c7ca4aeefcbf3d5605f0f96e86fe6ab0be7672e"
     },
     {
       "path": "scripts/capability_gate.py",
-      "size": 695,
-      "sha256": "374e0c82027d6bbef739d5da342f803714fc8b8419033dc909078d2672415f23"
+      "size": 711,
+      "sha256": "a47c6da1a24b628bf5b1c2348ed8175f3b07135c91248d84c4a2daa137c84780"
     },
     {
       "path": "scripts/capability_matrix.py",
-      "size": 9265,
-      "sha256": "1c3233eb4339bb773b422b1987241db9f485a531295a50382ea7eb27d485696c"
+      "size": 9267,
+      "sha256": "b5e6b2e0117f417c3cb9762416875cf78fe7a1503946cb2fe5fe91b2bf1f5867"
     },
     {
       "path": "scripts/check_skill_package.py",
-      "size": 1628,
-      "sha256": "7e179efe32fdec7b18eaf7dc77634c538c7cf1ef837e3df72ec7a5f4368a4398"
+      "size": 1647,
+      "sha256": "378d2ce46d195260fe21308f4c1ce98520ad85f745ff5936cc3682685917c5a6"
     },
     {
       "path": "scripts/ci_surface_census.py",
@@ -752,8 +752,8 @@
     },
     {
       "path": "scripts/claim_gate.py",
-      "size": 1381,
-      "sha256": "1036a4a24769dc1962ad5adc379188acd738e8682746aaf98790432d17428d56"
+      "size": 1397,
+      "sha256": "f202ad57edbda06125eaba8c79966b5e4a9a944108b0a1b39d1105819e38e53d"
     },
     {
       "path": "scripts/closeout_verifier.py",
@@ -767,8 +767,8 @@
     },
     {
       "path": "scripts/decision_policy.py",
-      "size": 1671,
-      "sha256": "371de81a1dfdd16e367cc5ee31d2aef4657830b3aa09ff95b0603d144002c864"
+      "size": 1687,
+      "sha256": "1e07d7cb77706a446cc3632f8ad8a5f8c92efb69a90b7535a985ecafdd90d091"
     },
     {
       "path": "scripts/dependency_license_gate.py",
@@ -787,23 +787,23 @@
     },
     {
       "path": "scripts/e2e_acceptance.py",
-      "size": 731,
-      "sha256": "a90fc25cde20a5711de4156e823bcc1ea5ad4bf8bea8a0b22b220f8a92442771"
+      "size": 739,
+      "sha256": "0d92e41d9cb687203cde6a88963d70d14c3a1225e26ab9c52d1847ea0c83da8e"
     },
     {
       "path": "scripts/faceted_step.py",
-      "size": 4413,
-      "sha256": "73470df8d938a970a9c1d2e40e6bc7f2d97ee28c13ba7dd752d7b203a9484c0f"
+      "size": 4415,
+      "sha256": "33a0e247f57d88a14bb632671f62e4f2be6a080f0ec7bea1ff24e531f7deca1f"
     },
     {
       "path": "scripts/lifecycle_gate.py",
-      "size": 1657,
-      "sha256": "3041f16c5146dd01b034d70858070434b0f4a1fd2518ab2691b2fb1dea4cca0a"
+      "size": 1673,
+      "sha256": "56017a79fcc2d150803e8037a8a5b8493a1d240c5ddb9db38026f114dd33d759"
     },
     {
       "path": "scripts/local_cad_adapter.py",
-      "size": 1568,
-      "sha256": "75a63662e22b24124c099086b031519d52e1382cf61a087c5a9f61be3d96ca49"
+      "size": 1588,
+      "sha256": "6717e1e6ee0ca059df0f003330285c97ea7535bf8a70a8895f1e1fd3b788cc67"
     },
     {
       "path": "scripts/manual_chain.py",
@@ -812,13 +812,13 @@
     },
     {
       "path": "scripts/manual_chain_gate.py",
-      "size": 6460,
-      "sha256": "096ca0b3ddcb0cc4f6e878f1d7fa9c9b7ca413f3ed788e13fc8ca02e3e9bc184"
+      "size": 6484,
+      "sha256": "2ae8ca9d42df7b2832bbcdfdf64d7c63417ce734d2b36ac75b2b5643bcfe6ccd"
     },
     {
       "path": "scripts/manual_preflight.py",
-      "size": 3278,
-      "sha256": "fc36111750b31a83c4a74b9eddd381ed0811671017e70f92734f06f8621404bd"
+      "size": 3280,
+      "sha256": "bafe6190e0bf89db0f0fba3ff5e7f799e5a3941352f2de9391ecd4ec3648e977"
     },
     {
       "path": "scripts/migrate_capability_registry.py",
@@ -827,8 +827,8 @@
     },
     {
       "path": "scripts/outcome_acceptance.py",
-      "size": 3398,
-      "sha256": "214201b09b5005e30aca0c1fdc0cd9444d116d2283cf1dae3125bd10719b927a"
+      "size": 3411,
+      "sha256": "0a8ee0296639952e5d8c4569891cba37376e38024a9f92b39c90de93f63efd45"
     },
     {
       "path": "scripts/product_capabilities_extra.py",
@@ -837,8 +837,8 @@
     },
     {
       "path": "scripts/production_release_gate.py",
-      "size": 35521,
-      "sha256": "ca4953cdf8b8596385cb164768183289c7536ad1a3b787536f4cd365664c8d2f"
+      "size": 35553,
+      "sha256": "5ced6c23e9402f24f83ccc9232af83c845baef6b0b7a13b437c1bc9f7605c0f6"
     },
     {
       "path": "scripts/quality_gate.py",
@@ -867,13 +867,13 @@
     },
     {
       "path": "scripts/research/_env.py",
-      "size": 2105,
-      "sha256": "d050425ca84a2bc32f9ceb05b035d708f68b7cc1c1ea1ac330b43051336632dc"
+      "size": 2106,
+      "sha256": "9691f0515ea1b1083244289099e88460483407591675b3f3c8bc3c34fdd14df6"
     },
     {
       "path": "scripts/research/_http_runtime.py",
-      "size": 6528,
-      "sha256": "bfbbf76a8bb4c7bb0b0f1eb68d2c7a1c8b307449aa2a645435e7c67a96907604"
+      "size": 6527,
+      "sha256": "7a53ea7beb246a43bc520d4b8e52e49da8120dba3e86ee627e07372cd59c8717"
     },
     {
       "path": "scripts/research/fetch_fulltexts.py",
@@ -898,7 +898,7 @@
     {
       "path": "scripts/research/search_papers_by_arxiv.py",
       "size": 6077,
-      "sha256": "d7b8ace270f3893c4e5f1b6a844390f0902107aca517043ee59ae96d479eaf11"
+      "sha256": "91e4550ede362cd02ea0fc4bbe416c9b4075ee6f45bc65099b078b5237f9ab81"
     },
     {
       "path": "scripts/research/search_papers_by_crossref.py",
@@ -918,7 +918,7 @@
     {
       "path": "scripts/research/search_papers_by_openreview.py",
       "size": 6750,
-      "sha256": "3ed426d514814a847554ea324c374c94c8a2856550ebf2ae3afcdf00cfc326b4"
+      "sha256": "094e093c82c835b294fbcc7183a00845cf5c0dd670c6057a43fc46f7a24e93ba"
     },
     {
       "path": "scripts/research/search_papers_by_semantic_scholar.py",
@@ -927,13 +927,13 @@
     },
     {
       "path": "scripts/research/selftest_postprocess.py",
-      "size": 4523,
-      "sha256": "b94ee238de608e42a3d3f53841170b04b3d59e0c01c77d881b092f6ec39c4a47"
+      "size": 4533,
+      "sha256": "ba3ef4cc783f1b67ec2cd0e4b378a4bf07fbaf690509aafdf38e88236222c160"
     },
     {
       "path": "scripts/research/selftest_runtime.py",
-      "size": 17292,
-      "sha256": "b3afda2daa0149d41a0fe81fd6b72cf78dbda0da64b6a1a74abdc1785e2cdd2f"
+      "size": 17290,
+      "sha256": "2f55c9d278a78a806f34c997113673600de70bf0bc6b883bd9eaab4867ae687c"
     },
     {
       "path": "scripts/research/source_worker.py",
@@ -942,8 +942,8 @@
     },
     {
       "path": "scripts/runtime_preflight.py",
-      "size": 3710,
-      "sha256": "969cd0d0a308c18d3fded084d552db3419235967b3b99185ce9884ae07aae1a4"
+      "size": 3747,
+      "sha256": "e2225ef374e66ca43289fbcef848f54a4591b4bb047b9278b1e33d94aa898a3e"
     },
     {
       "path": "scripts/scripts_lint_ratchet.py",
@@ -962,13 +962,13 @@
     },
     {
       "path": "scripts/selftest_v3.py",
-      "size": 2855,
-      "sha256": "bb6e9d846d37058f5a34b1adf6e81298dfcc8068bf93ddace9159fa66f98e47f"
+      "size": 2874,
+      "sha256": "216f93591a7c4ae492f1342f43b23df19d231ebcf379ab6ec864cefe0a15cc26"
     },
     {
       "path": "scripts/selftest_v4.py",
-      "size": 2802,
-      "sha256": "52109abb9105f78b07b9d53fa4a89c66eee1fd44d850115e94cbea0311365652"
+      "size": 2803,
+      "sha256": "fc3b4c4813769e16ce214308e32b042d1db347d9655d1f09eee5d938407ad647"
     },
     {
       "path": "scripts/sign_release.py",
@@ -977,8 +977,8 @@
     },
     {
       "path": "scripts/skill_quality_audit.py",
-      "size": 9397,
-      "sha256": "f66b1506e2cbd826b9a783d0eacb32cfbf5094e02e83e6c34e131f29fc12508d"
+      "size": 9334,
+      "sha256": "c1f46ac633d0b815200ff88e908c06b3f7ce65b5a922c495e5fc8a49532eff18"
     },
     {
       "path": "scripts/state_perf_gate.py",
@@ -2562,8 +2562,8 @@
     },
     {
       "path": "tests/test_ci_face_gates.py",
-      "size": 6053,
-      "sha256": "2cc6243df97c41f04c5657f1a8d1079e2be774741feb6c1f4cbd579a9e220372"
+      "size": 6202,
+      "sha256": "25b6b419d900368a8efc932cafeca0007c76cbbd42233efbb2024775ac9cbca9"
     },
     {
       "path": "tests/test_ci_surface_census.py",
@@ -3372,8 +3372,8 @@
     },
     {
       "path": "tests/test_supervisor_package.py",
-      "size": 4314,
-      "sha256": "6a261954b98669f918c62148fb0e0a48b1439c19e425a6bf451882869c9d2b6b"
+      "size": 5910,
+      "sha256": "ae9256bebaac912cae38f8fb2d6bc8d6732aa2a21530f69167dbf867b9b868df"
     },
     {
       "path": "tests/test_supervisor_state_integration.py",
