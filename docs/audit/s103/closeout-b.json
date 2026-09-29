@@ -1,0 +1,85 @@
+{
+ "command": "closeout verify",
+ "problems": [],
+ "violations": [
+  {
+   "check": "worktree_clean",
+   "detail": "工作树有 1 处未提交改动：['?? docs/audit/s103/report-s103.json']"
+  }
+ ],
+ "checks": {
+  "report_bound_to_provenance": {
+   "ok": true,
+   "detail": "报告 sha256=483e2df6d243 与 PROVENANCE 记录一致",
+   "kind": "violation"
+  },
+  "counts_counted_from_roster": {
+   "ok": true,
+   "detail": "现数 passed=2798 skipped=5 total=2803，summary 与 PROVENANCE 两处副本一致",
+   "kind": "violation"
+  },
+  "terminal_clean": {
+   "ok": true,
+   "detail": "exitcode=0，2803 条无 failed/error",
+   "kind": "violation"
+  },
+  "roster_covers_tree": {
+   "ok": true,
+   "detail": "树 226 文件 / 2708 个 def，报告 226 文件 / 2803 条，双向差集为空",
+   "kind": "violation"
+  },
+  "pinned_source_binding": {
+   "ok": true,
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 报告实测 HEAD 96a19941 的祖先",
+   "kind": "violation"
+  },
+  "content_parity_measured": {
+   "ok": true,
+   "detail": "2 条清单哈希用例都在名单里并 passed：测的就是这棵树",
+   "kind": "violation"
+  },
+  "report_fingerprint_recorded": {
+   "ok": true,
+   "kind": "ok",
+   "detail": "报告自带清单指纹 94ebcbd7b4d2"
+  },
+  "report_fingerprint_matches_disk": {
+   "ok": true,
+   "detail": "报告指纹与磁盘清单 94ebcbd7b4d2 同源（只换 generated_at 不算变）",
+   "kind": "violation"
+  },
+  "worktree_clean": {
+   "ok": false,
+   "detail": "工作树有 1 处未提交改动：['?? docs/audit/s103/report-s103.json']",
+   "kind": "violation"
+  },
+  "plaintiffs_measured": {
+   "ok": true,
+   "detail": "3 条本轮原告都在名单里且 passed",
+   "kind": "violation"
+  },
+  "size_ratchet": {
+   "ok": true,
+   "detail": "名单 2803 条 ≥ 下界 2803",
+   "kind": "violation"
+  }
+ },
+ "readings": {
+  "report_entries": 2803,
+  "outcome_hist": {
+   "passed": 2798,
+   "skipped": 5
+  },
+  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s103",
+  "report_duration_s": 347.1106081008911,
+  "provenance_binds_report": true,
+  "tree_files": 226,
+  "tree_defs": 2708,
+  "report_files": 226,
+  "worktree_head": "667928c55217623119eaa1543220279956012dcd",
+  "pinned_commit": "a66040520139405095648461f7144d4f00629924",
+  "report_fingerprint": "94ebcbd7b4d2",
+  "disk_manifest_fingerprint": "94ebcbd7b4d2"
+ },
+ "ok": false
+}
