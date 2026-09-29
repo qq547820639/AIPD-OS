@@ -12,8 +12,12 @@
 2. **历史面不能被拿来藏现状缺陷**：`CHANGELOG.md` 与 `docs/audit/**` 记的是当时的事实，
    只报不判、不改写；但"哪些文档算历史"这件事本身要被核——
    把 README 挪进历史名单就等于把门禁关掉（注入反证 D3 打的正是这一格）。
-3. **尺子自己能红**：`--self-test` 的 20 条合成读数必须全立住，且由本文件**子进程真 spawn**
-   （只被文本提到不算跑过）。
+3. **尺子自己能红**：`--self-test` 的合成读数必须全立住（条数以工具自报那一行为准，
+   本文不抄），且由本文件**子进程真 spawn**（只被文本提到不算跑过）。
+
+第 103 片在这三面之外又加了两格：**现状面不许写裸行钉**（`路径:123` 只在写下那一刻对，
+文件一长就静默失效 ⇒ 一律换成 `路径::符号`），以及**历史面的行钉漂移只报不判**
+（`drift` 档：还在符号区间 / 已离开 / 这句没点名符号，三档求和必须等于带行号引用数）。
 
 分母不手抄：引用总数、分类 Σ、文档份数一律现算，Σ 对不上就判「读数不可信」。
 """
@@ -97,6 +101,35 @@ def test_multi_and_missing_are_kept_apart(report) -> None:
     assert report["buckets"].get("multi", 0) > 50, "multi 档读空 ⇒ 简写全被判红了？"
     for doc, target, line in (tuple(x) for x in report["live_defects"]):
         assert target, (doc, line)
+
+
+def test_live_face_writes_symbol_anchors_not_bare_line_pins(report) -> None:
+    """现状面不许写裸行钉（第 103 片）：真语料必须 0 处，且符号锚这一档**真的有货**。
+
+    两头都要钉：只断 0 处会把"判据从没开过火"读成"现状干净"，所以要同时要求
+    `symbol-resolved` 有下界（现算 178 处）——它证明这条轴在被使用，而不是被绕开。
+    """
+    assert report["buckets"].get("bare-line-pin", 0) == 0, \
+        [r for r in report["refs"] if r["klass"] == "bare-line-pin"]
+    assert report["buckets"].get("symbol-resolved", 0) > 50, report["buckets"]
+
+
+def test_symbol_anchor_face_keeps_wrong_names_out(report) -> None:
+    """符号锚不是更宽松的写法：指向不存在的符号必须被单独切出来，不许混进 resolved。"""
+    assert "symbol-missing" in report["buckets"], report["buckets"]
+    live_missing = [r for r in report["refs"]
+                    if r["klass"] == "symbol-missing" and census._is_live(r["doc"])]
+    assert live_missing == [] or report["live_defects"], \
+        f"现状面有 {len(live_missing)} 条符号锚落空，却没进判红清单"
+
+
+def test_drift_face_closes_and_actually_sees_drift(report) -> None:
+    """历史面那档"只报不判"必须闭合，而且报得出真东西（不是恒零的安慰读数）。"""
+    d = report["drift"]
+    assert d["ok"] + d["suspect"] + d["unhinted"] == d["checked"], d
+    assert d["checked"] > 500, d
+    assert d["suspect"] > 0, f"一个漂移都没读到，这档就是摆设：{d}"
+    assert report["ok"] is True, report["problems"]
 
 
 def test_history_face_sorts_when_line_shapes_mix(tmp_path) -> None:

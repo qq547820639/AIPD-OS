@@ -1,0 +1,11 @@
+原文件 sha=70a9127a8993 靶文件债=无
+[ANCHORS OK] 6 支臂各命中 1 次
+[CONTROL OK] A0 原样全绿：自测 rc=0（缺的标记 []）/ 用例 rc=0 红 0 条：
+[KILLED]   X1-live-bare-pin-never-fires（现状面退回「行号不越界就算对」）被抓住：自测 rc=1（缺的标记 []）/ 用例 rc=1 红 1 条：tests/test_doc_reference_census.py::test_instrument_self_test_runs_and_is_green
+[KILLED]   X2-symbol-missing-not-a-defect（锚到不存在的符号不再算缺陷）被抓住：自测 rc=1（缺的标记 []）/ 用例 rc=1 红 1 条：tests/test_doc_reference_census.py::test_instrument_self_test_runs_and_is_green
+[KILLED]   X3-drift-closure-never-fires（漂移档 Σ 不再对分母（少加一档））被抓住：自测 rc=1（缺的标记 []）/ 用例 rc=1 红 3 条：tests/test_doc_reference_census.py::test_live_docs_have_no_dead_code_references; tests/test_doc_reference_census.py::test_instrument_self_test_runs_and_is_green; tests/test_doc_reference_census.py::test_drift_face_closes_and_actually_sees_drift
+[KILLED]   X4-class-qualifier-ignored（类限定写死取不到 ⇒ 符号锚退化成裸名）被抓住：自测 rc=1（缺的标记 []）/ 用例 rc=1 红 3 条：tests/test_doc_reference_census.py::test_live_docs_have_no_dead_code_references; tests/test_doc_reference_census.py::test_instrument_self_test_runs_and_is_green; tests/test_doc_reference_census.py::test_drift_face_closes_and_actually_sees_drift
+[KILLED]   X5-live-keys-drop-the-line（归一键丢掉行号 ⇒ 那条集合断言重新成橡皮章）被抓住：自测 rc=1（缺的标记 []）/ 用例 rc=1 红 1 条：tests/test_doc_reference_census.py::test_instrument_self_test_runs_and_is_green
+[KILLED]   X6-verdict-tag-renamed（档名改掉 ⇒ 下游认不出这条判决）被抓住：自测 rc=1（缺的标记 []）/ 用例 rc=1 红 1 条：tests/test_doc_reference_census.py::test_instrument_self_test_runs_and_is_green
+合计 KILLED 6 / 6；其余按判决分类：无
+收尾复算 sha=70a9127a8993（应等于 70a9127a8993）；靶文件债=无

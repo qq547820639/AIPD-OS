@@ -36,6 +36,20 @@
       "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
     },
     {
+      "path": "docs/audit/s103/battery103.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 39,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s103/closeout103.sh",
+      "rule": "closeout",
+      "hardcoded": true,
+      "line": 13,
+      "reason": "收口链脚本按配方要求用绝对路径拼仓库根与 worktree（见项目配方「worktree 必须写绝对路径」那条）；`.sh` 走这一条，因为它的 `R=` 必须指本次要认证的那棵树"
+    },
+    {
       "path": "docs/audit/s65/battery65.py",
       "rule": "battery",
       "hardcoded": true,

@@ -100,8 +100,8 @@ CLI 侧另测三档（4/13/33 条记录 × 两遍 × 7 次重复）：一趟命�
 
 **链头（2026-09-26 起，F-CTQ-PRODUCER 第 56 片）**：上面每一段都默认"库里已经有 CTQ"，
 而本轮复核的结果是：`record_type="ctq"` 在 `src/` 侧**只有读者没有写者**
-（`release_manifest.py:69`、`cad/spec_from_truth.py:55`、`cli/commands_drawing.py:86`、
-`cad/spec_rework.py:91`（这条指针第 62 片按现码复核过：原来写的 84 已被后续插入推到 91——
+（`release_manifest.py::_collect_ctq`、`cad/spec_from_truth.py::spec_from_ctq`、`cli/commands_drawing.py::cmd_drawing_spec`、
+`cad/spec_rework.py::rework_artifact`（这条指针第 62 片按现码复核过：原来写的 84 已被后续插入推到 91——
 指针不是取证件，写错就得改）），PI gate 只写 `requirement`/`feature` 且 Feature 模型里没有任何公差字段，
 所以第二跳的输入此前只能由测试种出来。现在由 `aipd ctq add`
 （`src/aipd_os/product_truth/ctq.py:declare_ctq`）补上：属主自述，七个必填项一次校验后才落库，
@@ -118,7 +118,7 @@ CLI 侧另测三档（4/13/33 条记录 × 两遍 × 7 次重复）：一趟命�
 并建返工任务 ⇒ `truth rework` 按新限值重写文件。判据形状借 Argo CD 实读的
 "compares the current, live state against the desired target state"（两侧都现算、基线只存一份），
 所以**没有新增 metadata 列、存量记录不需要迁移**：`spec_sha256` 本来就是声明正文的
-canonical 哈希（`cad/spec_lineage.py:41`），文件面与源面各自与它比。
+canonical 哈希（`cad/spec_lineage.py::spec_digest`），文件面与源面各自与它比。
 源面刻意**只吃记录自己声明的 `ctq_refs`**，不吃全作用域 CTQ——否则新增一条无关要求会把
 每条既有声明都读成漂移；"声明是否覆盖了当前全部要求"归发布门禁 `gdt_covers_ctq` 那一格，
 由 `tests/test_truth_spec_faces.py::test_unrelated_new_ctq_is_not_drift` 钉住不越界。
@@ -132,7 +132,7 @@ canonical 哈希（`cad/spec_lineage.py:41`），文件面与源面各自与它�
 另起一条 active 新版本（`version = 被修订那条 + 1`），旧的标 `superseded` 并在 metadata 留
 `superseded_by` / `superseded_at` / `superseded_by_actor` / `superseded_reason` 四个链字段，
 两条命令都往 `audit_log` 落一行（actor 取 `--by`，before/after 是限值与检验方法的快照）。
-退役态选 `superseded` 而不是 `expired` 是**出口判据**：`release_manifest.py:95-99` 对
+退役态选 `superseded` 而不是 `expired` 是**出口判据**：`release_manifest.py::_collect_ctq` 对
 `superseded` 只出非阻断点名（`blocking=False`，提醒"确认取代它的那条在名单里"），
 而 `expired`/`stale`/`blocked` 走的是 `blocking=True` 那一支，会把这条要求永久留在阻断名单里。
 形状借本轮实读的 dbt model versions（`latest_version` 决定未固定 `ref()` 指向哪一版；
@@ -152,8 +152,8 @@ by consumers until they are disabled or removed."）与 django-simple-history 3.
 **链头的读面（2026-09-27 起，F-CTQ-READER 第 62 片）**：上面两片给链头配了三个写者与四个读者，
 但"这个图纸尺寸上现在有效的是哪几条、限值与版本各是几"只能读库——那条缺席正是第 60 片那把
 `doc_command_census` 登记在 registry 限制句里、由只报面持续可见化的东西。现在补
-`aipd ctq list`（`src/aipd_os/product_truth/ctq.py:363 list_ctq`、
-`src/aipd_os/cli/commands_truth.py:543 cmd_truth_ctq_list`）。三处形状值得记：① 默认只列
+`aipd ctq list`（`src/aipd_os/product_truth/ctq.py::list_ctq`、
+`src/aipd_os/cli/commands_truth.py::cmd_truth_ctq_list`）。三处形状值得记：① 默认只列
 `active`（与发布分母**的 active 过滤**同口径——分母还额外要求 `metadata.feature`，缺它的
 active 记录门口判 `ctq_missing_feature` 阻断、这里照样列出），但**必须同时自报排除了几条、
 各是什么态**（`excluded` 那格）——只报"1 条"会被读成"库里只有 1 条"，而
@@ -161,18 +161,18 @@ active 记录门口判 `ctq_missing_feature` 阻断、这里照样列出），�
 "要求被撤了几条"是属主最该看见的；② 投影**复用**审计行用的那份 `_snapshot`，不在 CLI 里
 重抄字段（等值断言 `records == _snapshot(活记录)` 是这条的钉子），所以生产面加列时读面跟着长，
 不会出现"库里有、列不出"；③ 只读不写，一行 `audit_log` 都不落——那条通道要回答"谁改了事实"，
-把每次查看都写进去它就答不出了（写侧的门是 `AIPDStateDB.add_audit`，`state/db.py:1073`）。
+把每次查看都写进去它就答不出了（写侧的门是 `AIPDStateDB.add_audit`，`state/db.py::AIPDStateDB.add_audit`）。
 退码：读不出 2、成功 0；空作用域退 0 且明写「0 条 + 作用域」，与"没跑到"分开——
 这一档跟的是 `cmd_truth_tasks` 那个纯列表面的先例（它同样退 0，并且专门打一行
 "空列表不代表没有 stale 记录"），而不是 `truth drift` 那种扫描面的 `0/4`：
 把"存在被合法停用的要求"和"有要求今天没收口"折进同一个退码是新的谎。
 本轮电池留下一条排障账，记在这里因为它不是本项目独有的：给"读失败"写的**第一条**用例
 （`--db` 指到一个不是 sqlite 库的文件）在变异对照下**活了下来**——那个输入在
-`_open_store`（`commands_truth.py:24`）就被接住，命令里那段 try/except 根本没执行到，
+`_open_store`（`commands_truth.py::_open_store`）就被接住，命令里那段 try/except 根本没执行到，
 于是"把读失败读成空清单"这个改动没让任何用例变红。补了第二条（让 `list_ctq` 真的抛在手里）
 之后三臂全 KILLED，还原后复绿、文件 sha 复原；同一轮独立复核又抓出两处**读数说谎**并已修：
 合格域原先用 `f"{low:g}"` 打（实测 `format(8.050001, 'g') == '8.05'`，限值被格式化改了数），
-口径注原先写"superseded 是唯一能让一条要求退出分母的态"（重开 `release_manifest.py:67-103`：
+口径注原先写"superseded 是唯一能让一条要求退出分母的态"（重开 `release_manifest.py::_collect_ctq`：
 退出分母的是**全部**非 active 态，superseded 特殊的只是不阻断）——两处各补一条常驻用例加一支
 变异臂，终局 `6 KILLED / 0 SURVIVED`；复核提的第三项"有非 active 记录却退 0 不一致"经重开
 先例判为**不成立**，理由见上一段。另有一条镜像卫生账：`aipd ctq list` 这个名字
