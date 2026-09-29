@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 424832,
-      "sha256": "0b69410adee930185144c5728dd5768a9d159862a5b9ea7927a56e5bd935a9e8"
+      "size": 425594,
+      "sha256": "75ec5f191bc7821adc8f54660084fd69884939b8703644262f73f0bc40928cea"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -2622,8 +2622,8 @@
     },
     {
       "path": "tests/test_closeout_verifier.py",
-      "size": 34843,
-      "sha256": "1fcabd92f7273018093382cd219fe0565a9d34ce779777ea885aa60821c2b696"
+      "size": 35737,
+      "sha256": "81d59166d1de57ed68341f61c91a0dba747d750a8bbfa9603caa0f6da682f0cd"
     },
     {
       "path": "tests/test_command_coverage.py",
