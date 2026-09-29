@@ -33,6 +33,7 @@ r"""第 96 片变异电池：取证脚本根路径门禁**每个判决与每个�
 from __future__ import annotations
 
 import ast
+import contextlib
 import hashlib
 import importlib.util
 import os
@@ -126,10 +127,8 @@ def _drop_cache() -> None:
     """删掉本文件在 pycache_prefix / __pycache__ 里的两份缓存（防陈旧字节码遮蔽还原后的源）。"""
     for cand in (importlib.util.cache_from_source(str(TOOL)),
                  str(TOOL.parent / "__pycache__" / (TOOL.stem + ".cpython-39.pyc"))):
-        try:
+        with contextlib.suppress(OSError):
             os.remove(cand)
-        except OSError:
-            pass
 
 
 def main() -> int:
