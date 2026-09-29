@@ -1,4 +1,4 @@
-# 第 95 片收口链：绑定 → 提交 → 发布门 → 提交门的读数 → 收尾验签。
+# 第 96 片收口链：绑定 → 提交 → 发布门 → 提交门的读数 → 收尾验签。
 # 由上一片（第 95 片）逐行派生，只换：报告名 / worktree 名 / 产物目录名 /
 #   PRIOR_FLOOR=上一代实测 collected(2761) / 绑定提交信息 / --expect-test 点两条
 #   （第 96 片的原告在两个文件里：`tests/test_forensic_scripts_root.py` 那 10 条
@@ -7,7 +7,7 @@
 # 派生完做两件事：grep 残留 s94 归零（$X 的 .s88-outside 除外）、bash -n 过一遍。
 set -u
 R=/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
-WT=/Volumes/Extra/CodeProj/AI全链路自研/.wt-s96
+WT=/Volumes/Extra/CodeProj/AI全链路自研/.wt-s96b
 X=/Volumes/Extra/CodeProj/AI全链路自研/.s88-outside
 PY="$R/.venv/bin/python"
 export PATH="$R/.venv/bin:$PATH"
@@ -78,7 +78,7 @@ PY
 git add SOURCE_MANIFEST.json PROVENANCE.json \
         docs/audit/pytest-report.json docs/audit/pytest-report-v5.6.0.json
 git commit -q -F - <<'MSG'
-chore(s96): 绑定第 95 片的 attestation 报告
+chore(s96): 绑定第 96 片的 attestation 报告
 
 一次绑定、两个旗子同时给。本轮动的是两处读数面：`scripts/closeout_verifier.py` 的 C5 说明串
 不再被 `[:8]` 截半（标签与"弱一档"那句都要出现，常驻用例直读那个字符串），以及
@@ -123,4 +123,4 @@ git add docs/audit/s96/closeout.json
 git add -f docs/audit/s96/closeout95.log
 git commit -q -m "chore(s96): 收尾验签读数入库"
 echo "FINAL_COMMIT_RC=$?"
-echo "=== 第 95 片收口结束：BIND=$BIND_RC GATE=$GATE_RC CV=$CV_RC MIN_TESTS=$MIN_TESTS ==="
+echo "=== 第 96 片收口结束：BIND=$BIND_RC GATE=$GATE_RC CV=$CV_RC MIN_TESTS=$MIN_TESTS ==="
