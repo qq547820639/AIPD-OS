@@ -951,6 +951,34 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.57 F-FORENSIC-ROOT 第 96 片：给取证脚本的根路径立一把尺，并把 C5 那条读数钉进常驻**：
+  `docs/audit/**.py` 是复算入口，换机/换目录后那些 `Path("/Volumes/…/AIPD-OS")` 会指错树，
+  而这件事原先**没有任何尺子看得见**。新尺 `docs/audit/s96/build_forensic_root_register.py`
+  把每个 `.py` 现扫成三档事实——仓库内绝对字面量（判据）、仓库外绝对字面量（**只报不红**：
+  那些路径本身就是当轮读数的来处）、`tempfile.*`（可重放，两档都不进）——判决六道：
+  未点名 / 名册该撤（两极）/ 点名规则不唯一 / 名册缺条目 / 名册规则过期 / 豁免理由空缺，
+  前提两道（名册读不到、语料为空）一律退 2。名册 `docs/audit/FORENSIC_ROOT_REGISTER.json`
+  是生成物：`--emit` 与判据共用同一把 `facts()`，任一文件命中 0 条或 ≥2 条点名规则整批拒写（退 3）
+  ⇒ 重新生成洗不出更宽的豁免。选型按 A/B/C 三候选比过（`mypy-baseline` 0.7.4 与
+  `eslint-baseline` 0.4.0 都只记"每条错误一行"的文本基线，没有豁免类别／理由／文件消失这三格；
+  故**自研并借其"基线只列已知项、只在新项与漂移项开火"的思路**，四段见取证文档）。
+  本轮真实付过账的三格：① 识别面第一版用 ASCII 白名单字符类 ⇒ 本仓根含中文（`AI全链路自研`）
+  ⇒ 真语料读成"写死仓库内 0"且 `ok: true`，与"真的没人写死"完全同形——第 90 片同格的第二次，
+  现由 `test_the_abs_probe_reaches_a_non_ascii_repo_path` 带前提断言钉住；② 点名规则不带 `/`
+  左边界时 `s84/after_battery84.py`（电池的**接收**脚本）被词形吞成豁免，加左边界后它和另外三个
+  同类脚本落回"未点名"，于是四个仓库根字面量改成 `Path(__file__).resolve().parents[3]`；
+  ③ py3.9 的 f-string 嵌同族引号会吃掉尾引号，注入的夹具落成 `Path("/…/hard/src)`——
+  一支"必须开火"的臂读到 0 条判决，看起来与"量具没牙"不可区分；改由 `json.dumps` 生成引号，
+  且 `_write()` 落盘前 `ast.parse`（夹具必须是合法 Python）。
+  常驻：`tests/test_forensic_scripts_root.py` 新建 9 条、`tests/test_closeout_verifier.py` +1 条
+  （C5 读数标签不再被 `[:8]` 截半：`anc_src` 与 `anc_ref` 拼在同一条 f-string 里，
+  截错或丢标签在退码上一个字节都不动，故直读那个字符串、两档标签各配一极）。
+  变异电池 `docs/audit/s96/battery96.py`：Z0 对照 + 14 支撤销臂，第一轮 Z8
+  （名册同一路径登记两遍）存活 ⇒ 当场给判据与自测各补一臂，复跑 14/14 KILLED、复位 sha 相等。
+  现读（`--repo .`）：`.py 67 / 写死仓库内 50 / 写死仓库外 21 / tempfile 2`，
+  `exempt 50 + derived 17 == 67`、`unwatched 0`。这把尺自己抓到的第一笔真原告不是合成件：
+  新增 `battery96.py` 之后 `--repo .` 当场退 4 点名「名册缺条目」，`--emit` 之后归零。
+  取证与四段选型见 `docs/audit/FORENSIC_ROOT_F-FORENSIC-ROOT_2026-09-29.md`。
 - **v5.56 F-CERT-ANCHOR 第 95 片：报告锚点从"操作员自述"改成"跑内实测 + 跑内祖先关系"**：
   `tests/conftest.py:54` 原本是 `os.environ.get("AIPD_SOURCE_COMMIT","")` **优先**、
   测不到才 fallback 到 `git rev-parse HEAD`，而收口配方每跑都显式传该变量 ⇒

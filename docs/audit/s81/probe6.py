@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-R = Path("/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS")
+R = Path(__file__).resolve().parents[3]
 P = Path("/Volumes/Extra/CodeProj/AI全链路自研/tmp/s81/e2e")
 sys.path.insert(0, str(R / "src"))
 from PIL import Image  # noqa: E402

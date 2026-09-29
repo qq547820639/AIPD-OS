@@ -11,7 +11,7 @@ import sys
 import time
 from pathlib import Path
 
-R = Path("/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS")
+R = Path(__file__).resolve().parents[3]
 LOG = R / "docs/audit/s84/battery84.log"
 PID = sys.argv[1] if len(sys.argv) > 1 else ""
 

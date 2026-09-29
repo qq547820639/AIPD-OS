@@ -1,0 +1,354 @@
+{
+  "entries": [
+    {
+      "path": "docs/audit/s65/battery65.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 13,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s65/terminal65.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 15,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s66/battery66.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s66/terminal66.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s67/battery67.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s67/terminal67.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s68/battery68.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 10,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s68/terminal68.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s69/battery69.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s69/terminal69.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s70/battery70.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s70/terminal70.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s71/battery71.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s71/terminal71.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s72/battery72.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s72/terminal72.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s73/battery73.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s73/terminal73.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 12,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s74/battery74.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s74/terminal74.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 12,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s75/battery75.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 9,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s75/terminal75.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 13,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s76/battery76.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s76/terminal76.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 13,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s77/battery77.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s77/terminal77.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 13,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s78/battery78.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s78/terminal78.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 13,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s79/battery79.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s79/terminal79.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 13,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s80/battery80.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 11,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s80/terminal80.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 13,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s81/battery81.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 16,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s81/terminal81.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 12,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s82/battery82.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 15,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s83/battery83.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 21,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s83/terminal83.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 16,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s84/battery84.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 20,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s84/terminal84.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 24,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s85/terminal85.py",
+      "rule": "terminal",
+      "hardcoded": true,
+      "line": 19,
+      "reason": "终局读数脚本：它写的是**那一代收口时**的盘外暂存区与 worktree 路径，那些路径本身就是历史记录的一部分"
+    },
+    {
+      "path": "docs/audit/s86/battery86.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 17,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s87/battery87.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 15,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s88/battery88.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 29,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s89/battery89.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 41,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s90/battery90.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 42,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s91/battery91.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 29,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s92/battery92.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 27,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s93/battery93.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 55,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s94/battery94.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 87,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s96/battery96.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 40,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    }
+  ]
+}
