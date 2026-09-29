@@ -95,3 +95,26 @@ pip install -e ".[dev]"                               job_count  2  line 209
   这是有意的口径（消费表的键是命令，不是运行实例），但要写清：本片的"23 处"是 23 个
   `(job, 行)` 对，不等于 23 次 CI 运行。
 - `zizmor` 的规则集与输出 schema 未亲验，§二 的对比只用能核到的元数据下结论。
+
+## 五、认证读数（一代跑通）
+
+- `PRECHECK OK: 2778 passed / 5 skipped / collected 2783 / 347.5s / fp ae82a8dce495`
+- `MIN_TESTS=2783`（上一代下界 2780，由脚本从本轮报告现读后传入并硬断严格大于）
+- `SKIP 面逐条相同：5 条`；`BIND_RC=0`；回读 `test_report=2778p/0f/2783t`、`fp=ae82a8dce495`
+- 发布门 `GATE_RC=0`、`release_ready: True`、`未过: 无`、`项数: 8`
+- 收尾验签 `CV_RC=0` 11 格全绿；回收签出后 `-b` 复算 `checks 11 red []`
+- `roster_covers_tree`：树 224 文件 / 2688 个 `def` ↔ 报告 224 文件 / 2783 条，双向差集为空
+- `pinned_source_binding`：「…且它是 **报告实测 HEAD** `b48cce83` 的祖先」
+- `plaintiffs_measured`：2 条本轮原告（`tests/test_ci_surface_census.py`、
+  `tests/test_forensic_scripts_parse.py`）都在名单里且 passed
+- 被哈希文件数 `693 → 693`（本轮只改内容不改文件集：`scripts/ci_surface_census.py`），
+  这个数字本身就是"有没有误纳文件"的探针
+- 提交链（`git log --format="%h %s" 1a90a7c..HEAD` 现读，倒序）：`a644b2e` 验签读数 →
+  `f5ba4fd` 门读数 → `0292d1c` 绑定 → `b48cce8` 重刷清单 → `1a90a7c` 本片实现
+- 与上一片对照：这一次**一代就绿**（`GATE_RC=0`、`CV_RC=0` 都是第一跑），
+  差别就在启动门之前把全部改动（含 `docs/audit/s98/` 两份日志）先入了库——
+  第 91/96 片那两次"第一跑必红在 `workspace_clean`"不是必然，是工序顺序问题。
+
+未做到：`.wt-s98b` 这个名字沿用了上一片的"第二代带 b"约定，但本轮其实只有一代 ⇒
+名字与代次不符。不改（改 `WT=` 会让派生件与已提交脚本不一致），在此点名以免下一位读者
+以为漏了一代；下一片的派生已按 `.wt-sNN` 起。
