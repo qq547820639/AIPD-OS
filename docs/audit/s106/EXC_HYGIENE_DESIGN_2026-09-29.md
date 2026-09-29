@@ -64,3 +64,14 @@ cd AIPD-OS
 .venv/bin/python -m ruff check --no-cache src tests scripts state_service 2>&1 | grep -c '^warning'  # 0
 .venv/bin/python -B docs/audit/s106/battery106.py                    # KILLED 6/0/0
 ```
+
+## 七、认证流水账（含第一代作废）
+
+- 第一代（锚 `4d2b623` 后、`c51a721` 的树）：全量 2815p/4f——4 条红全是
+  `test_forensic_scripts_root` 一族：`closeout106.sh` 在名册末次 emit 之后才入库。
+  排障时又踩深一层：`build_forensic_root_register.py` **不带 `--emit` 只审不写**，
+  且两种模式的输出长得一样（都是"归属/缺陷"读数）——连跑两次"重发"名册都没动，
+  靠 `facts()` 与名册求差（inside 81 vs register 80）才定位。带 `--emit` 重发
+  81 条后 13/13 绿（`d6995da`）。第一代报告随 `.wt-s106` 重建作废，
+  尾巴留档 `run-s106-gen1-tail.log`。
+- 第二代：worktree 于 `d6995da` 干净重挂，全量 + 收口链读数见 `closeout106.log`。
