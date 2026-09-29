@@ -1,16 +1,11 @@
 {
  "command": "closeout verify",
  "problems": [],
- "violations": [
-  {
-   "check": "worktree_clean",
-   "detail": "工作树有 4 处未提交改动：['M docs/audit/DEPENDENCY_LICENSE_BODY_F-DEP-LICENSE_2026-09-29.md', '?? docs/audit/SCRIPTS_LINT_FACE_RULING_2026-09-29.md', '?? docs/audit/s99/closeout99.sh', '?? docs/audit/s99/derive_closeout99.py']"
-  }
- ],
+ "violations": [],
  "checks": {
   "report_bound_to_provenance": {
    "ok": true,
-   "detail": "报告 sha256=257160db8017 与 PROVENANCE 记录一致",
+   "detail": "报告 sha256=9c00b921b94c 与 PROVENANCE 记录一致",
    "kind": "violation"
   },
   "counts_counted_from_roster": {
@@ -30,7 +25,7 @@
   },
   "pinned_source_binding": {
    "ok": true,
-   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 报告实测 HEAD 51023121 的祖先",
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 报告实测 HEAD 6dcf8bfe 的祖先",
    "kind": "violation"
   },
   "content_parity_measured": {
@@ -41,16 +36,16 @@
   "report_fingerprint_recorded": {
    "ok": true,
    "kind": "ok",
-   "detail": "报告自带清单指纹 21085171c58e"
+   "detail": "报告自带清单指纹 a60d80997661"
   },
   "report_fingerprint_matches_disk": {
    "ok": true,
-   "detail": "报告指纹与磁盘清单 21085171c58e 同源（只换 generated_at 不算变）",
+   "detail": "报告指纹与磁盘清单 a60d80997661 同源（只换 generated_at 不算变）",
    "kind": "violation"
   },
   "worktree_clean": {
-   "ok": false,
-   "detail": "工作树有 4 处未提交改动：['M docs/audit/DEPENDENCY_LICENSE_BODY_F-DEP-LICENSE_2026-09-29.md', '?? docs/audit/SCRIPTS_LINT_FACE_RULING_2026-09-29.md', '?? docs/audit/s99/closeout99.sh', '?? docs/audit/s99/derive_closeout99.py']",
+   "ok": true,
+   "detail": "工作树干净",
    "kind": "violation"
   },
   "plaintiffs_measured": {
@@ -70,16 +65,16 @@
    "passed": 2780,
    "skipped": 5
   },
-  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s99",
-  "report_duration_s": 475.98925709724426,
+  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s99b",
+  "report_duration_s": 423.2491810321808,
   "provenance_binds_report": true,
   "tree_files": 224,
   "tree_defs": 2690,
   "report_files": 224,
-  "worktree_head": "c8352e29ad143a4225b25903a311bba0d797a73a",
+  "worktree_head": "c84e7eeb0951819d87ac08882ce341dc061a13b2",
   "pinned_commit": "a66040520139405095648461f7144d4f00629924",
-  "report_fingerprint": "21085171c58e",
-  "disk_manifest_fingerprint": "21085171c58e"
+  "report_fingerprint": "a60d80997661",
+  "disk_manifest_fingerprint": "a60d80997661"
  },
- "ok": false
+ "ok": true
 }
