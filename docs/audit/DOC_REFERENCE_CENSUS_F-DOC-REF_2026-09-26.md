@@ -245,3 +245,29 @@ X4 只在 detail 里报错了载体（把真载体换成首选那份）⇒ `self
 ② README 量具名册的差集我自己算错过：`grep -o 'scripts/[a-z_/]*\.py'` 的字符类不含数字，`c6_coverage.py`
 于是永远不命中、被误报成"README 里一个字都没有"（真零命中只有 2 台：`doc_reference_census`、
 `changelog_commit_crosscheck`）——子代理独立复核指出，我按"入门禁档须亲手重开"回读 `README.md:461` 后才改口。
+
+## 十一、第 105 片第二代（s105b）：认证过了，但过程里两处红各是一格真缺陷
+
+第一代锚 `05dbf37` 的认证在 precheck 就被拒（5 条常驻红），分诊出两条**根因不同的**账，
+重锚到 `17ddd4c` 之后整链重跑：
+
+- 取证名册没随新入库的 `docs/audit/s105/battery105.py`、`closeout105.sh` 重 emit ⇒ 4 条红；
+  `--emit` 后名册 79 ⇒ 80 条，`tests/test_forensic_scripts_root.py` 13 passed。
+- `tests/test_closeout_verifier.py::test_roster_gap_equals_tests_changed_since_the_report`
+  两侧粒度不同：`changed` 按 `def test_` 条数，`gap` 拿**报告条目数**比**树的 def 数**
+  ⇒ 参数化文件里新加一条 def 会被参数化余量吃掉（本轮 `test_changelog_commit_crosscheck.py`
+  5 ⇒ 6 def、报告 6 条 id ⇒ `6 < 6` 判"无缺口"）。改成剥 `[参数]` 按名去重；
+  第一版只取末段又造出 `tests/test_outbox_operations.py` 的假缺口（两类同名方法被并成一条）
+  ⇒ 键必须保留 `类::方法`。改后该文件 22 条全绿。
+
+第二代链上读数（`.wt-s105b @ 17ddd4c`，机器 load 高，墙钟虚高不影响判据）：
+
+| 环节 | 读数 |
+| --- | --- |
+| 全量 | 2807 passed / 5 skipped / collected **2812**、`RUN_RC=0`、自报 1129.3 s |
+| precheck | 0 failed ✓、锚点==tag ✓、自记指纹 `9d2a4bbf0648` == 磁盘清单 ✓、2812 > 下界 2811 ✓；SKIP 面逐条相同 5 条 |
+| 绑定 / 门 / 验签 | `BIND_RC=0`；`GATE_RC=0`（`release_ready=True`、8 项全过）；`CV_RC=0`、绿勾 11 |
+| 回收后 B 档 | `RECLAIM_RC=0`、`GATE_B_RC=0`、`CV_B_RC=0`、绿勾 11 ⇒ 第一跑即绿（先归档再复验的顺序修对了） |
+| 一处不完美 | 脚本把 `run-s105b.log` 的 `cp` 排在 `git worktree remove` 之后 ⇒ `LOG_COPY_FAILED`，那半份逐例日志随签出被回收；链上 stdout 已另存 `docs/audit/s105/finish105b-chain.log`，认证读数本身不受影响（判据只看报告 JSON 与门/验签输出） |
+
+至此第 105 片的符号支路、词边界修复与名册/粒度三处账全部认证在册。

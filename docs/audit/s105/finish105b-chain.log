@@ -1,0 +1,25 @@
+=== 1. 干净签出全量 ===
+RUN_RC=0
+2807 passed, 5 skipped, 1114 warnings in 1130.33s (0:18:50)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+=== 2. precheck（四条硬前提） ===
+PRECHECK OK: 2807 passed / 5 skipped / collected 2812 / 1129.3s / fp 9d2a4bbf0648
+SKIP 面逐条相同：5 条
+=== 3. 一次绑定（两旗同给） ===
+BIND_RC=0
+COMMIT_RC=0
+293c140 chore(s105b): 绑定词边界修复这一代的 attestation 报告
+=== 4. 发布门（JSON/stdout 落树外） ===
+GATE_RC=0
+release_ready: True | 未过: 无 | 项数: 8
+=== 5. 收尾验签 ===
+CV_RC=0 MIN=2812 绿勾=11
+  ✓ size_ratchet：名单 2812 条 ≥ 下界 2812
+全部判据绿
+=== 6. 回收签出后 B 档复验 ===
+RECLAIM_RC=0
+LOG_COPY_FAILED
+fatal: pathspec 'docs/audit/s105/run-s105b.log' did not match any files
+GATE_B_RC=0
+CV_B_RC=0 绿勾=11
+=== 尾段结束 ===
