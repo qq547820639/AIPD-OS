@@ -362,7 +362,13 @@ shellcheck-py 判的不是这一格且要引原生二进制，pygments 会把门
 | 代次 | 树（`source_commit_measured`） | 全量 | collected | 清单指纹 | 判定 |
 | --- | --- | --- | --- | --- | --- |
 | 第一代 `.wt-s99` | `51023121…` | **2780 passed / 0 failed / 5 skipped**（476.0s） | 2785 | `21085171c58e` | 报告本身干净、绑定成功（`BIND_RC=0`），**但收口链判红** |
-| 第二代 `.wt-s99b` | `6dcf8bf…` | 见下表（收口后填） | — | 与重锚后的清单同源 | 用于最终绑定 |
+| 第二代 `.wt-s99b` | `6dcf8bfe…` | **2780 passed / 0 failed / 5 skipped**（423.2s） | 2785 | `a60d80997661` | **认证通过**：绑定 `BIND_RC=0`、发布门 `GATE_RC=0 / release_ready True / 8 项全过`、收尾验签 `CV_RC=0`（11 格全绿），收树后 `-b` 复跑同样 `rc=0 / 11 格全绿` |
+
+两代的 collected 与终态逐字相同（同一份内容重跑），只有清单指纹与实测 HEAD 变了——
+这正是"红因是我动了树、不是判据变了"的证据形状。`--expect-test` 三条原告在第二代报告里
+逐条 `passed`：`test_forensic_scripts_root.py` 12 条、`test_ci_surface_census.py` 15 条、
+`test_forensic_scripts_parse.py` 4 条（第一代报告里也是同样的 12/15/4，用
+`report-s99-VOID-…json` 现数核对过）。
 
 第一代那一跑之后我又改了两处**被哈希的面**（`CHANGELOG.md`：把名册 69/语料 90 那组数补成
 "收口件入库后 92/70"），于是：
