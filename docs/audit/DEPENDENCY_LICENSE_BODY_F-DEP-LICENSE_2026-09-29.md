@@ -163,7 +163,12 @@ CV_RC=0      11 格全绿（report_bound_to_provenance / counts_counted_from_ros
              report_fingerprint_matches_disk / worktree_clean / plaintiffs_measured /
              size_ratchet）
 CVB_RC=0     回收 worktree 后 -b 复算仍 11/11；主树脏条目 0、worktree 数 1
-提交：fd41e11 绑定 → 5c9b0ad 门读数 → 337b... 验签 → 217db7d 有效代报告 → 本条补记
+提交链（`git log --oneline` 现读，不是凭印象）：
+`17439a4` 代码+文档 → `60e1484` 刷清单 → `fd41e11` 绑定 → `b20a596` 门读数入库
+→ `a169c0a` 验签读数入库 → `217db7d` 有效代报告入库 → 本条补记。
+**这一行先前是写错的**：我第一版凭轮次印象写成 `5c9b0ad` / `337b...` 两条不存在的哈希，
+是 `git log` 现读之后才改对的。留错不删——"读数从印象里补"正是这一族文档最容易犯的病，
+把它留在原地比抹掉更有约束力。
 ```
 
 被哈希文件数 **691 → 691**，新增/移除差集皆空 ⇒ 本轮所有产物
