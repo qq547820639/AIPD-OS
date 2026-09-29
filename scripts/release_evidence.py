@@ -249,10 +249,14 @@ def _pkg_version(pkg: str) -> str:
     try:
         return importlib.metadata.version(pkg)
     except importlib.metadata.PackageNotFoundError:
-        pass
+        return _attr_version(pkg)      # 显式走下一档，不是空吞
+
+
+def _attr_version(pkg: str) -> str:
+    """`importlib.metadata` 查不到（例如发行名与导入名不同形）时的回退档：问包自己。"""
     try:
         mod = __import__(pkg)
-    except Exception:
+    except Exception:        # noqa: EMPTY_EXCEPT - 可选依赖探测：导入炸了就按"没装"记，不能让取证工具因为一个包挂掉
         return "not-installed"
     return getattr(mod, "__version__", "unknown")
 

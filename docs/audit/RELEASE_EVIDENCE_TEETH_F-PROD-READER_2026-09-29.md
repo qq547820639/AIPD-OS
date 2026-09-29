@@ -140,6 +140,25 @@ scripts/release_evidence.py:235
    三个名字 ⇒ 以后漏掉这一格会在派生阶段就拒写，而不是等到读数对不上。
    s96 那三个文件按原样留着（改名会让"哪个文件是哪一跑"的对账变模糊）。
 
+### 3. 这一片的第一个全量被自家卫生门拦下（一代认证作废）
+
+`tests/test_exception_hygiene.py::test_no_uncommented_empty_except` 现读红在
+`scripts/release_evidence.py:251`——我写的 `except importlib.metadata.PackageNotFoundError: pass`
+体恰好只有 `pass`，而该门的判据正是「体只有 `pass`/`...` 且块内没有
+`# noqa: EMPTY_EXCEPT` 豁免」（`tests/test_exception_hygiene.py:35-44` 一手读）。
+`scripts/` 在这个门的扫描面里（`:17-20` `SCAN_DIRS`），所以它只有全量才看得见——
+定向跑新写的四支测试时它不在名单里，是我漏跑的，不是门的漏判。
+
+修法没有用豁免注释糊过去，而是**把空吞改成显式下一档**：
+`except PackageNotFoundError: return _attr_version(pkg)`，并把回退档拆成 `_attr_version()`，
+那条"导入炸了就按没装记"的 `except Exception` 保留宽类但补上 `# noqa: EMPTY_EXCEPT + 原因`
+（原因写的是"可选依赖探测：不能让取证工具因为一个包挂掉"）。
+改后 `test_exception_hygiene` + 三支 release_evidence 同族 ⇒ `43 passed`，`ruff check` 0 错。
+顺带现读到一处既有的**无效 noqa**：`scripts/release_evidence.py:272` 的
+`# noqa: EMPTY_EXCEPT` 让 ruff 吐 `Invalid # noqa directive`（它不是 ruff 的规则码，
+只是本仓卫生门读的记号）——这一格与"scripts/ 要不要进 CI lint 面"是同一个待裁项，本片不动。
+第一代报告（`.wt-s97`@`8faa446`，`1 failed / 2774 passed / 5 skipped`）按 VOID 命名留在树里。
+
 ## 六、认证读数
 
 （由 `docs/audit/s97/closeout97.sh` 回填。）
