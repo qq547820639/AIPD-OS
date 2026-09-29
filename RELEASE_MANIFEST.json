@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 416386,
-      "sha256": "3bfcf6c9311e8478447df2d6d622b8eb6062eeec7d75327e48611e29f8341265"
+      "size": 416528,
+      "sha256": "7808093dd35358684a3456c52b0035f6c381eb45f10e7632bff8a22c0d0ece8c"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -397,8 +397,8 @@
     },
     {
       "path": "docs/architecture/truth_architecture.md",
-      "size": 26579,
-      "sha256": "fd65e75a503b176a493063424a5686c31a425cfd4d0d91320669d8485c5a1953"
+      "size": 26678,
+      "sha256": "d508937c4d224e2fd81b4fb90973a830127c088ed11365e4e345a875c50d7bbf"
     },
     {
       "path": "docs/security/dependency-cve-review.md",
@@ -782,8 +782,8 @@
     },
     {
       "path": "scripts/doc_reference_census.py",
-      "size": 17809,
-      "sha256": "96f46d4fb6b73186eeeb9640e898403a6344b5050ddcea7ac66075fd0fe1f9d5"
+      "size": 27390,
+      "sha256": "70a9127a89933e224ecc339a213ab1b5179de3cc86feeaef1be577f99a2ed0a4"
     },
     {
       "path": "scripts/e2e_acceptance.py",
@@ -2692,8 +2692,8 @@
     },
     {
       "path": "tests/test_doc_reference_census.py",
-      "size": 6394,
-      "sha256": "41cabf7024153f721d62eab23463acc21f35e7b92401f6338867e56251d414cb"
+      "size": 8423,
+      "sha256": "d31fc00d55921d9625ed5c0db330dca03fe46d1d7117953a8b15953fbd2c3ce1"
     },
     {
       "path": "tests/test_drawing_dxf_lineage.py",
@@ -3449,6 +3449,11 @@
       "path": "tests/test_truth_sweep_cli.py",
       "size": 16224,
       "sha256": "76cb5c5469d1ff3e0e2ee75a505043c9d227c9964c083e22feb4f7bc6e67e3ac"
+    },
+    {
+      "path": "tests/test_unreachable_code.py",
+      "size": 4696,
+      "sha256": "80d75438f295b22f7fac8a2847009113abe90e4e8dee93e745e9faecb52911d1"
     },
     {
       "path": "tests/test_validation_domain.py",
