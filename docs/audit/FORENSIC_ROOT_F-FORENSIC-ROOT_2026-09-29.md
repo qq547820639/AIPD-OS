@@ -474,6 +474,17 @@ literals('# q = "/Volumes/aa/只在注释里"\np = "/Volumes/aa/代码里"\n')
   成本是 shell 面的重基线（B 那 20/20）。这一格不进判据、不登记为缺陷，只在 §八 挂着。
 - **heredoc 让渡**：`#` 在 heredoc 体里是正文，本门会把它当注释。今天因合计 0 而不成立，
   日后若 `comment_skipped > 0`，必须逐条读原文再判"是注释还是 heredoc 体"，不许按数字放行。
-- 认证读数：见本片 `docs/audit/s101/`（收口后填）。
+- **认证读数（一手，2026-09-29 收口后填）**：干净签出 `.wt-s101`（绝对路径、仓库**外**）在
+  `757196b` 上跑全量 ⇒ **2791 passed / 5 skipped / 0 failed，collected 2796，371.8s，exitcode=0**，
+  报告自记清单指纹 `660f5c74a5f9`（日志 `docs/audit/s101/run-s101.log`）。
+  `bash docs/audit/s101/closeout101.sh` 一次跑通：`PRECHECK OK` + **SKIP 面逐条相同 5 条** +
+  `BIND_RC=0`（回读 `source_commit=a66040520139`、`2791p/0f/2796t`）⇒ `ac826b3`；
+  `GATE_RC=0 / release_ready True / 未过 无 / 项数 8`；`CV_RC=0` **11 格全绿**，含
+  `roster_covers_tree：树 225 文件 / 2701 个 def ↔ 报告 225 文件 / 2796 条，双向差集为空`、
+  `size_ratchet：名单 2796 条 ≥ 下界 2796`、`pinned_source_binding`（锚点是报告实测 HEAD `757196bf` 的祖先）。
+  回收签出后 B 档复跑（JSON 一律落树外再入库）：`GATE_B_RC=0 / 8 项全过`、`CV_B_RC=0 / 11 格全绿`，
+  复验当时 `git status --short` **0 行**（`gate-b.json`、`closeout-b.json`、两份 `-b` 日志）。
+  绑定那份报告的 sha `3b740d8a9b3c` 与 `PROVENANCE.test_report.sha256` 逐字相同 ⇒ 签出删掉后
+  证据仍在树内可复算。被哈希的三面本轮都在链前定稿 ⇒ 没有第二代。
 
 
