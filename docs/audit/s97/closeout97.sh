@@ -7,7 +7,7 @@
 # 派生完做两件事：grep 残留 s94 归零（$X 的 .s88-outside 除外）、bash -n 过一遍。
 set -u
 R=/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
-WT=/Volumes/Extra/CodeProj/AI全链路自研/.wt-s97
+WT=/Volumes/Extra/CodeProj/AI全链路自研/.wt-s97b
 X=/Volumes/Extra/CodeProj/AI全链路自研/.s88-outside
 PY="$R/.venv/bin/python"
 export PATH="$R/.venv/bin:$PATH"

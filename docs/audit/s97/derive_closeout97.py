@@ -19,7 +19,8 @@ DST = ROOT / "docs/audit/s97/closeout97.sh"
 
 SUBS = [
     ("s96", "s97"),
-    ("/.wt-s97b", "/.wt-s97"),
+    # 第二代签出带 b：第一代 `.wt-s97`（被自家卫生门拦下那一跑）的名字要留给它的 VOID 读数。
+    ("/.wt-s97b", "/.wt-s97b"),
     ("# 由上一片（第 95 片）逐行派生", "# 由上一片（第 96 片）逐行派生"),
     ("#   PRIOR_FLOOR=上一代实测 collected(2761)", "#   PRIOR_FLOOR=上一代实测 collected(2772)"),
     ("PRIOR_FLOOR=2761", "PRIOR_FLOOR=2772"),
