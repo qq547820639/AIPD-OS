@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-29T00:44:47+00:00",
+  "generated_at": "2026-09-29T00:54:44+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -2562,8 +2562,8 @@
     },
     {
       "path": "tests/test_ci_surface_census.py",
-      "size": 16043,
-      "sha256": "f7902d0adac725716e24df002046583d37a721c5d447eb0b9fbfb7f80885c33c"
+      "size": 16590,
+      "sha256": "d4a720115c8437d74f6e2dbd86d39a69e383bc16e26cb1259635936607e2f88e"
     },
     {
       "path": "tests/test_claim_assessment.py",
