@@ -77,8 +77,44 @@ anc = git merge-base --is-ancestor pinned head      # head = 验签当时 worktr
    `[tool.mypy] files=["src","tests"]`；`ci.yml` 跑 `ruff check src tests state_service`）
    ⇒ 本片的 verifier/conftest 改动里，`closeout_verifier.py` 不在 mypy 覆盖面内。
 
-## 五、认证读数（收口时填）
+5. 读数文案有一处**截断错位**：C5 绿的时候打印 `它是 报告实测 HEA 的祖先`
+   （我把 `anc_src[:8]` 用在了标签上，本意是截 commit 的前 8 位）。
+   只影响可读性、不影响判决，但它是"字段被截半"的形状，若哪天有人按字串去匹配这条读数就会漏。
+   修法一行（标签不截、commit 截 8 位），排进第 96 片与另外两格一起做；
+   本片**不**为这一处重跑认证（那要再烧一跑全量，代价与收益不成比例）。
+
+## 五、认证读数（2026-09-29 收口，一次跑通）
 
 ```
-（待收口链写入：BIND / GATE / CV / -b 复算 / 全量 collected / 常驻用例数）
+$ bash docs/audit/s95/closeout95.sh
+PRECHECK OK: 2756 passed / 5 skipped / collected 2761 / 341.xs / fp b143a47e71ea
+MIN_TESTS=2761 （上一代下界 2760）      SKIP 面逐条相同：5 条
+BIND_RC=0   回读 OK: source_commit=a66040520139 test_report=2756p/0f/2761t fp=b143a47e71ea
+GATE_RC=0   release_ready: True | 未过: 无 | 项数: 8
+CV_RC=0     11 格全绿
+$ .venv/bin/python scripts/closeout_verifier.py … --json docs/audit/s95/closeout-s95-b.json   # 回收 worktree 后
+CVB_RC=0    11/11 全绿
 ```
+
+本片要的那一格在**产物里**看得见，不是只在代码里：
+
+```
+报告字段  source_commit_measured = d6baae569c3f     ← 那一跑实测的 HEAD（被测树）
+          source_commit          = a66040520139     ← 操作员声明的 tag 锚点
+C5 读数   "报告与 PROVENANCE 都绑在 a660405…，且它是 报告实测 HEA 的祖先"
+```
+
+最后一行的标签截断是 §四.5 那条已知瑕疵；**关键点是 C5 走了"报告实测 HEAD"这一支**，
+不再是"验签时刻的工作树"——收口链在绑定之后还提了 `2e46903`（绑定）与门/验签两个读数提交，
+若按旧判据，那时 HEAD 已是被测树的后代，恒真。
+`plaintiffs_measured` 这一格也从"1 条"变**2 条**（两片以来第一次点两条 `--expect-test`）。
+
+被哈希文件数：691 → 691（本轮无新增被哈希文件；新产物都在 `docs/audit/`）。
+提交链（`git log --oneline` 现读）：`935c1fb` 代码+测试+文书 → `d6baae5` 刷清单
+→ `2e46903` 绑定 → `b35de12` 门读数 → … 验签读数 → 有效代报告 → 本节。
+
+**未证事项**：
+① 报告整体仍可伪造——`source_commit_measured` 也是报告里的自述字段，只是**由那一跑的进程**写的；
+   要外证需签名或时间戳授权（属主侧，见 §四.2）。
+② `release_evidence.py` 仍无常驻读者（`grep -rln release_evidence tests/` 空，第 94 片 §四.6 同源）。
+③ §四.5 的文案截断未修（有意不为它重跑认证）。
