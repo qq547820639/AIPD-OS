@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-29T02:09:07+00:00",
+  "generated_at": "2026-09-29T02:24:00+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 392167,
-      "sha256": "d8f2f2fba11bb5f8087ba030342da7f1c747f74645bf3d5038e2fbfa0f4b5bc4"
+      "size": 392821,
+      "sha256": "2489d1d503d978adc5cd500948336183f155b625ed60e3cbadee79e22efe8da1"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -2797,8 +2797,8 @@
     },
     {
       "path": "tests/test_forensic_scripts_root.py",
-      "size": 9270,
-      "sha256": "56d787326259752ffc02b0163fe0ce9eaebf66d6ecb75279268582cf171af993"
+      "size": 12211,
+      "sha256": "5d49e1189bfb295bde37e9500eb38d1d60ecf64241eea12b5f43e1c564921b0b"
     },
     {
       "path": "tests/test_gate_attribution.py",
