@@ -2,13 +2,13 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-29T08:07:08+00:00",
+  "generated_at": "2026-09-29T09:57:12+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "size": 9874,
-      "sha256": "07dcb6c53b670ed7d7a20c810d9e47053b9d9a0bab79a0af0f1998d57bf9c716"
+      "size": 9913,
+      "sha256": "db4124677617c37f49bc460d424198a5109b97c483b2c31c810a0fd73b61cf97"
     },
     {
       "path": ".gitignore",
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 419248,
-      "sha256": "e4a0f182e0eabe34d4d8e1ff48b2d3e3458664e43d592bf1b377020ca62921d6"
+      "size": 421767,
+      "sha256": "0f44a961fc1012ef75a86772955d5e3fe7eca217303fa72d2a28ca7d68111406"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -739,6 +739,11 @@
       "path": "scripts/capability_matrix.py",
       "size": 9267,
       "sha256": "b5e6b2e0117f417c3cb9762416875cf78fe7a1503946cb2fe5fe91b2bf1f5867"
+    },
+    {
+      "path": "scripts/changelog_commit_crosscheck.py",
+      "size": 16960,
+      "sha256": "0f6fd9e720e390662637a3a56f86e382ac46d567801c85b565b52194180dd465"
     },
     {
       "path": "scripts/check_skill_package.py",
@@ -2556,14 +2561,19 @@
       "sha256": "987c283f3b5c0e6def5af5436d6583f6fc537522c88b270dc35ddf5e9fdb0a0e"
     },
     {
+      "path": "tests/test_changelog_commit_crosscheck.py",
+      "size": 4922,
+      "sha256": "61ece3b3d451ae35e12958a06358746f12bafc6aed50b968f326d9262772b0e1"
+    },
+    {
       "path": "tests/test_changelog_integrity.py",
       "size": 19639,
       "sha256": "5eb28588b67a12e691c037b19941f0a997073398b3476cd3aa4f8f9ac5a75df8"
     },
     {
       "path": "tests/test_ci_face_gates.py",
-      "size": 6202,
-      "sha256": "25b6b419d900368a8efc932cafeca0007c76cbbd42233efbb2024775ac9cbca9"
+      "size": 6248,
+      "sha256": "3b6990ae0c60ca1183052479f3f10f54b039b05e136e2cc20dd2855451d85ceb"
     },
     {
       "path": "tests/test_ci_surface_census.py",
