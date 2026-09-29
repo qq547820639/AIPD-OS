@@ -213,3 +213,35 @@ ruff/mypy 都不抓这一形，而本尺自己的 `resolve()` 里就躺着五条
 - 半截那次运行（中止在 92%）的日志按原样入库 `docs/audit/s103/run-s103-aborted-partial.log`：
   中止理由不是用例，是补写条目动了参与发布哈希的 `CHANGELOG.md` ⇒ 取证件作废、重锚重跑。
   这是"哈希面必须在链开始前定稿"这条工序的一次真实付费执行，那半截读数只当过程证据、不当认证。
+
+## 十、第 105 片：简写符号锚遍历全部同名候选（认证与变异读数）
+
+闭任务 #34 的 (b) 半。动手前两条前提被现算推翻（原文与更正见 `docs/audit/s105/NEXT_SLICE_CANDIDATES_2026-09-29.md`）：
+"生成物写的指针转判红档"会把 5 条**产物举例名**（`papers.json`、`assy.step` 等）当成缺陷——矩阵 6 条解析不到的引用里
+只有 1 条是真缺陷；"同名 >1 一律落 `multi`"会波及 **1323 条引用实例 / 188 个不同目标**（含 `README.md` 9 份同名、
+`config.py` 11、`__init__.py` 519）⇒ 文件级归属档一律不动，改法收窄成符号支路：首选载体没符号且目标是简写时
+遍历 `same_name_paths()`，命中判 `symbol-resolved` 并在 detail 点名真载体与同名份数，一份都没有才判 `symbol-missing`。
+产品侧另修 registry 一条 `unit_test`（`tests/test_cli.py::cmd_intake` → `::test_intake_creates_project_deterministic`，
+因为 `cmd_intake` 实住在 `src/aipd_os/cli/commands.py`，而该字段语义是"哪条测试证明它"）。
+
+读数：`symbol-missing` 21 ⇒ 17/18（这一格随语料生长，本轮末现读 18）、`symbol-resolved` 192 ⇒ 198；
+`--self-test` 25 ⇒ 27 条全立住。
+
+| 环节 | 读数 |
+| --- | --- |
+| 干净签出 | `.wt-s105 @ 58eecab`（绝对路径、仓库外）⇒ 全量 **2806 passed / 5 skipped / collected 2811**、`exitcode=0` |
+| precheck | 0 failed ✓、锚点==tag ✓、自记指纹 `7870d783f5fe` == 磁盘清单 ✓、2811 > 下界 2809 ✓、SKIP 面逐条相同 5 条 |
+| 绑定/门/验签 | `BIND_RC=0`、`GATE_RC=0`（`release_ready=True`、8 项全过）、`CV_RC=0`（11 格全绿；报告 sha256 `22106b157285` 与 PROVENANCE 一致；名册 227 文件 / 2715 个 def 双向差集空；3 条原告 passed） |
+| B 档 | 第一跑 `CV_B_RC=4`，✗ 唯一一条是 `worktree_clean：['?? docs/audit/s106/']`——红因是**同时刻派出的子代理刚建的目录**。补记入库后只复跑验签 ⇒ 终读 `CV_B_RC=0`、绿勾 11、当时 `git status --short` 0 行 |
+| 变异电池 | `docs/audit/s105/battery105.py` 基线 `self_rc=0 / spec_rc=0 / missing=18 / resolved=198` ⇒ **KILLED 4 / SURVIVED 0 / WRONG-REASON 0**，收尾 sha `80f195ed029c` 与开跑前相同、`git status` 空 |
+
+电池各臂的读数形状值得记：X1 关掉整条遍历与 X2 把候选清单截窄成永不命中，都把 `missing` 从 18 顶回 **22**（正是
+4 条 `decision_policy.py::should_ask_decision`）；X3 把 missing 洗成 **0**（resolved 216）；
+X4 只在 detail 里报错了载体（把真载体换成首选那份）⇒ `self_rc=0` 而 `spec_rc=1`——**只有常驻用例抓得到**，
+这正是"三观察面必须分工、红在别处要能分辨"的实证。
+
+两条手法账：① `battery105.py` 第一版 `ROOT = parents[2]` 从 `docs/audit/s105/` 只退到 `docs/` ⇒ 一跑就
+`FileNotFoundError`；与第 104 片同一个错，我这次写完没当场空跑，是它自己撞出来的 ⇒ 派生件写完立刻跑一次。
+② README 量具名册的差集我自己算错过：`grep -o 'scripts/[a-z_/]*\.py'` 的字符类不含数字，`c6_coverage.py`
+于是永远不命中、被误报成"README 里一个字都没有"（真零命中只有 2 台：`doc_reference_census`、
+`changelog_commit_crosscheck`）——子代理独立复核指出，我按"入门禁档须亲手重开"回读 `README.md:461` 后才改口。

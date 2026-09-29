@@ -170,6 +170,10 @@ grep -E '^python .*--self-test$' README.md
 于是过滤条件静默失效（BSD grep 另吐一行 `--include=*.py: No such file or directory`，
 读数却仍是 10，看不出坏）——选项一律排在 `--` 之前，模式用 `-e` 起头；
 分子用词边界 `\b` 而不是 `$` 收尾，见 H8。
+第三个坑：s105 原配方 `grep -l -- '--self-test' scripts/*.py scripts/research/*.py`
+靠 shell 展开目录，`scripts/research/` 一旦为空，glob 不匹配就把字面串交给 grep，
+那**一整层**从分母里消失而读数只少 1、不报错（今天该目录非空 ⇒ NOT LIVE，
+但守卫若要长在此配方上，改成 `grep -r` 自寻路更稳）。
 
 分子必须按**行首命令行**取而不是 basename 子串取，理由见 3.2 的 H4/H5；
 必须收词边界后的整行前缀而不是要求行尾，理由见 H8。
@@ -181,7 +185,7 @@ grep -E '^python .*--self-test$' README.md
 开火控制（禁手写名册，s105 项 ② `docs/audit/s105/NEXT_SLICE_CANDIDATES_2026-09-29.md:48`）：
 在临时根里造一台带 `--self-test` 的脚本 + 一份不含它的 README，断言它**立刻**进原告清单。
 
-### 3.2 会让它静默错的四件事（每条按本轮实读代码定 live/not-live）
+### 3.2 会让它静默错的八件事（每条按本轮实读代码定 live/not-live）
 
 | # | 隐患 | 今天是否成立 | 一手出处 |
 | --- | --- | --- | --- |
