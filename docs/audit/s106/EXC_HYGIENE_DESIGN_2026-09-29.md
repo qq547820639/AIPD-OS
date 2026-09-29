@@ -74,4 +74,11 @@ cd AIPD-OS
   靠 `facts()` 与名册求差（inside 81 vs register 80）才定位。带 `--emit` 重发
   81 条后 13/13 绿（`d6995da`）。第一代报告随 `.wt-s106` 重建作废，
   尾巴留档 `run-s106-gen1-tail.log`。
-- 第二代：worktree 于 `d6995da` 干净重挂，全量 + 收口链读数见 `closeout106.log`。
+- 第二代（`d6995da` 树，2819p/0f/5s 全绿）**作废在收口 precheck**：报告 `source_commit`
+  钉的是实测 HEAD 而不是 tag——worktree 全量必须带 `AIPD_SOURCE_COMMIT=<tag SHA>` 起跑，
+  这道发令旗只活在跑 pytest 的那行命令里，不在收口 .sh 内（已补进脚本头）。
+- 第三代（同一 `d6995da` 树 + 环境变量重跑）：2819 passed / 0 failed / 5 skipped，
+  collected 2824 > 下界 2812，fp ca85567b0bf1；SKIP 面逐条相同（5 条）；
+  BIND_RC=0（一次绑定两旗齐给）、GATE_RC=0（release_ready=True，8/8）、CV_RC=0 全绿；
+  B 臂（全部提交落库后复跑门 + 验签）GATE_B_RC=0 / CV_B_RC=0（`gate-b.json`、
+  `closeout-b.json`）。尾巴 `run-s106-gen3-tail.log`、链上全程 `closeout106-chain.log`。
