@@ -2562,8 +2562,8 @@
     },
     {
       "path": "tests/test_changelog_commit_crosscheck.py",
-      "size": 4922,
-      "sha256": "61ece3b3d451ae35e12958a06358746f12bafc6aed50b968f326d9262772b0e1"
+      "size": 5799,
+      "sha256": "b13bd5881720ddf74e482b64ad5ef62dcff7c7cf7c7f4f623560e66748932298"
     },
     {
       "path": "tests/test_changelog_integrity.py",
