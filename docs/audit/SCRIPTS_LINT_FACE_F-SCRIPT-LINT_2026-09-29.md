@@ -205,3 +205,36 @@ B1 的豁免语义与"数到真债"这对矛盾不能靠"补一条断言"消掉�
 写进被它检查的树**（同一形状第 99 片已记过一次），不是发布状态变了：改成一落树外、
 读完后才 `cp` 入库，同一棵 HEAD 立刻 `rc=0`。取证件面本轮无新增 `.py`/`.sh`，
 名册重 emit 后仍是 **73 条**且与已提交版本逐字节相同。
+
+## 九、第 102 片认证读数（一手，2026-09-29）
+
+机械档那一跑一次通过：干净签出 `.wt-s102`（绝对路径、仓库**外**）在 `d411350` 上跑全量
+⇒ **2792 passed / 5 skipped / 0 failed，collected 2797，exitcode=0**，报告自记清单指纹
+`44b85d697b46`（日志 `docs/audit/s102/run-s102.log`）。
+
+`bash docs/audit/s102/closeout102.sh` 四道退码 `BIND=0 GATE=0 CV=0`：
+
+| 步 | 现读 |
+| --- | --- |
+| 硬前提 | `PRECHECK OK` + `SKIP 面逐条相同：5 条`（与上一代双向差集为空） |
+| 一次绑定（两旗同给） | `BIND_RC=0`，回读 `source_commit=a66040520139`、`2792p/0f/2797t` ⇒ 提交 `64b5bbc` |
+| 发布门 | `GATE_RC=0`，`release_ready True / 未过 无 / 项数 8` |
+| 收尾验签 | `CV_RC=0`、**11 格全绿**，含 `roster_covers_tree：树 225 文件 / 2702 个 def ↔ 报告 225 文件 / 2797 条，双向差集为空`、`size_ratchet：名单 2797 条 ≥ 下界 2797`、`plaintiffs_measured：3 条本轮原告都在名单里且 passed`（`test_supervisor_package` / `test_ci_face_gates` / `test_scripts_lint_ratchet`） |
+| 回收后 B 档 | `git worktree remove --force` ⇒ `git worktree list` 只剩主树；复跑 `GATE_B_RC=0 / 8 项全过`、`CV_B_RC=0 / 11 格全绿`，复验当时 `git status --short` **0 行**（JSON 落树外再 `cp` 入库，第 100 片那条自伤没重犯） |
+
+绑定报告的 sha `81e3b15059d3` 与 `PROVENANCE.test_report.sha256` 逐字相同 ⇒ 签出删掉后证据仍在
+树内可复算。链后只动 `docs/audit/`（`run-s102.log`、`gate-b.json`、`closeout-b.json`、两份 `-b`
+日志、`drc.json` 与行钉分母那篇），被哈希的四面一字未动 ⇒ 没有第二代。
+
+链后复算：`scripts/scripts_lint_ratchet.py` rc=0（语料 60 / 有债 40 / 0 债 20 / 基线 89 格 /
+`ci.yml` 直连 20，"现状面缺陷 0 条"）；取证名册仍 **76 条**（本轮 `docs/audit` 没新增 `.py`/`.sh`）。
+
+## 十、第 102 片顺手量出来的一条尺子盲区（不在本面，另片处理）
+
+改 `scripts/` 行结构之前查"有没有人按行号引用它们"，撞出 `doc_reference_census` 只判
+`line > EOF`；用**它自己的** `LIVE`/`HISTORY` 作用域现算：live 面裸行钉 **11 处**（全在
+`docs/architecture/truth_architecture.md`，逐条 `resolved`）、history 面 **974 处**（其中 246 条
+是它自己认定的历史面缺陷，只报不判）。我第一版用自写的 `rglob(basename)` 数出"live 面 0 处"
+还把 `state/db.py:1073` 读成越界——那是我的临时尺撞了同名文件，不是语料缺陷。
+分母、下一刀形状与那条"借判据要连解析面一起借"的更正全部落在
+`docs/audit/LINE_PIN_BLINDSPOT_MEASURED_2026-09-29.md`，任务表里第 103 片入口按它更正过。
