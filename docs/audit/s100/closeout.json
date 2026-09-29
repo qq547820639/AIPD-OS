@@ -1,0 +1,80 @@
+{
+ "command": "closeout verify",
+ "problems": [],
+ "violations": [],
+ "checks": {
+  "report_bound_to_provenance": {
+   "ok": true,
+   "detail": "报告 sha256=c0768b4aef30 与 PROVENANCE 记录一致",
+   "kind": "violation"
+  },
+  "counts_counted_from_roster": {
+   "ok": true,
+   "detail": "现数 passed=2790 skipped=5 total=2795，summary 与 PROVENANCE 两处副本一致",
+   "kind": "violation"
+  },
+  "terminal_clean": {
+   "ok": true,
+   "detail": "exitcode=0，2795 条无 failed/error",
+   "kind": "violation"
+  },
+  "roster_covers_tree": {
+   "ok": true,
+   "detail": "树 225 文件 / 2700 个 def，报告 225 文件 / 2795 条，双向差集为空",
+   "kind": "violation"
+  },
+  "pinned_source_binding": {
+   "ok": true,
+   "detail": "报告与 PROVENANCE 都绑在 a66040520139405095648461f7144d4f00629924，且它是 报告实测 HEAD 28b507a9 的祖先",
+   "kind": "violation"
+  },
+  "content_parity_measured": {
+   "ok": true,
+   "detail": "2 条清单哈希用例都在名单里并 passed：测的就是这棵树",
+   "kind": "violation"
+  },
+  "report_fingerprint_recorded": {
+   "ok": true,
+   "kind": "ok",
+   "detail": "报告自带清单指纹 8fa29399bddf"
+  },
+  "report_fingerprint_matches_disk": {
+   "ok": true,
+   "detail": "报告指纹与磁盘清单 8fa29399bddf 同源（只换 generated_at 不算变）",
+   "kind": "violation"
+  },
+  "worktree_clean": {
+   "ok": true,
+   "detail": "工作树干净",
+   "kind": "violation"
+  },
+  "plaintiffs_measured": {
+   "ok": true,
+   "detail": "3 条本轮原告都在名单里且 passed",
+   "kind": "violation"
+  },
+  "size_ratchet": {
+   "ok": true,
+   "detail": "名单 2795 条 ≥ 下界 2795",
+   "kind": "violation"
+  }
+ },
+ "readings": {
+  "report_entries": 2795,
+  "outcome_hist": {
+   "passed": 2790,
+   "skipped": 5
+  },
+  "report_root": "/Volumes/Extra/CodeProj/AI全链路自研/.wt-s100",
+  "report_duration_s": 398.51734018325806,
+  "provenance_binds_report": true,
+  "tree_files": 225,
+  "tree_defs": 2700,
+  "report_files": 225,
+  "worktree_head": "ee0c5c8a8b072fb6138b00b77bdaa8f9e41ae367",
+  "pinned_commit": "a66040520139405095648461f7144d4f00629924",
+  "report_fingerprint": "8fa29399bddf",
+  "disk_manifest_fingerprint": "8fa29399bddf"
+ },
+ "ok": true
+}
