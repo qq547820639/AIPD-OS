@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 SRC = ROOT / "scripts" / "doc_reference_census.py"
 SPEC = "tests/test_doc_reference_census.py"
 PY = sys.executable

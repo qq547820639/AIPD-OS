@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/docs/audit/s105/battery105.py", line 119, in <module>
+    sys.exit(main())
+  File "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/docs/audit/s105/battery105.py", line 76, in main
+    orig = SRC.read_text(encoding="utf-8")
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/pathlib.py", line 1256, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/pathlib.py", line 1242, in open
+    return io.open(self, mode, buffering, encoding, errors, newline,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/pathlib.py", line 1110, in _opener
+    return self._accessor.open(self, flags, mode)
+FileNotFoundError: [Errno 2] No such file or directory: '/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS/docs/scripts/doc_reference_census.py'
