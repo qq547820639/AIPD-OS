@@ -172,8 +172,79 @@ def test_every_ci_command_reports_a_line_and_that_line_says_that_command() -> No
     bad = [c for c in cmds if not c["line"] or c["at"] not in text[c["line"] - 1]]
     assert not bad, bad[:3]
     assert all(c["line"] <= len(text) for c in cmds), max(c["line"] for c in cmds)
+    # 第 98 片把这一格从"每命令一个行号"升级成"每 (job, 行号) 都对账"
+    for c in cmds:
+        for job, lines in c["occurrences"].items():
+            for ln in lines:
+                assert c["at"] in text[ln - 1], (c["command"], job, ln, text[ln - 1])
     rep = csc.audit(ROOT)
     assert rep["corpus"]["ci_commands"] == len(cmds), rep["corpus"]
+
+
+def test_a_command_running_in_several_jobs_pins_every_one_of_them() -> None:
+    """真仓库现读：跨 job 复用的命令要**逐 job** 有钉，不许只留第一条命中的那个行号。
+
+    第 94 片的 `line` 是「这条命令在 workflow 里第一次出现的那一行」，而 `job` 列是一串名字
+    ⇒ 一条命令跑在 13 个 job 里时，那一个行号只证明其中一处（现读那三条 pip 安装命令就是
+    13/2/8 个 job 共用一个钉）。本片把行钉按 `(job, line)` 记账，判据要求两边同集。
+    """
+    cmds, probs = csc.ci_commands(ROOT)
+    assert not probs, probs
+    multi = [c for c in cmds if c["job_count"] > 1]
+    assert multi, ("本条的前提是「这个仓库有跨 job 复用的命令」；一个都没有时"
+                   "这不是「没缺陷」而是前提塌，要把本用例改名并重定前提")
+    for c in multi:
+        assert sorted(c["occurrences"]) == sorted(c["job"].split(",")), c
+        assert all(ls for ls in c["occurrences"].values()), c
+        assert c["lines_total"] >= c["job_count"], c
+        # `line` 是"排序后第一个跑它的 job"的那一行，不是全仓最小行号——
+        # 这条断言钉的就是这个定义本身（写错成 min(all) 也是一种自证）
+        first = sorted(c["occurrences"])[0]
+        assert c["line"] == min(c["occurrences"][first]), (c["line"], first, c["occurrences"])
+    rep = csc.audit(ROOT)
+    assert not [v for v in rep["violations"] if v["field"].startswith("CI面行钉")], \
+        rep["violations"]
+
+
+def test_a_pin_pointing_at_a_line_without_the_command_is_named() -> None:
+    """第二查走纯函数：正常解析时行号与文本天然自洽，只有解析面退化才会错。
+
+    所以这一支不许靠"写个坏 YAML 碰运气"来喂——直接递行表与合成行，
+    才证明这条判决不是恒不发生的摆设（同一形状见第 96 片"≥2 规则"那一臂）。
+    """
+    lines = ["jobs:", "  a:", "    steps:", "      - run: |", "          pytest -q",
+             "          mypy ."]
+    wrong = {"command": "mypy .", "at": "mypy .", "line": 4, "occurrences": {"a": [4]}}
+    got = csc.line_pin_defects([wrong], lines)
+    assert [g["field"] for g in got] == ["CI面行钉指错行"], got
+    assert "run: |" in got[0]["detail"], got[0]
+    right = dict(wrong, line=6, occurrences={"a": [6]})
+    assert csc.line_pin_defects([right], lines) == []
+    越界 = {"command": "mypy .", "at": "mypy .", "line": 99, "occurrences": {"a": [99]}}
+    assert [g["field"] for g in csc.line_pin_defects([越界], lines)] == ["CI面行钉指错行"]
+
+
+def test_a_second_job_that_cannot_be_pinned_fires_instead_of_shrinking(tmp_path: Path) -> None:
+    """两个 job 跑同一条命令、其中一个形状定不到行号 ⇒ 报「不穷举」，不是悄悄只报一条。
+
+    这一支同时钉第 94 片那格的多 job 版：折叠标量本身已有 `run_mark_unmatched` 这个前提诊断，
+    但那条只说「有 N 个步骤定不到行号」，不指名**哪条命令的哪个 job 没钉**——
+    而消费表与人读的都是命令行，缺这一格就会把「其中几个 job 没人钉」读成「全都钉了」。
+    """
+    _wf(tmp_path, "name: two\njobs:\n"
+                  "  alpha:\n    steps:\n      - name: T\n        run: |\n"
+                  "          pytest -q\n"
+                  "  beta:\n    steps:\n      - name: T\n        run: >-\n"
+                  "          pytest\n          -q\n")
+    rows, probs = csc.ci_commands(tmp_path)
+    by = {r["command"]: r for r in rows}
+    assert by["pytest -q"]["job_count"] == 2, by["pytest -q"]
+    assert sorted(by["pytest -q"]["occurrences"]) == ["alpha", "beta"], by["pytest -q"]
+    assert any(p.startswith("run_mark_unmatched") for p in probs), probs
+    rep = csc.audit(tmp_path)
+    fired = {(v["field"], v["written"]) for v in rep["violations"]}
+    assert ("CI面行钉不穷举", "pytest -q") in fired, fired
+    assert rep["buckets"]["line-defect"] >= 1, rep["buckets"]
 
 
 def test_folded_continuation_and_comment_block_report_the_start_line(tmp_path: Path) -> None:

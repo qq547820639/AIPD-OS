@@ -58,6 +58,12 @@ def ci_commands(root: Path, workflow_rel: str = WORKFLOW_REL) -> tuple[list[dict
     `pip install` 与一条没被登记的 `mypy` 在这件事上地位相同。
     `\` 续行折成一条。按命令文本去重（同一条命令在 11 个 job 里跑是一格账），
     出现次数留在 `jobs` 列表里，不折成多条。
+
+    第 98 片起行钉按 **(job, line) 全量记账**（`occurrences` / `lines_total`）：
+    去重成一格之后，`line` 只剩「排序后第一个跑它的 job」的那一行，而 `job` 列是一串名字——
+    两列不同源，一条命令跑 13 个 job 时那一个行号只钉住一处。
+    `line` 保留是为了人读的那句「在哪一行」，但它现在明确是**首处**；
+    穷举由 `occurrences` 承担，并由 `line_pin_defects()` 两条判决守（不穷举 / 指错行）。
     """
     p = root / workflow_rel
     if not p.is_file():
@@ -93,16 +99,28 @@ def ci_commands(root: Path, workflow_rel: str = WORKFLOW_REL) -> tuple[list[dict
                             "line": (base + off) if base else 0,
                             "at": at,
                             "swallow": swallow.group(0).strip() if swallow else "",
-                            "soft": soft})
+                            "soft": soft, "occ": {}})
                 if soft:
                     ent["soft"] = True
                 if swallow and not ent["swallow"]:
                     ent["swallow"] = swallow.group(0).strip()
                 if job not in ent["jobs"]:
                     ent["jobs"].append(job)
+                # 第 98 片：行钉要按 **(job, line)** 记账。只留第一条命中的那个行号，
+                # 一条命令在 13 个 job 里跑就只剩 1 个钉——`job` 列是一串名字，
+                # `line` 列是其中某一个的行，两列不同源，读的人以为指的是同一处。
+                # 定不到行号的 job 也要在 `occ` 里露头（给空列表），穷举检查才看得见它。
+                ent["occ"].setdefault(job, [])
+                if ent["line"] == 0 and base:
+                    ent["line"] = base + off
+                if base:
+                    ent["occ"][job].append(base + off)
     out = [{"job": ",".join(v["jobs"]), "step": v["step"], "line": v["line"],
             "at": v["at"], "command": k, "swallow": v["swallow"], "soft": v["soft"],
-            "job_count": len(v["jobs"])} for k, v in by_cmd.items()]
+            "job_count": len(v["jobs"]),
+            "occurrences": {j: sorted(ls) for j, ls in sorted(v["occ"].items())},
+            "lines_total": sum(len(ls) for ls in v["occ"].values())}
+           for k, v in by_cmd.items()]
     if unmatched:
         problems_extra.append(f"run_mark_unmatched: 有 {unmatched} 个 run 步骤定不到行号"
                               "（块标量形状变了或解析面跟不上）⇒ 那些命令的 `line` 记 0")
@@ -204,6 +222,35 @@ _SWALLOW_RE = re.compile(r"(\|\|\s*(?:true|:)\s*$|\bset\s+\+e\b|--exit-zero\b|"
                          r"--warn-only\b|--ignore-errors\b)")
 
 
+def line_pin_defects(cmds: list[dict], file_lines: list[str]) -> list[dict]:
+    """行钉两查：每个跑这条命令的 job 都要有行号；记下的行号那一句原文要含这条命令。
+
+    抽成纯函数是为了让第二查**可被喂到**：正常解析出来的行号与文件文本天然自洽，
+    只有解析面退化（折叠标量、续行偏移算错、锚法换掉）才会出现"行号指到别处"，
+    而那种形状不能靠写真 YAML 夹具来喂——所以让调用方递行表，测试直接给一行假钉。
+    """
+    defects: list[dict] = []
+    for c in cmds:
+        occ = c.get("occurrences") or {}
+        missing = sorted(j for j, ls in occ.items() if not ls)
+        if missing:
+            defects.append({
+                "field": "CI面行钉不穷举", "line": c["line"], "written": c["command"],
+                "detail": f"这条命令跑在 {len(occ)} 个 job 里，其中 {missing} 定不到行号"
+                           f"（第 94 片那格 `run_mark_unmatched` 的多 job 版）⇒ "
+                           "只报一个行号会把「其中几个 job 没人钉」读成「全都钉了」"})
+        for job, lines in occ.items():
+            for ln in lines:
+                if ln < 1 or ln > len(file_lines) or c["at"] not in file_lines[ln - 1]:
+                    got = file_lines[ln - 1].strip() if 1 <= ln <= len(file_lines) else "<越界>"
+                    defects.append({
+                        "field": "CI面行钉指错行", "line": ln, "written": c["command"],
+                        "detail": f"{job!r} 的钉落在第 {ln} 行，而那一行原文是 {got[:70]!r}，"
+                                  f"不含命令内容首行 {c['at'][:70]!r} ⇒ 锚法与解析面已经不同源，"
+                                  "这一格不许继续被当成「那一行在跑这条命令」"})
+    return defects
+
+
 def load_surface_register(root: Path, rel: str = SURFACE_REGISTER_REL
                           ) -> tuple[dict[str, dict], list[str]]:
     """《消费表》：命令 → {consumers, kind, why}。不在树里读成空册（所有命令判「无人守」）。"""
@@ -250,8 +297,17 @@ def audit(root: Path) -> dict[str, Any]:
     reg, rproblems = load_surface_register(root)
     problems += rproblems
     violations: list[dict] = []
-    buckets = {"consumed": 0, "unwatched": 0, "ci-only": 0, "soft-declared": 0}
+    buckets = {"consumed": 0, "unwatched": 0, "ci-only": 0, "soft-declared": 0,
+               "line-defect": 0}
     seen: set[str] = set()
+    wf_lines: list[str] = []
+    wf_path = root / WORKFLOW_REL
+    if wf_path.is_file():
+        wf_lines = wf_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    for d in line_pin_defects(cmds, wf_lines):
+        buckets["line-defect"] += 1
+        violations.append({"field": d["field"], "doc": WORKFLOW_REL, "line": d["line"],
+                           "written": d["written"], "detail": d["detail"]})
     for c in cmds:
         key = c["command"]
         seen.add(key)
@@ -328,6 +384,10 @@ def render(rep: dict[str, Any]) -> str:
                  f"消费表 {c['register_size']} 条")
     lines.append(f"归属：已接住 {b['consumed']} / 免跑有理由 {b['ci-only']} / "
                  f"无人守 {b['unwatched']} / 被声明为可失败 {b['soft-declared']}")
+    multi = [c for c in rep["commands"] if c["job_count"] > 1]
+    lines.append(f"行钉：跨 job 命令 {len(multi)} 条共 {sum(c['lines_total'] for c in multi)} 处"
+                 f"（`line` 只给首处，穷举看 `occurrences`）；行钉缺陷 {b['line-defect']} 处"
+                 if multi else "行钉：没有跨 job 复用的命令（这一格今天为空）")
     for v in rep["violations"]:
         lines.append(f"  ✗ {v['field']} {v['doc']}:{v['line']} `{v['written']}` ⇒ {v['detail']}")
     for p in rep["problems"]:
@@ -510,6 +570,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         entries = [{"command": c["command"], "kind": "TODO", "consumers": [],
                     "why": "", "job_at_emit_time": c["job"], "line_at_emit_time": c["line"],
+                    "lines_per_job_at_emit_time": c["occurrences"],
                     "line_text_at_emit_time": c["at"],
                     "soft_declared_at_emit_time": bool(c["swallow"] or c["soft"])}
                    for c in cmds]

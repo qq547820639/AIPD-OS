@@ -951,6 +951,33 @@
   「以为有闸」）。全量用例数 1953 → 1961。证据见
   `docs/audit/DFM_HOLE_LAND_F-DFM-01_2026-09-25.md`。
 
+- **v5.59 F-CI-SURFACE 第 98 片：CI 的行钉从"每命令一行"改成"每 (job, 行) 一处"**：
+  第 94 片把 `line` 从恒 0 补成 `ci.yml:NNN`，但 `ci_commands()` 按命令文本去重，行号取的是
+  **第一个命中它的 job** ⇒ `job` 列是一串名字而 `line` 只有一个。现读（改动前）：32 条命令 /
+  17 个 job 里有 3 条跨 job —— `python -m pip install --upgrade pip setuptools wheel` 跑在
+  13 个 job、`pip install -e ".[full,dev]"` 8 个、`pip install -e ".[dev]"` 2 个，
+  共 23 处执行点只钉住 3 个 ⇒ 其余 20 处"那一行确实在跑这条命令"从没被任何判据核过。
+  现在每命令另记 `occurrences`（逐 job 的行集）与 `lines_total`，**定不到行号的 job 也以空列表露头**
+  （否则"穷举"没有可核对的对象）；同 job 内不做 `set()` 去重——两次出现行号天然不同，
+  那是够不到的防御。新增两条判决 `CI面行钉不穷举` / `CI面行钉指错行`，做成**纯函数**
+  `line_pin_defects(cmds, file_lines)`：第二查在正常解析下天然自洽，不拆成纯函数就只能靠
+  "写个坏 YAML 碰运气"，读不到就等于没牙（同第 96 片"≥2 规则"那一臂的形状）。
+  `--emit-register` 另存 `lines_per_job_at_emit_time`，是 emit 时刻元数据、判据不读它
+  （与 `cited_by_at_emit_time` 同档，不让名册长出第二份事实）；`render()` 现读加一行
+  「跨 job 命令 3 条共 23 处（`line` 只给首处，穷举看 occurrences）；行钉缺陷 0 处」，
+  `buckets` 多一档 `line-defect`（位置轴，不参与消费档位求和）。
+  选型按两候选比过（引 `zizmor` 1.30.1 / MIT / "Static analysis for GitHub Actions"，
+  PyPI JSON 一手读；或扩本仓既有尺）：决定性判据是覆盖面——"命令 ↔ 本地收口链读不读它"
+  这张账只有后者有，引前者只能加一层不能省一层；**其规则集与输出 schema 未亲验**，
+  对比只按能核到的元数据下结论。
+  常驻 `tests/test_ci_surface_census.py` 12 → 15 条（原那条"每命令都有行号且那行含它"升级成
+  逐 `(job, line)` 对账），`15 passed`；电池 `docs/audit/s98/battery98.py` V0 对照 + 4 支撤销臂
+  **KILLED 4/4**（一开始就按第 96/97 片的硬化形状写：`ast.parse` 语法门 + `-B` +
+  `sys.implementation.cache_tag` + 每臂复位后清缓存）。
+  两处口径边界写进文档：`lines_total` 记的是 (job, 行) 对而不是 matrix 展开后的运行次数；
+  折叠标量 `>-` **只折一行**时锚仍成功（值与文件行逐字包含），第一版夹具因此读不到
+  `run_mark_unmatched`——要两行才造得出"定不到"，本轮付了一次空跑。
+  四段选型与读数见 `docs/audit/CI_LINE_PINS_F-CI-SURFACE_2026-09-29.md`。
 - **v5.58 F-PROD-READER 第 97 片：把发布工具里"没人调的四段"接进常驻，并换掉已废弃的版本号读法**：
   先更正上一片我自己记错的一条：「`release_evidence.py` 没有常驻读者」是**假否定结论**——
   按"否定结论要穷举全部书写形态"的规矩一手复算，`grep -rl release_evidence tests/` 现读命中 7 个文件

@@ -1,0 +1,9 @@
+原文件 sha=b1c79fb8cd74
+[ANCHORS OK] 4 支臂、4 处编辑各命中 1 次
+[CONTROL OK] V0 原样全绿
+[KILLED]   V1-occurrence-not-per-job（行钉不再逐 job 记账）被抓住 2 条：tests/test_ci_surface_census.py::test_a_command_running_in_several_jobs_pins_every_one_of_them; tests/test_ci_surface_census.py::test_a_second_job_that_cannot_be_pinned_fires_instead_of_shrinking
+[KILLED]   V2-line-judge-shorted（行钉两条判决整个短路）被抓住 2 条：tests/test_ci_surface_census.py::test_a_pin_pointing_at_a_line_without_the_command_is_named; tests/test_ci_surface_census.py::test_a_second_job_that_cannot_be_pinned_fires_instead_of_shrinking
+[KILLED]   V3-text-check-dropped（第二查（行号处的原文）整个摘掉）被抓住 1 条：tests/test_ci_surface_census.py::test_a_pin_pointing_at_a_line_without_the_command_is_named
+[KILLED]   V4-only-out-of-range-checked（第二查退化成只判越界）被抓住 1 条：tests/test_ci_surface_census.py::test_a_pin_pointing_at_a_line_without_the_command_is_named
+合计 KILLED 4 / 4；其余按判决分类：无
+收尾复算 sha=b1c79fb8cd74（应等于 b1c79fb8cd74）

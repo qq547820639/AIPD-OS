@@ -584,6 +584,17 @@ python scripts/ci_surface_census.py --self-test
 #     都算"这段不是一道门"——第 91 片立尺的理由是裸 `pip-licenses` 退码恒 0，
 #     这一档把"本来会红但被声明可忽略"的写法一并拦住。现读 32 条命令、软门 0 条
 #     （0 的真伪由同一条正则扫原文对账，见 docs/audit/CI_SURFACE_LINES_F-CI-SURFACE_2026-09-29.md §一）。
+#   ↑ 第 98 片把**行钉**这一维补成同源：`ci_commands()` 按命令文本去重，所以 `line` 只是
+#     「排序后第一个跑这条命令的 job」的那一行，而 `job` 列是一串名字——一条命令跑 13 个 job 时
+#     其余 20 处的「这一行确实在跑它」从没被核过。现在每命令另记 `occurrences`（逐 job 的行集）
+#     与 `lines_total`，并新增纯函数 `line_pin_defects()` 两条判决：`CI面行钉不穷举`
+#     （某 job 有命令却没钉）与 `CI面行钉指错行`（钉上那行的原文不含这条命令）。
+#     第二查做成纯函数（调用方递文件行表）是因为正常解析下它天然自洽，
+#     不这么拆就只能靠"写个坏 YAML 碰运气"；合成行直接喂它才有牙（电池臂 V3/V4 各撤一查）。
+#     名册另存 `lines_per_job_at_emit_time`，那是 emit 时刻的元数据、判据不读它
+#     （与 `cited_by_at_emit_time` 同档，避免名册里长出第二份事实）。
+#     口径边界：`lines_total` 记的是 (job, 行) 对，不是 matrix 展开后的运行次数。
+#     取证与选型见 docs/audit/CI_LINE_PINS_F-CI-SURFACE_2026-09-29.md。
 python scripts/dependency_license_gate.py
 #   ↑ 依赖许可证门禁（第 92 片）。权威面是**已装发行包的元数据**，从 `pyproject.toml` 的
 #     声明根做闭包 BFS；逐包落七档之一：allowed / forbidden（GPL 家族，直接红）/

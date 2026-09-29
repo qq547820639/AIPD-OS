@@ -356,6 +356,13 @@
       "hardcoded": true,
       "line": 44,
       "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
+    },
+    {
+      "path": "docs/audit/s98/battery98.py",
+      "rule": "battery",
+      "hardcoded": true,
+      "line": 31,
+      "reason": "变异电池按设计就地改**靶文件**（写回后按 sha 复原），仓库绝对路径是它的作业方式；改成仓库相对会让它去改别的树"
     }
   ]
 }
