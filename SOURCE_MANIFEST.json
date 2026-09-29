@@ -2,7 +2,7 @@
   "name": "AIPD-OS source manifest",
   "version": "5.6.0",
   "source_commit": "a66040520139405095648461f7144d4f00629924",
-  "generated_at": "2026-09-29T01:02:33+00:00",
+  "generated_at": "2026-09-29T01:15:12+00:00",
   "coverage": "git ls-files tracked sources (generated/self-changing files excluded)",
   "files": [
     {
@@ -127,8 +127,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "size": 386306,
-      "sha256": "ea753d8683b93dc81cb8a20927cdf018573e0a288396f07b1c8d46d7486354d4"
+      "size": 388200,
+      "sha256": "c2aac5f2e1a6d2a83e74d3bbcc2b4b1342100c19a74ca87ad0f4ce53ff43d610"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -157,8 +157,8 @@
     },
     {
       "path": "README.md",
-      "size": 75001,
-      "sha256": "f7c714bb0bbec155cf4c77f1424a7b673d0a7a690710dba5b3447334b0c64129"
+      "size": 75736,
+      "sha256": "53be0f52a2d0954e9d8c5efc5f52b7bf75265b5039e6bc70bde0e6e6405c2f08"
     },
     {
       "path": "RELEASE_SIGNING.md",
@@ -757,8 +757,8 @@
     },
     {
       "path": "scripts/closeout_verifier.py",
-      "size": 43409,
-      "sha256": "e3978f9e5af08c5e741d0bebb4ab8071349870dbf8a0d557def2e1adfc0cfa67"
+      "size": 44759,
+      "sha256": "b880f70c4a3e671d574cc71e4edac85a754dbae69f23e13de02680f52829a73f"
     },
     {
       "path": "scripts/command_surface_census.py",
@@ -2262,8 +2262,8 @@
     },
     {
       "path": "tests/conftest.py",
-      "size": 3610,
-      "sha256": "a2008d4a9a7e5721abc52583946389f7c73400f0b90b972612c93d2200f74b98"
+      "size": 4162,
+      "sha256": "d04c7e550652494c0454d20b4850fb225d3b83ab32a42815ac5cc9ee15544780"
     },
     {
       "path": "tests/fixtures/__init__.py",
@@ -3207,8 +3207,8 @@
     },
     {
       "path": "tests/test_report_manifest_fingerprint.py",
-      "size": 10378,
-      "sha256": "598760dcd525afbe3618c3c9daf846def03f0c530435743d47ca8068d11f5294"
+      "size": 13610,
+      "sha256": "8f6a900f3162153d3d9017ac600812d34e844b6ee0c215b884da8273955bed31"
     },
     {
       "path": "tests/test_research_chain.py",
