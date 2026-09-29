@@ -171,6 +171,16 @@ D4 一开始只报"抓住 0 条 rc=1"，是电池的半径解析只收 `FAILED` 
    意图与位置分开，位置可以过期，意图不能被打错。
 
 **电池**：`docs/audit/s103/battery103.py`，A0 + 6 臂 **KILLED 6/6**（含债中性门与理由门，
+
+历史树 `8f62f7e` 现算：`symbol-missing` 共 **12 条**，**全部在历史面**（现状面 0 条）。逐条读完分四型，
+每型都带"仓内 grep 过的出处数"作证据（`tmp/drc_now.json` 那一跑的 `--json` 现读，脚本已删）：
+
+| 型 | 条数 | 证据 | 判定 |
+| --- | --- | --- | --- |
+| 用例/类被改名或删掉，历史文档没跟上 | 6 | `tests/test_truth_propagate_cli.py::TestUnwiredHalfStaysVisible`（4 篇文档引同一枚，仓内 `grep -rl` 命中 **0** 个 `.py`）；`test_dxf_rework.py` 那两条同名长用例也 0 命中（第 70/71 片把四类改成五类时重命名过） | 当时为真、现在过期 ⇒ 历史面只报不改 |
+| **载体写错**（符号存在，但不在那台文件里） | 3 | `capability_matrix.md → tests/test_cli.py::cmd_intake`（`cmd_intake` 实际住在 `src/aipd_os/registry_data.py` 等 3 处，`test_cli.py` 里没有）；`scripts/aipd_supervisor.py::Supervisor.run_supervisor`（supervisor 在 P1-1 已整体迁到 `src/aipd_os/supervisor/`，wrapper 只 re-export） | 这两条**不是历史**：前者是**生成物**写的指针——`capability_matrix.py` 会把 registry 字段原样渲染成 `file::symbol`，字段写错它就跟着错，且没有任何尺子看过它 ⇒ 已进任务清单当入口；后者是文件搬迁后的旧载体 |
+| **同名简写撞错文件** | 1 | `decision_policy.py::should_ask_decision`：真身是 `src/aipd_os/execution/decision_policy.py`，而 `resolve()` 的 basename 解法先撞上 `scripts/decision_policy.py`（该文件里没这个符号）⇒ 判成 `symbol-missing` | 尺子自己的口径缺口：简写在**多同名**时该判 `multi` 而不是先撞到的那个；现状面暂未受害（这类指针在现状面是 0），但这是真盲区 ⇒ 记进本节"还没闭的" |
+| 散文里的截断名 | 2 | `tests/test_packaging.py::test_`（文档写的是"`test_packaging.py::test_*`"这类通配式提法，`SYM_RE` 把 `test_` 当符号名） | 形状病不是事实病；不在现状面 ⇒ 不判红。要收的话给 `SYM_RE` 加一条"`*`/截断 ⇒ `elided`"的档，代价是再一档归属措辞镜像 |
 靶文件在 CI 的 ruff 面上，所以变异形状一律避免常量条件；收尾 sha 与开跑前相同）。
 `--self-test` 现报 25 条合成读数全立住（条数只以该行自报为准，本文与 README 都不抄它）。
 另外本片顺手补了一把新尺：`tests/test_unreachable_code.py`（函数体顶层 `return` 之后还挂语句 ⇒ 判红；
