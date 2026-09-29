@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-09-29T15:38:34",
-  "source_commit": "bd544c0a054ed35d21ccf9df65e3299e51d988c7",
+  "generated_at": "2026-09-29T18:29:23",
+  "source_commit": "282b51a94310545e45cfe50c722f859662bcdf25",
   "package_version": "5.6.0",
   "generator_version": "capability_matrix_v1",
   "command": "python scripts/capability_matrix.py --repo . --out docs/audit",
   "repo_root": "/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS",
   "default_branch": "main",
-  "latest_commit_sha": "bd544c0a054ed35d21ccf9df65e3299e51d988c7",
-  "latest_commit_time": "2026-09-29 14:46:45 +0800",
+  "latest_commit_sha": "282b51a94310545e45cfe50c722f859662bcdf25",
+  "latest_commit_time": "2026-09-29 18:24:34 +0800",
   "version": "5.6.0",
   "file_tree": {
     "top_entries": [
@@ -82,11 +82,11 @@
       "migrations": 2,
       "references": 36,
       "releases": 4,
-      "scripts": 46,
+      "scripts": 47,
       "src": 0,
       "state_service": 3,
       "templates": 3,
-      "tests": 228,
+      "tests": 229,
       "tmp": 0
     }
   },
@@ -118,44 +118,27 @@
     "present": true,
     "version": "5.6.0",
     "parsed": true,
-    "total_files": 695,
-    "hash_matches": 691,
-    "hash_mismatch_count": 4,
+    "total_files": 698,
+    "hash_matches": 696,
+    "hash_mismatch_count": 2,
     "mismatches": [
-      {
-        "path": "CHANGELOG.md",
-        "reason": "hash_mismatch",
-        "expected": "3bfcf6c9311e8478447df2d6d622b8eb6062eeec7d75327e48611e29f8341265",
-        "actual": "7808093dd35358684a3456c52b0035f6c381eb45f10e7632bff8a22c0d0ece8c"
-      },
-      {
-        "path": "docs/architecture/truth_architecture.md",
-        "reason": "hash_mismatch",
-        "expected": "fd65e75a503b176a493063424a5686c31a425cfd4d0d91320669d8485c5a1953",
-        "actual": "d508937c4d224e2fd81b4fb90973a830127c088ed11365e4e345a875c50d7bbf"
-      },
       {
         "path": "scripts/doc_reference_census.py",
         "reason": "hash_mismatch",
-        "expected": "96f46d4fb6b73186eeeb9640e898403a6344b5050ddcea7ac66075fd0fe1f9d5",
-        "actual": "70a9127a89933e224ecc339a213ab1b5179de3cc86feeaef1be577f99a2ed0a4"
+        "expected": "70a9127a89933e224ecc339a213ab1b5179de3cc86feeaef1be577f99a2ed0a4",
+        "actual": "6335c75677d19b6a938bc4eb2c8196d6e3b3c46333eb475d32768dca6d8fd094"
       },
       {
-        "path": "tests/test_doc_reference_census.py",
+        "path": "src/aipd_os/registry_data.py",
         "reason": "hash_mismatch",
-        "expected": "41cabf7024153f721d62eab23463acc21f35e7b92401f6338867e56251d414cb",
-        "actual": "d31fc00d55921d9625ed5c0db330dca03fe46d1d7117953a8b15953fbd2c3ce1"
+        "expected": "a86599b53901083aadd69902a4c8fd0183cd43c19888347d69670c4b10a9b764",
+        "actual": "6ba75351d69368244c49828b98a528aafd91f04e5d0cddf035a3344243530d48"
       }
     ]
   },
   "untracked_or_generated": [
-    " M CHANGELOG.md",
-    " M docs/architecture/truth_architecture.md",
-    " M docs/audit/DOC_REFERENCE_CENSUS_F-DOC-REF_2026-09-26.md",
     " M scripts/doc_reference_census.py",
-    " M tests/test_doc_reference_census.py",
-    "?? docs/audit/s103/",
-    "?? tests/test_unreachable_code.py",
+    " M src/aipd_os/registry_data.py",
     "generated build/bundle_stage/src/aipd_os.egg-info",
     "generated src/aipd_os.egg-info"
   ],
