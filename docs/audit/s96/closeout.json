@@ -1,12 +1,7 @@
 {
  "command": "closeout verify",
  "problems": [],
- "violations": [
-  {
-   "check": "worktree_clean",
-   "detail": "工作树有 2 处未提交改动：['M docs/audit/s96/closeout96.sh', ' M docs/audit/s96/derive_closeout96.py']"
-  }
- ],
+ "violations": [],
  "checks": {
   "report_bound_to_provenance": {
    "ok": true,
@@ -49,8 +44,8 @@
    "kind": "violation"
   },
   "worktree_clean": {
-   "ok": false,
-   "detail": "工作树有 2 处未提交改动：['M docs/audit/s96/closeout96.sh', ' M docs/audit/s96/derive_closeout96.py']",
+   "ok": true,
+   "detail": "工作树干净",
    "kind": "violation"
   },
   "plaintiffs_measured": {
@@ -76,10 +71,10 @@
   "tree_files": 223,
   "tree_defs": 2677,
   "report_files": 223,
-  "worktree_head": "7cc1ba74c34dd1057cbdc2983698bdb414c51585",
+  "worktree_head": "29c603f0a32000221f1fe6a43394b7af1d8b43d6",
   "pinned_commit": "a66040520139405095648461f7144d4f00629924",
   "report_fingerprint": "6df360f50ace",
   "disk_manifest_fingerprint": "6df360f50ace"
  },
- "ok": false
+ "ok": true
 }
