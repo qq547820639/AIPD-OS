@@ -10,6 +10,9 @@
 #   两条已记录的卫生规矩照抄：门的 JSON/stdout 与验签的 JSON 一律**落树外**再 cp 入库
 #   （第 91/100 片两次实测：写进被检查的树 ⇒ `workspace_clean`/`worktree_clean` 必自红）；
 #   取证件先 commit 再跑验签（未跟踪也算脏）。
+#   第 106 片补记（第一代作废的另一课）：worktree 里的全量 pytest 必须带
+#   `AIPD_SOURCE_COMMIT=<tag SHA>` 起跑——conftest 只在环境变量在场时才把报告锚钉在 tag，
+#   否则钉实测 HEAD（d6995da），precheck 的「报告锚点 == tag SHA」当场红。
 set -u
 R=/Volumes/Extra/CodeProj/AI全链路自研/AIPD-OS
 WT=/Volumes/Extra/CodeProj/AI全链路自研/.wt-s106
