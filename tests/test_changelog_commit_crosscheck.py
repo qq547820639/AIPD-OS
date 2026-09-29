@@ -92,3 +92,17 @@ def test_self_test_is_actually_run() -> None:
     assert len(stated) == 1, f"自报行应当恰好一条，实得 {stated}"
     assert "全部对上" in stated[0]
     assert out.count("✓立住") == int(stated[0].split("上")[1].split("条")[0]), out
+
+
+def test_a_path_segment_in_a_subject_is_not_an_accounting_claim() -> None:
+    """主题里的路径段不算开账（第 105 片收尾时本尺判红过自己的那条真实假原告）。
+
+    我写过一条提交主题 `chore(s105): … 并发子代理刚建的 docs/audit/s106/`，
+    于是判据报「有 s106 提交、无第 106 片条目」——形状上 `docs/audit/s106` 与
+    `scope(s106)` 无法由"字母数字左边"那一类区分，根因是排除类漏了 `/**。
+    取舍记成断言：**位置不表态**，只有 scope 与正文提法表态。
+    """
+    assert rcc.slices_from_subjects(
+        ["chore(s105): 红因是并发子代理建的 docs/audit/s106/"]) == {105}
+    assert rcc.slices_from_subjects(["重跑 .wt-s103 那半截"]) == set()
+    assert rcc.slices_from_subjects(["chore(s105): 绑定报告", "docs: 补账 s99"]) == {105, 99}
