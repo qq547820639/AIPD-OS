@@ -259,3 +259,46 @@ def test_a_step_whose_line_cannot_be_located_is_a_named_diagnostic_not_a_silent_
     rep = csc.audit(tmp_path)
     assert rep["problems"], rep
     assert csc.main(["--repo", str(tmp_path)]) == 2, rep["problems"]
+
+
+def test_emit_register_writes_line_pins_and_keeps_hand_filled_fields(
+        tmp_path: Path) -> None:
+    """`--emit-register` 这一整条路之前**没有任何常驻读者**（第 94 片电池 W12 就是这么活下来的）。
+
+    断三件：草案里每条都带**行号 + 那一行的原文 + 是否软门**，且原文确实落在那一行；
+    手工填过的 kind/consumers/why 在二次 emit 时必须保住；而一次性的 `line_at_emit_time`
+    要被剥掉——把某轮的行号钉成永久断言，下一轮改 workflow 就会误红。
+    """
+    wf = _wf(tmp_path, "name: e\njobs:\n  a:\n    steps:\n"
+                       "      - run: ruff check src\n"
+                       "      - run: bash scripts/soft.sh || true\n")
+    reg = tmp_path / csc.SURFACE_REGISTER_REL
+    assert csc.main(["--repo", str(tmp_path), "--emit-register"]) == 4
+    ents = {e["command"]: e for e in json.loads(reg.read_text(encoding="utf-8"))["entries"]}
+    assert set(ents) == {"ruff check src", "bash scripts/soft.sh || true"}, ents
+    assert all(e["kind"] == "TODO" for e in ents.values()), ents
+    wf_lines = wf.read_text(encoding="utf-8").splitlines()
+    for cmd, e in ents.items():
+        assert e["line_at_emit_time"] > 0, (cmd, e)
+        txt = e["line_text_at_emit_time"]
+        # 用等式而不是"包含"：`"" in 任何串` 恒真，包含式断言会把**空字段**判成通过
+        # （第一版就是这么写的，于是电池 W12「emit 不带原文字段」当场存活）。
+        assert txt and txt == wf_lines[e["line_at_emit_time"] - 1].split("run:", 1)[1].strip(), \
+            (cmd, e)
+    assert ents["bash scripts/soft.sh || true"]["soft_declared_at_emit_time"] is True, ents
+    assert ents["ruff check src"]["soft_declared_at_emit_time"] is False, ents
+
+    reg.write_text(json.dumps({"entries": [
+        {"command": "ruff check src", "kind": "consumed",
+         "consumers": ["tests/test_ci_face_gates.py"], "why": "本地收口链跑同一面",
+         "line_at_emit_time": 99, "job_at_emit_time": "过期的一轮"}]},
+        ensure_ascii=False), encoding="utf-8")
+    assert csc.main(["--repo", str(tmp_path), "--emit-register"]) == 4
+    doc2 = json.loads(reg.read_text(encoding="utf-8"))["entries"]
+    keep = [e for e in doc2 if e["command"] == "ruff check src"][0]
+    assert keep["kind"] == "consumed", keep
+    assert keep["consumers"] == ["tests/test_ci_face_gates.py"], keep
+    assert keep["why"] == "本地收口链跑同一面", keep
+    assert "line_at_emit_time" not in keep and "job_at_emit_time" not in keep, keep
+    soft2 = [e for e in doc2 if e["command"] == "bash scripts/soft.sh || true"][0]
+    assert soft2["kind"] == "TODO", soft2          # 没登记的那条仍然待填 ⇒ 退 4 不是退 0
