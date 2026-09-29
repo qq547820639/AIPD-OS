@@ -105,16 +105,29 @@ $ python scripts/dependency_license_gate.py            # 退码 4（第 92 片�
 6. 台账的 `casadi` 条目仍是 `needs-review` ⇒ 门交付时是红的，这是有意的（见 §三与第 92 片 §三）。
 7. **顺带量到的一条覆盖面缺口（本轮不修，写清读数）**：CI 的 lint 门跑的是
    `ruff check src tests state_service`（`.github/workflows/ci.yml:144`），**不含 `scripts/`**，
-   而 46 个量具脚本都住在那儿。现读：
-   `ruff check scripts` ⇒ **643 条**（`265 E702` 分号多语句 / `191 E501` 超长行 /
-   `98 E701` 冒号多语句 / `28 I001` 导入序 + 少量其他），另有 4 条
-   `Invalid # noqa directive` 警告（`scripts/audit_repo.py:326`、`scripts/aipd_store.py:195,286,290`
-   —— 那种写法等于没豁免）。`ruff check src tests state_service` 与
+   而量具脚本都住在那儿（**第 93 片当时**读 46 个）。第 99 片重开这一格的现读：
+   `find scripts -name "*.py" | wc -l` ⇒ **59 个**（45 顶层 + 14 `scripts/research/`）；
+   `ruff check --no-cache scripts` ⇒ **642 条**（本文件第 93 片记的 643 条是当时的读数，
+   长尾差 1 条无法指认是哪条），`--output-format concise` 逐条数同为 642、
+   只落在 **44 个**文件上（15 个文件 0 命中）；stderr 的
+   `Invalid # noqa directive` 由 4 条涨到 **6** 条（新增两处正是第 97 片按同一惯例加的
+   `scripts/release_evidence.py:259,272`；连同 `audit_repo.py:326`、`aipd_store.py:195,286,290`）。
+   这 6 处的写法是 `# noqa: EMPTY_EXCEPT - 理由`——`EMPTY_EXCEPT` 不是 ruff 的规则码，
+   所以 **ruff 侧等于没豁免**（并且那六个位点的体都不是空体，ruff 本来也无事可豁免）；
+   真正消费这个记号的是 `tests/test_exception_hygiene.py`，它按文本读，豁免在那一面是生效的。
+   ⇒ 一句话：这是**同一个记号在两张面上的读法不同**，不是豁免失效；代价单见
+   `docs/audit/SCRIPTS_LINT_FACE_RULING_2026-09-29.md`（含把 `scripts/` 接进 lint 面的
+   A/B/C 三选项、各自改哪几行与今天会红哪几条常驻用例）。`ruff check src tests state_service` 与
    `ruff check docs/audit/s93` 本轮复算仍是 `All checks passed!`；
    `docs/audit/s92/battery92.py` 有 5 条 E501（上一片留下，未并入任何门）。
-   为什么不在本轮顺手接进 CI 面：那要先把 643 条清掉或做逐文件豁免，
-   属于"lint 面加宽"那种独立一片（同第 91 片 F-CI-SURFACE 一族），
+   为什么不在本轮顺手接进 CI 面：接它要先把那 642 条（第 93 片记 643，第 99 片复算）清掉
+   或做逐文件豁免，属于"lint 面加宽"那种独立一片（同第 91 片 F-CI-SURFACE 一族），
    混进许可证这一片会把两件事的证据搅在一起。
+   **第 99 片复算时更正这里的一个前提**：不必先清完才谈接入——59 个脚本里有 **15 个**
+   今天已经 0 命中，`ruff check src tests state_service` 加上那 15 个文件合并跑现读
+   `rc=0 / All checks passed!`（stderr 的 invalid noqa 由 3 行涨到 5 行，都是同一记号族）。
+   ⇒ "先清债再接入"这个顺序不成立，正确形状是"先把 0 债的那批接进来当棘轮起点"；
+   代价与三选项见 `docs/audit/SCRIPTS_LINT_FACE_RULING_2026-09-29.md`。
 
 ## 五、同片第二项：清单指纹遇到 float 就**拒算**（`scripts/release_fingerprint.py`）
 
